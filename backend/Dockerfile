@@ -1,6 +1,9 @@
-FROM node:20-alpine AS builder
+FROM node:20-alpine
 
 WORKDIR /app
+
+# Install build dependencies for native addons like argon2
+RUN apk add --no-cache python3 make g++
 
 COPY package*.json ./
 COPY backend/package*.json ./backend/
@@ -15,4 +18,4 @@ EXPOSE 5000
 
 ENV NODE_ENV=production
 
-CMD ["node", "src/index.js"]
+CMD ["node", "src/server.js"]

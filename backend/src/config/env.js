@@ -13,7 +13,10 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.string().default('5000').transform((val) => parseInt(val, 10)),
-  MONGO_URI: z.string().default('mongodb://127.0.0.1:27017/shanthi_ayurvedas_crm'),
+  MONGO_URI: z
+    .string()
+    .optional()
+    .default(process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/shanthi_ayurvedas_crm'),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
   JWT_ACCESS_SECRET: z.string().default('shanthi_crm_jwt_super_secret_access_key_2026_!@#$%^&*()'),
   JWT_REFRESH_SECRET: z.string().default('shanthi_crm_jwt_super_secret_refresh_key_2026_!@#$%^&*()'),

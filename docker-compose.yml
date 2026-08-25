@@ -35,6 +35,7 @@ services:
     environment:
       PORT: 5000
       NODE_ENV: production
+      MONGO_URI: mongodb://admin:SecureAdminPassword123@mongodb:27017/shanthi_ayurvedas_crm?authSource=admin
       MONGODB_URI: mongodb://admin:SecureAdminPassword123@mongodb:27017/shanthi_ayurvedas_crm?authSource=admin
       JWT_ACCESS_SECRET: default_production_super_secret_jwt_access_key_2026_shanthi_ayurvedas
       JWT_REFRESH_SECRET: default_production_super_secret_jwt_refresh_key_2026_shanthi_ayurvedas

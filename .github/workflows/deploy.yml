@@ -1,0 +1,42 @@
+name: Deploy to Hostinger VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: 🚀 Deploy to Hostinger VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Execute Remote SSH Commands & Deploy Docker
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          timeout: 60s
+          command_timeout: 10m
+          script: |
+            # If directory doesn't exist or is not a git repo, clone fresh
+            if [ ! -d /docker/shanthiayurvedics/.git ]; then
+              echo "⚡ No git repo found — cloning fresh..."
+              rm -rf /docker/shanthiayurvedics
+              mkdir -p /docker
+              git clone https://github.com/risewithmediaofficial-collab/shanthiayurvedics.git /docker/shanthiayurvedics
+            fi
+
+            cd /docker/shanthiayurvedics
+            git pull origin main
+
+            # Force rebuild with no cache to pick up latest Dockerfile changes
+            docker compose down
+            docker compose up -d --build --no-deps
+            docker image prune -f
+            echo "✅ Deployment complete!"

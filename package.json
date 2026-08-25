@@ -1,0 +1,32 @@
+{
+  "name": "shanthi-ayurvedas-crm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production-Ready Shanthi Ayurvedas MERN CRM",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=backend & npm run dev --workspace=frontend",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "build": "npm run build:frontend",
+    "seed": "npm run seed --workspace=backend",
+    "test": "npm run test --workspace=backend",
+    "lint": "npm run lint --workspace=frontend"
+  },
+  "keywords": [
+    "crm",
+    "ayurveda",
+    "mern",
+    "telecaller",
+    "inventory",
+    "orders",
+    "shipping",
+    "rto"
+  ],
+  "author": "Shanthi Ayurvedas Development Team",
+  "license": "ISC"
+}

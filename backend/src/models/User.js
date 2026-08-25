@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import argon2 from 'argon2';
+import bcrypt from 'bcryptjs';
 import { ROLES } from '../constants/roles.js';
 
 const userSchema = new mongoose.Schema(
@@ -83,20 +83,16 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Hash password with Argon2id before saving
+// Hash password with bcrypt before saving
 userSchema.statics.hashPassword = async function (plainPassword) {
-  return argon2.hash(plainPassword, {
-    type: argon2.argon2id,
-    memoryCost: 2 ** 16, // 64 MB
-    timeCost: 3,
-    parallelism: 1
-  });
+  const saltRounds = 12;
+  return bcrypt.hash(plainPassword, saltRounds);
 };
 
 // Verify password
 userSchema.methods.verifyPassword = async function (plainPassword) {
   if (!this.passwordHash) return false;
-  return argon2.verify(this.passwordHash, plainPassword);
+  return bcrypt.compare(plainPassword, this.passwordHash);
 };
 
 // Check if account is locked

@@ -89,7 +89,7 @@ export const getSession = asyncHandler(async (req, res) => {
 
   try {
     const decoded = AuthService.verifyAccessToken(token);
-    const user = await User.findById(decoded.id)
+    const user = await User.findById(decoded.userId || decoded.id)
       .populate('branchId', 'name code')
       .populate('branches', 'name code')
       .lean();

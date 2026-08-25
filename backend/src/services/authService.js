@@ -97,6 +97,7 @@ export class AuthService {
 
     const tokenPayload = {
       userId: user._id.toString(),
+      id: user._id.toString(),
       email: user.email,
       role: user.role,
       branchId: user.branchId?._id?.toString() || user.branchId?.toString() || null,

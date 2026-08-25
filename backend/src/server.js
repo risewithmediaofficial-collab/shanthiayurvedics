@@ -4,6 +4,8 @@ import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { connectDB, disconnectDB } from './config/db.js';
 import { initSocketIO } from './sockets/index.js';
+import { User } from './models/User.js';
+import { seedDatabase } from './scripts/seed.js';
 
 const server = http.createServer(app);
 
@@ -15,6 +17,17 @@ const startServer = async () => {
   try {
     // Connect to database
     await connectDB();
+
+    // Auto-seed initial staff accounts & branches on fresh database
+    try {
+      const userCount = await User.countDocuments();
+      if (userCount === 0) {
+        logger.info('🌱 Empty database detected. Auto-seeding initial staff accounts, branches, and roles...');
+        await seedDatabase();
+      }
+    } catch (seedErr) {
+      logger.warn(`Auto-seeding check skipped/failed: ${seedErr.message}`);
+    }
 
     server.listen(env.PORT, () => {
       logger.info(`🚀 Shanthi Ayurvedas CRM API running on port ${env.PORT} [${env.NODE_ENV}]`);

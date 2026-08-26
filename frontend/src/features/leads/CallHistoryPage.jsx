@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { PhoneCall, Calendar, Clock, User, CheckCircle2 } from 'lucide-react';
+import { PhoneCall, Calendar, Clock, User, CheckCircle2, MessageSquare, Phone } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { Table } from '../../components/common/Table.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
@@ -20,10 +20,25 @@ export function CallHistoryPage() {
   const calls = callsResponse?.data || [];
   const meta = callsResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
+  const handleOpenWhatsApp = (row) => {
+    const mobile = row.leadId?.mobile || row.customerId?.mobile || '';
+    const cleanMobile = mobile.replace(/\D/g, '').slice(-10);
+    const name = row.leadId?.name || row.customerId?.name || 'Customer';
+    if (!cleanMobile) return;
+    const textMsg = encodeURIComponent(
+      `🌿 *Shanthi Ayurvedas Follow-up*\n\n` +
+        `Hello *${name}*,\n` +
+        `Following up regarding our Ayurvedic wellness discussion.\n` +
+        `Please let us know if you have any questions about your prescribed formulations or consultation.\n\n` +
+        `🙏 Shanthi Ayurvedas Healthcare Team`
+    );
+    window.open(`https://wa.me/91${cleanMobile}?text=${textMsg}`, '_blank');
+  };
+
   const getOutcomeBadge = (outcome) => {
     switch (outcome) {
       case 'CONNECTED_INTERESTED':
-        return <Badge variant="success">Interested</Badge>;
+        return <Badge variant="emerald">Interested</Badge>;
       case 'CONNECTED_CALLBACK_REQUESTED':
         return <Badge variant="warning">Callback</Badge>;
       case 'CONNECTED_NOT_INTERESTED':
@@ -39,12 +54,16 @@ export function CallHistoryPage() {
   const columns = [
     {
       header: 'Lead / Customer',
-      cell: (row) => (
-        <div>
-          <div className="font-bold text-slate-900">{row.leadId?.name || row.customerId?.name || 'Customer'}</div>
-          <div className="text-xs text-slate-500 font-mono">{row.leadId?.mobile || row.customerId?.mobile}</div>
-        </div>
-      )
+      cell: (row) => {
+        const name = row.leadId?.name || row.customerId?.name || 'Customer';
+        const mobile = row.leadId?.mobile || row.customerId?.mobile || '—';
+        return (
+          <div>
+            <div className="font-bold text-slate-900">{name}</div>
+            <div className="text-xs text-slate-500 font-mono">{mobile}</div>
+          </div>
+        );
+      }
     },
     {
       header: 'Outcome',
@@ -60,12 +79,39 @@ export function CallHistoryPage() {
     },
     {
       header: 'Date & Time',
-      align: 'right',
       cell: (row) => (
-        <div className="text-xs text-slate-500 text-right">
+        <div className="text-xs text-slate-500">
           {new Date(row.createdAt).toLocaleDateString()} {new Date(row.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
       )
+    },
+    {
+      header: 'Quick Action',
+      align: 'right',
+      cell: (row) => {
+        const mobile = row.leadId?.mobile || row.customerId?.mobile || '';
+        return (
+          <div className="flex items-center justify-end gap-1.5">
+            <button
+              type="button"
+              onClick={() => handleOpenWhatsApp(row)}
+              title="WhatsApp Follow-up"
+              className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors flex items-center gap-1"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+            </button>
+            {mobile && (
+              <a
+                href={`tel:${mobile}`}
+                title="Call"
+                className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center gap-1"
+              >
+                <Phone className="w-3.5 h-3.5" />
+              </a>
+            )}
+          </div>
+        );
+      }
     }
   ];
 

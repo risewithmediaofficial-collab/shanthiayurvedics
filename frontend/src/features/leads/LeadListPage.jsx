@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus,
   Search,
-  Filter,
   PhoneCall,
-  UserPlus,
-  Calendar,
-  Sparkles,
+  Download,
   ShoppingBag,
+  MessageSquare,
+  Stethoscope,
+  Phone,
   AlertCircle
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
@@ -21,10 +22,11 @@ import { Select } from '../../components/common/Select.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Pagination } from '../../components/common/Pagination.jsx';
-import { Spinner } from '../../components/common/Spinner.jsx';
+import { OrderCreateModal } from '../orders/OrderCreateModal.jsx';
 
 export function LeadListPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { hasPermission, isTelecaller } = usePermissions();
   const { selectedBranchId } = useBranch();
 
@@ -37,6 +39,9 @@ export function LeadListPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [activeLead, setActiveLead] = useState(null);
+
+  // Order creation from lead
+  const [leadForOrder, setLeadForOrder] = useState(null);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -115,12 +120,51 @@ export function LeadListPage() {
     }
   };
 
+  // 1-Click WhatsApp Chat
+  const handleOpenWhatsApp = (lead) => {
+    const cleanMobile = (lead.whatsappNumber || lead.mobile || '').replace(/\D/g, '').slice(-10);
+    if (!cleanMobile) return;
+    const textMsg = encodeURIComponent(
+      `🌿 *Shanthi Ayurvedas Wellness*\n\n` +
+        `Hello *${lead.name}*,\n` +
+        `Thank you for inquiring about our authentic Ayurvedic formulations and wellness care.\n\n` +
+        `How may our Ayurvedic health specialist assist you today?\n\n` +
+        `📍 *Shanthi Ayurvedas Clinic & Pharmacy*`
+    );
+    window.open(`https://wa.me/91${cleanMobile}?text=${textMsg}`, '_blank');
+  };
+
+  // Export Leads to CSV
+  const handleExportCSV = () => {
+    if (leads.length === 0) return;
+    const headers = ['Lead Name', 'Mobile', 'WhatsApp', 'Email', 'Source', 'Status', 'City', 'Assigned To', 'Created At'];
+    const rows = leads.map((l) => [
+      `"${l.name || ''}"`,
+      `"${l.mobile || ''}"`,
+      `"${l.whatsappNumber || ''}"`,
+      `"${l.email || ''}"`,
+      `"${l.source || ''}"`,
+      `"${l.status || ''}"`,
+      `"${l.city || ''}"`,
+      `"${l.assignedTo?.name || 'Unassigned'}"`,
+      `"${new Date(l.createdAt).toLocaleDateString('en-GB')}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `shanthi_leads_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const getStatusBadge = (status) => {
     switch (status) {
       case 'NEW': return <Badge variant="primary">New</Badge>;
       case 'ASSIGNED': return <Badge variant="info">Assigned</Badge>;
       case 'CONTACTED': return <Badge variant="warning">Contacted</Badge>;
-      case 'INTERESTED': return <Badge variant="success">Interested</Badge>;
+      case 'INTERESTED': return <Badge variant="emerald">Interested</Badge>;
       case 'CONVERTED': return <Badge variant="emerald">Converted</Badge>;
       case 'LOST': return <Badge variant="danger">Lost</Badge>;
       default: return <Badge variant="neutral">{status}</Badge>;
@@ -162,10 +206,31 @@ export function LeadListPage() {
       )
     },
     {
-      header: 'Actions',
+      header: 'Quick Connect & Actions',
       align: 'right',
       cell: (row) => (
         <div className="flex items-center justify-end gap-1.5">
+          {/* WhatsApp Direct */}
+          <button
+            type="button"
+            onClick={() => handleOpenWhatsApp(row)}
+            title="Chat on WhatsApp"
+            className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors flex items-center gap-1"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span className="hidden md:inline text-[11px]">WhatsApp</span>
+          </button>
+
+          {/* Direct Phone Dial */}
+          <a
+            href={`tel:${row.mobile}`}
+            title="Call"
+            className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center gap-1"
+          >
+            <Phone className="w-3.5 h-3.5" />
+          </a>
+
+          {/* Log Call */}
           <Button
             size="sm"
             variant="outline"
@@ -175,8 +240,29 @@ export function LeadListPage() {
               setIsCallModalOpen(true);
             }}
           >
-            Log Call
+            Log
           </Button>
+
+          {/* Convert to Order */}
+          <button
+            type="button"
+            onClick={() => setLeadForOrder(row)}
+            title="Create Order for Lead"
+            className="p-1.5 rounded-lg bg-ayur-50 hover:bg-ayur-100 text-ayur-800 text-xs font-semibold transition-colors flex items-center gap-1"
+          >
+            <ShoppingBag className="w-3.5 h-3.5 text-ayur-700" />
+            <span className="hidden lg:inline text-[11px]">Order</span>
+          </button>
+
+          {/* Book Consult */}
+          <button
+            type="button"
+            onClick={() => navigate(`/doctor-slots?name=${encodeURIComponent(row.name)}&mobile=${row.mobile}`)}
+            title="Book Doctor Consultation"
+            className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold transition-colors flex items-center gap-1"
+          >
+            <Stethoscope className="w-3.5 h-3.5" />
+          </button>
         </div>
       )
     }
@@ -190,13 +276,23 @@ export function LeadListPage() {
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Leads & Telecaller Pipeline</h2>
           <p className="text-xs text-slate-500">Capture, assign, track calls, and convert leads into customers</p>
         </div>
-        <Button
-          variant="primary"
-          icon={Plus}
-          onClick={() => setIsCreateModalOpen(true)}
-        >
-          Add New Lead
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            icon={Download}
+            onClick={handleExportCSV}
+            disabled={leads.length === 0}
+          >
+            Export CSV
+          </Button>
+          <Button
+            variant="primary"
+            icon={Plus}
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            Add New Lead
+          </Button>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -239,10 +335,10 @@ export function LeadListPage() {
             }}
             options={[
               { value: '', label: 'All Sources' },
-              { value: 'FACEBOOK', label: 'Facebook Ads' },
-              { value: 'WHATSAPP', label: 'WhatsApp' },
+              { value: 'FACEBOOK', label: 'Facebook / Meta Ad' },
+              { value: 'WHATSAPP', label: 'WhatsApp Enquiry' },
               { value: 'CALL', label: 'Direct Call' },
-              { value: 'WEBSITE', label: 'Website' },
+              { value: 'WEBSITE', label: 'Website Form' },
               { value: 'WALKIN', label: 'Walk-in' }
             ]}
           />
@@ -273,6 +369,7 @@ export function LeadListPage() {
         title="Capture New Lead"
         subtitle="Automatic duplicate mobile check across system database"
         maxWidth="max-w-lg"
+        icon="👤"
       >
         <form
           onSubmit={(e) => {
@@ -347,7 +444,7 @@ export function LeadListPage() {
           />
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" type="button" onClick={() => setIsCreateModalOpen(false)}>
+            <Button variant="secondary" type="button" onClick={() => setIsCreateModalOpen(false)}>
               Cancel
             </Button>
             <Button variant="primary" type="submit" isLoading={createLeadMutation.isPending}>
@@ -365,6 +462,7 @@ export function LeadListPage() {
           title={`Log Call with ${activeLead.name}`}
           subtitle={`Phone: ${activeLead.mobile} | Current Status: ${activeLead.status}`}
           maxWidth="max-w-md"
+          icon="📞"
         >
           <form
             onSubmit={(e) => {
@@ -408,7 +506,7 @@ export function LeadListPage() {
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" type="button" onClick={() => setIsCallModalOpen(false)}>
+              <Button variant="secondary" type="button" onClick={() => setIsCallModalOpen(false)}>
                 Cancel
               </Button>
               <Button variant="primary" type="submit" isLoading={logCallMutation.isPending}>
@@ -417,6 +515,20 @@ export function LeadListPage() {
             </div>
           </form>
         </Modal>
+      )}
+
+      {/* Direct Order Creation Drawer for Selected Lead */}
+      {leadForOrder && (
+        <OrderCreateModal
+          isOpen={Boolean(leadForOrder)}
+          onClose={() => setLeadForOrder(null)}
+          initialPatientData={{
+            name: leadForOrder.name,
+            mobile: leadForOrder.mobile,
+            altMobile: leadForOrder.whatsappNumber,
+            city: leadForOrder.city
+          }}
+        />
       )}
     </div>
   );

@@ -11,6 +11,9 @@ import {
   MapPin,
   Phone,
   User,
+  MessageSquare,
+  Printer,
+  Tag,
   ShieldCheck
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
@@ -21,6 +24,8 @@ import { Badge } from '../../components/common/Badge.jsx';
 import { Spinner } from '../../components/common/Spinner.jsx';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Input } from '../../components/common/Input.jsx';
+import { PrintableInvoiceModal } from './PrintableInvoiceModal.jsx';
+import { PrintableShippingLabelModal } from './PrintableShippingLabelModal.jsx';
 
 export function OrderDetailPage() {
   const { id } = useParams();
@@ -32,6 +37,10 @@ export function OrderDetailPage() {
   const [targetStatus, setTargetStatus] = useState('');
   const [transitionNotes, setTransitionNotes] = useState('');
   const [cancellationReason, setCancellationReason] = useState('');
+
+  // Print Modals
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+  const [isLabelOpen, setIsLabelOpen] = useState(false);
 
   const { data: orderData, isLoading } = useQuery({
     queryKey: ['order', id],
@@ -63,10 +72,29 @@ export function OrderDetailPage() {
 
   const order = orderData;
   const statusHistory = orderData.statusHistory || [];
+  const patientMobile = order.patientDetails?.mobile || order.customerId?.mobile || '';
+  const patientName = order.patientDetails?.patientName || order.customerId?.name || 'Customer';
 
   const handleOpenTransition = (status) => {
     setTargetStatus(status);
     setTransitionModalOpen(true);
+  };
+
+  const handleShareWhatsApp = () => {
+    const cleanMobile = patientMobile.replace(/\D/g, '').slice(-10);
+    if (!cleanMobile) return;
+
+    const itemList = order.items?.map((i) => `• ${i.quantity}x ${i.productName}`).join('\n') || '';
+    const textMsg = encodeURIComponent(
+      `🌿 *Shanthi Ayurvedas Order Update*\n\n` +
+        `Hello *${patientName}*,\n` +
+        `Your order *#${order.orderNumber}* status is: *${order.status}*!\n\n` +
+        `📦 *Prescribed Products:*\n${itemList}\n\n` +
+        `💰 *Grand Total:* ₹${order.grandTotal?.toLocaleString()} (${order.paymentMethod})\n` +
+        `📍 *Delivery Address:* ${order.deliveryAddress?.city}, ${order.deliveryAddress?.pincode}\n\n` +
+        `Thank you for trusting Shanthi Ayurvedas authentic holistic care. 🙏`
+    );
+    window.open(`https://wa.me/91${cleanMobile}?text=${textMsg}`, '_blank');
   };
 
   const renderAvailableTransitions = () => {
@@ -174,7 +202,40 @@ export function OrderDetailPage() {
           </div>
         </div>
 
-        {renderAvailableTransitions()}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* WhatsApp Notification */}
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={MessageSquare}
+            onClick={handleShareWhatsApp}
+            className="text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+          >
+            WhatsApp Patient
+          </Button>
+
+          {/* Tax Invoice */}
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={Printer}
+            onClick={() => setIsInvoiceOpen(true)}
+          >
+            Tax Invoice
+          </Button>
+
+          {/* Shipping Label */}
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={Tag}
+            onClick={() => setIsLabelOpen(true)}
+          >
+            Shipping Label
+          </Button>
+
+          {renderAvailableTransitions()}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -218,10 +279,10 @@ export function OrderDetailPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="p-3.5 bg-slate-50 rounded-xl space-y-1.5">
                 <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-ayur-600" /> {order.customerId?.name}
+                  <User className="w-3.5 h-3.5 text-ayur-600" /> {patientName}
                 </div>
-                <div className="text-slate-600 flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5 text-slate-400" /> {order.customerId?.mobile}
+                <div className="text-slate-600 flex items-center gap-1.5 font-mono">
+                  <Phone className="w-3.5 h-3.5 text-slate-400" /> {patientMobile}
                 </div>
                 <div className="text-slate-500 text-[11px]">
                   Assigned Telecaller: {order.telecallerId?.name || 'Staff'}
@@ -302,7 +363,7 @@ export function OrderDetailPage() {
           />
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" type="button" onClick={() => setTransitionModalOpen(false)}>
+            <Button variant="secondary" type="button" onClick={() => setTransitionModalOpen(false)}>
               Cancel
             </Button>
             <Button variant="primary" type="submit" isLoading={transitionMutation.isPending}>
@@ -311,6 +372,24 @@ export function OrderDetailPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Printable Tax Invoice Modal */}
+      {isInvoiceOpen && (
+        <PrintableInvoiceModal
+          isOpen={isInvoiceOpen}
+          onClose={() => setIsInvoiceOpen(false)}
+          order={order}
+        />
+      )}
+
+      {/* Printable Shipping Label Modal */}
+      {isLabelOpen && (
+        <PrintableShippingLabelModal
+          isOpen={isLabelOpen}
+          onClose={() => setIsLabelOpen(false)}
+          order={order}
+        />
+      )}
     </div>
   );
 }

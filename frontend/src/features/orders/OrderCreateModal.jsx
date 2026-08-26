@@ -243,6 +243,24 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
     });
   };
 
+  const footerActions = (
+    <>
+      <Button variant="secondary" type="button" onClick={onClose}>
+        Cancel
+      </Button>
+      <Button
+        variant="primary"
+        type="submit"
+        form="order-create-form"
+        icon={MessageSquare}
+        isLoading={createOrderMutation.isPending}
+        className="px-6 bg-gradient-to-r from-emerald-700 to-ayur-800 hover:from-emerald-600 hover:to-ayur-700 text-white font-bold shadow-sm text-xs tracking-wide"
+      >
+        🛒 Save Order & Send WhatsApp
+      </Button>
+    </>
+  );
+
   return (
     <Modal
       isOpen={isOpen}
@@ -250,8 +268,10 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
       title="Create Prescription Order"
       subtitle="Atomically reserves herbal stock and triggers WhatsApp dispatch notification"
       maxWidth="max-w-3xl"
+      icon="🛒"
+      footer={footerActions}
     >
-      <form onSubmit={handleSubmit} className="space-y-6 text-slate-800">
+      <form id="order-create-form" onSubmit={handleSubmit} className="space-y-6 text-slate-800">
         {formError && (
           <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -662,21 +682,6 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
           onChange={(e) => setNotes(e.target.value)}
         />
 
-        {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
-          <Button variant="secondary" type="button" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            type="submit"
-            icon={MessageSquare}
-            isLoading={createOrderMutation.isPending}
-            className="px-6 py-2.5 bg-gradient-to-r from-emerald-700 to-ayur-800 hover:from-emerald-600 hover:to-ayur-700 text-white font-black shadow-md text-xs tracking-wide"
-          >
-            🛒 Save Order & Send WhatsApp
-          </Button>
-        </div>
       </form>
     </Modal>
   );

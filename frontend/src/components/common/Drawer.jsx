@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -16,7 +17,7 @@ export function Drawer({
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
-        onClose();
+        onClose?.();
       }
     };
     if (isOpen) {
@@ -31,19 +32,19 @@ export function Drawer({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+  const drawerContent = (
+    <div className="fixed inset-0 z-[100] overflow-hidden" role="dialog" aria-modal="true">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      <div className={clsx('fixed inset-y-0 flex max-w-full', position === 'right' ? 'right-0 pl-10' : 'left-0 pr-10')}>
-        <div className={twMerge('w-screen bg-white shadow-2xl flex flex-col', size)}>
+      <div className={clsx('fixed inset-y-0 flex max-w-full', position === 'right' ? 'right-0' : 'left-0')}>
+        <div className={twMerge('w-screen h-full bg-white shadow-2xl flex flex-col border-l border-slate-200 animate-slide-in-right', size)}>
           {/* Header */}
-          <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
             <div>
               {title && <h3 className="text-base font-semibold text-slate-900">{title}</h3>}
               {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
@@ -58,14 +59,20 @@ export function Drawer({
           </div>
 
           {/* Body */}
-          <div className="relative flex-1 overflow-y-auto p-6">{children}</div>
+          <div className="relative flex-1 overflow-y-auto p-6 space-y-4">{children}</div>
 
           {/* Footer */}
-          {footer && <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">{footer}</div>}
+          {footer && (
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/80 shrink-0 flex justify-end gap-3">
+              {footer}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
+
+  return createPortal(drawerContent, document.body);
 }
 
 export default Drawer;

@@ -1,8 +1,21 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 
+/**
+ * Full-height right-side slide-over drawer panel attached to document.body via createPortal.
+ *
+ * Props:
+ *  - isOpen       {boolean}
+ *  - onClose      {() => void}
+ *  - title        {string}
+ *  - subtitle     {string}
+ *  - children     {ReactNode}  — scrollable body content
+ *  - footer       {ReactNode}  — pinned bottom action bar
+ *  - maxWidth     {string}     — width variant e.g. 'max-w-md' | 'max-w-lg' | 'max-w-2xl' | 'max-w-3xl'
+ *  - showClose    {boolean}
+ *  - icon         {ReactNode}  — optional icon/emoji next to title
+ */
 export function Modal({
   isOpen,
   onClose,
@@ -11,33 +24,31 @@ export function Modal({
   children,
   maxWidth = 'max-w-2xl',
   showClose = true,
-  footer = null
+  footer = null,
+  icon = null
 }) {
-  // Background scroll restriction and ESC key handler
+  /* ── lock background scroll & ESC key ── */
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
+    if (!isOpen) return;
+
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose?.();
     };
+    window.addEventListener('keydown', onKey);
 
-    if (isOpen) {
-      // Save current scroll position and strictly restrict background scrolling
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-
-      return () => {
-        document.body.style.overflow = originalOverflow || 'unset';
-        window.removeEventListener('keydown', handleKeyDown);
-      };
-    }
+    return () => {
+      document.body.style.overflow = prev || '';
+      window.removeEventListener('keydown', onKey);
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
-  // Map standard modal max-width classes to responsive slide-over drawer widths
-  const getDrawerWidthClass = () => {
+  /* ── map maxWidth to clean width class ── */
+  const getWidthClass = () => {
     switch (maxWidth) {
       case 'max-w-sm':
         return 'sm:max-w-sm';
@@ -48,53 +59,62 @@ export function Modal({
       case 'max-w-xl':
         return 'sm:max-w-xl';
       case 'max-w-3xl':
-        return 'sm:max-w-2xl md:max-w-3xl';
+        return 'sm:max-w-3xl';
       case 'max-w-4xl':
-        return 'sm:max-w-2xl md:max-w-3xl lg:max-w-4xl';
+        return 'sm:max-w-4xl';
       case 'max-w-5xl':
-        return 'sm:max-w-3xl md:max-w-4xl lg:max-w-5xl';
+        return 'sm:max-w-5xl';
+      case 'max-w-2xl':
       default:
-        return 'sm:max-w-xl md:max-w-2xl';
+        return 'sm:max-w-2xl';
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end" role="dialog" aria-modal="true">
-      {/* Darkened Blur Backdrop with Fade-In */}
+  const modalContent = (
+    <div
+      className="fixed inset-0 z-[100] flex justify-end overflow-hidden"
+      role="dialog"
+      aria-modal="true"
+    >
+      {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-fade-in"
+        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Slide-over Right Drawer Panel */}
+      {/* Full-Height Right Drawer Panel */}
       <div
-        className={twMerge(
-          clsx(
-            'relative w-full h-full bg-white shadow-2xl flex flex-col z-50 border-l border-slate-200 animate-slide-in-right',
-            getDrawerWidthClass()
-          )
-        )}
+        className={`relative w-full ${getWidthClass()} h-full min-h-screen bg-white shadow-2xl flex flex-col z-10 border-l border-slate-200 animate-slide-in-right`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header Bar */}
+        {/* Sticky Header */}
         {(title || showClose) && (
-          <div className="px-5 py-4 sm:px-6 sm:py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
-            <div className="pr-4">
-              {title && (
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug tracking-tight">
-                  {title}
-                </h3>
+          <div className="shrink-0 px-6 py-4.5 border-b border-slate-100 bg-white flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0 pr-2">
+              {icon && (
+                <div className="w-9 h-9 rounded-xl bg-ayur-50 border border-ayur-100 flex items-center justify-center text-lg shrink-0">
+                  {icon}
+                </div>
               )}
-              {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+              <div className="min-w-0">
+                {title && (
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug truncate">
+                    {title}
+                  </h3>
+                )}
+                {subtitle && (
+                  <p className="text-xs text-slate-500 mt-0.5 truncate">{subtitle}</p>
+                )}
+              </div>
             </div>
 
             {showClose && (
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Close panel"
-                className="rounded-xl p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/80 transition-colors focus:outline-none cursor-pointer shrink-0"
+                aria-label="Close"
+                className="shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -102,20 +122,22 @@ export function Modal({
           </div>
         )}
 
-        {/* Scrollable Content Body */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-5 bg-white">
           {children}
         </div>
 
-        {/* Optional Pinned Footer */}
+        {/* Sticky Footer */}
         {footer && (
-          <div className="px-5 py-4 sm:px-6 border-t border-slate-100 bg-slate-50/80 shrink-0 flex items-center justify-end gap-3">
+          <div className="shrink-0 px-6 py-4 border-t border-slate-100 bg-slate-50/80 flex items-center justify-end gap-3">
             {footer}
           </div>
         )}
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
 
 export default Modal;

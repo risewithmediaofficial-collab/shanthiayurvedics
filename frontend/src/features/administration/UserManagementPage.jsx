@@ -120,9 +120,10 @@ export function UserManagementPage() {
       <Modal
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        title="Add Staff Member"
-        subtitle="Generates Argon2id secured CRM account"
+        title="Create Staff Account"
+        subtitle="Provisions role-based authentication and branch scoping"
         maxWidth="max-w-md"
+        icon="👤"
       >
         <form
           onSubmit={(e) => {
@@ -182,8 +183,8 @@ export function UserManagementPage() {
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           />
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" type="button" onClick={() => setCreateModalOpen(false)}>
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button variant="secondary" type="button" onClick={() => setCreateModalOpen(false)}>
               Cancel
             </Button>
             <Button variant="primary" type="submit" isLoading={createUserMutation.isPending}>

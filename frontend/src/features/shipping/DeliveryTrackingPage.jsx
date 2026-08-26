@@ -85,7 +85,7 @@ export function DeliveryTrackingPage() {
       cell: (row) => (
         <Button
           size="sm"
-          variant="outline"
+          variant="secondary"
           onClick={() => setSelectedShipmentAwb(row.awbNumber)}
         >
           Track Timeline
@@ -142,6 +142,12 @@ export function DeliveryTrackingPage() {
           title={`Live Tracking — ${selectedShipmentAwb}`}
           subtitle={`Carrier: ${trackingDetails?.shipment?.courierName || 'Logistics Partner'}`}
           maxWidth="max-w-md"
+          icon="🚚"
+          footer={
+            <Button variant="secondary" onClick={() => setSelectedShipmentAwb(null)}>
+              Close
+            </Button>
+          }
         >
           {isTrackingLoading ? (
             <div className="py-8 text-center text-xs text-slate-500">Connecting to carrier network...</div>

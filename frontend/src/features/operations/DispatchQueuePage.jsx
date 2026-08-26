@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Barcode, Send, CheckCircle2, Building } from 'lucide-react';
+import { Truck, Barcode, Send, CheckCircle2, Building, ShieldCheck } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { Table } from '../../components/common/Table.jsx';
 import { Button } from '../../components/common/Button.jsx';
@@ -49,7 +49,9 @@ export function DispatchQueuePage() {
       header: 'Customer & Address',
       cell: (row) => (
         <div>
-          <div className="font-bold text-slate-900 text-xs">{row.customerId?.name}</div>
+          <div className="font-bold text-slate-900 text-xs">
+            {row.patientDetails?.patientName || row.customerId?.name}
+          </div>
           <div className="text-[10px] text-slate-500 font-mono">
             {row.deliveryAddress?.city}, {row.deliveryAddress?.pincode}
           </div>
@@ -114,6 +116,7 @@ export function DispatchQueuePage() {
           title={`Generate Courier AWB for ${selectedOrder.orderNumber}`}
           subtitle={`Destination: ${selectedOrder.deliveryAddress?.city} (${selectedOrder.deliveryAddress?.pincode})`}
           maxWidth="max-w-md"
+          icon="🚚"
         >
           <form
             onSubmit={(e) => {
@@ -146,8 +149,8 @@ export function DispatchQueuePage() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" type="button" onClick={() => setAwbModalOpen(false)}>
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button variant="secondary" type="button" onClick={() => setAwbModalOpen(false)}>
                 Cancel
               </Button>
               <Button variant="primary" type="submit" isLoading={createShipmentMutation.isPending}>

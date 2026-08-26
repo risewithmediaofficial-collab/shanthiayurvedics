@@ -284,7 +284,7 @@ export function ProductCatalogPage() {
           />
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" type="button" onClick={() => setCreateModalOpen(false)}>
+            <Button variant="secondary" type="button" onClick={() => setCreateModalOpen(false)}>
               Cancel
             </Button>
             <Button variant="primary" type="submit" isLoading={createProductMutation.isPending}>
@@ -341,8 +341,8 @@ export function ProductCatalogPage() {
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" type="button" onClick={() => setBatchModalOpen(false)}>
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button variant="secondary" type="button" onClick={() => setBatchModalOpen(false)}>
                 Cancel
               </Button>
               <Button variant="primary" type="submit" isLoading={addBatchMutation.isPending}>

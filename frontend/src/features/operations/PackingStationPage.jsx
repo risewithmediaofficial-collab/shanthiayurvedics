@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Package, CheckCircle2, Scale, Box, Tag } from 'lucide-react';
+import { Package, CheckCircle2, Scale, Box, Tag, RefreshCw } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { Table } from '../../components/common/Table.jsx';
 import { Button } from '../../components/common/Button.jsx';
@@ -13,6 +13,7 @@ export function PackingStationPage() {
   const queryClient = useQueryClient();
   const [packModalOpen, setPackModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [statusTab, setStatusTab] = useState('ALL_AWAITING'); // ALL_AWAITING, PROCESSING, CONFIRMED, PACKED
 
   const [packForm, setPackForm] = useState({
     weightGrams: 450,
@@ -25,14 +26,25 @@ export function PackingStationPage() {
   });
 
   const { data: ordersResponse, isLoading } = useQuery({
-    queryKey: ['packingQueue'],
+    queryKey: ['packingQueue', statusTab],
     queryFn: async () => {
-      const res = await apiClient.get('/orders', { params: { status: 'PROCESSING', limit: 30 } });
+      let params = { limit: 50 };
+      if (statusTab === 'PACKED') {
+        params.status = 'PACKED';
+      } else if (statusTab === 'PROCESSING') {
+        params.status = 'PROCESSING';
+      } else if (statusTab === 'CONFIRMED') {
+        params.status = 'CONFIRMED';
+      }
+      const res = await apiClient.get('/orders', { params });
       return res.data;
     }
   });
 
-  const orders = ordersResponse?.data || [];
+  const allOrders = ordersResponse?.data || [];
+  const orders = statusTab === 'ALL_AWAITING'
+    ? allOrders.filter((o) => o.status === 'CONFIRMED' || o.status === 'PROCESSING' || o.status === 'READY_FOR_PACKING')
+    : allOrders;
 
   const packMutation = useMutation({
     mutationFn: ({ orderId, data }) => apiClient.post(`/operations/orders/${orderId}/pack`, data),
@@ -55,10 +67,12 @@ export function PackingStationPage() {
       )
     },
     {
-      header: 'Customer',
+      header: 'Customer & City',
       cell: (row) => (
         <div>
-          <div className="font-bold text-slate-900 text-xs">{row.customerId?.name}</div>
+          <div className="font-bold text-slate-900 text-xs">
+            {row.patientDetails?.patientName || row.customerId?.name}
+          </div>
           <div className="text-[10px] text-slate-500">{row.deliveryAddress?.city}, {row.deliveryAddress?.state}</div>
         </div>
       )
@@ -69,27 +83,41 @@ export function PackingStationPage() {
         <div className="text-xs text-slate-700">
           {row.items?.map((item, idx) => (
             <div key={idx}>
-              <span className="font-semibold text-slate-900">{item.quantity}x</span> {item.productName} ({item.sku})
+              <span className="font-semibold text-slate-900">{item.quantity}x</span> {item.productName}
             </div>
           ))}
         </div>
       )
     },
     {
+      header: 'Status',
+      cell: (row) => (
+        <Badge variant={row.status === 'PACKED' ? 'purple' : 'warning'} size="sm">
+          {row.status}
+        </Badge>
+      )
+    },
+    {
       header: 'Actions',
       align: 'right',
       cell: (row) => (
-        <Button
-          size="sm"
-          variant="primary"
-          icon={Package}
-          onClick={() => {
-            setSelectedOrder(row);
-            setPackModalOpen(true);
-          }}
-        >
-          Pack Parcel
-        </Button>
+        row.status !== 'PACKED' ? (
+          <Button
+            size="sm"
+            variant="primary"
+            icon={Package}
+            onClick={() => {
+              setSelectedOrder(row);
+              setPackModalOpen(true);
+            }}
+          >
+            Pack Parcel
+          </Button>
+        ) : (
+          <span className="text-xs font-semibold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-100">
+            ✓ Box Sealed
+          </span>
+        )
       )
     }
   ];
@@ -98,23 +126,63 @@ export function PackingStationPage() {
     <div className="space-y-4">
       <div>
         <h2 className="text-xl font-bold text-slate-900 tracking-tight">Packing Station Queue</h2>
-        <p className="text-xs text-slate-500">Inspect prescriptions, package bottles, and attach security seals</p>
+        <p className="text-xs text-slate-500">
+          Physical SKU order fulfillment, tamper-evident parcel sealing, and precision weigh-in
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+        <button
+          onClick={() => setStatusTab('ALL_AWAITING')}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            statusTab === 'ALL_AWAITING' ? 'bg-ayur-800 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          All Awaiting Packing
+        </button>
+        <button
+          onClick={() => setStatusTab('CONFIRMED')}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            statusTab === 'CONFIRMED' ? 'bg-blue-700 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          Confirmed Queue
+        </button>
+        <button
+          onClick={() => setStatusTab('PROCESSING')}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            statusTab === 'PROCESSING' ? 'bg-amber-700 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          Processing Bay
+        </button>
+        <button
+          onClick={() => setStatusTab('PACKED')}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            statusTab === 'PACKED' ? 'bg-purple-700 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          Packed & Ready
+        </button>
       </div>
 
       <Table
         columns={columns}
         data={orders}
         isLoading={isLoading}
-        emptyMessage="Packing station clear! No orders pending packaging."
+        emptyMessage="No orders found in this packing queue."
       />
 
+      {/* Pack Modal */}
       {selectedOrder && (
         <Modal
           isOpen={packModalOpen}
           onClose={() => setPackModalOpen(false)}
           title={`Pack Order ${selectedOrder.orderNumber}`}
-          subtitle={`Customer: ${selectedOrder.customerId?.name}`}
+          subtitle="Record physical box dimensions, security seal, and calibrated weight"
           maxWidth="max-w-lg"
+          icon="📦"
         >
           <form
             onSubmit={(e) => {
@@ -123,35 +191,47 @@ export function PackingStationPage() {
                 orderId: selectedOrder._id,
                 data: {
                   weightGrams: Number(packForm.weightGrams),
-                  boxType: packForm.boxType,
                   dimensions: {
                     lengthCm: Number(packForm.lengthCm),
                     widthCm: Number(packForm.widthCm),
                     heightCm: Number(packForm.heightCm)
                   },
+                  boxType: packForm.boxType,
                   sealNumber: packForm.sealNumber,
                   notes: packForm.notes
                 }
               });
             }}
-            className="space-y-3.5"
+            className="space-y-4"
           >
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Order Items to Verify</div>
+              <div className="space-y-1">
+                {selectedOrder.items?.map((item, idx) => (
+                  <div key={idx} className="flex justify-between text-xs text-slate-800">
+                    <span>{item.quantity}x {item.productName}</span>
+                    <span className="font-mono text-slate-500">₹{item.total}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <Input
-                label="Total Weight (Grams) *"
+                label="Parcel Weight (grams) *"
                 type="number"
                 required
                 value={packForm.weightGrams}
                 onChange={(e) => setPackForm({ ...packForm, weightGrams: e.target.value })}
               />
               <Select
-                label="Box Type *"
+                label="Outer Box Type *"
                 value={packForm.boxType}
                 onChange={(e) => setPackForm({ ...packForm, boxType: e.target.value })}
                 options={[
-                  { value: 'Small Corrugated Box', label: 'Small Box (1-2 Oils)' },
-                  { value: 'Standard Corrugated Box', label: 'Standard Box (3-5 Items)' },
-                  { value: 'Large Heavy Box', label: 'Large Box (Combos)' }
+                  { value: 'Standard Corrugated Box', label: 'Standard Corrugated Box' },
+                  { value: 'Heavy Duty Herbal Pouch', label: 'Heavy Duty Herbal Pouch' },
+                  { value: 'Fragile Glass Bottle Box', label: 'Fragile Glass Bottle Box' }
                 ]}
               />
             </div>
@@ -178,18 +258,24 @@ export function PackingStationPage() {
             </div>
 
             <Input
-              label="Security Seal Barcode *"
-              required
+              label="Tamper Evident Seal Number"
               value={packForm.sealNumber}
               onChange={(e) => setPackForm({ ...packForm, sealNumber: e.target.value })}
             />
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" type="button" onClick={() => setPackModalOpen(false)}>
+            <Input
+              label="Packing Remarks"
+              placeholder="e.g. Added bubble wrap for herbal oil bottles"
+              value={packForm.notes}
+              onChange={(e) => setPackForm({ ...packForm, notes: e.target.value })}
+            />
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button variant="secondary" type="button" onClick={() => setPackModalOpen(false)}>
                 Cancel
               </Button>
               <Button variant="primary" type="submit" isLoading={packMutation.isPending}>
-                Complete Packing & Seal
+                Seal & Mark Packed
               </Button>
             </div>
           </form>

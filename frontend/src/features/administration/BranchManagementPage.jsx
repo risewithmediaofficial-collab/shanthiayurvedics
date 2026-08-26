@@ -116,9 +116,10 @@ export function BranchManagementPage() {
       <Modal
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        title="Add New Physical Branch"
-        subtitle="Registers warehouse location and inventory ledger scope"
+        title="Add New Operating Branch"
+        subtitle="Configure physical branch location, contact details, and postal code"
         maxWidth="max-w-md"
+        icon="🏢"
       >
         <form
           onSubmit={(e) => {
@@ -186,8 +187,8 @@ export function BranchManagementPage() {
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" type="button" onClick={() => setCreateModalOpen(false)}>
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button variant="secondary" type="button" onClick={() => setCreateModalOpen(false)}>
               Cancel
             </Button>
             <Button variant="primary" type="submit" isLoading={createMutation.isPending}>

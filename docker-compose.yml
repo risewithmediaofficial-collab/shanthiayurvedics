@@ -1,5 +1,4 @@
 version: '3.8'
-
 services:
   mongodb:
     image: mongo:7.0
@@ -16,11 +15,10 @@ services:
     networks:
       - crm-network
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
       interval: 10s
       timeout: 5s
       retries: 5
-
   backend:
     build:
       context: .
@@ -43,7 +41,6 @@ services:
       FRONTEND_URL: http://localhost:88
     networks:
       - crm-network
-
   frontend:
     build:
       context: .
@@ -57,10 +54,8 @@ services:
       - backend
     networks:
       - crm-network
-
 volumes:
   mongodb_data:
-
 networks:
   crm-network:
     driver: bridge

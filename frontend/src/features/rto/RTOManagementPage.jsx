@@ -94,7 +94,7 @@ export function RTOManagementPage() {
           {row.status === 'RTO_INITIATED' && (
             <Button
               size="sm"
-              variant="outline"
+              variant="secondary"
               icon={Box}
               onClick={() => receiveMutation.mutate(row._id)}
             >
@@ -149,6 +149,7 @@ export function RTOManagementPage() {
           title={`Physical Condition Verification for Order ${selectedRTO.orderId?.orderNumber}`}
           subtitle="Non-destructive stock recovery workflow"
           maxWidth="max-w-md"
+          icon="📦"
         >
           <form
             onSubmit={(e) => {
@@ -179,8 +180,8 @@ export function RTOManagementPage() {
               onChange={(e) => setNotes(e.target.value)}
             />
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" type="button" onClick={() => setVerifyModalOpen(false)}>
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button variant="secondary" type="button" onClick={() => setVerifyModalOpen(false)}>
                 Cancel
               </Button>
               <Button variant="primary" type="submit" isLoading={verifyMutation.isPending}>

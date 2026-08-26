@@ -256,6 +256,7 @@ export function InventoryLedgerPage() {
         title="Stock In (Physical Stock Addition)"
         subtitle="Record new factory shipments or supplier purchase intake"
         maxWidth="max-w-md"
+        icon="📥"
       >
         <form
           onSubmit={(e) => {
@@ -323,8 +324,8 @@ export function InventoryLedgerPage() {
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           />
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" type="button" onClick={() => setStockInModalOpen(false)}>
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button variant="secondary" type="button" onClick={() => setStockInModalOpen(false)}>
               Cancel
             </Button>
             <Button variant="primary" type="submit" isLoading={stockInMutation.isPending}>
@@ -341,6 +342,7 @@ export function InventoryLedgerPage() {
         title="Stock Adjustment (Cycle Count)"
         subtitle="Recalibrate physical on-hand quantity after physical count"
         maxWidth="max-w-md"
+        icon="⚖️"
       >
         <form
           onSubmit={(e) => {
@@ -397,8 +399,8 @@ export function InventoryLedgerPage() {
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           />
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" type="button" onClick={() => setAdjustModalOpen(false)}>
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button variant="secondary" type="button" onClick={() => setAdjustModalOpen(false)}>
               Cancel
             </Button>
             <Button variant="primary" type="submit" isLoading={adjustMutation.isPending}>

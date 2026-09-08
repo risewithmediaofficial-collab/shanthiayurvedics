@@ -12,7 +12,12 @@ import {
   CheckCircle2,
   Search,
   ShieldCheck,
-  Printer
+  Printer,
+  LayoutList,
+  LayoutGrid,
+  ArrowRight,
+  TrendingUp,
+  Phone
 } from 'lucide-react';
 import apiClient from '../../../api/apiClient.js';
 import { useBranch } from '../../../context/BranchContext.jsx';
@@ -25,6 +30,8 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
   const { selectedBranchId } = useBranch();
   const queryClient = useQueryClient();
 
+  // Default to 'table' view as requested
+  const [viewMode, setViewMode] = useState('table');
   const [search, setSearch] = useState('');
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
@@ -59,9 +66,9 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
         // fallback
       }
       return [
-        { _id: 'tc-1', name: 'KANAGAVALLI', phone: '9629985341', email: 'kanaga@shanthiayurvedas.com', isActive: true },
-        { _id: 'tc-2', name: 'AMRUTHA', phone: '9629985342', email: 'amrutha@shanthiayurvedas.com', isActive: true },
-        { _id: 'tc-3', name: 'PATTUSELVI', phone: '9629985343', email: 'pattuselvi@shanthiayurvedas.com', isActive: true }
+        { _id: 'tc-1', name: 'PATTUSELVI', phone: '8056519369', email: 'pattuselvi@shanthiayurvedas.com', isActive: true },
+        { _id: 'tc-2', name: 'VASUKI', phone: '8015802369', email: 'vasuki@shanthiayurvedas.com', isActive: true },
+        { _id: 'tc-3', name: 'ANANDHI', phone: '8122854369', email: 'anandhi@shanthiayurvedas.com', isActive: true }
       ];
     }
   });
@@ -119,8 +126,33 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
   const filteredTeam = teamUsers.filter((u) => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return u.name.toLowerCase().includes(q) || (u.phone && u.phone.includes(q)) || (u.email && u.email.toLowerCase().includes(q));
+    return (
+      u.name?.toLowerCase().includes(q) ||
+      (u.phone && u.phone.includes(q)) ||
+      (u.email && u.email.toLowerCase().includes(q))
+    );
   });
+
+  // Aggregated KPI stats
+  const totalCalls = filteredTeam.reduce((acc, staff, idx) => {
+    const stats = telecallerStatsMap.get(staff._id) || {};
+    return acc + (stats.todayCalls ?? (idx === 0 ? 32 : idx === 1 ? 28 : 25));
+  }, 0);
+
+  const totalLeads = filteredTeam.reduce((acc, staff, idx) => {
+    const stats = telecallerStatsMap.get(staff._id) || {};
+    return acc + (stats.assignedCount ?? (idx === 0 ? 14 : idx === 1 ? 9 : 11));
+  }, 0);
+
+  const totalOrders = filteredTeam.reduce((acc, staff, idx) => {
+    const stats = telecallerStatsMap.get(staff._id) || {};
+    return acc + (stats.todayOrders ?? (idx === 0 ? 6 : idx === 1 ? 4 : 5));
+  }, 0);
+
+  const totalRevenue = filteredTeam.reduce((acc, staff, idx) => {
+    const stats = telecallerStatsMap.get(staff._id) || {};
+    return acc + (stats.todaySales ?? (idx === 0 ? 18500 : idx === 1 ? 12400 : 14200));
+  }, 0);
 
   return (
     <div className="space-y-4">
@@ -131,15 +163,15 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
         </div>
       )}
 
-      {/* Top Action Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Top Document & Action Bar */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
             variant="secondary"
             icon={CreditCard}
             onClick={() => {
-              setSelectedStaffForDoc(teamUsers[0]);
+              setSelectedStaffForDoc(filteredTeam[0] || teamUsers[0]);
               setIsIdCardModalOpen(true);
             }}
             className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold shadow-xs"
@@ -152,7 +184,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
             variant="secondary"
             icon={FileText}
             onClick={() => {
-              setSelectedStaffForDoc(teamUsers[0]);
+              setSelectedStaffForDoc(filteredTeam[0] || teamUsers[0]);
               setIsAppointmentModalOpen(true);
             }}
             className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold shadow-xs"
@@ -165,7 +197,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
             variant="secondary"
             icon={Award}
             onClick={() => {
-              setSelectedStaffForDoc(teamUsers[0]);
+              setSelectedStaffForDoc(filteredTeam[0] || teamUsers[0]);
               setIsCertificateModalOpen(true);
             }}
             className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold shadow-xs"
@@ -174,13 +206,45 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
           </Button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* View Mode Switcher */}
+          <div className="bg-slate-100 p-1 rounded-xl border border-slate-200 flex items-center gap-1 text-xs">
+            <button
+              type="button"
+              id="btn-view-mode-table"
+              onClick={() => setViewMode('table')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                viewMode === 'table'
+                  ? 'bg-white text-emerald-800 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Table View"
+            >
+              <LayoutList className="w-3.5 h-3.5" />
+              <span>Table</span>
+            </button>
+            <button
+              type="button"
+              id="btn-view-mode-grid"
+              onClick={() => setViewMode('grid')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                viewMode === 'grid'
+                  ? 'bg-white text-emerald-800 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Card Grid View"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Cards</span>
+            </button>
+          </div>
+
           <Button
             size="sm"
             variant="secondary"
             id="btn-top-open-telecaller"
             icon={Users}
-            onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(filteredTeam[0] || { name: 'MADHU SUDHAN' })}
+            onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(filteredTeam[0] || { name: 'PATTUSELVI' })}
             className="bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 text-xs font-bold shadow-xs"
           >
             Open Telecaller Console →
@@ -198,12 +262,252 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
         </div>
       </div>
 
-      {/* Team Cards Grid */}
+      {/* KPI Metrics Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Total Telecallers</div>
+          <div className="text-2xl font-bold text-slate-900 mt-1 font-mono">{filteredTeam.length}</div>
+          <div className="text-[11px] text-emerald-700 font-medium mt-0.5">100% Active on duty</div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Calls Logged Today</div>
+          <div className="text-2xl font-bold text-slate-900 mt-1 font-mono">{totalCalls}</div>
+          <div className="text-[11px] text-blue-700 font-medium mt-0.5">Across Hosur Main Desk</div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Orders Closed Today</div>
+          <div className="text-2xl font-bold text-purple-700 mt-1 font-mono">{totalOrders}</div>
+          <div className="text-[11px] text-slate-500 font-medium mt-0.5">{totalLeads} leads active</div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Delivered Revenue</div>
+          <div className="text-2xl font-bold text-emerald-700 mt-1 font-mono">₹{totalRevenue.toLocaleString()}</div>
+          <div className="text-[11px] text-emerald-700 font-medium mt-0.5">Realized patient orders</div>
+        </div>
+      </div>
+
+      {/* Filter & Search Toolbar */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Search telecaller by name, mobile or email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none"
+          />
+        </div>
+        <div className="text-xs text-slate-500 font-medium flex items-center gap-2 self-end sm:self-center">
+          <span>Showing <strong>{filteredTeam.length}</strong> staff members</span>
+          <span className="text-slate-300">|</span>
+          <span className="text-emerald-700 font-semibold">Click any row to open telecaller dashboard</span>
+        </div>
+      </div>
+
+      {/* Table or Cards View */}
       {isLoading ? (
         <div className="py-20 text-center bg-white rounded-2xl border border-slate-200">
           <Spinner size="lg" text="Loading team members..." />
         </div>
+      ) : filteredTeam.length === 0 ? (
+        <div className="py-16 text-center bg-white rounded-2xl border border-slate-200 text-slate-500">
+          <div className="text-3xl mb-2">👥</div>
+          <div className="text-sm font-bold text-slate-800">No telecallers match your search</div>
+          <p className="text-xs text-slate-400 mt-1">Try searching by mobile number or name</p>
+        </div>
+      ) : viewMode === 'table' ? (
+        /* ================= 1. TABLE VIEW (DEFAULT) ================= */
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50/90 text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                <tr>
+                  <th className="py-3 px-3.5 font-bold">Staff Member</th>
+                  <th className="py-3 px-2.5 font-bold">Branch & Role</th>
+                  <th className="py-3 px-2 font-bold text-center">Duty Status</th>
+                  <th className="py-3 px-2 font-bold text-center">Today Calls</th>
+                  <th className="py-3 px-2 font-bold text-center">Assigned Leads</th>
+                  <th className="py-3 px-2 font-bold text-center">Orders Closed</th>
+                  <th className="py-3 px-3 font-bold text-right">Delivered Revenue</th>
+                  <th className="py-3 px-2 font-bold text-center">Conversion</th>
+                  <th className="py-3 px-3.5 font-bold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredTeam.map((staff, idx) => {
+                  const stats = telecallerStatsMap.get(staff._id) || {};
+                  const cleanPhone = (staff.phone || '9629985341').replace(/\D/g, '').slice(-10);
+                  const todayLeads = stats.assignedCount ?? (idx === 0 ? 14 : idx === 1 ? 9 : 11);
+                  const todayCalls = stats.todayCalls ?? (idx === 0 ? 32 : idx === 1 ? 28 : 25);
+                  const orders = stats.todayOrders ?? (idx === 0 ? 6 : idx === 1 ? 4 : 5);
+                  const revenue = stats.todaySales ?? (idx === 0 ? 18500 : idx === 1 ? 12400 : 14200);
+                  const conversion = todayLeads > 0 ? Math.round((orders / todayLeads) * 100) : 40;
+
+                  return (
+                    <tr
+                      key={staff._id || idx}
+                      className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                    >
+                      {/* Staff Member Avatar & Info */}
+                      <td
+                        className="py-3 px-3.5"
+                        onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(staff)}
+                        title={`Open ${staff.name}'s Dashboard`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-xl bg-slate-100 group-hover:bg-emerald-100 text-slate-800 group-hover:text-emerald-800 font-bold text-xs flex items-center justify-center border border-slate-200 group-hover:border-emerald-300 shrink-0 transition-colors shadow-2xs">
+                            {staff.name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-bold text-slate-900 group-hover:text-emerald-800 text-xs leading-tight uppercase flex items-center gap-1 transition-colors">
+                              <span>{staff.name}</span>
+                              <span className="text-[10px] text-slate-400 group-hover:text-emerald-700 font-normal">→</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-[11px] text-slate-500 font-mono">{staff.phone || '9629985341'}</span>
+                              <span className="text-slate-300 hidden sm:inline">·</span>
+                              <span className="text-[10px] text-slate-400 truncate max-w-[120px] hidden sm:inline">{staff.email || `${staff.name.toLowerCase()}@shanthiayurvedas.com`}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Branch & Role */}
+                      <td
+                        className="py-3 px-2.5"
+                        onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(staff)}
+                      >
+                        <div className="space-y-0.5">
+                          <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-bold uppercase tracking-wider">
+                            Telecaller
+                          </span>
+                          <p className="text-[10px] text-slate-500 font-medium">Hosur Main</p>
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td
+                        className="py-3 px-2 text-center"
+                        onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(staff)}
+                      >
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>ACTIVE</span>
+                        </span>
+                      </td>
+
+                      {/* Today Calls */}
+                      <td
+                        className="py-3 px-2 text-center font-mono font-bold text-slate-900 text-xs"
+                        onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(staff)}
+                      >
+                        {todayCalls}
+                      </td>
+
+                      {/* Assigned Leads */}
+                      <td
+                        className="py-3 px-2 text-center font-mono font-bold text-blue-700 text-xs"
+                        onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(staff)}
+                      >
+                        {todayLeads}
+                      </td>
+
+                      {/* Orders Closed */}
+                      <td
+                        className="py-3 px-2 text-center font-mono font-bold text-purple-700 text-xs"
+                        onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(staff)}
+                      >
+                        {orders}
+                      </td>
+
+                      {/* Delivered Revenue */}
+                      <td
+                        className="py-3 px-3 text-right font-mono font-bold text-emerald-700 text-xs"
+                        onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(staff)}
+                      >
+                        ₹{revenue.toLocaleString()}
+                      </td>
+
+                      {/* Conversion */}
+                      <td
+                        className="py-3 px-2 text-center"
+                        onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(staff)}
+                      >
+                        <div className="inline-flex flex-col items-center">
+                          <span className="font-bold text-slate-900 text-[11px]">{conversion}%</span>
+                          <div className="w-12 h-1.5 bg-slate-100 rounded-full overflow-hidden mt-0.5">
+                            <div
+                              className="h-full bg-emerald-600 rounded-full"
+                              style={{ width: `${Math.min(conversion, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3 px-3.5 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* 1-Click Open Telecaller Dashboard */}
+                          <button
+                            type="button"
+                            id={`btn-open-telecaller-${staff._id || idx}`}
+                            onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(staff)}
+                            className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-600 text-emerald-800 hover:text-white border border-emerald-200 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-all shadow-2xs cursor-pointer group/btn"
+                            title={`Open ${staff.name}'s Dashboard`}
+                          >
+                            <span>Dashboard</span>
+                            <ArrowRight className="w-3 h-3 text-emerald-700 group-hover/btn:text-white transition-colors" />
+                          </button>
+
+                          {/* Quick Call */}
+                          <a
+                            href={`tel:${cleanPhone}`}
+                            title={`Call ${staff.name} (${cleanPhone})`}
+                            className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold inline-flex items-center justify-center transition-colors shadow-2xs"
+                          >
+                            <PhoneCall className="w-3.5 h-3.5" />
+                          </a>
+
+                          {/* Reset Password */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedUserForReset(staff);
+                              setIsResetPasswordModalOpen(true);
+                            }}
+                            title="Reset Staff Password"
+                            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+                          >
+                            <KeyRound className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Print ID Card quick action */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedStaffForDoc(staff);
+                              setIsIdCardModalOpen(true);
+                            }}
+                            title="Print Staff ID Card"
+                            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
+        /* ================= 2. CARD GRID VIEW (ALTERNATIVE) ================= */
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {filteredTeam.map((staff, idx) => {
             const stats = telecallerStatsMap.get(staff._id) || {};
@@ -251,7 +555,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
                     </div>
                   </div>
 
-                  {/* 5-KPI Block */}
+                  {/* 4-KPI Block */}
                   <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-100 text-xs">
                     <div className="bg-slate-50/80 p-2 rounded-xl border border-slate-100">
                       <div className="text-[10px] uppercase font-semibold text-slate-400">Today Calls</div>
@@ -467,10 +771,10 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
 
               <div className="py-4 flex items-center gap-4">
                 <div className="w-16 h-16 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center font-black text-xl border border-white/30 text-white">
-                  {selectedStaffForDoc?.name?.slice(0, 2).toUpperCase() || 'KA'}
+                  {selectedStaffForDoc?.name?.slice(0, 2).toUpperCase() || 'PA'}
                 </div>
                 <div>
-                  <h4 className="font-black text-base leading-tight uppercase">{selectedStaffForDoc?.name || 'KANAGAVALLI'}</h4>
+                  <h4 className="font-black text-base leading-tight uppercase">{selectedStaffForDoc?.name || 'PATTUSELVI'}</h4>
                   <p className="text-xs text-emerald-200 font-semibold mt-0.5">TELECALLER & PATIENT COUNSELOR</p>
                   <p className="text-[10px] text-white/70 font-mono mt-1">EMP ID: SH-TC-108</p>
                 </div>
@@ -514,7 +818,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
             </div>
 
             <p><strong>Date:</strong> {new Date().toLocaleDateString('en-GB')}</p>
-            <p>To: <strong>{selectedStaffForDoc?.name || 'KANAGAVALLI'}</strong></p>
+            <p>To: <strong>{selectedStaffForDoc?.name || 'PATTUSELVI'}</strong></p>
             <p>Dear {selectedStaffForDoc?.name || 'Staff Member'},</p>
             <p>
               We are pleased to appoint you as a <strong>Telecaller & Customer Care Executive</strong> at
@@ -532,7 +836,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
               </div>
               <div>
                 <p className="font-bold">Employee Acceptance</p>
-                <p className="text-slate-500">{selectedStaffForDoc?.name}</p>
+                <p className="text-slate-500">{selectedStaffForDoc?.name || 'Staff Member'}</p>
               </div>
             </div>
 
@@ -566,7 +870,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
             <h3 className="font-serif font-black text-xl text-amber-950 tracking-wider">CERTIFICATE OF EXCELLENCE</h3>
             <p className="text-xs text-slate-600 italic">This is proudly presented to</p>
             <h2 className="text-2xl font-black text-emerald-900 underline decoration-amber-400 underline-offset-8">
-              {selectedStaffForDoc?.name || 'KANAGAVALLI'}
+              {selectedStaffForDoc?.name || 'PATTUSELVI'}
             </h2>
             <p className="text-xs text-slate-700 max-w-sm mx-auto">
               In recognition of outstanding dedication, patient care counseling, and exceptional sales achievement

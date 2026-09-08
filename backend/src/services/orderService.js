@@ -325,6 +325,24 @@ export class OrderService {
         ...order.patientDetails,
         ...updateData.patientDetails
       };
+    } else if (updateData.patientName || updateData.mobile || updateData.alternateMobile) {
+      order.patientDetails = {
+        ...order.patientDetails,
+        ...(updateData.patientName ? { patientName: updateData.patientName } : {}),
+        ...(updateData.mobile ? { mobile: updateData.mobile } : {}),
+        ...(updateData.alternateMobile ? { alternateMobile: updateData.alternateMobile } : {})
+      };
+    }
+
+    if (order.customerId && (updateData.patientName || updateData.mobile || updateData.patientDetails?.patientName || updateData.patientDetails?.mobile)) {
+      const custUpdate = {};
+      const newName = updateData.patientName || updateData.patientDetails?.patientName;
+      const newMobile = updateData.mobile || updateData.patientDetails?.mobile;
+      if (newName) custUpdate.name = newName.trim();
+      if (newMobile) custUpdate.mobile = newMobile.trim();
+      if (Object.keys(custUpdate).length > 0) {
+        await Customer.findByIdAndUpdate(order.customerId, custUpdate);
+      }
     }
 
     if (updateData.deliveryAddress) {
@@ -332,6 +350,26 @@ export class OrderService {
         ...order.deliveryAddress,
         ...updateData.deliveryAddress
       };
+    } else if (updateData.street || updateData.city || updateData.district || updateData.pincode) {
+      order.deliveryAddress = {
+        ...order.deliveryAddress,
+        ...(updateData.street ? { street: updateData.street } : {}),
+        ...(updateData.city ? { city: updateData.city } : {}),
+        ...(updateData.district ? { district: updateData.district } : {}),
+        ...(updateData.pincode ? { pincode: updateData.pincode } : {})
+      };
+    }
+
+    if (updateData.trackingNumber !== undefined) {
+      order.trackingNumber = updateData.trackingNumber;
+    }
+
+    if (updateData.grandTotal !== undefined && !isNaN(Number(updateData.grandTotal))) {
+      order.grandTotal = Number(updateData.grandTotal);
+    }
+
+    if (updateData.status && updateData.status !== order.status) {
+      order.status = updateData.status;
     }
 
     if (updateData.paymentMethod) {
@@ -349,6 +387,9 @@ export class OrderService {
     if (updateData.offerPrice !== undefined) {
       order.offerPrice = updateData.offerPrice;
     }
+
+    order.markModified('patientDetails');
+    order.markModified('deliveryAddress');
 
     await order.save();
 

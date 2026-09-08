@@ -174,15 +174,28 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
           </Button>
         </div>
 
-        <Button
-          size="sm"
-          variant="primary"
-          icon={Plus}
-          onClick={() => setIsAddUserModalOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs"
-        >
-          Add Telecaller / Staff
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            id="btn-top-open-telecaller"
+            icon={Users}
+            onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(filteredTeam[0] || { name: 'MADHU SUDHAN' })}
+            className="bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 text-xs font-bold shadow-xs"
+          >
+            Open Telecaller Console →
+          </Button>
+
+          <Button
+            size="sm"
+            variant="primary"
+            icon={Plus}
+            onClick={() => setIsAddUserModalOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs"
+          >
+            Add Telecaller / Staff
+          </Button>
+        </div>
       </div>
 
       {/* Team Cards Grid */}
@@ -208,16 +221,34 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-xl bg-slate-100 text-slate-800 font-bold text-sm flex items-center justify-center border border-slate-200 shrink-0">
+                    <div
+                      className="flex items-center gap-3 cursor-pointer group"
+                      onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(staff)}
+                      title={`Open ${staff.name}'s Telecaller Dashboard`}
+                    >
+                      <div className="w-11 h-11 rounded-xl bg-slate-100 group-hover:bg-emerald-100 text-slate-800 group-hover:text-emerald-800 font-bold text-sm flex items-center justify-center border border-slate-200 group-hover:border-emerald-300 shrink-0 transition-colors">
                         {staff.name.slice(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <h4 className="font-bold text-slate-900 text-sm leading-tight uppercase">{staff.name}</h4>
+                        <h4 className="font-bold text-slate-900 group-hover:text-emerald-800 text-sm leading-tight uppercase flex items-center gap-1 transition-colors">
+                          <span>{staff.name}</span>
+                          <span className="text-[10px] text-slate-400 group-hover:text-emerald-700 font-normal">→</span>
+                        </h4>
                         <p className="text-xs text-slate-500 font-mono mt-0.5">{staff.phone || '9629985341'}</p>
                       </div>
                     </div>
-                    <Badge variant="emerald" size="sm">Active</Badge>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(staff)}
+                        className="text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors cursor-pointer"
+                        title={`Open ${staff.name}'s Dashboard`}
+                      >
+                        <span>Console</span>
+                        <span>→</span>
+                      </button>
+                      <Badge variant="emerald" size="sm">Active</Badge>
+                    </div>
                   </div>
 
                   {/* 5-KPI Block */}
@@ -247,26 +278,39 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
                 </div>
 
                 {/* Card Action Buttons */}
-                <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
-                  <a
-                    href={`tel:${cleanPhone}`}
-                    className="flex-1 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
-                  >
-                    <PhoneCall className="w-3.5 h-3.5" />
-                    <span>Call</span>
-                  </a>
-
+                <div className="space-y-2 pt-3 border-t border-slate-100">
+                  {/* Primary 1-Click Open Telecaller Dashboard */}
                   <button
                     type="button"
-                    onClick={() => {
-                      setSelectedUserForReset(staff);
-                      setIsResetPasswordModalOpen(true);
-                    }}
-                    className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                    id={`btn-open-telecaller-${staff._id || idx}`}
+                    onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(staff)}
+                    className="w-full py-2 bg-emerald-50 hover:bg-emerald-700 text-emerald-800 hover:text-white border border-emerald-200/90 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-2xs cursor-pointer group"
                   >
-                    <KeyRound className="w-3.5 h-3.5" />
-                    <span>Reset Pass</span>
+                    <Users className="w-3.5 h-3.5 text-emerald-700 group-hover:text-white transition-colors" strokeWidth={1.75} />
+                    <span>Open {staff.name}'s Dashboard →</span>
                   </button>
+
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={`tel:${cleanPhone}`}
+                      className="flex-1 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
+                    >
+                      <PhoneCall className="w-3.5 h-3.5" />
+                      <span>Call</span>
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedUserForReset(staff);
+                        setIsResetPasswordModalOpen(true);
+                      }}
+                      className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span>Reset Pass</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             );

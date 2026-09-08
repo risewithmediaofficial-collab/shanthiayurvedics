@@ -983,16 +983,32 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                     </h3>
                     <p className="text-xs text-slate-400 mt-0.5">Ranked by gross delivered revenue closed</p>
                   </div>
-                  <Badge variant="emerald" size="sm">
-                    {telecallersLeaderboard.length} Active Advisors
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    {onSwitchToTelecaller && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        id="btn-boss-top-open-telecaller"
+                        icon={Users}
+                        onClick={() => onSwitchToTelecaller(telecallersLeaderboard[0])}
+                        className="bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 text-xs font-bold shadow-xs"
+                      >
+                        Open Telecaller Dashboard →
+                      </Button>
+                    )}
+                    <Badge variant="emerald" size="sm">
+                      {telecallersLeaderboard.length} Active Advisors
+                    </Badge>
+                  </div>
                 </div>
 
                 <div className="divide-y divide-slate-100">
                   {telecallersLeaderboard.map((tc) => (
                     <div
                       key={tc.name}
-                      className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                      onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(tc)}
+                      title={`Click to open ${tc.name}'s Telecaller Dashboard`}
+                      className="p-4 flex items-center justify-between hover:bg-emerald-50/40 transition-colors cursor-pointer group"
                     >
                       <div className="flex items-center gap-3.5">
                         <div className={`w-8 h-8 rounded-xl font-black text-xs flex items-center justify-center ${
@@ -1004,8 +1020,9 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                           #{tc.rank}
                         </div>
                         <div>
-                          <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                          <div className="font-bold text-slate-900 group-hover:text-emerald-800 text-sm flex items-center gap-2 transition-colors">
                             <span>{tc.name}</span>
+                            <span className="text-[10px] text-slate-400 group-hover:text-emerald-700 font-normal">→</span>
                             <span className="text-xs font-mono text-slate-400">📱 {tc.phone}</span>
                           </div>
                           <div className="text-xs text-slate-400 mt-0.5">
@@ -1035,10 +1052,15 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                         {onSwitchToTelecaller && (
                           <button
                             type="button"
-                            onClick={() => onSwitchToTelecaller(tc)}
-                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-all"
+                            id={`btn-boss-open-telecaller-${tc.rank}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSwitchToTelecaller(tc);
+                            }}
+                            className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-700 text-emerald-800 hover:text-white border border-emerald-200/90 text-xs font-bold rounded-xl transition-all shadow-2xs cursor-pointer flex items-center gap-1 group/btn"
                           >
-                            Console →
+                            <span>Dashboard</span>
+                            <span className="text-[10px] group-hover/btn:translate-x-0.5 transition-transform">→</span>
                           </button>
                         )}
                       </div>

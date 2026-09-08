@@ -46,13 +46,13 @@ import { Select } from '../../components/common/Select.jsx';
 import { Spinner } from '../../components/common/Spinner.jsx';
 import { SimpleProgressBar } from '../../components/common/SimpleProgressBar.jsx';
 
-export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView }) {
+export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, onSwitchToBossView, returnView = 'MANAGER' }) {
   const { user, logout } = useAuth();
   const { selectedBranchId } = useBranch();
   const queryClient = useQueryClient();
 
   const callerName = previewCaller?.name || user?.name || 'KANAGAVALLI';
-  const isPreview = Boolean(previewCaller || onSwitchToManagerView);
+  const isPreview = Boolean(previewCaller || onSwitchToManagerView || onSwitchToBossView);
 
   // Active navigation tab
   const [activeTab, setActiveTab] = useState('HOME');
@@ -349,7 +349,20 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView }
             {isCheckedIn ? 'Checked In' : 'Duty Off'}
           </button>
 
-          {/* Switch back to Manager View if in preview */}
+          {/* Switch back to Boss Desk if Boss opened preview */}
+          {onSwitchToBossView && (
+            <Button
+              id="btn-back-to-boss"
+              variant="secondary"
+              size="sm"
+              onClick={onSwitchToBossView}
+              className="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-semibold shadow-xs"
+            >
+              ← Back to Boss Panel
+            </Button>
+          )}
+
+          {/* Switch back to Manager Desk if in preview */}
           {onSwitchToManagerView && (
             <Button
               id="btn-back-to-manager"
@@ -373,6 +386,41 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView }
           </Button>
         </div>
       </div>
+
+      {/* Supervisor Mode Banner */}
+      {isPreview && (
+        <div className="bg-purple-50/90 border border-purple-200/90 rounded-2xl p-3 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-purple-900 shadow-2xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse shrink-0" />
+            <span>
+              <strong>Supervisor Preview Mode:</strong> Viewing live workstation for <strong className="font-bold text-purple-950">{callerName}</strong> (Hosur Hub). Real-time calling station, dialer, leads & dispatch logs.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {onSwitchToManagerView && (
+              <button
+                type="button"
+                onClick={onSwitchToManagerView}
+                className="font-bold underline hover:text-purple-700 cursor-pointer"
+              >
+                Manager Desk
+              </button>
+            )}
+            {onSwitchToBossView && (
+              <>
+                <span className="text-purple-300">·</span>
+                <button
+                  type="button"
+                  onClick={onSwitchToBossView}
+                  className="font-bold underline hover:text-purple-700 cursor-pointer"
+                >
+                  Boss Panel
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 2. Advisory Banner */}
       <div className="bg-emerald-700 text-white p-3.5 px-5 rounded-2xl shadow-xs flex items-center justify-between">

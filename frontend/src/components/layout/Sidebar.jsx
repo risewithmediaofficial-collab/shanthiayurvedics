@@ -342,23 +342,34 @@ export function Sidebar({ isOpen, onClose }) {
 
           {/* Active Telecallers Section */}
           <div className="pt-3 mt-3 border-t border-slate-100 space-y-1">
-            <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-between">
-              <span>TEAM CALLERS</span>
+            <NavLink
+              to="/dashboard?tab=team"
+              onClick={() => onClose && onClose()}
+              className="px-2 py-1 text-[10px] font-bold text-slate-400 hover:text-emerald-700 uppercase tracking-widest flex items-center justify-between group cursor-pointer transition-colors"
+              title="Open Team Management Desk"
+            >
+              <span className="group-hover:text-emerald-700">TEAM CALLERS</span>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            </div>
+            </NavLink>
             {displayCallers.map((tc, idx) => (
               <div
                 key={tc._id || idx}
                 className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-slate-600 hover:bg-slate-50 transition-colors"
               >
-                <div className="flex items-center gap-2 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span className="truncate font-semibold text-[11px] text-slate-700 uppercase">{tc.name}</span>
-                </div>
+                <NavLink
+                  to={`/dashboard?view=telecaller&caller=${encodeURIComponent(tc.name)}&from=manager`}
+                  onClick={() => onClose && onClose()}
+                  className="flex items-center gap-2 truncate cursor-pointer hover:text-emerald-700 flex-1 min-w-0 group/caller"
+                  title={`Open ${tc.name}'s Telecaller Console`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="truncate font-semibold text-[11px] text-slate-700 group-hover/caller:text-emerald-800 uppercase">{tc.name}</span>
+                  <span className="text-[10px] text-slate-300 group-hover/caller:text-emerald-600 font-bold ml-1">→</span>
+                </NavLink>
                 <a
                   href={`tel:${tc.phone || '9629985345'}`}
                   title={`Call ${tc.name}`}
-                  className="text-slate-400 hover:text-emerald-700 p-0.5"
+                  className="text-slate-400 hover:text-emerald-700 p-0.5 shrink-0"
                 >
                   <PhoneCall className="w-3 h-3" />
                 </a>

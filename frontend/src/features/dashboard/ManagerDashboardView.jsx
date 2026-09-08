@@ -276,16 +276,24 @@ export function ManagerDashboardView({ onSwitchToBossView, onSwitchToTelecaller 
         </div>
 
         {/* Card 4: Telecaller Squad */}
-        <div className="clean-card p-4 space-y-3">
+        <div
+          id="card-manager-team-callers"
+          onClick={() => handleSelectTab('team')}
+          title="Click to view Team Callers & live consoles"
+          className="clean-card p-4 space-y-3 cursor-pointer hover:border-purple-300 hover:shadow-xs transition-all group"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Team Callers</span>
-            <div className="icon-box-purple">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-purple-700 transition-colors">Team Callers</span>
+            <div className="icon-box-purple group-hover:scale-105 transition-transform">
               <Activity className="w-4 h-4" strokeWidth={1.75} />
             </div>
           </div>
           <div>
             <div className="text-2xl font-black text-slate-900 font-mono tracking-tight">{teamCount}</div>
-            <p className="text-[11px] text-purple-700 font-semibold mt-0.5">Active calling stations</p>
+            <p className="text-[11px] text-purple-700 font-semibold mt-0.5 flex items-center gap-1">
+              <span>Active calling stations</span>
+              <span className="text-xs">→</span>
+            </p>
           </div>
           <SimpleProgressBar value={100} max={100} size="sm" color="purple" label="On-Duty Check-in" />
         </div>
@@ -334,6 +342,7 @@ export function ManagerDashboardView({ onSwitchToBossView, onSwitchToTelecaller 
           return (
             <button
               key={tab.id}
+              id={`tab-manager-${tab.id}`}
               type="button"
               onClick={() => handleSelectTab(tab.id)}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer select-none ${

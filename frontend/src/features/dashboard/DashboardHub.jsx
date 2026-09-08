@@ -15,22 +15,44 @@ export function DashboardHub() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [previewCaller, setPreviewCaller] = useState(null);
 
-  // Derive view from URL (reactive — picked up on every render)
+  // URL parameters (reactive)
   const urlView = searchParams.get('view')?.toUpperCase();
+  const callerParam = searchParams.get('caller');
+  const fromParam = searchParams.get('from')?.toUpperCase();
 
-  // Determine the active view:
+  // Determine active view:
   //   - URL param wins if set
   //   - Otherwise, telecallers go to TELECALLER view by default
   //   - Everyone else gets MANAGER view by default
   const activeView = urlView || (isTelecaller ? 'TELECALLER' : 'MANAGER');
 
-  const setView = (newView, caller = null) => {
+  // Effective caller: either local state or URL param
+  const effectiveCaller = previewCaller || (callerParam ? { name: callerParam } : null);
+
+  const setView = (newView, caller = null, returnTo = null) => {
     setPreviewCaller(caller);
     const params = {};
-    if (searchParams.get('tab')) params.tab = searchParams.get('tab');
+
     // Only record view param if it's not the default for this role
     const defaultView = isTelecaller ? 'TELECALLER' : 'MANAGER';
-    if (newView !== defaultView) params.view = newView.toLowerCase();
+    if (newView !== defaultView) {
+      params.view = newView.toLowerCase();
+    }
+
+    if (newView === 'TELECALLER') {
+      if (caller?.name) params.caller = caller.name;
+      else if (callerParam) params.caller = callerParam;
+
+      const origin = returnTo || (activeView === 'BOSS' || activeView === 'DISTRIBUTOR' ? 'boss' : 'manager');
+      params.from = origin.toLowerCase();
+      // Keep tab as team so when returning, user is back on team tab
+      params.tab = searchParams.get('tab') || 'team';
+    } else {
+      // Returning to Manager or Boss view: keep active tab
+      if (searchParams.get('tab')) params.tab = searchParams.get('tab');
+      else params.tab = 'team';
+    }
+
     setSearchParams(params, { replace: true });
   };
 
@@ -48,14 +70,21 @@ export function DashboardHub() {
 
   const canSwitchToBoss = isOwner || isDistributor;
 
-  // TELECALLER VIEW — direct login or manager preview
+  // TELECALLER VIEW — direct login or supervisor preview (Manager / Boss)
   if (activeView === 'TELECALLER') {
+    const isSupervisor = !isTelecaller || Boolean(effectiveCaller) || Boolean(fromParam);
     return (
       <TelecallerDashboardView
-        previewCaller={previewCaller}
+        previewCaller={effectiveCaller}
+        returnView={fromParam || (isOwner || isDistributor ? 'BOSS' : 'MANAGER')}
         onSwitchToManagerView={
-          !isTelecaller || previewCaller
+          isSupervisor
             ? () => setView('MANAGER')
+            : undefined
+        }
+        onSwitchToBossView={
+          isSupervisor && canSwitchToBoss
+            ? () => setView('BOSS')
             : undefined
         }
       />
@@ -67,7 +96,7 @@ export function DashboardHub() {
     return (
       <AdminDistributorDashboardView
         onSwitchToManagerView={() => setView('MANAGER')}
-        onSwitchToTelecaller={(caller) => setView('TELECALLER', caller)}
+        onSwitchToTelecaller={(caller) => setView('TELECALLER', caller, 'BOSS')}
       />
     );
   }
@@ -80,7 +109,7 @@ export function DashboardHub() {
           ? () => setView('BOSS')
           : undefined
       }
-      onSwitchToTelecaller={(caller) => setView('TELECALLER', caller)}
+      onSwitchToTelecaller={(caller) => setView('TELECALLER', caller, 'MANAGER')}
     />
   );
 }

@@ -1,12 +1,22 @@
-import React from 'react';
-import { Printer, Truck, Box } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Printer } from 'lucide-react';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Button } from '../../components/common/Button.jsx';
 
 export function PrintableShippingLabelModal({ isOpen, onClose, order }) {
+  useEffect(() => {
+    const clearPrintMode = () => document.body.classList.remove('printing-shipping-label');
+    window.addEventListener('afterprint', clearPrintMode);
+    return () => {
+      window.removeEventListener('afterprint', clearPrintMode);
+      clearPrintMode();
+    };
+  }, []);
+
   if (!order) return null;
 
   const handlePrint = () => {
+    document.body.classList.add('printing-shipping-label');
     window.print();
   };
 
@@ -19,7 +29,7 @@ export function PrintableShippingLabelModal({ isOpen, onClose, order }) {
     <Modal isOpen={isOpen} onClose={onClose} title={`Shipping Label (4x6) — ${order.orderNumber}`} maxWidth="max-w-md">
       <div className="space-y-4 text-slate-900 font-sans p-1">
         {/* Thermal 4x6 Label Format */}
-        <div className="border-2 border-slate-900 rounded-lg p-4 bg-white space-y-3 print:border-none print:p-0">
+        <div id="printable-shipping-label" className="border-2 border-slate-900 rounded-lg p-4 bg-white space-y-3 print:border-none print:p-0">
           {/* Top Bar with Speed Post */}
           <div className="flex justify-between items-center border-b-2 border-slate-900 pb-2">
             <div>

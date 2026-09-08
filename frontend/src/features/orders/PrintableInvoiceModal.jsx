@@ -1,12 +1,22 @@
-import React from 'react';
-import { Printer, X, Download } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Printer } from 'lucide-react';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Button } from '../../components/common/Button.jsx';
 
 export function PrintableInvoiceModal({ isOpen, onClose, order }) {
+  useEffect(() => {
+    const clearPrintMode = () => document.body.classList.remove('printing-invoice');
+    window.addEventListener('afterprint', clearPrintMode);
+    return () => {
+      window.removeEventListener('afterprint', clearPrintMode);
+      clearPrintMode();
+    };
+  }, []);
+
   if (!order) return null;
 
   const handlePrint = () => {
+    document.body.classList.add('printing-invoice');
     window.print();
   };
 

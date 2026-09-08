@@ -12,6 +12,17 @@ const COOKIE_OPTIONS = {
   path: '/'
 };
 
+const setAuthCookies = (res, result) => {
+  res.cookie('accessToken', result.accessToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: 15 * 60 * 1000
+  });
+  res.cookie('refreshToken', result.refreshToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  });
+};
+
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   const result = await AuthService.login({ email, password, req });
@@ -75,6 +86,19 @@ export const logout = asyncHandler(async (req, res) => {
 });
 
 export const getSession = asyncHandler(async (req, res) => {
+  const refreshFromCookie = async () => {
+    const rawRefreshToken = req.cookies?.refreshToken;
+    if (!rawRefreshToken) return null;
+
+    try {
+      const result = await AuthService.refreshSession({ rawRefreshToken, req });
+      setAuthCookies(res, result);
+      return result;
+    } catch {
+      return null;
+    }
+  };
+
   let token = null;
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -84,6 +108,14 @@ export const getSession = asyncHandler(async (req, res) => {
   }
 
   if (!token) {
+    const refreshed = await refreshFromCookie();
+    if (refreshed) {
+      return ApiResponse.success(res, {
+        user: refreshed.user,
+        accessToken: refreshed.accessToken,
+        isAuthenticated: true
+      }, 'Session refreshed');
+    }
     return ApiResponse.success(res, { user: null, isAuthenticated: false }, 'No active session');
   }
 
@@ -117,6 +149,14 @@ export const getSession = asyncHandler(async (req, res) => {
       'Active session retrieved'
     );
   } catch {
+    const refreshed = await refreshFromCookie();
+    if (refreshed) {
+      return ApiResponse.success(res, {
+        user: refreshed.user,
+        accessToken: refreshed.accessToken,
+        isAuthenticated: true
+      }, 'Session refreshed');
+    }
     return ApiResponse.success(res, { user: null, isAuthenticated: false }, 'Session expired or invalid');
   }
 });

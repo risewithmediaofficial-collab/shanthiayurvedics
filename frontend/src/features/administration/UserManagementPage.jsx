@@ -12,6 +12,7 @@ import { Select } from '../../components/common/Select.jsx';
 export function UserManagementPage() {
   const queryClient = useQueryClient();
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [actionMsg, setActionMsg] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -55,6 +56,20 @@ export function UserManagementPage() {
       queryClient.invalidateQueries(['users']);
       setCreateModalOpen(false);
       setFormData({ name: '', email: '', phone: '', password: '', role: 'TELECALLER', branchId: '' });
+      setActionMsg('✓ Staff account created successfully');
+      setTimeout(() => setActionMsg(''), 3000);
+    },
+    onError: (err) => {
+      const details = err.response?.data?.errors;
+      const messages = Array.isArray(details) && details.length > 0
+        ? details.map((detail) => {
+          if (typeof detail === 'string') return detail;
+          const field = detail.field ? `${detail.field}: ` : '';
+          return `${field}${detail.message || 'Invalid value'}`;
+        })
+        : [err.response?.data?.message || 'Failed to create staff account'];
+      setActionMsg(`⚠ ${messages.join(' | ')}`);
+      setTimeout(() => setActionMsg(''), 5000);
     }
   });
 
@@ -109,6 +124,16 @@ export function UserManagementPage() {
           Add Staff Member
         </Button>
       </div>
+
+      {actionMsg && (
+        <div className={`px-4 py-2.5 border text-sm font-semibold rounded-xl ${
+          actionMsg.startsWith('⚠')
+            ? 'bg-rose-50 border-rose-200 text-rose-700'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+        }`}>
+          {actionMsg}
+        </div>
+      )}
 
       <Table
         columns={columns}
@@ -179,9 +204,13 @@ export function UserManagementPage() {
             type="password"
             required
             placeholder="Min 10 characters with symbols"
+            minLength={10}
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           />
+          <p className="text-[11px] text-slate-500 -mt-2">
+            Use at least 10 characters with uppercase, lowercase, number, and special character.
+          </p>
 
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
             <Button variant="secondary" type="button" onClick={() => setCreateModalOpen(false)}>

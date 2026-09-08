@@ -59,7 +59,7 @@ export function Table({
                           col.align === 'center' && 'text-center'
                         )}
                       >
-                        {col.render ? col.render(value, row) : (value ?? '-')}
+                        {col.cell ? col.cell(row) : col.render ? col.render(value, row) : (value ?? '-')}
                       </td>
                     );
                   })}

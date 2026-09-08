@@ -15,11 +15,13 @@ export function AuthProvider({ children }) {
     try {
       setIsLoading(true);
       const res = await apiClient.get('/auth/session');
-      if (res.data?.success && res.data?.data?.user && res.data?.data?.isAuthenticated) {
-        setUser(res.data.data.user);
+      const sessionData = res.data?.success ? res.data.data : null;
+
+      if (sessionData?.user) {
+        setUser(sessionData.user);
         setIsAuthenticated(true);
-        setToken(res.data.data.accessToken || null);
-        initSocket(res.data.data.accessToken);
+        setToken(sessionData.accessToken || null);
+        initSocket(sessionData.accessToken);
       } else {
         setUser(null);
         setIsAuthenticated(false);

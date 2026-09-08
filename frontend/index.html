@@ -10,6 +10,32 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      // Suppress unhandled third-party extension / VM script errors (e.g. web-vitals 'startTime')
+      window.addEventListener('error', function (event) {
+        var msg = (event && (event.message || (event.error && event.error.message))) || '';
+        var stack = (event && event.error && event.error.stack) || '';
+        var filename = (event && event.filename) || '';
+        if (
+          msg.indexOf('startTime') !== -1 ||
+          msg.indexOf('reportAllChanges') !== -1 ||
+          stack.indexOf('reportAllChanges') !== -1 ||
+          (filename.indexOf('VM') !== -1 && msg.indexOf('Cannot read properties of undefined') !== -1)
+        ) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          return true;
+        }
+      });
+      window.addEventListener('unhandledrejection', function (event) {
+        var reason = event && event.reason;
+        var msg = (reason && (reason.message || String(reason))) || '';
+        if (msg.indexOf('startTime') !== -1 || msg.indexOf('reportAllChanges') !== -1) {
+          event.preventDefault();
+          return true;
+        }
+      });
+    </script>
   </head>
   <body class="bg-slate-50 text-slate-900 antialiased font-sans selection:bg-ayur-200 selection:text-ayur-900 min-h-screen">
     <div id="root"></div>

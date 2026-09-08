@@ -17,16 +17,19 @@ export const getLeads = asyncHandler(async (req, res) => {
 
   const query = {};
 
-  // Branch Scope Filter
-  if (!req.branchScope.isGlobal && req.branchScope.branchId) {
-    query.branchId = req.branchScope.branchId;
-  }
-
   // Telecaller Ownership Filter
   if (req.user.role === ROLES.TELECALLER) {
+    // An explicit assignment grants the telecaller access even if the lead
+    // originated from another branch.
     query.assignedTo = req.user.id;
   } else if (assignedTo) {
     query.assignedTo = assignedTo;
+  }
+
+  // Branch Scope Filter for supervisory views. Telecallers use assignment
+  // ownership above so assigned leads are not hidden by branch selection.
+  if (req.user.role !== ROLES.TELECALLER && !req.branchScope.isGlobal && req.branchScope.branchId) {
+    query.branchId = req.branchScope.branchId;
   }
 
   if (status) query.status = status;
@@ -126,6 +129,16 @@ export const updateLead = asyncHandler(async (req, res) => {
   await lead.save();
 
   return ApiResponse.success(res, lead, 'Lead updated successfully');
+});
+
+export const deleteLead = asyncHandler(async (req, res) => {
+  const lead = await Lead.findById(req.params.id);
+  if (!lead) {
+    throw new NotFoundError('Lead');
+  }
+
+  await Lead.findByIdAndDelete(req.params.id);
+  return ApiResponse.success(res, null, 'Lead deleted successfully');
 });
 
 export const logCall = asyncHandler(async (req, res) => {

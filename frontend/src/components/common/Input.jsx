@@ -14,6 +14,7 @@ export const Input = forwardRef(function Input(
     id,
     required,
     type = 'text',
+    autoComplete,
     showPasswordToggle = true,
     ...props
   },
@@ -24,6 +25,14 @@ export const Input = forwardRef(function Input(
 
   const isPasswordType = type === 'password';
   const effectiveType = isPasswordType && showPassword ? 'text' : type;
+  const effectiveAutoComplete =
+    autoComplete !== undefined
+      ? autoComplete
+      : isPasswordType
+        ? 'current-password'
+        : type === 'email'
+          ? 'username'
+          : undefined;
 
   return (
     <div className={twMerge('w-full space-y-1.5', containerClassName)}>
@@ -54,6 +63,7 @@ export const Input = forwardRef(function Input(
               className
             )
           )}
+          autoComplete={effectiveAutoComplete}
           {...props}
         />
         {isPasswordType && showPasswordToggle && (

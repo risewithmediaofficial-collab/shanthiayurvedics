@@ -10,7 +10,11 @@ import {
   MessageSquare,
   Stethoscope,
   Phone,
-  AlertCircle
+  AlertCircle,
+  Pencil,
+  Trash2,
+  AlertTriangle,
+  CheckCircle2
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
@@ -39,6 +43,20 @@ export function LeadListPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [activeLead, setActiveLead] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [leadToEdit, setLeadToEdit] = useState(null);
+  const [leadToDelete, setLeadToDelete] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    mobile: '',
+    email: '',
+    whatsappNumber: '',
+    source: 'CALL',
+    status: 'NEW',
+    city: '',
+    notes: ''
+  });
 
   // Order creation from lead
   const [leadForOrder, setLeadForOrder] = useState(null);
@@ -49,7 +67,7 @@ export function LeadListPage() {
     mobile: '',
     email: '',
     whatsappNumber: '',
-    source: 'FACEBOOK',
+    source: 'CALL',
     city: '',
     notes: ''
   });
@@ -61,6 +79,9 @@ export function LeadListPage() {
     nextFollowUpNotes: ''
   });
   const [duplicateWarning, setDuplicateWarning] = useState(null);
+  const [formError, setFormError] = useState('');
+  const [callError, setCallError] = useState('');
+  const [leadActionMsg, setLeadActionMsg] = useState('');
 
   // Fetch Leads
   const { data: leadsResponse, isLoading } = useQuery({
@@ -78,21 +99,90 @@ export function LeadListPage() {
   const leads = leadsResponse?.data || [];
   const meta = leadsResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
+  const { data: telecallersResponse } = useQuery({
+    queryKey: ['lead-telecallers'],
+    queryFn: async () => {
+      const res = await apiClient.get('/users', { params: { role: 'TELECALLER', limit: 100 } });
+      return res.data?.data || [];
+    },
+    enabled: hasPermission('leads.assign')
+  });
+
+  const telecallers = telecallersResponse || [];
+
+  const assignLeadMutation = useMutation({
+    mutationFn: ({ leadId, assignedTo }) => apiClient.post(`/leads/${leadId}/assign`, {
+      assignedTo,
+      reason: 'Assigned from Leads Desk'
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['leads']);
+      queryClient.invalidateQueries(['dashboard']);
+      setLeadActionMsg('✓ Lead assigned to telecaller successfully');
+      setTimeout(() => setLeadActionMsg(''), 3000);
+    },
+    onError: (err) => {
+      setLeadActionMsg(`⚠ ${err.response?.data?.message || 'Failed to assign lead'}`);
+      setTimeout(() => setLeadActionMsg(''), 4000);
+    }
+  });
+
   // Create Lead Mutation
   const createLeadMutation = useMutation({
     mutationFn: (data) => apiClient.post('/leads', data),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      if (res?.data?.isDuplicateWarning) {
+        setDuplicateWarning(res.data.data?.existingLead || res.data.data?.existingCustomer || res.data.data);
+        return;
+      }
       queryClient.invalidateQueries(['leads']);
+      queryClient.invalidateQueries(['dashboard']);
       setIsCreateModalOpen(false);
-      setFormData({ name: '', mobile: '', email: '', whatsappNumber: '', source: 'FACEBOOK', city: '', notes: '' });
+      setFormData({ name: '', mobile: '', email: '', whatsappNumber: '', source: 'CALL', city: '', notes: '' });
       setDuplicateWarning(null);
+      setFormError('');
     },
     onError: (err) => {
       if (err.response?.status === 409 && err.response?.data?.data?.duplicateLead) {
         setDuplicateWarning(err.response.data.data.duplicateLead);
+      } else {
+        const errorMsg =
+          err.response?.data?.errors?.[0]?.message ||
+          err.response?.data?.message ||
+          'Failed to save lead. Please check the inputs.';
+        setFormError(errorMsg);
       }
     }
   });
+
+  const handleSaveLead = (e, forceCreate = false) => {
+    if (e) e.preventDefault();
+    setFormError('');
+
+    const cleanMobile = (formData.mobile || '').replace(/\D/g, '').slice(-10);
+    if (!cleanMobile || cleanMobile.length !== 10) {
+      setFormError('Please enter a valid 10-digit mobile number starting with 6-9');
+      return;
+    }
+    if (!formData.name.trim()) {
+      setFormError('Please enter the customer / lead full name');
+      return;
+    }
+
+    const payload = {
+      name: formData.name.trim(),
+      mobile: cleanMobile,
+      whatsappNumber: formData.whatsappNumber?.trim() || undefined,
+      email: formData.email?.trim() || undefined,
+      source: formData.source || 'CALL',
+      city: formData.city?.trim() || undefined,
+      notes: formData.notes?.trim() || undefined,
+      branchId: selectedBranchId && selectedBranchId !== 'ALL' ? selectedBranchId : undefined,
+      forceCreate
+    };
+
+    createLeadMutation.mutate(payload);
+  };
 
   // Log Call Mutation
   const logCallMutation = useMutation({
@@ -100,8 +190,53 @@ export function LeadListPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(['leads']);
       queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries(['callHistory']);
       setIsCallModalOpen(false);
       setCallData({ outcome: 'CONNECTED_INTERESTED', durationSeconds: 120, notes: '', nextFollowUpDate: '', nextFollowUpNotes: '' });
+      setCallError('');
+    },
+    onError: (err) => {
+      const errorMsg =
+        err.response?.data?.errors?.[0]?.message ||
+        err.response?.data?.message ||
+        'Failed to log call';
+      setCallError(errorMsg);
+    }
+  });
+
+  // Update Lead Mutation
+  const updateLeadMutation = useMutation({
+    mutationFn: ({ leadId, payload }) => apiClient.patch(`/leads/${leadId}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['leads']);
+      queryClient.invalidateQueries(['dashboard']);
+      setIsEditModalOpen(false);
+      setLeadToEdit(null);
+      setLeadActionMsg('✓ Lead updated successfully');
+      setTimeout(() => setLeadActionMsg(''), 3000);
+    },
+    onError: (err) => {
+      const errorMsg = err.response?.data?.message || 'Failed to update lead';
+      setLeadActionMsg(`⚠ ${errorMsg}`);
+      setTimeout(() => setLeadActionMsg(''), 4000);
+    }
+  });
+
+  // Delete Lead Mutation
+  const deleteLeadMutation = useMutation({
+    mutationFn: (leadId) => apiClient.delete(`/leads/${leadId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['leads']);
+      queryClient.invalidateQueries(['dashboard']);
+      setIsDeleteModalOpen(false);
+      setLeadToDelete(null);
+      setLeadActionMsg('✓ Lead deleted successfully');
+      setTimeout(() => setLeadActionMsg(''), 3000);
+    },
+    onError: (err) => {
+      const errorMsg = err.response?.data?.message || 'Failed to delete lead';
+      setLeadActionMsg(`⚠ ${errorMsg}`);
+      setTimeout(() => setLeadActionMsg(''), 4000);
     }
   });
 
@@ -201,7 +336,28 @@ export function LeadListPage() {
       header: 'Assigned To',
       cell: (row) => (
         <div className="text-xs text-slate-600">
-          {row.assignedTo?.name || <span className="text-slate-400 italic">Unassigned</span>}
+          {hasPermission('leads.assign') ? (
+            <select
+              value={row.assignedTo?._id || ''}
+              onChange={(e) => {
+                if (e.target.value) {
+                  assignLeadMutation.mutate({ leadId: row._id, assignedTo: e.target.value });
+                }
+              }}
+              disabled={assignLeadMutation.isPending}
+              aria-label={`Assign ${row.name}`}
+              className="max-w-[150px] text-xs bg-white border border-slate-200 rounded-md px-2 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ayur-500/20"
+            >
+              <option value="">{row.assignedTo?.name || 'Unassigned'}</option>
+              {telecallers.map((telecaller) => (
+                <option key={telecaller._id} value={telecaller._id}>
+                  {telecaller.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            row.assignedTo?.name || <span className="text-slate-400 italic">Unassigned</span>
+          )}
         </div>
       )
     },
@@ -254,14 +410,40 @@ export function LeadListPage() {
             <span className="hidden lg:inline text-[11px]">Order</span>
           </button>
 
-          {/* Book Consult */}
+          {/* Edit Lead */}
           <button
             type="button"
-            onClick={() => navigate(`/doctor-slots?name=${encodeURIComponent(row.name)}&mobile=${row.mobile}`)}
-            title="Book Doctor Consultation"
-            className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold transition-colors flex items-center gap-1"
+            onClick={() => {
+              setLeadToEdit(row);
+              setEditFormData({
+                name: row.name || '',
+                mobile: row.mobile || '',
+                email: row.email || '',
+                whatsappNumber: row.whatsappNumber || '',
+                source: row.source || 'CALL',
+                status: row.status || 'NEW',
+                city: row.city || '',
+                notes: row.notes || ''
+              });
+              setIsEditModalOpen(true);
+            }}
+            title="Edit Lead"
+            className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center cursor-pointer"
           >
-            <Stethoscope className="w-3.5 h-3.5" />
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Delete Lead */}
+          <button
+            type="button"
+            onClick={() => {
+              setLeadToDelete(row);
+              setIsDeleteModalOpen(true);
+            }}
+            title="Delete Lead"
+            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors flex items-center cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       )
@@ -274,7 +456,7 @@ export function LeadListPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Leads & Telecaller Pipeline</h2>
-          <p className="text-xs text-slate-500">Capture, assign, track calls, and convert leads into customers</p>
+          <p className="text-xs text-slate-500">Capture, assign, track calls, edit, and convert leads into customers</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -294,6 +476,18 @@ export function LeadListPage() {
           </Button>
         </div>
       </div>
+
+      {/* Success / Error Notification */}
+      {leadActionMsg && (
+        <div className={`flex items-center gap-2 px-4 py-2.5 border text-sm font-semibold rounded-xl ${
+          leadActionMsg.startsWith('⚠')
+            ? 'bg-amber-50 border-amber-200 text-amber-700'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+        }`}>
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+          {leadActionMsg}
+        </div>
+      )}
 
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-slate-200">
@@ -326,7 +520,7 @@ export function LeadListPage() {
             ]}
           />
         </div>
-        <div className="w-40">
+        <div className="w-44">
           <Select
             value={sourceFilter}
             onChange={(e) => {
@@ -335,11 +529,14 @@ export function LeadListPage() {
             }}
             options={[
               { value: '', label: 'All Sources' },
-              { value: 'FACEBOOK', label: 'Facebook / Meta Ad' },
+              { value: 'CALL', label: 'Direct Phone Call' },
               { value: 'WHATSAPP', label: 'WhatsApp Enquiry' },
-              { value: 'CALL', label: 'Direct Call' },
+              { value: 'FACEBOOK', label: 'Facebook / Meta Ad' },
+              { value: 'META', label: 'Meta (IG / FB)' },
               { value: 'WEBSITE', label: 'Website Form' },
-              { value: 'WALKIN', label: 'Walk-in' }
+              { value: 'WALKIN', label: 'Walk-in' },
+              { value: 'REFERRAL', label: 'Referral' },
+              { value: 'MANUAL', label: 'Manual Entry' }
             ]}
           />
         </div>
@@ -365,24 +562,52 @@ export function LeadListPage() {
       {/* Create Lead Modal */}
       <Modal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setFormError('');
+          setDuplicateWarning(null);
+        }}
         title="Capture New Lead"
         subtitle="Automatic duplicate mobile check across system database"
         maxWidth="max-w-lg"
         icon="👤"
       >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            createLeadMutation.mutate(formData);
-          }}
-          className="space-y-3.5"
-        >
+        <form onSubmit={(e) => handleSaveLead(e, false)} className="space-y-3.5">
+          {formError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="flex-1 font-medium">{formError}</div>
+            </div>
+          )}
+
           {duplicateWarning && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <strong>Duplicate Warning:</strong> Lead with phone {duplicateWarning.mobile} already exists assigned to {duplicateWarning.assignedTo?.name || 'staff'}.
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <strong>Duplicate Detected:</strong> Lead or customer with phone <strong>{duplicateWarning.mobile}</strong> already exists
+                  {duplicateWarning.assignedTo?.name ? ` assigned to ${duplicateWarning.assignedTo.name}` : ''}
+                  {duplicateWarning.status ? ` (Status: ${duplicateWarning.status})` : ''}.
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-1 border-t border-amber-200">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  type="button"
+                  onClick={() => setDuplicateWarning(null)}
+                >
+                  Dismiss
+                </Button>
+                <Button
+                  size="sm"
+                  variant="warning"
+                  type="button"
+                  isLoading={createLeadMutation.isPending}
+                  onClick={(e) => handleSaveLead(e, true)}
+                >
+                  Save Anyway (Force Duplicate)
+                </Button>
               </div>
             </div>
           )}
@@ -421,11 +646,14 @@ export function LeadListPage() {
               value={formData.source}
               onChange={(e) => setFormData({ ...formData, source: e.target.value })}
               options={[
-                { value: 'FACEBOOK', label: 'Facebook / Meta Ad' },
-                { value: 'WHATSAPP', label: 'WhatsApp Enquiry' },
                 { value: 'CALL', label: 'Direct Phone Call' },
+                { value: 'WHATSAPP', label: 'WhatsApp Enquiry' },
+                { value: 'FACEBOOK', label: 'Facebook / Meta Ad' },
+                { value: 'META', label: 'Meta (IG / FB)' },
                 { value: 'WEBSITE', label: 'Website Form' },
-                { value: 'WALKIN', label: 'Walk-in' }
+                { value: 'WALKIN', label: 'Walk-in' },
+                { value: 'REFERRAL', label: 'Referral' },
+                { value: 'MANUAL', label: 'Manual Entry' }
               ]}
             />
             <Input
@@ -444,7 +672,15 @@ export function LeadListPage() {
           />
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" type="button" onClick={() => setIsCreateModalOpen(false)}>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => {
+                setIsCreateModalOpen(false);
+                setFormError('');
+                setDuplicateWarning(null);
+              }}
+            >
               Cancel
             </Button>
             <Button variant="primary" type="submit" isLoading={createLeadMutation.isPending}>
@@ -458,7 +694,10 @@ export function LeadListPage() {
       {activeLead && (
         <Modal
           isOpen={isCallModalOpen}
-          onClose={() => setIsCallModalOpen(false)}
+          onClose={() => {
+            setIsCallModalOpen(false);
+            setCallError('');
+          }}
           title={`Log Call with ${activeLead.name}`}
           subtitle={`Phone: ${activeLead.mobile} | Current Status: ${activeLead.status}`}
           maxWidth="max-w-md"
@@ -467,10 +706,32 @@ export function LeadListPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              logCallMutation.mutate({ leadId: activeLead._id, data: callData });
+              setCallError('');
+              if (!callData.notes.trim()) {
+                setCallError('Please enter conversation notes');
+                return;
+              }
+              logCallMutation.mutate({
+                leadId: activeLead._id,
+                data: {
+                  outcome: callData.outcome,
+                  callStatus: callData.outcome,
+                  notes: callData.notes.trim(),
+                  callDurationSeconds: Number(callData.durationSeconds) || 0,
+                  durationSeconds: Number(callData.durationSeconds) || 0,
+                  nextFollowUpAt: callData.nextFollowUpDate || undefined
+                }
+              });
             }}
             className="space-y-3.5"
           >
+            {callError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div className="flex-1 font-medium">{callError}</div>
+              </div>
+            )}
+
             <Select
               label="Call Outcome / Disposition *"
               value={callData.outcome}
@@ -506,7 +767,14 @@ export function LeadListPage() {
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="secondary" type="button" onClick={() => setIsCallModalOpen(false)}>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => {
+                  setIsCallModalOpen(false);
+                  setCallError('');
+                }}
+              >
                 Cancel
               </Button>
               <Button variant="primary" type="submit" isLoading={logCallMutation.isPending}>
@@ -529,6 +797,150 @@ export function LeadListPage() {
             city: leadForOrder.city
           }}
         />
+      )}
+
+      {/* Edit Lead Modal */}
+      {isEditModalOpen && leadToEdit && (
+        <Modal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          title={`Edit Lead: ${leadToEdit.name}`}
+          subtitle="Update customer contact details, status, and lead source"
+          maxWidth="max-w-md"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              updateLeadMutation.mutate({
+                leadId: leadToEdit._id,
+                payload: {
+                  name: editFormData.name.trim(),
+                  mobile: editFormData.mobile.trim(),
+                  email: editFormData.email?.trim() || undefined,
+                  whatsappNumber: editFormData.whatsappNumber?.trim() || undefined,
+                  source: editFormData.source,
+                  status: editFormData.status,
+                  city: editFormData.city?.trim() || undefined,
+                  notes: editFormData.notes?.trim() || undefined
+                }
+              });
+            }}
+            className="space-y-3.5"
+          >
+            <Input
+              label="Customer Full Name *"
+              required
+              value={editFormData.name}
+              onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Mobile Number *"
+                required
+                value={editFormData.mobile}
+                onChange={(e) => setEditFormData({ ...editFormData, mobile: e.target.value })}
+              />
+              <Input
+                label="WhatsApp Number"
+                value={editFormData.whatsappNumber}
+                onChange={(e) => setEditFormData({ ...editFormData, whatsappNumber: e.target.value })}
+              />
+            </div>
+            <Input
+              label="Email Address"
+              type="email"
+              value={editFormData.email}
+              onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Select
+                label="Lead Status"
+                value={editFormData.status}
+                onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                options={[
+                  { value: 'NEW', label: 'New Lead' },
+                  { value: 'ASSIGNED', label: 'Assigned' },
+                  { value: 'CONTACTED', label: 'Contacted' },
+                  { value: 'INTERESTED', label: 'Interested' },
+                  { value: 'CONVERTED', label: 'Converted' },
+                  { value: 'LOST', label: 'Lost / Drop' }
+                ]}
+              />
+              <Select
+                label="Source Channel"
+                value={editFormData.source}
+                onChange={(e) => setEditFormData({ ...editFormData, source: e.target.value })}
+                options={[
+                  { value: 'CALL', label: 'Direct Call' },
+                  { value: 'WHATSAPP', label: 'WhatsApp Inbound' },
+                  { value: 'WEBSITE', label: 'Website / SEO' },
+                  { value: 'FACEBOOK', label: 'Facebook / Meta' },
+                  { value: 'INSTAGRAM', label: 'Instagram' },
+                  { value: 'WALKIN', label: 'Walk-in / Clinic' },
+                  { value: 'REFERRAL', label: 'Doctor Referral' }
+                ]}
+              />
+            </div>
+            <Input
+              label="City / Town"
+              value={editFormData.city}
+              onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+            />
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Lead Notes</label>
+              <textarea
+                rows={2}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-ayur-500 focus:bg-white outline-none"
+                value={editFormData.notes}
+                onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                placeholder="Health issue, dosage query, callback request..."
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button variant="secondary" type="button" onClick={() => setIsEditModalOpen(false)} disabled={updateLeadMutation.isPending}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" isLoading={updateLeadMutation.isPending}>
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Delete Lead Confirmation Modal */}
+      {isDeleteModalOpen && leadToDelete && (
+        <Modal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          title="Delete Lead Confirmation"
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-3.5 bg-red-50 border border-red-100 rounded-xl">
+              <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="text-xs text-red-800">
+                <p className="font-bold mb-1">Are you sure you want to delete this lead?</p>
+                <p>
+                  Lead <strong>{leadToDelete.name}</strong> ({leadToDelete.mobile}) will be permanently removed from the system.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)} disabled={deleteLeadMutation.isPending}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => deleteLeadMutation.mutate(leadToDelete._id)}
+                isLoading={deleteLeadMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete Lead
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

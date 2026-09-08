@@ -9,6 +9,7 @@ import { Spinner } from './components/common/Spinner.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
 import ForgotPasswordPage from './features/auth/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './features/auth/ResetPasswordPage.jsx';
+import PublicConsultationBookingPage from './features/consultation/PublicConsultationBookingPage.jsx';
 import DashboardHub from './features/dashboard/DashboardHub.jsx';
 import LeadListPage from './features/leads/LeadListPage.jsx';
 import CallHistoryPage from './features/leads/CallHistoryPage.jsx';
@@ -32,7 +33,6 @@ import UserManagementPage from './features/administration/UserManagementPage.jsx
 import RolesManagementPage from './features/administration/RolesManagementPage.jsx';
 import IntegrationsPage from './features/administration/IntegrationsPage.jsx';
 import AuditLogViewerPage from './features/administration/AuditLogViewerPage.jsx';
-import DoctorSlotsPage from './features/consultations/DoctorSlotsPage.jsx';
 
 // Protected Route Guard
 function ProtectedRoute({ children }) {
@@ -61,6 +61,9 @@ export function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/book-consultation" element={<PublicConsultationBookingPage />} />
+        <Route path="/book_consultation.php" element={<PublicConsultationBookingPage />} />
+        <Route path="/consult/:branchCode" element={<PublicConsultationBookingPage />} />
       </Route>
 
       {/* Protected App Routes */}
@@ -71,8 +74,10 @@ export function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Navigate to="/dashboard?tab=orders" replace />} />
         <Route path="/dashboard" element={<DashboardHub />} />
+        <Route path="/manager" element={<DashboardHub />} />
+        <Route path="/consult" element={<Navigate to="/dashboard?tab=consult" replace />} />
 
         {/* Phase 3 — Leads, Followups & Customers */}
         <Route path="/leads" element={<LeadListPage />} />
@@ -86,17 +91,15 @@ export function App() {
         <Route path="/inventory" element={<InventoryLedgerPage />} />
         <Route path="/inventory/transfers" element={<StockTransfersPage />} />
 
-        {/* Phase 5 — Orders & Doctor Consultations */}
+        {/* Phase 5 — Orders & AyurOne Mart Modules */}
         <Route path="/orders" element={<OrderListPage />} />
         <Route path="/orders/counter-sale" element={<CounterSalePage />} />
         <Route path="/orders/stuck" element={<StuckOrdersPage />} />
         <Route path="/orders/stuck-outstanding" element={<StuckOrdersPage />} />
         <Route path="/orders/:id" element={<OrderDetailPage />} />
-        <Route path="/doctor-slots" element={<DoctorSlotsPage />} />
-        <Route path="/consultations" element={<DoctorSlotsPage />} />
-
         {/* Phase 6 — Operations */}
         <Route path="/operations" element={<OperationsHubPage />} />
+
         <Route path="/operations/packing" element={<PackingStationPage />} />
         <Route path="/operations/dispatch" element={<DispatchQueuePage />} />
 

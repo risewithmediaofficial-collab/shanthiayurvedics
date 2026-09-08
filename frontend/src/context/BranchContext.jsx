@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext.jsx';
+import apiClient from '../api/apiClient.js';
 
 const BranchContext = createContext(null);
 

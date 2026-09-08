@@ -39,19 +39,16 @@ export function LoginPage() {
     try {
       setIsLoading(true);
       setErrorMessage('');
-      await login(data);
+      await login({
+        email: data.email?.trim(),
+        password: data.password?.trim()
+      });
       navigate(from, { replace: true });
     } catch (err) {
       setErrorMessage(err.response?.data?.message || err.message || 'Invalid email or password');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleQuickFill = (email, pass = 'Password@12345') => {
-    setValue('email', email, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
-    setValue('password', pass, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
-    setErrorMessage('');
   };
 
   return (
@@ -74,6 +71,7 @@ export function LoginPage() {
         <Input
           label="Email Address"
           type="email"
+          autoComplete="username"
           placeholder="name@shanthiayurvedas.com"
           icon={Mail}
           error={errors.email?.message}
@@ -83,6 +81,7 @@ export function LoginPage() {
         <Input
           label="Password"
           type="password"
+          autoComplete="current-password"
           placeholder="••••••••••••"
           icon={Lock}
           showPasswordToggle={true}
@@ -116,44 +115,23 @@ export function LoginPage() {
         >
           Sign In to CRM
         </Button>
-      </form>
 
-      {/* Demo Credentials Quick Switcher */}
-      <div className="pt-4 border-t border-slate-100">
-        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-          Demo Staff Credentials (Click to fill)
-        </p>
-        <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+        <div className="pt-2">
           <button
             type="button"
-            onClick={() => handleQuickFill('owner@shanthiayurvedas.com')}
-            className="px-2.5 py-1.5 text-left bg-slate-50 hover:bg-ayur-50 hover:text-ayur-800 rounded-lg border border-slate-200 transition-colors"
+            onClick={() => {
+              setValue('email', 'owner@shanthiayurvedas.com', { shouldValidate: true });
+              setValue('password', 'Password@12345', { shouldValidate: true });
+              setErrorMessage('');
+            }}
+            className="w-full text-xs py-2 px-3 bg-ayur-50 hover:bg-ayur-100 text-ayur-800 rounded-lg border border-ayur-200 transition-colors flex items-center justify-between"
           >
-            👑 <strong>Owner</strong> (All Access)
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickFill('manager.hosur@shanthiayurvedas.com')}
-            className="px-2.5 py-1.5 text-left bg-slate-50 hover:bg-ayur-50 hover:text-ayur-800 rounded-lg border border-slate-200 transition-colors"
-          >
-            🏢 <strong>Manager</strong> (Hosur)
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickFill('telecaller.priya@shanthiayurvedas.com')}
-            className="px-2.5 py-1.5 text-left bg-slate-50 hover:bg-ayur-50 hover:text-ayur-800 rounded-lg border border-slate-200 transition-colors"
-          >
-            📞 <strong>Telecaller</strong> (Priya)
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickFill('distributor@shanthiayurvedas.com')}
-            className="px-2.5 py-1.5 text-left bg-slate-50 hover:bg-ayur-50 hover:text-ayur-800 rounded-lg border border-slate-200 transition-colors"
-          >
-            📊 <strong>Distributor</strong>
+            <span className="font-semibold">⚡ Autofill Owner (Admin)</span>
+            <span className="text-[11px] text-ayur-600 font-mono">owner@shanthiayurvedas.com</span>
           </button>
         </div>
-      </div>
+      </form>
+
     </div>
   );
 }

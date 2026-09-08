@@ -93,11 +93,9 @@ export class DoctorSlotService {
   }
 
   /**
-   * Fetch all doctors with their schedule and bookings for a specific date
+   * Fetch all doctors with their schedule and bookings for a specific date.
    */
   static async getDoctorsWithSlots(dateStr) {
-    await this.seedDefaultDoctorsIfNeeded();
-
     const targetDate = dateStr ? new Date(dateStr) : new Date();
     const formattedDate = targetDate.toISOString().split('T')[0];
     const dayOfWeek = targetDate.getDay(); // 0 = Sun, 1 = Mon ...

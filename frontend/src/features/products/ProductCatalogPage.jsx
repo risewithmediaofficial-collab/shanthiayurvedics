@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Layers, Calendar, Tag, Package } from 'lucide-react';
+import { Plus, Search, Layers, Calendar, Tag, Package, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
 import { Table } from '../../components/common/Table.jsx';
@@ -20,7 +20,11 @@ export function ProductCatalogPage() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [batchModalOpen, setBatchModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [actionMsg, setActionMsg] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -32,6 +36,17 @@ export function ProductCatalogPage() {
     unit: 'BOTTLE',
     lowStockThreshold: 15,
     initialBatchNumber: ''
+  });
+
+  const [editData, setEditData] = useState({
+    name: '',
+    category: 'OILS',
+    price: '',
+    mrp: '',
+    costPrice: '',
+    unit: 'BOTTLE',
+    lowStockThreshold: 15,
+    description: ''
   });
 
   const [batchData, setBatchData] = useState({
@@ -60,6 +75,8 @@ export function ProductCatalogPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(['products']);
       setCreateModalOpen(false);
+      setActionMsg('✓ Product created successfully');
+      setTimeout(() => setActionMsg(''), 3000);
       setFormData({
         name: '',
         sku: '',
@@ -71,6 +88,32 @@ export function ProductCatalogPage() {
         lowStockThreshold: 15,
         initialBatchNumber: ''
       });
+    },
+    onError: (err) => {
+      setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to create product'}`);
+      setTimeout(() => setActionMsg(''), 4000);
+    }
+  });
+
+  const editProductMutation = useMutation({
+    mutationFn: ({ id, data }) => apiClient.patch(`/products/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['products']);
+      setEditModalOpen(false);
+      setSelectedProduct(null);
+      setActionMsg('✓ Product updated successfully');
+      setTimeout(() => setActionMsg(''), 3000);
+    }
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: (id) => apiClient.delete(`/products/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['products']);
+      setDeleteModalOpen(false);
+      setProductToDelete(null);
+      setActionMsg('✓ Product removed successfully');
+      setTimeout(() => setActionMsg(''), 3000);
     }
   });
 
@@ -79,6 +122,8 @@ export function ProductCatalogPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(['products']);
       setBatchModalOpen(false);
+      setActionMsg('✓ Batch added successfully');
+      setTimeout(() => setActionMsg(''), 3000);
       setBatchData({ batchNumber: '', manufacturingDate: '', expiryDate: '', mrp: '', purchasePrice: '' });
     }
   });
@@ -126,17 +171,55 @@ export function ProductCatalogPage() {
       header: 'Actions',
       align: 'right',
       cell: (row) => (
-        <Button
-          size="sm"
-          variant="outline"
-          icon={Plus}
-          onClick={() => {
-            setSelectedProduct(row);
-            setBatchModalOpen(true);
-          }}
-        >
-          Add Batch
-        </Button>
+        <div className="flex items-center justify-end gap-1.5">
+          <Button
+            size="sm"
+            variant="outline"
+            icon={Plus}
+            onClick={() => {
+              setSelectedProduct(row);
+              setBatchModalOpen(true);
+            }}
+          >
+            Add Batch
+          </Button>
+
+          {/* Edit Product */}
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedProduct(row);
+              setEditData({
+                name: row.name || '',
+                category: row.category || 'OILS',
+                price: row.price || '',
+                mrp: row.mrp || '',
+                costPrice: row.costPrice || '',
+                unit: row.unit || 'BOTTLE',
+                lowStockThreshold: row.lowStockThreshold || 15,
+                description: row.description || ''
+              });
+              setEditModalOpen(true);
+            }}
+            title="Edit Product"
+            className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center cursor-pointer"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Delete Product */}
+          <button
+            type="button"
+            onClick={() => {
+              setProductToDelete(row);
+              setDeleteModalOpen(true);
+            }}
+            title="Delete Product"
+            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors flex items-center cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       )
     }
   ];
@@ -152,6 +235,16 @@ export function ProductCatalogPage() {
           New Product
         </Button>
       </div>
+
+      {actionMsg && (
+        <div className={`px-4 py-2.5 border text-sm font-semibold rounded-xl ${
+          actionMsg.startsWith('⚠')
+            ? 'bg-rose-50 border-rose-200 text-rose-700'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+        }`}>
+          {actionMsg}
+        </div>
+      )}
 
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-slate-200">
@@ -176,10 +269,12 @@ export function ProductCatalogPage() {
             options={[
               { value: '', label: 'All Categories' },
               { value: 'OILS', label: 'Ayurvedic Oils' },
+              { value: 'CHURNAS', label: 'Choornams / Powders' },
               { value: 'CAPSULES', label: 'Capsules / Tablets' },
-              { value: 'POWDERS', label: 'Choornams / Powders' },
-              { value: 'SYRUPS', label: 'Arishtams / Syrups' },
-              { value: 'CREAMS', label: 'Balms & Creams' }
+              { value: 'TONICS', label: 'Tonics / Syrups' },
+              { value: 'TABLETS', label: 'Tablets' },
+              { value: 'KITS', label: 'Treatment Kits' },
+              { value: 'OTHER', label: 'Other' }
             ]}
           />
         </div>
@@ -245,10 +340,12 @@ export function ProductCatalogPage() {
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               options={[
                 { value: 'OILS', label: 'Ayurvedic Oils' },
-                { value: 'CAPSULES', label: 'Capsules / Tablets' },
-                { value: 'POWDERS', label: 'Choornams / Powders' },
-                { value: 'SYRUPS', label: 'Arishtams / Syrups' },
-                { value: 'CREAMS', label: 'Balms & Creams' }
+                { value: 'CHURNAS', label: 'Choornams / Powders' },
+                { value: 'CAPSULES', label: 'Capsules' },
+                { value: 'TONICS', label: 'Tonics / Syrups' },
+                { value: 'TABLETS', label: 'Tablets' },
+                { value: 'KITS', label: 'Treatment Kits' },
+                { value: 'OTHER', label: 'Other' }
               ]}
             />
           </div>
@@ -350,6 +447,166 @@ export function ProductCatalogPage() {
               </Button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* Edit Product Modal */}
+      {selectedProduct && editModalOpen && (
+        <Modal
+          isOpen={editModalOpen}
+          onClose={() => {
+            setEditModalOpen(false);
+            setSelectedProduct(null);
+          }}
+          title={`Edit Product: ${selectedProduct.name}`}
+          subtitle={`SKU: ${selectedProduct.sku}`}
+          maxWidth="max-w-xl"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              editProductMutation.mutate({
+                id: selectedProduct._id,
+                data: {
+                  name: editData.name.trim(),
+                  category: editData.category,
+                  price: Number(editData.price),
+                  mrp: Number(editData.mrp),
+                  costPrice: editData.costPrice ? Number(editData.costPrice) : undefined,
+                  unit: editData.unit,
+                  lowStockThreshold: Number(editData.lowStockThreshold || 15),
+                  description: editData.description?.trim()
+                }
+              });
+            }}
+            className="space-y-3.5"
+          >
+            <Input
+              label="Product Name *"
+              required
+              value={editData.name}
+              onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+            />
+
+            <div className="grid grid-cols-2 gap-3">
+              <Select
+                label="Category *"
+                value={editData.category}
+                onChange={(e) => setEditData({ ...editData, category: e.target.value })}
+                options={[
+                  { value: 'OILS', label: 'Ayurvedic Taila / Oils' },
+                  { value: 'CHURNAS', label: 'Churnas & Powders' },
+                  { value: 'RASAYANAS', label: 'Rasayanas & Lehyams' },
+                  { value: 'TABLETS', label: 'Vati / Tablets' },
+                  { value: 'CAPSULES', label: 'Capsules' },
+                  { value: 'KITS', label: 'Treatment Kits' },
+                  { value: 'RAW_HERBS', label: 'Raw Herbs' }
+                ]}
+              />
+              <Select
+                label="Unit of Measurement *"
+                value={editData.unit}
+                onChange={(e) => setEditData({ ...editData, unit: e.target.value })}
+                options={[
+                  { value: 'BOTTLE', label: 'Bottle' },
+                  { value: 'JAR', label: 'Jar' },
+                  { value: 'BOX', label: 'Box' },
+                  { value: 'PACKET', label: 'Packet' },
+                  { value: 'STRIP', label: 'Strip' },
+                  { value: 'KG', label: 'Kilogram' },
+                  { value: 'GM', label: 'Gram' }
+                ]}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <Input
+                label="Selling Price (₹) *"
+                type="number"
+                required
+                value={editData.price}
+                onChange={(e) => setEditData({ ...editData, price: e.target.value })}
+              />
+              <Input
+                label="MRP (₹) *"
+                type="number"
+                required
+                value={editData.mrp}
+                onChange={(e) => setEditData({ ...editData, mrp: e.target.value })}
+              />
+              <Input
+                label="Cost Price (₹)"
+                type="number"
+                value={editData.costPrice}
+                onChange={(e) => setEditData({ ...editData, costPrice: e.target.value })}
+              />
+            </div>
+
+            <Input
+              label="Low Stock Alert Threshold"
+              type="number"
+              value={editData.lowStockThreshold}
+              onChange={(e) => setEditData({ ...editData, lowStockThreshold: e.target.value })}
+            />
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Product Description</label>
+              <textarea
+                rows={2}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-ayur-500 focus:bg-white outline-none"
+                value={editData.description}
+                onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                placeholder="Ingredients, benefits, dosage guidelines..."
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button variant="secondary" type="button" onClick={() => setEditModalOpen(false)} disabled={editProductMutation.isPending}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" isLoading={editProductMutation.isPending}>
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Delete Product Confirmation Modal */}
+      {productToDelete && deleteModalOpen && (
+        <Modal
+          isOpen={deleteModalOpen}
+          onClose={() => {
+            setDeleteModalOpen(false);
+            setProductToDelete(null);
+          }}
+          title="Remove Product Confirmation"
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-3.5 bg-red-50 border border-red-100 rounded-xl">
+              <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="text-xs text-red-800">
+                <p className="font-bold mb-1">Are you sure you want to remove this product?</p>
+                <p>
+                  <strong>{productToDelete.name}</strong> ({productToDelete.sku}) will be deactivated and removed from the active catalog.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={() => setDeleteModalOpen(false)} disabled={deleteProductMutation.isPending}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => deleteProductMutation.mutate(productToDelete._id)}
+                isLoading={deleteProductMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Remove Product
+              </Button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

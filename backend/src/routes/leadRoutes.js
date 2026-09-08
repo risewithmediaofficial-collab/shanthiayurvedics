@@ -4,6 +4,7 @@ import {
   getLeadById,
   createLead,
   updateLead,
+  deleteLead,
   logCall,
   assignLead,
   bulkAssignLeads,
@@ -32,6 +33,7 @@ router.post('/', requirePermission(PERMISSIONS.LEADS_CREATE), validate(createLea
 router.post('/bulk-assign', requirePermission(PERMISSIONS.LEADS_ASSIGN), bulkAssignLeads);
 router.get('/:id', requirePermission(PERMISSIONS.LEADS_VIEW), getLeadById);
 router.patch('/:id', requirePermission(PERMISSIONS.LEADS_EDIT), validate(updateLeadSchema), updateLead);
+router.delete('/:id', requirePermission(PERMISSIONS.LEADS_EDIT), deleteLead);
 router.post('/:id/calls', requirePermission(PERMISSIONS.LEADS_EDIT), validate(logCallSchema), logCall);
 router.post('/:id/assign', requirePermission(PERMISSIONS.LEADS_ASSIGN), validate(assignLeadSchema), assignLead);
 

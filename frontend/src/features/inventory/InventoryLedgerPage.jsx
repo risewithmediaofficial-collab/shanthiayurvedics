@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Minus, SlidersHorizontal, ArrowLeftRight, History, Package, AlertTriangle } from 'lucide-react';
+import { Plus, Minus, SlidersHorizontal, ArrowLeftRight, History, Package, AlertTriangle, Pencil, Trash2 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
 import { useBranch } from '../../context/BranchContext.jsx';
@@ -24,10 +24,12 @@ export function InventoryLedgerPage() {
   const [stockInModalOpen, setStockInModalOpen] = useState(false);
   const [stockOutModalOpen, setStockOutModalOpen] = useState(false);
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
+  const [actionMsg, setActionMsg] = useState('');
 
   const [formData, setFormData] = useState({
     productId: '',
     batchId: '',
+    branchId: '',
     quantity: '',
     reason: 'PURCHASE',
     notes: '',
@@ -74,6 +76,9 @@ export function InventoryLedgerPage() {
       queryClient.invalidateQueries(['inventoryMovements']);
       setStockInModalOpen(false);
       setFormData({ productId: '', batchId: '', quantity: '', reason: 'PURCHASE', notes: '', newAvailable: '' });
+    },
+    onError: (err) => {
+      setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to record stock in'}`);
     }
   });
 
@@ -84,6 +89,9 @@ export function InventoryLedgerPage() {
       queryClient.invalidateQueries(['inventoryMovements']);
       setStockOutModalOpen(false);
       setFormData({ productId: '', batchId: '', quantity: '', reason: 'PURCHASE', notes: '', newAvailable: '' });
+    },
+    onError: (err) => {
+      setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to record stock out'}`);
     }
   });
 
@@ -94,10 +102,14 @@ export function InventoryLedgerPage() {
       queryClient.invalidateQueries(['inventoryMovements']);
       setAdjustModalOpen(false);
       setFormData({ productId: '', batchId: '', quantity: '', reason: 'PURCHASE', notes: '', newAvailable: '' });
+    },
+    onError: (err) => {
+      setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to adjust stock'}`);
     }
   });
 
   const selectedProductObj = productsData?.find((p) => p._id === formData.productId);
+  const writeBranchId = selectedBranchId !== 'ALL' ? selectedBranchId : formData.branchId;
 
   const invColumns = [
     {
@@ -137,6 +149,52 @@ export function InventoryLedgerPage() {
     {
       header: 'Damaged',
       cell: (row) => <span className="text-xs text-slate-400">{row.damagedQuantity || 0}</span>
+    },
+    {
+      header: 'Actions',
+      align: 'right',
+      cell: (row) => (
+        <div className="flex items-center justify-end gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({
+                productId: row.productId?._id || '',
+                batchId: row.batchId?._id || '',
+                branchId: row.branchId?._id || row.branchId || '',
+                quantity: '',
+                reason: 'PHYSICAL_AUDIT',
+                notes: `Audited from current available ${row.availableQuantity}`,
+                newAvailable: row.availableQuantity
+              });
+              setAdjustModalOpen(true);
+            }}
+            title="Edit / Adjust Stock Level"
+            className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center cursor-pointer"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({
+                productId: row.productId?._id || '',
+                batchId: row.batchId?._id || '',
+                branchId: row.branchId?._id || row.branchId || '',
+                quantity: '',
+                reason: 'DAMAGED',
+                notes: '',
+                newAvailable: ''
+              });
+              setStockOutModalOpen(true);
+            }}
+            title="Remove / Stock Out"
+            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors flex items-center cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )
     }
   ];
 
@@ -214,6 +272,16 @@ export function InventoryLedgerPage() {
         </div>
       </div>
 
+      {actionMsg && (
+        <div className={`px-4 py-2.5 border text-sm font-semibold rounded-xl ${
+          actionMsg.startsWith('⚠')
+            ? 'bg-rose-50 border-rose-200 text-rose-700'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+        }`}>
+          {actionMsg}
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
         <button
@@ -261,9 +329,14 @@ export function InventoryLedgerPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            if (!writeBranchId) {
+              setActionMsg('⚠ Select a specific branch before recording stock.');
+              return;
+            }
             stockInMutation.mutate({
               productId: formData.productId,
               batchId: formData.batchId,
+              branchId: writeBranchId,
               quantity: Number(formData.quantity),
               reason: formData.reason,
               notes: formData.notes
@@ -347,9 +420,14 @@ export function InventoryLedgerPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            if (!writeBranchId) {
+              setActionMsg('⚠ Select a specific branch before adjusting stock.');
+              return;
+            }
             adjustMutation.mutate({
               productId: formData.productId,
               batchId: formData.batchId,
+              branchId: writeBranchId,
               newAvailable: Number(formData.newAvailable),
               reason: 'PHYSICAL_VERIFICATION',
               notes: formData.notes

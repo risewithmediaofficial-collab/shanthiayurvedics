@@ -1,5 +1,6 @@
 import { Order } from '../models/Order.js';
 import { OrderStatusHistory } from '../models/OrderStatusHistory.js';
+import { Inventory } from '../models/Inventory.js';
 import { OrderService } from '../services/orderService.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -10,6 +11,9 @@ export const getOrders = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 20;
   const status = req.query.status;
+  const district = req.query.district?.trim();
+  const startDate = req.query.startDate;
+  const endDate = req.query.endDate;
   const search = req.query.search?.trim();
 
   const query = {};
@@ -25,16 +29,34 @@ export const getOrders = asyncHandler(async (req, res) => {
     query.status = status;
   }
 
+  if (district && district !== 'ALL') {
+    query['deliveryAddress.district'] = { $regex: district, $options: 'i' };
+  }
+
+  if (startDate || endDate) {
+    query.createdAt = {};
+    if (startDate) {
+      query.createdAt.$gte = new Date(startDate);
+    }
+    if (endDate) {
+      query.createdAt.$lte = new Date(endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`);
+    }
+  }
+
   if (search) {
     query.$or = [
       { orderNumber: { $regex: search, $options: 'i' } },
+      { trackingNumber: { $regex: search, $options: 'i' } },
+      { 'patientDetails.patientName': { $regex: search, $options: 'i' } },
+      { 'patientDetails.mobile': { $regex: search, $options: 'i' } },
       { 'deliveryAddress.phone': { $regex: search, $options: 'i' } },
-      { 'deliveryAddress.city': { $regex: search, $options: 'i' } }
+      { 'deliveryAddress.city': { $regex: search, $options: 'i' } },
+      { 'deliveryAddress.district': { $regex: search, $options: 'i' } }
     ];
   }
 
   const skip = (page - 1) * limit;
-  const [total, orders] = await Promise.all([
+  const [total, orders, revenueAgg] = await Promise.all([
     Order.countDocuments(query),
     Order.find(query)
       .populate('customerId', 'name mobile email')
@@ -43,10 +65,16 @@ export const getOrders = asyncHandler(async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .lean()
+      .lean(),
+    Order.aggregate([
+      { $match: { ...query, status: { $ne: 'CANCELLED' } } },
+      { $group: { _id: null, total: { $sum: '$grandTotal' } } }
+    ])
   ]);
 
-  return ApiResponse.paginated(res, orders, { page, limit, total }, 'Orders retrieved');
+  const totalRevenue = revenueAgg[0]?.total || 0;
+
+  return ApiResponse.paginated(res, orders, { page, limit, total, totalRevenue }, 'Orders retrieved');
 });
 
 export const getOrderById = asyncHandler(async (req, res) => {
@@ -78,12 +106,162 @@ export const createOrder = asyncHandler(async (req, res) => {
 });
 
 export const transitionOrderStatus = asyncHandler(async (req, res) => {
-  const { status, notes, cancellationReason } = req.body;
+  const { status, notes, cancellationReason, forceRevert } = req.body;
+  const isManagerOrAbove = [ROLES.OWNER, ROLES.MANAGER, ROLES.DISTRIBUTOR].includes(req.user.role);
+
   const order = await OrderService.transitionStatus(req.params.id, status, {
     changedBy: req.user,
     notes,
     cancellationReason,
+    forceRevert: Boolean(forceRevert && isManagerOrAbove),
     req
   });
   return ApiResponse.success(res, order, `Order transitioned to ${status}`);
 });
+
+export const bulkTransitionOrders = asyncHandler(async (req, res) => {
+  const { orderIds, status, notes, forceRevert } = req.body;
+  if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+    return ApiResponse.error(res, 'orderIds array is required', 400);
+  }
+  if (!status) {
+    return ApiResponse.error(res, 'status is required', 400);
+  }
+
+  const isManagerOrAbove = [ROLES.OWNER, ROLES.MANAGER, ROLES.DISTRIBUTOR].includes(req.user.role);
+  const result = await OrderService.bulkTransitionStatus(orderIds, status, {
+    forceRevert: Boolean(forceRevert && isManagerOrAbove),
+    changedBy: req.user,
+    notes,
+    req
+  });
+
+  return ApiResponse.success(res, result, `Bulk transitioned ${result.successCount} orders to ${status}`);
+});
+
+export const bulkAssignVerification = asyncHandler(async (req, res) => {
+  const { orderIds, telecallerId } = req.body;
+  if (!orderIds || !Array.isArray(orderIds) || !telecallerId) {
+    return ApiResponse.error(res, 'orderIds array and telecallerId are required', 400);
+  }
+
+  const result = await OrderService.bulkAssignVerification(orderIds, telecallerId, req.user, req);
+  return ApiResponse.success(res, result, `Assigned ${result.updatedCount} orders to telecaller`);
+});
+
+export const bulkVerifyOrders = asyncHandler(async (req, res) => {
+  const { orderIds } = req.body;
+  if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+    return ApiResponse.error(res, 'orderIds array is required', 400);
+  }
+
+  const result = await OrderService.bulkVerifyOrders(orderIds, req.user, req);
+  return ApiResponse.success(res, result, `Verified ${result.verifiedCount} orders`);
+});
+
+export const autoDispatchOrders = asyncHandler(async (req, res) => {
+  const branchId = req.branchScope.isGlobal ? req.body.branchId : req.branchScope.branchId;
+  const result = await OrderService.autoDispatchOrders(branchId, req.user, req);
+  return ApiResponse.success(res, result, `Auto-dispatched ${result.count} orders successfully`);
+});
+
+export const importExcelOrders = asyncHandler(async (req, res) => {
+  const { orders } = req.body;
+  if (!orders || !Array.isArray(orders) || orders.length === 0) {
+    return ApiResponse.error(res, 'orders array is required', 400);
+  }
+
+  const branchId = req.branchScope.branchId || req.user.branchId;
+  const result = await OrderService.importOrdersBatch(orders, branchId, req.user, req);
+  return ApiResponse.success(res, result, `Imported ${result.imported} orders (${result.failed} failed)`);
+});
+
+export const exportOrders = asyncHandler(async (req, res) => {
+  const query = {};
+  if (!req.branchScope.isGlobal && req.branchScope.branchId) {
+    query.branchId = req.branchScope.branchId;
+  }
+  if (req.query.status && req.query.status !== 'ALL') {
+    query.status = req.query.status;
+  }
+  if (req.query.district && req.query.district !== 'ALL') {
+    query['deliveryAddress.district'] = { $regex: req.query.district, $options: 'i' };
+  }
+  if (req.query.orderIds) {
+    const ids = req.query.orderIds.split(',').filter(Boolean);
+    if (ids.length > 0) query._id = { $in: ids };
+  }
+
+  const orders = await Order.find(query)
+    .populate('customerId', 'name mobile email')
+    .populate('telecallerId', 'name')
+    .populate('branchId', 'name code')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return ApiResponse.success(res, orders, `Export data retrieved for ${orders.length} orders`);
+});
+
+export const getOrderMetricsSummary = asyncHandler(async (req, res) => {
+  const branchFilter = (!req.branchScope.isGlobal && req.branchScope.branchId)
+    ? { branchId: req.branchScope.branchId }
+    : {};
+
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const [
+    totalOrders,
+    todayOrdersAgg,
+    shippedCount,
+    packedCount,
+    toVerifyCount,
+    inQueueCount,
+    lowStockCount,
+    totalRevenueAgg
+  ] = await Promise.all([
+    Order.countDocuments(branchFilter),
+    Order.aggregate([
+      { $match: { ...branchFilter, createdAt: { $gte: startOfToday }, status: { $ne: 'CANCELLED' } } },
+      { $group: { _id: null, total: { $sum: '$grandTotal' }, count: { $sum: 1 } } }
+    ]),
+    Order.countDocuments({ ...branchFilter, status: { $in: ['DISPATCHED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED'] } }),
+    Order.countDocuments({ ...branchFilter, status: 'PACKED' }),
+    Order.countDocuments({ ...branchFilter, status: 'NEW' }),
+    Order.countDocuments({ ...branchFilter, status: { $in: ['PROCESSING', 'READY_FOR_PACKING', 'PACKED', 'READY_FOR_DISPATCH'] } }),
+    Inventory.countDocuments({ ...(branchFilter.branchId ? { branchId: branchFilter.branchId } : {}), availableQuantity: { $lte: 20 } }),
+    Order.aggregate([
+      { $match: { ...branchFilter, status: { $ne: 'CANCELLED' } } },
+      { $group: { _id: null, total: { $sum: '$grandTotal' } } }
+    ])
+  ]);
+
+  return ApiResponse.success(res, {
+    totalOrders,
+    todayRev: todayOrdersAgg[0]?.total || 0,
+    todayOrdersCount: todayOrdersAgg[0]?.count || 0,
+    shippedCount,
+    packedCount,
+    toVerifyCount,
+    inQueueCount,
+    lowStockCount,
+    totalRevenue: totalRevenueAgg[0]?.total || 0
+  }, 'Order metrics summary retrieved');
+});
+
+export const getDistinctDistricts = asyncHandler(async (req, res) => {
+  const districts = await Order.distinct('deliveryAddress.district');
+  const filtered = districts.filter(Boolean).sort();
+  return ApiResponse.success(res, filtered, 'Districts retrieved');
+});
+
+export const updateOrder = asyncHandler(async (req, res) => {
+  const order = await OrderService.updateOrder(req.params.id, req.body, req.user, req);
+  return ApiResponse.success(res, order, 'Order updated successfully');
+});
+
+export const deleteOrder = asyncHandler(async (req, res) => {
+  const result = await OrderService.deleteOrder(req.params.id, req.user, req);
+  return ApiResponse.success(res, result, 'Order deleted successfully');
+});
+

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
   UserCheck,
@@ -7,26 +7,77 @@ import {
   MapPin,
   Phone,
   MessageSquare,
-  Download
+  Download,
+  Pencil,
+  Trash2,
+  AlertTriangle,
+  CheckCircle2
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { Table } from '../../components/common/Table.jsx';
 import { Button } from '../../components/common/Button.jsx';
 import { Input } from '../../components/common/Input.jsx';
+import { Modal } from '../../components/common/Modal.jsx';
 import { Pagination } from '../../components/common/Pagination.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { OrderCreateModal } from '../orders/OrderCreateModal.jsx';
 
 export function CustomerListPage() {
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [customerForOrder, setCustomerForOrder] = useState(null);
+  const [customerToEdit, setCustomerToEdit] = useState(null);
+  const [customerToDelete, setCustomerToDelete] = useState(null);
+  const [actionMsg, setActionMsg] = useState('');
+
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    mobile: '',
+    altMobile: '',
+    email: '',
+    fatherName: '',
+    street: '',
+    landmark: '',
+    city: '',
+    state: 'Tamil Nadu',
+    pincode: '',
+    notes: ''
+  });
 
   const { data: customerResponse, isLoading } = useQuery({
     queryKey: ['customers', page, search],
     queryFn: async () => {
       const res = await apiClient.get('/customers', { params: { page, limit: 15, search } });
       return res.data;
+    }
+  });
+
+  const updateCustomerMutation = useMutation({
+    mutationFn: ({ id, payload }) => apiClient.patch(`/customers/${id}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['customers']);
+      setCustomerToEdit(null);
+      setActionMsg('✓ Customer profile updated successfully');
+      setTimeout(() => setActionMsg(''), 3000);
+    },
+    onError: (err) => {
+      setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to update customer'}`);
+      setTimeout(() => setActionMsg(''), 4000);
+    }
+  });
+
+  const deleteCustomerMutation = useMutation({
+    mutationFn: (id) => apiClient.delete(`/customers/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['customers']);
+      setCustomerToDelete(null);
+      setActionMsg('✓ Customer removed successfully');
+      setTimeout(() => setActionMsg(''), 3000);
+    },
+    onError: (err) => {
+      setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to remove customer'}`);
+      setTimeout(() => setActionMsg(''), 4000);
     }
   });
 
@@ -129,10 +180,9 @@ export function CustomerListPage() {
             type="button"
             onClick={() => handleOpenWhatsApp(row)}
             title="Chat on WhatsApp"
-            className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors flex items-center gap-1"
+            className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
           >
             <MessageSquare className="w-3.5 h-3.5" />
-            <span className="hidden md:inline text-[11px]">WhatsApp</span>
           </button>
 
           <a
@@ -147,10 +197,46 @@ export function CustomerListPage() {
             type="button"
             onClick={() => setCustomerForOrder(row)}
             title="New Prescription Order"
-            className="p-1.5 rounded-lg bg-ayur-50 hover:bg-ayur-100 text-ayur-800 text-xs font-semibold transition-colors flex items-center gap-1"
+            className="p-1.5 rounded-lg bg-ayur-50 hover:bg-ayur-100 text-ayur-800 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
           >
             <ShoppingBag className="w-3.5 h-3.5 text-ayur-700" />
-            <span className="hidden lg:inline text-[11px]">New Order</span>
+            <span className="hidden lg:inline text-[11px]">Order</span>
+          </button>
+
+          {/* Edit Customer */}
+          <button
+            type="button"
+            onClick={() => {
+              const addr = row.addresses?.[0] || {};
+              setCustomerToEdit(row);
+              setEditFormData({
+                name: row.name || '',
+                mobile: row.mobile || '',
+                altMobile: row.altMobile || '',
+                email: row.email || '',
+                fatherName: row.fatherName || '',
+                street: addr.street || '',
+                landmark: addr.landmark || '',
+                city: addr.city || '',
+                state: addr.state || 'Tamil Nadu',
+                pincode: addr.pincode || '',
+                notes: row.notes || ''
+              });
+            }}
+            title="Edit Customer"
+            className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center cursor-pointer"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Delete Customer */}
+          <button
+            type="button"
+            onClick={() => setCustomerToDelete(row)}
+            title="Delete Customer"
+            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors flex items-center cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       )
@@ -173,6 +259,18 @@ export function CustomerListPage() {
           Export CSV
         </Button>
       </div>
+
+      {/* Notification Toast */}
+      {actionMsg && (
+        <div className={`flex items-center gap-2 px-4 py-2.5 border text-sm font-semibold rounded-xl ${
+          actionMsg.startsWith('⚠')
+            ? 'bg-amber-50 border-amber-200 text-amber-700'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+        }`}>
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+          {actionMsg}
+        </div>
+      )}
 
       <div className="p-3 bg-white rounded-xl border border-slate-200">
         <Input
@@ -216,6 +314,141 @@ export function CustomerListPage() {
             pincode: customerForOrder.addresses?.[0]?.pincode || ''
           }}
         />
+      )}
+
+      {/* Edit Customer Modal */}
+      {customerToEdit && (
+        <Modal
+          isOpen={Boolean(customerToEdit)}
+          onClose={() => setCustomerToEdit(null)}
+          title={`Edit Customer: ${customerToEdit.name}`}
+          maxWidth="max-w-xl"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              updateCustomerMutation.mutate({
+                id: customerToEdit._id,
+                payload: {
+                  name: editFormData.name.trim(),
+                  mobile: editFormData.mobile.trim(),
+                  altMobile: editFormData.altMobile?.trim(),
+                  email: editFormData.email?.trim(),
+                  fatherName: editFormData.fatherName?.trim(),
+                  notes: editFormData.notes?.trim(),
+                  addresses: [
+                    {
+                      street: editFormData.street?.trim(),
+                      landmark: editFormData.landmark?.trim(),
+                      city: editFormData.city?.trim() || 'Hosur',
+                      state: editFormData.state || 'Tamil Nadu',
+                      pincode: editFormData.pincode?.trim() || '635109'
+                    }
+                  ]
+                }
+              });
+            }}
+            className="space-y-3.5"
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Customer Name *"
+                required
+                value={editFormData.name}
+                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+              />
+              <Input
+                label="Father / Guardian Name"
+                value={editFormData.fatherName}
+                onChange={(e) => setEditFormData({ ...editFormData, fatherName: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Primary Mobile *"
+                required
+                value={editFormData.mobile}
+                onChange={(e) => setEditFormData({ ...editFormData, mobile: e.target.value })}
+              />
+              <Input
+                label="Alternate Mobile"
+                value={editFormData.altMobile}
+                onChange={(e) => setEditFormData({ ...editFormData, altMobile: e.target.value })}
+              />
+            </div>
+            <Input
+              label="Email Address"
+              type="email"
+              value={editFormData.email}
+              onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+            />
+            <Input
+              label="Street Address"
+              value={editFormData.street}
+              onChange={(e) => setEditFormData({ ...editFormData, street: e.target.value })}
+            />
+            <div className="grid grid-cols-3 gap-3">
+              <Input
+                label="City / Town"
+                value={editFormData.city}
+                onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+              />
+              <Input
+                label="State"
+                value={editFormData.state}
+                onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })}
+              />
+              <Input
+                label="Pincode"
+                value={editFormData.pincode}
+                onChange={(e) => setEditFormData({ ...editFormData, pincode: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button variant="secondary" type="button" onClick={() => setCustomerToEdit(null)} disabled={updateCustomerMutation.isPending}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" isLoading={updateCustomerMutation.isPending}>
+                Save Customer
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Delete Customer Modal */}
+      {customerToDelete && (
+        <Modal
+          isOpen={Boolean(customerToDelete)}
+          onClose={() => setCustomerToDelete(null)}
+          title="Delete Customer Confirmation"
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-3.5 bg-red-50 border border-red-100 rounded-xl">
+              <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="text-xs text-red-800">
+                <p className="font-bold mb-1">Are you sure you want to delete this customer?</p>
+                <p>
+                  Customer <strong>{customerToDelete.name}</strong> ({customerToDelete.mobile}) will be permanently removed.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={() => setCustomerToDelete(null)} disabled={deleteCustomerMutation.isPending}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => deleteCustomerMutation.mutate(customerToDelete._id)}
+                isLoading={deleteCustomerMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete Customer
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

@@ -14,7 +14,10 @@ import {
   MessageSquare,
   Printer,
   Tag,
-  ShieldCheck
+  ShieldCheck,
+  Pencil,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
@@ -24,6 +27,7 @@ import { Badge } from '../../components/common/Badge.jsx';
 import { Spinner } from '../../components/common/Spinner.jsx';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Input } from '../../components/common/Input.jsx';
+import { Select } from '../../components/common/Select.jsx';
 import { PrintableInvoiceModal } from './PrintableInvoiceModal.jsx';
 import { PrintableShippingLabelModal } from './PrintableShippingLabelModal.jsx';
 
@@ -42,6 +46,15 @@ export function OrderDetailPage() {
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   const [isLabelOpen, setIsLabelOpen] = useState(false);
 
+  // Edit & Delete Modals
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    patientName: '', fatherName: '', mobile: '', alternateMobile: '',
+    street: '', landmark: '', village: '', district: '', city: '', state: 'Tamil Nadu', pincode: '',
+    paymentMethod: 'COD', paymentStatus: 'PENDING', notes: ''
+  });
+
   const { data: orderData, isLoading } = useQuery({
     queryKey: ['order', id],
     queryFn: async () => {
@@ -59,6 +72,25 @@ export function OrderDetailPage() {
       setTransitionModalOpen(false);
       setTransitionNotes('');
       setCancellationReason('');
+    }
+  });
+
+  const editMutation = useMutation({
+    mutationFn: (payload) => apiClient.patch(`/orders/${id}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['order', id]);
+      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries(['dashboard']);
+      setIsEditModalOpen(false);
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => apiClient.delete(`/orders/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries(['dashboard']);
+      navigate('/orders');
     }
   });
 
@@ -234,6 +266,47 @@ export function OrderDetailPage() {
             Shipping Label
           </Button>
 
+          {/* Edit Order */}
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={Pencil}
+            onClick={() => {
+              const pat = order.patientDetails || {};
+              const addr = order.deliveryAddress || {};
+              setEditFormData({
+                patientName: pat.patientName || order.customerId?.name || '',
+                fatherName: pat.fatherName || '',
+                mobile: pat.mobile || order.customerId?.mobile || '',
+                alternateMobile: pat.alternateMobile || '',
+                street: addr.street || '',
+                landmark: addr.landmark || '',
+                village: addr.village || '',
+                district: addr.district || '',
+                city: addr.city || '',
+                state: addr.state || 'Tamil Nadu',
+                pincode: addr.pincode || '',
+                paymentMethod: order.paymentMethod || 'COD',
+                paymentStatus: order.paymentStatus || 'PENDING',
+                notes: order.notes || ''
+              });
+              setIsEditModalOpen(true);
+            }}
+          >
+            Edit
+          </Button>
+
+          {/* Delete Order */}
+          <Button
+            variant="danger"
+            size="sm"
+            icon={Trash2}
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+          >
+            Delete
+          </Button>
+
           {renderAvailableTransitions()}
         </div>
       </div>
@@ -380,6 +453,202 @@ export function OrderDetailPage() {
           onClose={() => setIsInvoiceOpen(false)}
           order={order}
         />
+      )}
+
+      {/* Edit Order Modal */}
+      {isEditModalOpen && (
+        <Modal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          title={`Edit Order #${order.orderNumber}`}
+          subtitle="Update patient contact, delivery address, and payment details"
+          maxWidth="max-w-2xl"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              editMutation.mutate({
+                patientDetails: {
+                  patientName: editFormData.patientName,
+                  fatherName: editFormData.fatherName,
+                  mobile: editFormData.mobile,
+                  alternateMobile: editFormData.alternateMobile
+                },
+                deliveryAddress: {
+                  street: editFormData.street,
+                  landmark: editFormData.landmark,
+                  village: editFormData.village,
+                  district: editFormData.district,
+                  city: editFormData.city,
+                  state: editFormData.state,
+                  pincode: editFormData.pincode,
+                  phone: editFormData.mobile
+                },
+                paymentMethod: editFormData.paymentMethod,
+                paymentStatus: editFormData.paymentStatus,
+                notes: editFormData.notes
+              });
+            }}
+            className="space-y-4"
+          >
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Patient / Customer Info</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  label="Patient Name *"
+                  required
+                  value={editFormData.patientName}
+                  onChange={(e) => setEditFormData({ ...editFormData, patientName: e.target.value })}
+                />
+                <Input
+                  label="Father / Guardian Name"
+                  value={editFormData.fatherName}
+                  onChange={(e) => setEditFormData({ ...editFormData, fatherName: e.target.value })}
+                />
+                <Input
+                  label="Primary Mobile *"
+                  required
+                  value={editFormData.mobile}
+                  onChange={(e) => setEditFormData({ ...editFormData, mobile: e.target.value })}
+                />
+                <Input
+                  label="Alternate Mobile"
+                  value={editFormData.alternateMobile}
+                  onChange={(e) => setEditFormData({ ...editFormData, alternateMobile: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Delivery Address</h4>
+              <div className="space-y-3">
+                <Input
+                  label="Street Address *"
+                  required
+                  value={editFormData.street}
+                  onChange={(e) => setEditFormData({ ...editFormData, street: e.target.value })}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    label="Landmark"
+                    value={editFormData.landmark}
+                    onChange={(e) => setEditFormData({ ...editFormData, landmark: e.target.value })}
+                  />
+                  <Input
+                    label="Village / Area"
+                    value={editFormData.village}
+                    onChange={(e) => setEditFormData({ ...editFormData, village: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <Input
+                    label="City / Town *"
+                    required
+                    value={editFormData.city}
+                    onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                  />
+                  <Input
+                    label="District"
+                    value={editFormData.district}
+                    onChange={(e) => setEditFormData({ ...editFormData, district: e.target.value })}
+                  />
+                  <Input
+                    label="Pincode *"
+                    required
+                    value={editFormData.pincode}
+                    onChange={(e) => setEditFormData({ ...editFormData, pincode: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Payment & Notes</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <Select
+                  label="Payment Method"
+                  value={editFormData.paymentMethod}
+                  onChange={(e) => setEditFormData({ ...editFormData, paymentMethod: e.target.value })}
+                  options={[
+                    { value: 'COD', label: 'Cash on Delivery (COD)' },
+                    { value: 'ONLINE', label: 'Online / Gateway' },
+                    { value: 'UPI', label: 'UPI Direct' },
+                    { value: 'BANK_TRANSFER', label: 'Bank Transfer' }
+                  ]}
+                />
+                <Select
+                  label="Payment Status"
+                  value={editFormData.paymentStatus}
+                  onChange={(e) => setEditFormData({ ...editFormData, paymentStatus: e.target.value })}
+                  options={[
+                    { value: 'PENDING', label: 'Pending' },
+                    { value: 'COD_PENDING', label: 'COD Pending' },
+                    { value: 'PAID', label: 'Paid' },
+                    { value: 'FAILED', label: 'Failed' },
+                    { value: 'REFUNDED', label: 'Refunded' }
+                  ]}
+                />
+              </div>
+              <div className="mt-3">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Order Notes / Prescription Info</label>
+                <textarea
+                  rows={2}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-ayur-500 focus:bg-white outline-none"
+                  value={editFormData.notes}
+                  onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+              <Button variant="secondary" type="button" onClick={() => setIsEditModalOpen(false)} disabled={editMutation.isPending}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" isLoading={editMutation.isPending}>
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <Modal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          title="Delete Order Confirmation"
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-3.5 bg-red-50 border border-red-100 rounded-xl">
+              <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="text-xs text-red-800">
+                <p className="font-bold mb-1">Are you sure you want to delete this order?</p>
+                <p>
+                  Order <strong className="font-mono">#{order.orderNumber}</strong> (₹{order.grandTotal?.toLocaleString()}) will be permanently removed.
+                </p>
+                <p className="mt-1 text-red-600">
+                  ✓ Reserved inventory items will be restored back to branch stock.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)} disabled={deleteMutation.isPending}>
+                Keep Order
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => deleteMutation.mutate()}
+                isLoading={deleteMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete Order
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Printable Shipping Label Modal */}

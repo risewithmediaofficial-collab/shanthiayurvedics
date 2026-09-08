@@ -181,6 +181,8 @@ export class DashboardService {
   static async getTelecallerDashboard(userId, branchId) {
     const { startOfToday } = this.getDateBoundaries();
     const userObjectId = new mongoose.Types.ObjectId(userId);
+    const user = await User.findById(userObjectId).select('branchId').lean();
+    const branchFilter = branchId && branchId !== 'ALL' ? { branchId: new mongoose.Types.ObjectId(branchId) } : user?.branchId ? { branchId: user.branchId } : {};
 
     const [
       newAssignedLeads,
@@ -215,7 +217,35 @@ export class DashboardService {
     const ordersCount = todayOrders[0]?.count || 0;
     const conversionRate = totalAssignedLeads > 0 ? ((convertedLeads / totalAssignedLeads) * 100).toFixed(1) : 0;
 
-    // Recent calls
+    const telecallerTeam = await User.find({
+      role: ROLES.TELECALLER,
+      ...(branchFilter.branchId ? { branchId: branchFilter.branchId } : {})
+    }).select('_id name branchId').lean();
+
+    const teamPerformance = await Promise.all(
+      telecallerTeam.map(async (telecaller) => {
+        const [leadsFollowed, ordersCreatedAgg, revenueAgg] = await Promise.all([
+          FollowUp.countDocuments({ telecallerId: telecaller._id }),
+          Order.aggregate([
+            { $match: { telecallerId: telecaller._id, status: { $ne: ORDER_STATUS.CANCELLED } } },
+            { $group: { _id: null, count: { $sum: 1 } } }
+          ]),
+          Order.aggregate([
+            { $match: { telecallerId: telecaller._id, status: { $ne: ORDER_STATUS.CANCELLED } } },
+            { $group: { _id: null, total: { $sum: '$grandTotal' } } }
+          ])
+        ]);
+
+        return {
+          employeeName: telecaller.name,
+          employeeId: telecaller._id,
+          leadsFollowed,
+          ordersCreated: ordersCreatedAgg[0]?.count || 0,
+          revenue: revenueAgg[0]?.total || 0
+        };
+      })
+    );
+
     const recentCalls = await CallHistory.find({ telecallerId: userObjectId })
       .populate('leadId', 'name mobile')
       .populate('customerId', 'name mobile')
@@ -234,6 +264,7 @@ export class DashboardService {
         conversionRate,
         totalAssignedLeads
       },
+      teamPerformance: teamPerformance.sort((a, b) => b.revenue - a.revenue || b.ordersCreated - a.ordersCreated),
       recentCalls
     };
   }

@@ -113,3 +113,44 @@ export const addBatch = asyncHandler(async (req, res) => {
 
   return ApiResponse.created(res, batch, 'Batch added successfully');
 });
+
+export const updateProduct = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id);
+  if (!product) throw new NotFoundError('Product');
+
+  const oldValue = product.toObject();
+  Object.assign(product, req.body);
+  await product.save();
+
+  await AuditService.log({
+    userId: req.user.id,
+    action: 'PRODUCT_UPDATED',
+    module: 'products',
+    resourceType: 'Product',
+    resourceId: product._id,
+    oldValue,
+    newValue: product.toObject(),
+    req
+  });
+
+  return ApiResponse.success(res, product, 'Product updated successfully');
+});
+
+export const deleteProduct = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id);
+  if (!product) throw new NotFoundError('Product');
+
+  product.isActive = false;
+  await product.save();
+
+  await AuditService.log({
+    userId: req.user.id,
+    action: 'PRODUCT_DELETED',
+    module: 'products',
+    resourceType: 'Product',
+    resourceId: product._id,
+    req
+  });
+
+  return ApiResponse.success(res, null, 'Product removed successfully');
+});

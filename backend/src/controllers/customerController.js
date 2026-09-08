@@ -64,3 +64,32 @@ export const addCustomerAddress = asyncHandler(async (req, res) => {
 
   return ApiResponse.success(res, customer, 'Customer address added');
 });
+
+export const updateCustomer = asyncHandler(async (req, res) => {
+  const customer = await Customer.findById(req.params.id);
+  if (!customer) {
+    throw new NotFoundError('Customer');
+  }
+
+  const { name, mobile, altMobile, email, fatherName, notes, addresses } = req.body;
+  if (name) customer.name = name.trim();
+  if (mobile) customer.mobile = mobile.trim();
+  if (altMobile !== undefined) customer.altMobile = altMobile.trim();
+  if (email !== undefined) customer.email = email.trim();
+  if (fatherName !== undefined) customer.fatherName = fatherName.trim();
+  if (notes !== undefined) customer.notes = notes.trim();
+  if (addresses && Array.isArray(addresses)) customer.addresses = addresses;
+
+  await customer.save();
+  return ApiResponse.success(res, customer, 'Customer updated successfully');
+});
+
+export const deleteCustomer = asyncHandler(async (req, res) => {
+  const customer = await Customer.findById(req.params.id);
+  if (!customer) {
+    throw new NotFoundError('Customer');
+  }
+
+  await Customer.findByIdAndDelete(req.params.id);
+  return ApiResponse.success(res, null, 'Customer deleted successfully');
+});

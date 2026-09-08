@@ -166,4 +166,69 @@ describe('Leads & Telecaller CRM Integration Tests', () => {
     expect(convertRes.body.data.name).toBe('Venkatesh Kumar');
     expect(convertRes.body.data.addresses.length).toBeGreaterThan(0);
   });
+
+  it('should successfully create lead with Direct Call source, empty email string, and default branch', async () => {
+    const res = await request(app)
+      .post('/api/leads')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        name: 'Sathish Kumar',
+        mobile: '6381174855',
+        email: '',
+        whatsappNumber: '',
+        source: 'CALL',
+        city: 'Hosur',
+        notes: ''
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.name).toBe('Sathish Kumar');
+    expect(res.body.data.mobile).toBe('6381174855');
+    expect(res.body.data.source).toBe('CALL');
+    expect(res.body.data.branchId).toBeDefined();
+  });
+
+  it('should allow force creating a duplicate lead when forceCreate is true', async () => {
+    const res = await request(app)
+      .post('/api/leads')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        name: 'Sathish Kumar Duplicate',
+        mobile: '6381174855',
+        source: 'CALL',
+        forceCreate: true
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.isDuplicate).toBe(true);
+    expect(res.body.data.duplicateOf).toBeDefined();
+  });
+
+  it('should log a call with frontend outcome format and update status', async () => {
+    const res = await request(app)
+      .post('/api/leads')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        name: 'Test Outcome Lead',
+        mobile: '8877665544',
+        source: 'WHATSAPP'
+      });
+
+    const leadId = res.body.data._id;
+
+    const callRes = await request(app)
+      .post(`/api/leads/${leadId}/calls`)
+      .set('Authorization', `Bearer ${telecaller1Token}`)
+      .send({
+        outcome: 'CONNECTED_INTERESTED',
+        durationSeconds: 120,
+        notes: 'Discussion about Kumkumadi oil completed',
+        nextFollowUpDate: new Date(Date.now() + 86400000).toISOString()
+      });
+
+    expect(callRes.status).toBe(201);
+    expect(callRes.body.data.notes).toBe('Discussion about Kumkumadi oil completed');
+  });
 });

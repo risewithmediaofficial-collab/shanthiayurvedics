@@ -154,6 +154,30 @@ const orderSchema = new mongoose.Schema(
       type: String,
       trim: true
     },
+    trackingNumber: {
+      type: String,
+      trim: true,
+      index: true
+    },
+    courierName: {
+      type: String,
+      default: 'India Post'
+    },
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    verifiedAt: {
+      type: Date
+    },
+    assignedVerifierId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
     statusHistory: [orderStatusHistoryItemSchema]
   },
   {

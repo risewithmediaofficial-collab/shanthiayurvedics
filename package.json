@@ -14,6 +14,8 @@
     "build:frontend": "npm run build --workspace=frontend",
     "build": "npm run build:frontend",
     "seed": "npm run seed --workspace=backend",
+    "clear": "npm run clear --workspace=backend",
+    "bootstrap": "npm run bootstrap --workspace=backend",
     "test": "npm run test --workspace=backend",
     "lint": "npm run lint --workspace=frontend"
   },
@@ -28,5 +30,8 @@
     "rto"
   ],
   "author": "Shanthi Ayurvedas Development Team",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "playwright": "^1.63.0"
+  }
 }

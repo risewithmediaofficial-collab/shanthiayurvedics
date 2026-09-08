@@ -98,3 +98,65 @@
 .animate-fade-in {
   animation: fadeIn 0.2s ease-out forwards;
 }
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  body.printing-invoice {
+    background: #fff !important;
+  }
+
+  body.printing-invoice * {
+    visibility: hidden !important;
+  }
+
+  body.printing-invoice #printable-tax-invoice,
+  body.printing-invoice #printable-tax-invoice * {
+    visibility: visible !important;
+  }
+
+  body.printing-invoice #printable-tax-invoice {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  @page shipping-label {
+    size: 4in 6in;
+    margin: 0;
+  }
+
+  body.printing-shipping-label {
+    background: #fff !important;
+  }
+
+  body.printing-shipping-label * {
+    visibility: hidden !important;
+  }
+
+  body.printing-shipping-label #printable-shipping-label,
+  body.printing-shipping-label #printable-shipping-label * {
+    visibility: visible !important;
+  }
+
+  body.printing-shipping-label #printable-shipping-label {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    min-height: 100% !important;
+    margin: 0 !important;
+    padding: 4mm !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    page: shipping-label;
+  }
+}

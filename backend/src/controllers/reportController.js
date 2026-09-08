@@ -35,3 +35,41 @@ export const getDeliveryReport = asyncHandler(async (req, res) => {
   const result = await ReportService.getDeliveryReport({ branchId });
   return ApiResponse.success(res, result, 'Delivery analytics retrieved');
 });
+
+export const getTCSalesSalary = asyncHandler(async (req, res) => {
+  const branchId = req.branchScope.isGlobal ? req.query.branchId : req.branchScope.branchId;
+  const { startDate, endDate, month, year } = req.query;
+
+  const result = await ReportService.getTCSalesSalaryReport({
+    branchId,
+    startDate,
+    endDate,
+    month,
+    year
+  });
+
+  return ApiResponse.success(res, result, 'TC Sales and salary report retrieved');
+});
+
+export const getTillDateWithdrawal = asyncHandler(async (req, res) => {
+  const branchId = req.branchScope.isGlobal ? req.query.branchId : req.branchScope.branchId;
+  const result = await ReportService.getTillDateWithdrawalData({ branchId });
+  return ApiResponse.success(res, result, 'Branch till-date and withdrawal data retrieved');
+});
+
+export const createWithdrawalRequest = asyncHandler(async (req, res) => {
+  const branchId = req.branchScope.isGlobal ? (req.body.branchId || req.query.branchId) : req.branchScope.branchId;
+  const { amount, payoutMode, bankAccount, upiId } = req.body;
+
+  const result = await ReportService.createWithdrawalRequest({
+    branchId,
+    requestedBy: req.user.id,
+    amount,
+    payoutMode,
+    bankAccount,
+    upiId
+  });
+
+  return ApiResponse.success(res, result, 'Withdrawal request submitted successfully', 201);
+});
+

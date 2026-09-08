@@ -38,3 +38,32 @@ export const completeFollowup = asyncHandler(async (req, res) => {
   );
   return ApiResponse.success(res, followup, 'Follow-up marked as completed');
 });
+
+export const updateFollowup = asyncHandler(async (req, res) => {
+  const { FollowUp } = await import('../models/FollowUp.js');
+  const followup = await FollowUp.findById(req.params.id);
+  if (!followup) {
+    const { NotFoundError } = await import('../utils/errors.js');
+    throw new NotFoundError('FollowUp');
+  }
+
+  const { scheduledAt, notes, priority } = req.body;
+  if (scheduledAt) followup.scheduledAt = new Date(scheduledAt);
+  if (notes !== undefined) followup.notes = notes;
+  if (priority) followup.priority = priority;
+
+  await followup.save();
+  return ApiResponse.success(res, followup, 'Follow-up rescheduled/updated successfully');
+});
+
+export const deleteFollowup = asyncHandler(async (req, res) => {
+  const { FollowUp } = await import('../models/FollowUp.js');
+  const followup = await FollowUp.findById(req.params.id);
+  if (!followup) {
+    const { NotFoundError } = await import('../utils/errors.js');
+    throw new NotFoundError('FollowUp');
+  }
+
+  await FollowUp.findByIdAndDelete(req.params.id);
+  return ApiResponse.success(res, null, 'Follow-up removed successfully');
+});

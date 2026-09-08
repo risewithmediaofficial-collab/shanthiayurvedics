@@ -3,6 +3,11 @@ import { io } from 'socket.io-client';
 let socket = null;
 
 export const initSocket = (token = null) => {
+  const socketToken = token || undefined;
+  if (socket && socket.auth?.token === socketToken) {
+    return socket;
+  }
+
   if (socket) {
     socket.disconnect();
   }
@@ -12,7 +17,7 @@ export const initSocket = (token = null) => {
   socket = io(socketUrl, {
     withCredentials: true,
     auth: {
-      token: token || undefined,
+      token: socketToken,
       requireAuth: false
     },
     transports: ['websocket', 'polling'],

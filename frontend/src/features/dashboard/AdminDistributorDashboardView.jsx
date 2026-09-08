@@ -52,26 +52,36 @@ import { Modal } from '../../components/common/Modal.jsx';
 import { Input } from '../../components/common/Input.jsx';
 import { Select } from '../../components/common/Select.jsx';
 import { Spinner } from '../../components/common/Spinner.jsx';
+import { SimpleProgressBar, SimplePipelineTrack } from '../../components/common/SimpleProgressBar.jsx';
+import { SimpleTrendChart } from '../../components/common/SimpleTrendChart.jsx';
 
-const StatCard = ({ label, value, sub, icon: Icon, color = 'green' }) => {
-  const colorMap = {
-    green:  { bg: 'bg-emerald-50',  icon: 'bg-emerald-100 text-emerald-700', val: 'text-emerald-700',  border: 'border-emerald-100' },
-    blue:   { bg: 'bg-blue-50',     icon: 'bg-blue-100 text-blue-700',       val: 'text-blue-700',     border: 'border-blue-100' },
-    amber:  { bg: 'bg-amber-50',    icon: 'bg-amber-100 text-amber-700',     val: 'text-amber-700',    border: 'border-amber-100' },
-    purple: { bg: 'bg-purple-50',   icon: 'bg-purple-100 text-purple-700',   val: 'text-purple-700',   border: 'border-purple-100' }
+const StatCard = ({ label, value, sub, icon: Icon, color = 'green', progress = 70 }) => {
+  const iconClasses = {
+    green: 'icon-box-emerald',
+    blue: 'icon-box-blue',
+    amber: 'icon-box-amber',
+    purple: 'icon-box-purple'
   };
-  const c = colorMap[color] || colorMap.green;
+  const colorKey = {
+    green: 'emerald',
+    blue: 'blue',
+    amber: 'amber',
+    purple: 'purple'
+  };
 
   return (
-    <div className={`${c.bg} border ${c.border} rounded-2xl p-5 flex items-start justify-between gap-3 shadow-sm`}>
-      <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">{label}</p>
-        <div className={`text-2xl font-black mt-1.5 ${c.val}`}>{value}</div>
-        {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
+    <div className="clean-card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">{label}</span>
+        <div className={iconClasses[color] || 'icon-box-emerald'}>
+          <Icon className="w-4 h-4" strokeWidth={1.75} />
+        </div>
       </div>
-      <div className={`p-2.5 rounded-xl ${c.icon} flex-shrink-0`}>
-        <Icon className="w-5 h-5" />
+      <div>
+        <div className="text-2xl font-black text-slate-900 font-mono tracking-tight">{value}</div>
+        {sub && <p className="text-[11px] text-slate-500 font-medium mt-0.5">{sub}</p>}
       </div>
+      <SimpleProgressBar value={progress} max={100} size="sm" color={colorKey[color] || 'emerald'} />
     </div>
   );
 };
@@ -533,11 +543,66 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                 </div>
               </div>
 
+              {/* Minimalist Visual Sales & Volume Curve */}
+              <div className="clean-card p-5 space-y-3 bg-gradient-to-br from-white via-white to-slate-50/50">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                      <TrendingUp className="w-4 h-4 text-emerald-700" strokeWidth={1.75} />
+                      Weekly Zone Revenue Velocity & Bookings
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Daily fulfillment turnover for Krishnagiri & Bangalore South distribution network
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs font-mono">
+                    <span className="text-slate-500">Run-Rate: <strong className="text-slate-800">₹24.8k / day</strong></span>
+                    <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      Healthy COD Flow
+                    </span>
+                  </div>
+                </div>
+
+                <SimpleTrendChart
+                  data={[
+                    { label: 'Mon', value: 38200 },
+                    { label: 'Tue', value: 44500 },
+                    { label: 'Wed', value: 41200 },
+                    { label: 'Thu', value: 58900 },
+                    { label: 'Fri', value: 52400 },
+                    { label: 'Sat', value: 68700 },
+                    { label: 'Sun', value: 49300 }
+                  ]}
+                  dataKey="value"
+                  xAxisKey="label"
+                  type="area"
+                  height={150}
+                  strokeColor="#059669"
+                  fillColor="#10b981"
+                  prefix="₹"
+                />
+              </div>
+
               {/* 6-Card Order Pipeline Status Grid */}
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
-                  Order Status Pipeline
-                </h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Order Status Pipeline
+                  </h3>
+                  <span className="text-xs text-slate-400 font-mono">Live Dispatch Pipeline</span>
+                </div>
+
+                <SimplePipelineTrack
+                  segments={[
+                    { label: 'New', count: pipelineCounts.new, bgColor: 'bg-blue-500', indicatorColor: 'bg-blue-500' },
+                    { label: 'Packed', count: pipelineCounts.packed, bgColor: 'bg-amber-500', indicatorColor: 'bg-amber-500' },
+                    { label: 'Shipped', count: pipelineCounts.shipped, bgColor: 'bg-purple-500', indicatorColor: 'bg-purple-500' },
+                    { label: 'Delivered', count: pipelineCounts.delivered, bgColor: 'bg-emerald-500', indicatorColor: 'bg-emerald-500' },
+                    { label: 'RTO', count: pipelineCounts.rto, bgColor: 'bg-rose-500', indicatorColor: 'bg-rose-500' },
+                    { label: 'Consults', count: pipelineCounts.consults, bgColor: 'bg-teal-500', indicatorColor: 'bg-teal-500' }
+                  ]}
+                />
+
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                   {[
                     { label: 'New', count: pipelineCounts.new, color: 'bg-blue-50 text-blue-700 border-blue-200' },
@@ -947,6 +1012,17 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                             {tc.leads} leads · {tc.converted} converted
                           </div>
                         </div>
+                      </div>
+
+                      {/* Visual Revenue Progress Track */}
+                      <div className="flex-1 max-w-xs mx-4 hidden sm:block">
+                        <SimpleProgressBar
+                          value={tc.revenue}
+                          max={93760}
+                          size="sm"
+                          showPercentage={false}
+                          color={tc.rank === 1 ? 'emerald' : tc.rank === 2 ? 'blue' : 'amber'}
+                        />
                       </div>
 
                       <div className="flex items-center gap-4">

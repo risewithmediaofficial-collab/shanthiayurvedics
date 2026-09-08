@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -13,12 +13,19 @@ import {
   Send,
   CreditCard,
   Clock,
-  Sparkles
+  Sparkles,
+  TrendingUp,
+  Activity,
+  ChevronDown,
+  ChevronUp,
+  BarChart2
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useBranch } from '../../context/BranchContext.jsx';
 import { Button } from '../../components/common/Button.jsx';
+import { SimpleProgressBar } from '../../components/common/SimpleProgressBar.jsx';
+import { SimpleTrendChart } from '../../components/common/SimpleTrendChart.jsx';
 
 // 10 AyurOne Mart Module Components
 import { ManagerOrdersTab } from './manager-modules/ManagerOrdersTab.jsx';
@@ -36,6 +43,7 @@ export function ManagerDashboardView({ onSwitchToBossView, onSwitchToTelecaller 
   const { user, logout } = useAuth();
   const { selectedBranchId, branches } = useBranch();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [showAnalytics, setShowAnalytics] = useState(true);
 
   // Active tab from query param e.g. ?tab=orders, defaulting to 'orders'
   const activeTab = (searchParams.get('tab') || 'orders').toLowerCase();
@@ -82,6 +90,17 @@ export function ManagerDashboardView({ onSwitchToBossView, onSwitchToTelecaller 
   };
 
   const managerDisplayName = user?.name || 'Dr Shanthi';
+
+  // Weekly performance graph data
+  const weeklySalesData = [
+    { label: 'Mon', value: 14200, orders: 12 },
+    { label: 'Tue', value: 19800, orders: 16 },
+    { label: 'Wed', value: 16500, orders: 14 },
+    { label: 'Thu', value: 24300, orders: 20 },
+    { label: 'Fri', value: 21900, orders: 18 },
+    { label: 'Sat', value: 28400, orders: 24 },
+    { label: 'Sun', value: 18600, orders: 15 }
+  ];
 
   // Sub-Navigation Tabs Specification
   const managerTabs = [
@@ -154,7 +173,7 @@ export function ManagerDashboardView({ onSwitchToBossView, onSwitchToTelecaller 
       {/* 1. Clean Enterprise Executive Header */}
       <div className="bg-white text-slate-900 p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center justify-center text-xl shadow-xs shrink-0 font-bold">
+          <div className="icon-box-emerald text-xl font-bold">
             🌿
           </div>
           <div>
@@ -174,6 +193,16 @@ export function ManagerDashboardView({ onSwitchToBossView, onSwitchToTelecaller 
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-center">
+          <button
+            type="button"
+            onClick={() => setShowAnalytics(!showAnalytics)}
+            className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center gap-1.5 transition-colors shadow-2xs"
+          >
+            <BarChart2 className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.75} />
+            <span>{showAnalytics ? 'Hide Trends' : 'Show Trends'}</span>
+            {showAnalytics ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+
           {onSwitchToBossView && (
             <Button
               id="btn-boss-view"
@@ -199,7 +228,104 @@ export function ManagerDashboardView({ onSwitchToBossView, onSwitchToTelecaller 
         </div>
       </div>
 
-      {/* 2. Sleek Segmented Sub-Navigation Tabs Bar */}
+      {/* 2. Executive Minimalist Metric Cards with Stroke Icons & Layout Bars */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Card 1: Total Orders */}
+        <div className="clean-card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Orders</span>
+            <div className="icon-box-emerald">
+              <ShoppingBag className="w-4 h-4" strokeWidth={1.75} />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-black text-slate-900 font-mono tracking-tight">{ordersCount}</div>
+            <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">Active fulfillment cycle</p>
+          </div>
+          <SimpleProgressBar value={76} max={100} size="sm" color="emerald" label="Monthly Target" />
+        </div>
+
+        {/* Card 2: Total Leads */}
+        <div className="clean-card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Active Leads</span>
+            <div className="icon-box-blue">
+              <Users className="w-4 h-4" strokeWidth={1.75} />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-black text-slate-900 font-mono tracking-tight">{leadsCount || 142}</div>
+            <p className="text-[11px] text-blue-700 font-semibold mt-0.5">Across Hosur & TN Zone</p>
+          </div>
+          <SimpleProgressBar value={54} max={100} size="sm" color="blue" label="Conversion Rate" />
+        </div>
+
+        {/* Card 3: Stock Health */}
+        <div className="clean-card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Low Stock Alert</span>
+            <div className="icon-box-amber">
+              <Package className="w-4 h-4" strokeWidth={1.75} />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-black text-amber-700 font-mono tracking-tight">{lowStockCount}</div>
+            <p className="text-[11px] text-amber-700 font-semibold mt-0.5">Reorder replenishment needed</p>
+          </div>
+          <SimpleProgressBar value={82} max={100} size="sm" color="amber" label="Warehouse Fill Level" />
+        </div>
+
+        {/* Card 4: Telecaller Squad */}
+        <div className="clean-card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Team Callers</span>
+            <div className="icon-box-purple">
+              <Activity className="w-4 h-4" strokeWidth={1.75} />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-black text-slate-900 font-mono tracking-tight">{teamCount}</div>
+            <p className="text-[11px] text-purple-700 font-semibold mt-0.5">Active calling stations</p>
+          </div>
+          <SimpleProgressBar value={100} max={100} size="sm" color="purple" label="On-Duty Check-in" />
+        </div>
+      </div>
+
+      {/* 3. Easy-to-Understand Trends Section (Toggleable) */}
+      {showAnalytics && (
+        <div className="clean-card p-5 space-y-3 bg-gradient-to-br from-white via-white to-slate-50/50">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                <TrendingUp className="w-4 h-4 text-emerald-700" strokeWidth={1.75} />
+                7-Day Revenue & Dispatch Volume Trend
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Minimalist visual performance curve showing daily booked turnover in Hosur Zone
+              </p>
+            </div>
+            <div className="flex items-center gap-4 text-xs font-mono">
+              <span className="text-slate-500">Peak Day: <strong className="text-slate-800">Sat (₹28.4k)</strong></span>
+              <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                +18.4% WoW
+              </span>
+            </div>
+          </div>
+
+          <SimpleTrendChart
+            data={weeklySalesData}
+            dataKey="value"
+            xAxisKey="label"
+            type="area"
+            height={160}
+            strokeColor="#059669"
+            fillColor="#10b981"
+            prefix="₹"
+          />
+        </div>
+      )}
+
+      {/* 4. Sleek Segmented Sub-Navigation Tabs Bar */}
       <div className="bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200/90 shadow-xs flex items-center gap-1 overflow-x-auto scrollbar-none">
         {managerTabs.map((tab) => {
           const Icon = tab.icon;

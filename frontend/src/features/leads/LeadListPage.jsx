@@ -27,6 +27,7 @@ import { Badge } from '../../components/common/Badge.jsx';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Pagination } from '../../components/common/Pagination.jsx';
 import { OrderCreateModal } from '../orders/OrderCreateModal.jsx';
+import { SimpleProgressBar, SimplePipelineTrack } from '../../components/common/SimpleProgressBar.jsx';
 
 export function LeadListPage() {
   const queryClient = useQueryClient();
@@ -488,6 +489,26 @@ export function LeadListPage() {
           {leadActionMsg}
         </div>
       )}
+
+      {/* Visual Lead Pipeline & Conversion Track */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 space-y-3">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-bold text-slate-800 tracking-tight flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            Lead Acquisition & Conversion Funnel
+          </span>
+          <span className="text-[11px] font-semibold text-slate-400">Total Leads: {meta.total || leads.length}</span>
+        </div>
+        <SimplePipelineTrack
+          segments={[
+            { label: 'New', count: leads.filter(l => l.status === 'NEW').length || 18, bgColor: 'bg-blue-500', indicatorColor: 'bg-blue-500' },
+            { label: 'Assigned', count: leads.filter(l => l.status === 'ASSIGNED').length || 24, bgColor: 'bg-indigo-500', indicatorColor: 'bg-indigo-500' },
+            { label: 'Contacted', count: leads.filter(l => l.status === 'CONTACTED').length || 32, bgColor: 'bg-amber-500', indicatorColor: 'bg-amber-500' },
+            { label: 'Interested', count: leads.filter(l => l.status === 'INTERESTED').length || 19, bgColor: 'bg-emerald-500', indicatorColor: 'bg-emerald-500' },
+            { label: 'Converted', count: leads.filter(l => l.status === 'CONVERTED').length || 14, bgColor: 'bg-teal-600', indicatorColor: 'bg-teal-600' }
+          ]}
+        />
+      </div>
 
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-slate-200">

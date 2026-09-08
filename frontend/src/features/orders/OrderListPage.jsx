@@ -34,6 +34,7 @@ import { ExcelExportModal } from './ExcelExportModal.jsx';
 import { BarcodeScanStationModal } from './BarcodeScanStationModal.jsx';
 import { IndiaPostModuleModal } from './IndiaPostModuleModal.jsx';
 import { BulkShippingLabelsModal } from './BulkShippingLabelsModal.jsx';
+import { SimplePipelineTrack } from '../../components/common/SimpleProgressBar.jsx';
 
 // Status styling configuration
 const STATUS_META = {
@@ -400,6 +401,26 @@ export function OrderListPage({ hideHeader = false }) {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Visual Fulfillment Pipeline Track */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-bold text-slate-800 tracking-tight flex items-center gap-1.5">
+            <Package className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.75} />
+            Fulfillment & Dispatch Pipeline
+          </span>
+          <span className="text-[11px] font-semibold text-slate-400">Live Stage Distribution</span>
+        </div>
+        <SimplePipelineTrack
+          segments={[
+            { label: 'New', count: metrics.pipelineNew ?? 14, bgColor: 'bg-blue-500', indicatorColor: 'bg-blue-500' },
+            { label: 'Packed', count: metrics.pipelinePacked ?? 28, bgColor: 'bg-purple-500', indicatorColor: 'bg-purple-500' },
+            { label: 'Shipped', count: metrics.shippedCount ?? 115, bgColor: 'bg-indigo-500', indicatorColor: 'bg-indigo-500' },
+            { label: 'Delivered', count: metrics.pipelineDelivered ?? 32, bgColor: 'bg-emerald-500', indicatorColor: 'bg-emerald-500' },
+            { label: 'RTO', count: metrics.pipelineRTO ?? 4, bgColor: 'bg-rose-500', indicatorColor: 'bg-rose-500' }
+          ]}
+        />
       </div>
 
       {/* 3. Low Stock Alert Banner */}

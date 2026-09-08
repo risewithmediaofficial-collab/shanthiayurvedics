@@ -44,6 +44,7 @@ import { Modal } from '../../components/common/Modal.jsx';
 import { Input } from '../../components/common/Input.jsx';
 import { Select } from '../../components/common/Select.jsx';
 import { Spinner } from '../../components/common/Spinner.jsx';
+import { SimpleProgressBar } from '../../components/common/SimpleProgressBar.jsx';
 
 export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView }) {
   const { user, logout } = useAuth();
@@ -393,28 +394,77 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView }
         </span>
       </div>
 
-      {/* 3. KPI Ribbon (4 Metrics) */}
+      {/* 3. KPI Ribbon (4 Metrics with Stroke Icons & Progress Bars) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">MY LEADS</p>
-          <div className="text-2xl font-black text-slate-900 mt-1">{totalLeadsCount}</div>
-          <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">Assigned to me</p>
+        <div className="clean-card p-4 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">MY LEADS</p>
+            <div className="icon-box-emerald">
+              <Users className="w-4 h-4" strokeWidth={1.75} />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-black text-slate-900 font-mono">{totalLeadsCount}</div>
+            <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">Assigned to me</p>
+          </div>
+          <SimpleProgressBar value={Math.min(100, totalLeadsCount * 10 || 40)} max={100} size="sm" color="emerald" />
         </div>
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">FOLLOWUPS</p>
-          <div className="text-2xl font-black text-amber-700 mt-1">{followupsCount}</div>
-          <p className="text-[11px] text-slate-400 font-medium mt-0.5">Due today & overdue</p>
+
+        <div className="clean-card p-4 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">FOLLOWUPS</p>
+            <div className="icon-box-amber">
+              <CalendarClock className="w-4 h-4" strokeWidth={1.75} />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-black text-amber-700 font-mono">{followupsCount}</div>
+            <p className="text-[11px] text-slate-400 font-medium mt-0.5">Due today & overdue</p>
+          </div>
+          <SimpleProgressBar value={65} max={100} size="sm" color="amber" />
         </div>
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">CONSULTS</p>
-          <div className="text-2xl font-black text-blue-700 mt-1">{consultsCount}</div>
-          <p className="text-[11px] text-blue-600 font-medium mt-0.5">Scheduled inquiries</p>
+
+        <div className="clean-card p-4 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">CONSULTS</p>
+            <div className="icon-box-blue">
+              <Stethoscope className="w-4 h-4" strokeWidth={1.75} />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-black text-blue-700 font-mono">{consultsCount}</div>
+            <p className="text-[11px] text-blue-600 font-medium mt-0.5">Scheduled inquiries</p>
+          </div>
+          <SimpleProgressBar value={50} max={100} size="sm" color="blue" />
         </div>
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">ORDERS</p>
-          <div className="text-2xl font-black text-emerald-700 mt-1">{ordersCount}</div>
-          <p className="text-[11px] text-slate-400 font-medium mt-0.5">Closed & dispatched</p>
+
+        <div className="clean-card p-4 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">ORDERS</p>
+            <div className="icon-box-purple">
+              <ShoppingBag className="w-4 h-4" strokeWidth={1.75} />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-black text-purple-700 font-mono">{ordersCount}</div>
+            <p className="text-[11px] text-slate-400 font-medium mt-0.5">Closed & dispatched</p>
+          </div>
+          <SimpleProgressBar value={80} max={100} size="sm" color="purple" />
         </div>
+      </div>
+
+      {/* Daily Call Quota & Activity Layout Bar */}
+      <div className="clean-card p-4 space-y-2 bg-gradient-to-r from-white via-white to-emerald-50/30">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-bold text-slate-800 flex items-center gap-1.5">
+            <PhoneCall className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.75} />
+            Today's Telecalling Outreach Quota
+          </span>
+          <span className="text-[11px] font-mono text-slate-500">
+            Target: <strong className="text-slate-800">50 Calls / Day</strong>
+          </span>
+        </div>
+        <SimpleProgressBar value={34} max={50} size="md" color="emerald" label="Progress" sublabel="34 of 50 completed" />
       </div>
 
       {/* 4. Quick Actions Bar */}
@@ -423,9 +473,9 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView }
           type="button"
           id="btn-tc-book-consult"
           onClick={() => setIsConsultModalOpen(true)}
-          className="flex items-center justify-center gap-2 p-3 bg-white hover:bg-purple-50/70 border border-slate-200 hover:border-purple-300 rounded-xl text-xs font-bold text-slate-700 hover:text-purple-800 shadow-xs transition-all"
+          className="flex items-center justify-center gap-2 p-3 bg-white hover:bg-purple-50/70 border border-slate-200 hover:border-purple-300 rounded-xl text-xs font-bold text-slate-700 hover:text-purple-800 shadow-2xs transition-all"
         >
-          <Stethoscope className="w-4 h-4 text-purple-600" />
+          <Stethoscope className="w-4 h-4 text-purple-600" strokeWidth={1.75} />
           <span>Book Consult</span>
         </button>
 
@@ -433,9 +483,9 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView }
           type="button"
           id="btn-tc-new-order"
           onClick={() => setIsOrderModalOpen(true)}
-          className="flex items-center justify-center gap-2 p-3 bg-white hover:bg-emerald-50/70 border border-slate-200 hover:border-emerald-300 rounded-xl text-xs font-bold text-slate-700 hover:text-emerald-800 shadow-xs transition-all"
+          className="flex items-center justify-center gap-2 p-3 bg-white hover:bg-emerald-50/70 border border-slate-200 hover:border-emerald-300 rounded-xl text-xs font-bold text-slate-700 hover:text-emerald-800 shadow-2xs transition-all"
         >
-          <ShoppingBag className="w-4 h-4 text-emerald-600" />
+          <ShoppingBag className="w-4 h-4 text-emerald-600" strokeWidth={1.75} />
           <span>New Order</span>
         </button>
 
@@ -443,9 +493,9 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView }
           type="button"
           id="btn-tc-new-lead"
           onClick={() => setIsLeadModalOpen(true)}
-          className="flex items-center justify-center gap-2 p-3 bg-white hover:bg-rose-50/70 border border-slate-200 hover:border-rose-300 rounded-xl text-xs font-bold text-slate-700 hover:text-rose-800 shadow-xs transition-all"
+          className="flex items-center justify-center gap-2 p-3 bg-white hover:bg-rose-50/70 border border-slate-200 hover:border-rose-300 rounded-xl text-xs font-bold text-slate-700 hover:text-rose-800 shadow-2xs transition-all"
         >
-          <PhoneForwarded className="w-4 h-4 text-rose-600" />
+          <PhoneForwarded className="w-4 h-4 text-rose-600" strokeWidth={1.75} />
           <span>Product Lead</span>
         </button>
 
@@ -456,9 +506,9 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView }
             if (leads.length > 0) handleOpenCallModal(leads[0]);
             else setIsCallCentreModalOpen(true);
           }}
-          className="flex items-center justify-center gap-2 p-3 bg-white hover:bg-blue-50/70 border border-slate-200 hover:border-blue-300 rounded-xl text-xs font-bold text-slate-700 hover:text-blue-800 shadow-xs transition-all"
+          className="flex items-center justify-center gap-2 p-3 bg-white hover:bg-blue-50/70 border border-slate-200 hover:border-blue-300 rounded-xl text-xs font-bold text-slate-700 hover:text-blue-800 shadow-2xs transition-all"
         >
-          <Phone className="w-4 h-4 text-blue-600" />
+          <Phone className="w-4 h-4 text-blue-600" strokeWidth={1.75} />
           <span>Call Centre</span>
         </button>
 
@@ -466,10 +516,10 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView }
           type="button"
           id="btn-tc-cust-profile"
           onClick={() => setIsCustomerProfileModalOpen(true)}
-          className="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:text-slate-900 shadow-xs transition-all"
+          className="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 p-3 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:text-slate-900 shadow-2xs transition-all"
         >
-          <UserCheck className="w-4 h-4 text-slate-600" />
-          <span>Customer Profile</span>
+          <Search className="w-4 h-4 text-slate-500" strokeWidth={1.75} />
+          <span>Profile Search</span>
         </button>
       </div>
 

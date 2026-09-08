@@ -305,26 +305,27 @@ export function Sidebar({ isOpen, onClose }) {
                           key={item.path}
                           to={item.path}
                           onClick={() => onClose && onClose()}
-                          className={`flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium transition-all ${
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                             isActive
-                              ? 'bg-slate-900 text-white font-semibold shadow-xs'
+                              ? 'bg-emerald-700 text-white font-semibold shadow-xs'
                               : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                           }`}
                         >
                           <Icon
-                            className={`w-3.5 h-3.5 flex-shrink-0 ${
-                              isActive ? 'text-white' : 'text-slate-400'
+                            strokeWidth={1.75}
+                            className={`w-4 h-4 flex-shrink-0 ${
+                              isActive ? 'text-white' : 'text-slate-500'
                             }`}
                           />
-                          <span className="truncate flex-1">{item.label}</span>
+                          <span className="truncate flex-1 tracking-tight">{item.label}</span>
                           {item.badge !== undefined && (
                             <span
-                              className={`ml-auto px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                              className={`ml-auto px-1.5 py-0.5 rounded-md text-[10px] font-black font-mono ${
                                 item.badgeVariant === 'danger'
-                                  ? 'bg-red-500 text-white'
+                                  ? 'bg-rose-500 text-white'
                                   : isActive
                                   ? 'bg-white/20 text-white'
-                                  : 'bg-slate-200 text-slate-700'
+                                  : 'bg-slate-100 text-slate-700 border border-slate-200'
                               }`}
                             >
                               {item.badge}

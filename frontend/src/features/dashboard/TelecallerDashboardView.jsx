@@ -37,8 +37,10 @@ import {
   Truck,
   Copy,
   ExternalLink,
-  Package
+  Package,
+  Eye
 } from 'lucide-react';
+import { OrderDetailsModal } from './OrderDetailsModal.jsx';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -70,6 +72,8 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isEditOrderModalOpen, setIsEditOrderModalOpen] = useState(false);
   const [selectedOrderForEdit, setSelectedOrderForEdit] = useState(null);
+  const [isOrderDetailsModalOpen, setIsOrderDetailsModalOpen] = useState(false);
+  const [selectedOrderForDetails, setSelectedOrderForDetails] = useState(null);
   const [orderSearch, setOrderSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('ALL');
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
@@ -317,6 +321,11 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
       return matchSearch && matchStatus;
     });
   }, [orders, orderSearch, orderStatusFilter]);
+
+  const handleOpenOrderDetails = (order) => {
+    setSelectedOrderForDetails(order);
+    setIsOrderDetailsModalOpen(true);
+  };
 
   const handleOpenEditOrder = (order) => {
     setSelectedOrderForEdit(order);
@@ -1099,12 +1108,26 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
                           const cleanPhone = (o.customerPhone || '9629985341').replace(/\D/g, '').slice(-10);
 
                           return (
-                            <tr key={o._id || idx} className="hover:bg-slate-50/80 transition-colors group">
+                            <tr
+                              key={o._id || idx}
+                              onClick={() => handleOpenOrderDetails(o)}
+                              className="hover:bg-slate-50/90 transition-colors group cursor-pointer"
+                            >
                               {/* Order ID & Date */}
                               <td className="px-3.5 py-3">
-                                <div className="font-mono font-bold text-slate-900 text-xs">
-                                  {o.orderNumber}
-                                </div>
+                                <button
+                                  type="button"
+                                  id={`btn-order-id-${o._id || idx}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenOrderDetails(o);
+                                  }}
+                                  className="font-mono font-bold text-emerald-800 hover:text-emerald-950 hover:underline text-left text-xs flex items-center gap-1 group/id cursor-pointer"
+                                  title="Click to view full order & products details"
+                                >
+                                  <span>{o.orderNumber}</span>
+                                  <ExternalLink className="w-2.5 h-2.5 text-emerald-600 opacity-60 group-hover/id:opacity-100 transition-opacity" />
+                                </button>
                                 <div className="text-[10px] text-slate-400 mt-0.5">
                                   {o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-GB') : '08/09/2026'}
                                 </div>
@@ -1112,9 +1135,18 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
 
                               {/* Patient Details */}
                               <td className="px-3.5 py-3">
-                                <div className="font-bold text-slate-900 text-xs uppercase leading-tight">
+                                <button
+                                  type="button"
+                                  id={`btn-order-patient-${o._id || idx}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenOrderDetails(o);
+                                  }}
+                                  className="font-bold text-slate-900 hover:text-emerald-800 hover:underline text-left text-xs uppercase leading-tight cursor-pointer block"
+                                  title="Click to view patient profile & order details"
+                                >
                                   {o.customerName}
-                                </div>
+                                </button>
                                 <div className="flex items-center gap-1.5 mt-0.5 text-slate-500">
                                   <span className="font-mono text-[11px]">{cleanPhone}</span>
                                   {o.district && (
@@ -1128,7 +1160,15 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
 
                               {/* Products */}
                               <td className="px-3 py-3 text-slate-700 max-w-[220px]">
-                                <div className="font-medium truncate text-xs" title={o.productsList}>
+                                <div
+                                  id={`btn-order-products-${o._id || idx}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenOrderDetails(o);
+                                  }}
+                                  className="font-medium truncate text-xs hover:text-emerald-800 transition-colors cursor-pointer"
+                                  title="Click to view all ordered products & formulation details"
+                                >
                                   {o.productsList}
                                 </div>
                                 <div className="text-[10px] text-slate-400 mt-0.5">Ayurvedic Formulation</div>
@@ -1179,21 +1219,40 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
                               {/* Actions */}
                               <td className="px-3.5 py-3 text-right whitespace-nowrap">
                                 <div className="flex items-center justify-end gap-1.5">
+                                  {/* View Details Button */}
+                                  <button
+                                    type="button"
+                                    id={`btn-view-order-${o._id || idx}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenOrderDetails(o);
+                                    }}
+                                    className="px-2 py-1 bg-emerald-50 hover:bg-emerald-600 text-emerald-800 hover:text-white border border-emerald-200 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-all shadow-2xs cursor-pointer group/view"
+                                    title="View full order and products details"
+                                  >
+                                    <Eye className="w-3 h-3 text-emerald-700 group-hover/view:text-white transition-colors" />
+                                    <span>View</span>
+                                  </button>
+
                                   {/* Edit Option Button */}
                                   <button
                                     type="button"
                                     id={`btn-edit-order-${o._id || idx}`}
-                                    onClick={() => handleOpenEditOrder(o)}
-                                    className="px-2.5 py-1 bg-slate-100 hover:bg-emerald-600 text-slate-700 hover:text-white border border-slate-200 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-all shadow-2xs cursor-pointer group/btn"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenEditOrder(o);
+                                    }}
+                                    className="px-2 py-1 bg-slate-100 hover:bg-blue-600 text-slate-700 hover:text-white border border-slate-200 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-all shadow-2xs cursor-pointer group/edit"
                                     title="Edit Patient Details, Status or Tracking"
                                   >
-                                    <Edit3 className="w-3 h-3 text-slate-500 group-hover/btn:text-white transition-colors" />
+                                    <Edit3 className="w-3 h-3 text-slate-500 group-hover/edit:text-white transition-colors" />
                                     <span>Edit</span>
                                   </button>
 
                                   {/* Call Patient */}
                                   <a
                                     href={`tel:${cleanPhone}`}
+                                    onClick={(e) => e.stopPropagation()}
                                     title={`Call ${o.customerName}`}
                                     className="p-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs inline-flex items-center justify-center transition-colors shadow-2xs"
                                   >
@@ -1834,6 +1893,23 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
             </div>
           </form>
         </Modal>
+      )}
+
+      {/* MODAL 1C: ORDER DETAILS & PRODUCTS BREAKDOWN */}
+      {isOrderDetailsModalOpen && selectedOrderForDetails && (
+        <OrderDetailsModal
+          isOpen={isOrderDetailsModalOpen}
+          onClose={() => {
+            setIsOrderDetailsModalOpen(false);
+            setSelectedOrderForDetails(null);
+          }}
+          order={selectedOrderForDetails}
+          onEditOrder={(orderToEdit) => {
+            setIsOrderDetailsModalOpen(false);
+            setSelectedOrderForDetails(null);
+            handleOpenEditOrder(orderToEdit);
+          }}
+        />
       )}
 
       {/* MODAL 2: LOG NEW LEAD */}

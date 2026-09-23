@@ -163,14 +163,7 @@ export class ReportService {
       ...(branchFilter.branchId ? { branchId: branchFilter.branchId } : {})
     }).select('name email phone isActive').lean();
 
-    // Default callers if none seeded yet
-    const fallbackCallers = [
-      { _id: new mongoose.Types.ObjectId(), name: 'KANAGAVALLI', phone: '9629985341', email: 'kanaga@shanthiayurvedas.com' },
-      { _id: new mongoose.Types.ObjectId(), name: 'AMRUTHA', phone: '9629985342', email: 'amrutha@shanthiayurvedas.com' },
-      { _id: new mongoose.Types.ObjectId(), name: 'PATTUSELVI', phone: '9629985343', email: 'pattuselvi@shanthiayurvedas.com' }
-    ];
-
-    const activeCallers = telecallers.length > 0 ? telecallers : fallbackCallers;
+    const activeCallers = telecallers;
 
     // 2. Aggregate delivered orders by telecaller
     const deliveredAgg = await Order.aggregate([

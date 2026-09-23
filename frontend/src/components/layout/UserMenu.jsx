@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, LogOut, Shield, ChevronDown } from 'lucide-react';
+import PersonRounded from '@mui/icons-material/PersonRounded';
+import LogoutRounded from '@mui/icons-material/LogoutRounded';
+import SecurityRounded from '@mui/icons-material/SecurityRounded';
+import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { AccountSwitcherMenu } from './AccountSwitcher.jsx';
 
 export function UserMenu() {
   const { user, logout } = useAuth();
@@ -50,21 +54,23 @@ export function UserMenu() {
             {user?.role?.toLowerCase() || 'Authenticated'}
           </div>
         </div>
-        <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden md:block" />
+        <KeyboardArrowDownRounded sx={{ fontSize: 16 }} className="text-slate-400 hidden md:block" />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-modal border border-slate-200/80 py-1.5 z-50 animate-fade-in">
+        <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-modal border border-slate-200/80 py-1.5 z-50 animate-fade-in">
           <div className="px-4 py-3 border-b border-slate-100">
             <p className="text-xs font-semibold text-slate-900">{user?.name}</p>
             <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
             <div className="mt-2">
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${getRoleBadgeColor(user?.role)}`}>
-                <Shield className="w-2.5 h-2.5" />
+                <SecurityRounded sx={{ fontSize: 12 }} />
                 {user?.role}
               </span>
             </div>
           </div>
+
+          {user?.role === 'OWNER' && <AccountSwitcherMenu />}
 
           <div className="py-1">
             <button
@@ -73,9 +79,9 @@ export function UserMenu() {
                 setIsOpen(false);
                 logout();
               }}
-              className="w-full px-4 py-2 text-left text-xs font-medium text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors"
+              className="w-full px-4 py-2 text-left text-xs font-medium text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors cursor-pointer"
             >
-              <LogOut className="w-4 h-4" />
+              <LogoutRounded sx={{ fontSize: 16 }} />
               Sign Out
             </button>
           </div>

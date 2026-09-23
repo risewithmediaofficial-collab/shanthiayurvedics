@@ -28,6 +28,19 @@ import { Modal } from '../../components/common/Modal.jsx';
 import { Pagination } from '../../components/common/Pagination.jsx';
 import { OrderCreateModal } from '../orders/OrderCreateModal.jsx';
 import { SimpleProgressBar, SimplePipelineTrack } from '../../components/common/SimpleProgressBar.jsx';
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils.js';
+import { DateRangeFilter } from '../../components/common/DateRangeFilter.jsx';
+import { ExportButton } from '../../components/common/ExportButton.jsx';
+import { SortDropdown } from '../../components/common/SortDropdown.jsx';
+
+const LEAD_SORT_OPTIONS = [
+  { value: 'createdAt', label: '📅 Created Date' },
+  { value: 'name', label: '👤 Lead Name' },
+  { value: 'status', label: '🏷️ Status' },
+  { value: 'source', label: '📢 Source' },
+  { value: 'city', label: '🏙️ City' },
+  { value: 'updatedAt', label: '⏱️ Last Activity' }
+];
 
 export function LeadListPage() {
   const queryClient = useQueryClient();
@@ -39,6 +52,10 @@ export function LeadListPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -86,12 +103,14 @@ export function LeadListPage() {
 
   // Fetch Leads
   const { data: leadsResponse, isLoading } = useQuery({
-    queryKey: ['leads', page, search, statusFilter, sourceFilter, selectedBranchId],
+    queryKey: ['leads', page, search, statusFilter, sourceFilter, startDate, endDate, sortBy, sortOrder, selectedBranchId],
     queryFn: async () => {
-      const params = { page, limit: 15 };
-      if (search) params.search = search;
-      if (statusFilter) params.status = statusFilter;
-      if (sourceFilter) params.source = sourceFilter;
+      const params = { page, limit: 15, sortBy, sortOrder };
+      if (search?.trim()) params.search = search.trim();
+      if (statusFilter && statusFilter !== 'ALL') params.status = statusFilter;
+      if (sourceFilter && sourceFilter !== 'ALL') params.source = sourceFilter;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
       const res = await apiClient.get('/leads', { params });
       return res.data;
     }
@@ -270,29 +289,58 @@ export function LeadListPage() {
     window.open(`https://wa.me/91${cleanMobile}?text=${textMsg}`, '_blank');
   };
 
-  // Export Leads to CSV
-  const handleExportCSV = () => {
-    if (leads.length === 0) return;
-    const headers = ['Lead Name', 'Mobile', 'WhatsApp', 'Email', 'Source', 'Status', 'City', 'Assigned To', 'Created At'];
-    const rows = leads.map((l) => [
-      `"${l.name || ''}"`,
-      `"${l.mobile || ''}"`,
-      `"${l.whatsappNumber || ''}"`,
-      `"${l.email || ''}"`,
-      `"${l.source || ''}"`,
-      `"${l.status || ''}"`,
-      `"${l.city || ''}"`,
-      `"${l.assignedTo?.name || 'Unassigned'}"`,
-      `"${new Date(l.createdAt).toLocaleDateString('en-GB')}"`
-    ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `shanthi_leads_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Export Leads to Excel or CSV
+  const handleExportLeads = async (format = 'excel') => {
+    try {
+      setLeadActionMsg('⏳ Preparing leads for export...');
+      const params = {
+        export: true,
+        sortBy,
+        sortOrder
+      };
+      if (search?.trim()) params.search = search.trim();
+      if (statusFilter && statusFilter !== 'ALL') params.status = statusFilter;
+      if (sourceFilter && sourceFilter !== 'ALL') params.source = sourceFilter;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+
+      const res = await apiClient.get('/leads', { params });
+      const exportList = res.data?.data || leads;
+
+      if (exportList.length === 0) {
+        setLeadActionMsg('⚠️ No leads found to export');
+        setTimeout(() => setLeadActionMsg(''), 3000);
+        return;
+      }
+
+      const rows = exportList.map((lead, idx) => ({
+        'S.No': idx + 1,
+        'Lead Name': lead.name || '—',
+        'Mobile': lead.mobile || '—',
+        'WhatsApp': lead.whatsappNumber || '',
+        'Email': lead.email || '',
+        'City': lead.city || '—',
+        'Status': lead.status || 'NEW',
+        'Source': lead.source || 'CALL',
+        'Assigned Telecaller': lead.assignedTo?.name || 'Unassigned',
+        'Created Date': new Date(lead.createdAt).toLocaleDateString('en-GB'),
+        'Last Updated': new Date(lead.updatedAt).toLocaleDateString('en-GB'),
+        'Notes': lead.notes || ''
+      }));
+
+      const filePrefix = `Shanthi_Leads_${startDate ? `${startDate}_to_${endDate || 'today'}` : 'All'}`;
+      if (format === 'excel') {
+        exportToExcel(rows, filePrefix, 'Leads');
+      } else {
+        exportToCSV(rows, filePrefix);
+      }
+      setLeadActionMsg(`✓ Exported ${rows.length} lead(s) successfully!`);
+      setTimeout(() => setLeadActionMsg(''), 4000);
+    } catch (err) {
+      console.error('Lead export error:', err);
+      setLeadActionMsg('⚠️ Failed to export leads');
+      setTimeout(() => setLeadActionMsg(''), 4000);
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -460,14 +508,11 @@ export function LeadListPage() {
           <p className="text-xs text-slate-500">Capture, assign, track calls, edit, and convert leads into customers</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            icon={Download}
-            onClick={handleExportCSV}
+          <ExportButton
+            onExport={handleExportLeads}
+            label="Export Leads"
             disabled={leads.length === 0}
-          >
-            Export CSV
-          </Button>
+          />
           <Button
             variant="primary"
             icon={Plus}
@@ -490,14 +535,44 @@ export function LeadListPage() {
         </div>
       )}
 
+      {/* Bento Metric Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Total Inquiries</div>
+          <div className="bento-metric-value text-slate-900">{meta.total || leads.length}</div>
+          <div className="text-[11px] text-slate-500 font-medium">Pipeline volume</div>
+        </div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">New Inquiries</div>
+          <div className="bento-metric-value text-blue-600">
+            {leads.filter(l => l.status === 'NEW').length}
+          </div>
+          <div className="text-[11px] text-blue-600 font-medium">Awaiting telecaller</div>
+        </div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Active Outreach</div>
+          <div className="bento-metric-value text-amber-600">
+            {leads.filter(l => l.status === 'CONTACTED' || l.status === 'INTERESTED').length}
+          </div>
+          <div className="text-[11px] text-amber-600 font-medium">In discussion</div>
+        </div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Converted Clients</div>
+          <div className="bento-metric-value text-emerald-700">
+            {leads.filter(l => l.status === 'CONVERTED').length}
+          </div>
+          <div className="text-[11px] text-emerald-600 font-medium">Treatment booked</div>
+        </div>
+      </div>
+
       {/* Visual Lead Pipeline & Conversion Track */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 space-y-3">
+      <div className="bento-card space-y-3">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-bold text-slate-800 tracking-tight flex items-center gap-1.5">
+          <span className="font-semibold text-slate-800 tracking-tight flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             Lead Acquisition & Conversion Funnel
           </span>
-          <span className="text-[11px] font-semibold text-slate-400">Total Leads: {meta.total || leads.length}</span>
+          <span className="text-[11px] font-medium text-slate-500">Total: {meta.total || leads.length}</span>
         </div>
         <SimplePipelineTrack
           segments={[
@@ -510,8 +585,8 @@ export function LeadListPage() {
         />
       </div>
 
-      {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-slate-200">
+      {/* Filter & Sorting Bar */}
+      <div className="bento-card p-3 flex flex-wrap items-center gap-2.5">
         <div className="flex-1 min-w-[200px]">
           <Input
             placeholder="Search by name, mobile, or city..."
@@ -523,7 +598,19 @@ export function LeadListPage() {
             }}
           />
         </div>
-        <div className="w-40">
+
+        {/* Date to Date Filter */}
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onChange={({ startDate: s, endDate: e }) => {
+            setStartDate(s);
+            setEndDate(e);
+            setPage(1);
+          }}
+        />
+
+        <div className="w-36">
           <Select
             value={statusFilter}
             onChange={(e) => {
@@ -541,7 +628,8 @@ export function LeadListPage() {
             ]}
           />
         </div>
-        <div className="w-44">
+
+        <div className="w-40">
           <Select
             value={sourceFilter}
             onChange={(e) => {
@@ -561,6 +649,46 @@ export function LeadListPage() {
             ]}
           />
         </div>
+
+        {/* Dynamic Sort Dropdown */}
+        <SortDropdown
+          options={LEAD_SORT_OPTIONS}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSortChange={(field, order) => {
+            setSortBy(field);
+            setSortOrder(order);
+            setPage(1);
+          }}
+        />
+
+        {/* Direct Export Button */}
+        <ExportButton
+          onExport={handleExportLeads}
+          label="Export"
+        />
+
+        {/* Clear Active Filters */}
+        {(statusFilter || sourceFilter || startDate || endDate || search || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
+          <button
+            type="button"
+            onClick={() => {
+              setStatusFilter('');
+              setSourceFilter('');
+              setStartDate('');
+              setEndDate('');
+              setSearch('');
+              setSortBy('createdAt');
+              setSortOrder('desc');
+              setPage(1);
+            }}
+            className="px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+            title="Reset all filters"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>Reset</span>
+          </button>
+        )}
       </div>
 
       {/* Table */}
@@ -677,11 +805,25 @@ export function LeadListPage() {
                 { value: 'MANUAL', label: 'Manual Entry' }
               ]}
             />
-            <Input
+            <Select
               label="City"
               value={formData.city}
               onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-              placeholder="e.g. Hosur"
+              options={[
+                { value: 'Hosur', label: 'Hosur' },
+                { value: 'Krishnagiri', label: 'Krishnagiri' },
+                { value: 'Dharmapuri', label: 'Dharmapuri' },
+                { value: 'Salem', label: 'Salem' },
+                { value: 'Coimbatore', label: 'Coimbatore' },
+                { value: 'Erode', label: 'Erode' },
+                { value: 'Tirupur', label: 'Tirupur' },
+                { value: 'Chennai', label: 'Chennai' },
+                { value: 'Vellore', label: 'Vellore' },
+                { value: 'Bengaluru', label: 'Bengaluru' },
+                { value: 'Tirunelveli', label: 'Tirunelveli' },
+                { value: 'Madurai', label: 'Madurai' },
+                { value: 'Other', label: 'Other City' }
+              ]}
             />
           </div>
 
@@ -902,10 +1044,25 @@ export function LeadListPage() {
                 ]}
               />
             </div>
-            <Input
+            <Select
               label="City / Town"
               value={editFormData.city}
               onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+              options={[
+                { value: 'Hosur', label: 'Hosur' },
+                { value: 'Krishnagiri', label: 'Krishnagiri' },
+                { value: 'Dharmapuri', label: 'Dharmapuri' },
+                { value: 'Salem', label: 'Salem' },
+                { value: 'Coimbatore', label: 'Coimbatore' },
+                { value: 'Erode', label: 'Erode' },
+                { value: 'Tirupur', label: 'Tirupur' },
+                { value: 'Chennai', label: 'Chennai' },
+                { value: 'Vellore', label: 'Vellore' },
+                { value: 'Bengaluru', label: 'Bengaluru' },
+                { value: 'Tirunelveli', label: 'Tirunelveli' },
+                { value: 'Madurai', label: 'Madurai' },
+                { value: 'Other', label: 'Other City' }
+              ]}
             />
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Lead Notes</label>

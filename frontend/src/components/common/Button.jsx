@@ -1,7 +1,7 @@
 import React from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Loader2 } from 'lucide-react';
+import CircularProgress from '@mui/material/CircularProgress';
 
 export function Button({
   children,
@@ -15,7 +15,7 @@ export function Button({
   type = 'button',
   ...props
 }) {
-  const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed select-none';
+  const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed select-none cursor-pointer';
 
   const variants = {
     primary: 'text-white bg-ayur-700 hover:bg-ayur-800 active:bg-ayur-900 shadow-sm focus:ring-ayur-500/30',
@@ -33,6 +33,13 @@ export function Button({
     lg: 'px-5 py-2.5 text-base gap-2.5',
   };
 
+  const spinnerSizes = {
+    xs: 12,
+    sm: 14,
+    md: 16,
+    lg: 18
+  };
+
   return (
     <button
       type={type}
@@ -41,12 +48,12 @@ export function Button({
       {...props}
     >
       {isLoading ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
+        <CircularProgress size={spinnerSizes[size] || 16} color="inherit" thickness={4.5} />
       ) : (
-        Icon && iconPosition === 'left' && <Icon className="w-4 h-4" />
+        Icon && iconPosition === 'left' && <Icon sx={{ fontSize: 18 }} className="w-4 h-4" />
       )}
       <span>{children}</span>
-      {!isLoading && Icon && iconPosition === 'right' && <Icon className="w-4 h-4" />}
+      {!isLoading && Icon && iconPosition === 'right' && <Icon sx={{ fontSize: 18 }} className="w-4 h-4" />}
     </button>
   );
 }

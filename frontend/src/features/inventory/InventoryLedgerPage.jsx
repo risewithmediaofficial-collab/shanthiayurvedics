@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Minus, SlidersHorizontal, ArrowLeftRight, History, Package, AlertTriangle, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Minus, SlidersHorizontal, ArrowLeftRight, History, Package, AlertTriangle, Pencil, Trash2, Search, X } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
 import { useBranch } from '../../context/BranchContext.jsx';
@@ -11,6 +11,23 @@ import { Select } from '../../components/common/Select.jsx';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { Pagination } from '../../components/common/Pagination.jsx';
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils.js';
+import { DateRangeFilter } from '../../components/common/DateRangeFilter.jsx';
+import { ExportButton } from '../../components/common/ExportButton.jsx';
+import { SortDropdown } from '../../components/common/SortDropdown.jsx';
+
+const INVENTORY_SORT_OPTIONS = [
+  { value: 'productName', label: '📦 Product Name' },
+  { value: 'availableQuantity', label: '📊 Available Stock' },
+  { value: 'reservedQuantity', label: '🔒 Reserved Stock' },
+  { value: 'updatedAt', label: '⏱️ Last Updated' }
+];
+
+const MOVEMENT_SORT_OPTIONS = [
+  { value: 'createdAt', label: '📅 Movement Date' },
+  { value: 'quantity', label: '🔢 Quantity' },
+  { value: 'type', label: '🏷️ Movement Type' }
+];
 
 export function InventoryLedgerPage() {
   const queryClient = useQueryClient();
@@ -19,6 +36,11 @@ export function InventoryLedgerPage() {
 
   const [activeTab, setActiveTab] = useState('CURRENT'); // 'CURRENT' | 'MOVEMENTS'
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [sortBy, setSortBy] = useState('productName');
+  const [sortOrder, setSortOrder] = useState('asc');
 
   // Modals
   const [stockInModalOpen, setStockInModalOpen] = useState(false);
@@ -47,9 +69,13 @@ export function InventoryLedgerPage() {
 
   // Fetch Current Inventory
   const { data: invResponse, isLoading: isInvLoading } = useQuery({
-    queryKey: ['inventory', page, selectedBranchId],
+    queryKey: ['inventory', page, search, startDate, endDate, sortBy, sortOrder, selectedBranchId],
     queryFn: async () => {
-      const res = await apiClient.get('/inventory', { params: { page, limit: 15 } });
+      const params = { page, limit: 15, sortBy, sortOrder };
+      if (search?.trim()) params.search = search.trim();
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+      const res = await apiClient.get('/inventory', { params });
       return res.data;
     },
     enabled: activeTab === 'CURRENT'
@@ -57,9 +83,12 @@ export function InventoryLedgerPage() {
 
   // Fetch Movements Ledger
   const { data: movementsResponse, isLoading: isMovLoading } = useQuery({
-    queryKey: ['inventoryMovements', page, selectedBranchId],
+    queryKey: ['inventoryMovements', page, startDate, endDate, sortBy, sortOrder, selectedBranchId],
     queryFn: async () => {
-      const res = await apiClient.get('/inventory/movements', { params: { page, limit: 15 } });
+      const params = { page, limit: 15, sortBy, sortOrder };
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+      const res = await apiClient.get('/inventory/movements', { params });
       return res.data;
     },
     enabled: activeTab === 'MOVEMENTS'
@@ -68,6 +97,68 @@ export function InventoryLedgerPage() {
   const inventory = invResponse?.data || [];
   const movements = movementsResponse?.data || [];
   const meta = (activeTab === 'CURRENT' ? invResponse?.meta : movementsResponse?.meta) || { page: 1, totalPages: 1, total: 0 };
+
+  const handleExportInventory = async (format = 'excel') => {
+    try {
+      setActionMsg('⏳ Preparing inventory data for export...');
+      if (activeTab === 'CURRENT') {
+        const params = { export: true, sortBy, sortOrder };
+        if (search?.trim()) params.search = search.trim();
+        if (startDate) params.startDate = startDate;
+        if (endDate) params.endDate = endDate;
+
+        const res = await apiClient.get('/inventory', { params });
+        const list = res.data?.data || inventory;
+
+        const rows = list.map((item, idx) => ({
+          'S.No': idx + 1,
+          'Product Name': item.productId?.name || '—',
+          'SKU': item.productId?.sku || '—',
+          'Category': item.productId?.category || '—',
+          'Batch Number': item.batchId?.batchNumber || '—',
+          'Expiry Date': item.batchId?.expiryDate ? new Date(item.batchId.expiryDate).toLocaleDateString('en-GB') : '—',
+          'Unit Price (₹)': item.productId?.price || 0,
+          'Available Units': item.availableQuantity || 0,
+          'Reserved Units': item.reservedQuantity || 0,
+          'Stock Value (₹)': ((item.availableQuantity || 0) * (item.productId?.price || 0)).toFixed(2),
+          'Branch': item.branchId?.name || 'Hosur Main Hub'
+        }));
+
+        const filePrefix = `Shanthi_Inventory_Stock_${startDate ? `${startDate}_to_${endDate || 'today'}` : 'Current'}`;
+        if (format === 'excel') exportToExcel(rows, filePrefix, 'Stock_Ledger');
+        else exportToCSV(rows, filePrefix);
+      } else {
+        const params = { export: true, sortBy, sortOrder };
+        if (startDate) params.startDate = startDate;
+        if (endDate) params.endDate = endDate;
+
+        const res = await apiClient.get('/inventory/movements', { params });
+        const list = res.data?.data || movements;
+
+        const rows = list.map((m, idx) => ({
+          'S.No': idx + 1,
+          'Date': new Date(m.createdAt).toLocaleDateString('en-GB'),
+          'Product': m.productId?.name || '—',
+          'Type': m.type || '—',
+          'Quantity': m.quantity || 0,
+          'Batch': m.batchId?.batchNumber || '—',
+          'Reason / Reference': m.reason || m.notes || '—',
+          'Performed By': m.performedBy?.name || 'Admin',
+          'Branch': m.branchId?.name || 'Hosur'
+        }));
+
+        const filePrefix = `Shanthi_Stock_Movements_${startDate ? `${startDate}_to_${endDate || 'today'}` : 'All'}`;
+        if (format === 'excel') exportToExcel(rows, filePrefix, 'Stock_Movements');
+        else exportToCSV(rows, filePrefix);
+      }
+      setActionMsg('✓ Export completed successfully');
+      setTimeout(() => setActionMsg(''), 4000);
+    } catch (err) {
+      console.error('Inventory export error:', err);
+      setActionMsg('⚠️ Failed to export inventory');
+      setTimeout(() => setActionMsg(''), 4000);
+    }
+  };
 
   const stockInMutation = useMutation({
     mutationFn: (data) => apiClient.post('/inventory/in', data),
@@ -285,7 +376,7 @@ export function InventoryLedgerPage() {
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
         <button
-          onClick={() => { setActiveTab('CURRENT'); setPage(1); }}
+          onClick={() => { setActiveTab('CURRENT'); setPage(1); setSortBy('productName'); }}
           className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             activeTab === 'CURRENT' ? 'bg-ayur-800 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
           }`}
@@ -293,13 +384,82 @@ export function InventoryLedgerPage() {
           📦 Available Stock Matrix
         </button>
         <button
-          onClick={() => { setActiveTab('MOVEMENTS'); setPage(1); }}
+          onClick={() => { setActiveTab('MOVEMENTS'); setPage(1); setSortBy('createdAt'); }}
           className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             activeTab === 'MOVEMENTS' ? 'bg-ayur-800 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           📜 Transaction Movements Ledger
         </button>
+      </div>
+
+      {/* Search, Filter, Sort & Export Toolbar */}
+      <div className="bento-card p-3 flex flex-wrap items-center gap-2.5">
+        {activeTab === 'CURRENT' && (
+          <div className="flex-1 min-w-[200px] relative">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Search product name or SKU..."
+              className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-ayur-600 transition-colors"
+            />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+          </div>
+        )}
+
+        {/* Date to Date Range Filter */}
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onChange={({ startDate: s, endDate: e }) => {
+            setStartDate(s);
+            setEndDate(e);
+            setPage(1);
+          }}
+          label={activeTab === 'CURRENT' ? 'Updated Between' : 'Movement Date'}
+        />
+
+        {/* Dynamic Sort Dropdown */}
+        <SortDropdown
+          options={activeTab === 'CURRENT' ? INVENTORY_SORT_OPTIONS : MOVEMENT_SORT_OPTIONS}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSortChange={(field, order) => {
+            setSortBy(field);
+            setSortOrder(order);
+            setPage(1);
+          }}
+        />
+
+        {/* Direct Export Button */}
+        <ExportButton
+          onExport={handleExportInventory}
+          label="Export Ledger"
+        />
+
+        {/* Reset Filter Button */}
+        {(search || startDate || endDate || (activeTab === 'CURRENT' ? sortBy !== 'productName' : sortBy !== 'createdAt')) && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearch('');
+              setStartDate('');
+              setEndDate('');
+              setSortBy(activeTab === 'CURRENT' ? 'productName' : 'createdAt');
+              setSortOrder('asc');
+              setPage(1);
+            }}
+            className="px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+            title="Reset filters"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>Reset</span>
+          </button>
+        )}
       </div>
 
       <Table

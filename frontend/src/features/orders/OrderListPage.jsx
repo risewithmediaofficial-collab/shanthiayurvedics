@@ -18,7 +18,13 @@ import {
   Clock,
   MapPin,
   Zap,
-  CheckCircle2
+  CheckCircle2,
+  Pencil,
+  X,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Filter
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
@@ -35,6 +41,9 @@ import { BarcodeScanStationModal } from './BarcodeScanStationModal.jsx';
 import { IndiaPostModuleModal } from './IndiaPostModuleModal.jsx';
 import { BulkShippingLabelsModal } from './BulkShippingLabelsModal.jsx';
 import { SimplePipelineTrack } from '../../components/common/SimpleProgressBar.jsx';
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils.js';
+import { DateRangeFilter } from '../../components/common/DateRangeFilter.jsx';
+import { ExportButton } from '../../components/common/ExportButton.jsx';
 
 // Status styling configuration
 const STATUS_META = {
@@ -57,16 +66,101 @@ export function OrderListPage({ hideHeader = false }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { hasPermission, isOwner, isManager, role } = usePermissions();
+  const { hasPermission, isOwner, isManager, isDistributor, role, user } = usePermissions();
   const { selectedBranchId } = useBranch();
 
-  // Filters & State
+  // Filters & Sorting State
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
   const [districtFilter, setDistrictFilter] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
   const [viewMode, setViewMode] = useState('card'); // 'card' | 'full'
+
+  const handleHeaderSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(field);
+      setSortOrder('desc');
+    }
+    setPage(1);
+  };
+
+  const handleExportOrders = async (format = 'excel') => {
+    try {
+      showToast('⏳ Preparing orders for export...');
+      let exportOrdersList = [];
+
+      if (selectedOrderIds.length > 0) {
+        exportOrdersList = orders.filter((o) => selectedOrderIds.includes(o._id));
+      } else {
+        const params = {
+          export: true,
+          sortBy,
+          sortOrder
+        };
+        if (search?.trim()) params.search = search.trim();
+        if (statusFilter && statusFilter !== 'ALL') params.status = statusFilter;
+        if (districtFilter && districtFilter !== 'ALL') params.district = districtFilter;
+        if (startDate) params.startDate = startDate;
+        if (endDate) params.endDate = endDate;
+        if (selectedBranchId && selectedBranchId !== 'ALL') params.branchId = selectedBranchId;
+
+        const res = await apiClient.get('/orders', { params });
+        exportOrdersList = res.data?.data || orders;
+      }
+
+      if (exportOrdersList.length === 0) {
+        showToast('⚠️ No orders found to export');
+        return;
+      }
+
+      const rows = exportOrdersList.map((ord, idx) => {
+        const pat = ord.patientDetails || {};
+        const addr = ord.deliveryAddress || {};
+        const customerName = pat.patientName || ord.customerId?.name || 'Customer';
+        const mobile = pat.mobile || ord.customerId?.mobile || addr.phone || '';
+        const itemsStr = ord.items?.map((i) => `${i.productName} (x${i.quantity})`).join(', ') || 'Ayurvedic Medicine';
+
+        return {
+          'S.No': idx + 1,
+          'Order Number': ord.orderNumber,
+          'Order Date': new Date(ord.createdAt).toLocaleDateString('en-GB'),
+          'Customer Name': customerName,
+          'Mobile': mobile,
+          'Alt Mobile': pat.alternateMobile || '',
+          'Products Summary': itemsStr,
+          'Total Amount (₹)': ord.grandTotal || 0,
+          'Payment Method': ord.paymentMethod || 'COD',
+          'Payment Status': ord.paymentStatus || 'PENDING',
+          'Order Status': ord.status,
+          'Street Address': addr.street || '',
+          'Landmark': addr.landmark || '',
+          'City': addr.city || 'Hosur',
+          'District': addr.district || 'Krishnagiri',
+          'State': addr.state || 'Tamil Nadu',
+          'Pincode': addr.pincode || '',
+          'Tracking Number': ord.trackingNumber || '',
+          'Branch': ord.branchId?.name || 'Hosur Main Hub'
+        };
+      });
+
+      const filePrefix = `Shanthi_Orders_${startDate ? `${startDate}_to_${endDate || 'today'}` : 'All'}`;
+      if (format === 'excel') {
+        exportToExcel(rows, filePrefix, 'Orders');
+      } else {
+        exportToCSV(rows, filePrefix);
+      }
+      showToast(`✓ Exported ${rows.length} order(s) successfully!`);
+    } catch (err) {
+      console.error('Export error:', err);
+      showToast('⚠️ Failed to export orders');
+    }
+  };
 
   // Multi-Selection State
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
@@ -86,6 +180,28 @@ export function OrderListPage({ hideHeader = false }) {
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState(null);
   const [selectedOrderForLabel, setSelectedOrderForLabel] = useState(null);
   const [selectedOrderForDelete, setSelectedOrderForDelete] = useState(null);
+  const [selectedOrderForEdit, setSelectedOrderForEdit] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    patientName: '',
+    fatherName: '',
+    mobile: '',
+    alternateMobile: '',
+    street: '',
+    landmark: '',
+    village: '',
+    taluk: '',
+    city: '',
+    district: '',
+    state: 'Tamil Nadu',
+    pincode: '',
+    paymentMethod: 'COD',
+    paymentStatus: 'COD_PENDING',
+    status: 'NEW',
+    trackingNumber: '',
+    courierName: 'India Post',
+    notes: '',
+    grandTotal: ''
+  });
 
   // Notification Toast
   const [toastMsg, setToastMsg] = useState('');
@@ -102,6 +218,7 @@ export function OrderListPage({ hideHeader = false }) {
       const res = await apiClient.get('/orders/metrics-summary');
       return res.data?.data || {};
     },
+    enabled: Boolean(user),
     refetchInterval: 15000
   });
 
@@ -111,7 +228,8 @@ export function OrderListPage({ hideHeader = false }) {
     queryFn: async () => {
       const res = await apiClient.get('/orders/districts');
       return res.data?.data || [];
-    }
+    },
+    enabled: Boolean(user)
   });
 
   // Fetch Telecallers for Assignment Dropdown
@@ -124,24 +242,25 @@ export function OrderListPage({ hideHeader = false }) {
       } catch (e) {
         return [];
       }
-    }
+    },
+    enabled: Boolean(user)
   });
 
   // Fetch Paginated Orders
   const { data: ordersResponse, isLoading, refetch: refetchOrders } = useQuery({
-    queryKey: ['orders', page, search, statusFilter, districtFilter, dateFilter, selectedBranchId],
+    queryKey: ['orders', page, search, statusFilter, districtFilter, startDate, endDate, sortBy, sortOrder, selectedBranchId],
     queryFn: async () => {
-      const params = { page, limit: 15 };
-      if (search) params.search = search;
-      if (statusFilter) params.status = statusFilter;
-      if (districtFilter) params.district = districtFilter;
-      if (dateFilter) {
-        params.startDate = dateFilter;
-        params.endDate = dateFilter;
-      }
+      const params = { page, limit: 15, sortBy, sortOrder };
+      if (search?.trim()) params.search = search.trim();
+      if (statusFilter && statusFilter !== 'ALL') params.status = statusFilter;
+      if (districtFilter && districtFilter !== 'ALL') params.district = districtFilter;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+      if (selectedBranchId && selectedBranchId !== 'ALL') params.branchId = selectedBranchId;
       const res = await apiClient.get('/orders', { params });
       return res.data;
-    }
+    },
+    enabled: Boolean(user)
   });
 
   const orders = ordersResponse?.data || [];
@@ -155,10 +274,19 @@ export function OrderListPage({ hideHeader = false }) {
     mutationFn: ({ orderIds, status, forceRevert }) =>
       apiClient.patch('/orders/bulk-status', { orderIds, status, forceRevert }),
     onSuccess: (res) => {
-      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      refetchOrders();
       refetchMetrics();
       setSelectedOrderIds([]);
-      showToast(`✓ Bulk updated status to ${bulkStatusToApply}`);
+
+      const data = res.data?.data || {};
+      if (data.failedCount > 0 && data.successCount === 0) {
+        showToast(`⚠️ Could not update: ${data.failed?.[0]?.error || 'Transition not allowed for selected status'}`);
+      } else if (data.failedCount > 0) {
+        showToast(`⚠️ Updated ${data.successCount} order(s), but ${data.failedCount} failed`);
+      } else {
+        showToast(`✓ Updated ${data.successCount || 'all'} order(s) to ${STATUS_META[bulkStatusToApply]?.label || bulkStatusToApply}`);
+      }
     },
     onError: (err) => {
       showToast(`⚠️ ${err?.response?.data?.message || 'Bulk transition failed'}`);
@@ -169,8 +297,9 @@ export function OrderListPage({ hideHeader = false }) {
   const bulkAssignMutation = useMutation({
     mutationFn: ({ orderIds, telecallerId }) =>
       apiClient.patch('/orders/bulk-assign', { orderIds, telecallerId }),
-    onSuccess: (res) => {
-      queryClient.invalidateQueries(['orders']);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      refetchOrders();
       setSelectedOrderIds([]);
       showToast('✓ Selected orders assigned to telecaller for verification');
     },
@@ -183,7 +312,8 @@ export function OrderListPage({ hideHeader = false }) {
   const bulkVerifyMutation = useMutation({
     mutationFn: ({ orderIds }) => apiClient.patch('/orders/bulk-verify', { orderIds }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      refetchOrders();
       refetchMetrics();
       setSelectedOrderIds([]);
       showToast('✓ Selected orders marked as verified & confirmed');
@@ -197,7 +327,8 @@ export function OrderListPage({ hideHeader = false }) {
   const autoDispatchMutation = useMutation({
     mutationFn: () => apiClient.post('/orders/auto-dispatch'),
     onSuccess: (res) => {
-      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      refetchOrders();
       refetchMetrics();
       showToast(`✓ ${res.data?.data?.count || 0} packed orders auto-dispatched successfully!`);
     },
@@ -211,7 +342,8 @@ export function OrderListPage({ hideHeader = false }) {
     mutationFn: ({ orderId, status, forceRevert }) =>
       apiClient.patch(`/orders/${orderId}/transition`, { status, forceRevert }),
     onSuccess: (_, { status }) => {
-      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      refetchOrders();
       refetchMetrics();
       showToast(`✓ Order status updated to ${STATUS_META[status]?.label || status}`);
     },
@@ -224,7 +356,8 @@ export function OrderListPage({ hideHeader = false }) {
   const deleteMutation = useMutation({
     mutationFn: (orderId) => apiClient.delete(`/orders/${orderId}`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      refetchOrders();
       refetchMetrics();
       setSelectedOrderForDelete(null);
       showToast('✓ Order deleted and stock released');
@@ -233,6 +366,48 @@ export function OrderListPage({ hideHeader = false }) {
       showToast(`⚠️ ${err?.response?.data?.message || 'Failed to delete order'}`);
     }
   });
+
+  // Update Order Mutation
+  const updateOrderMutation = useMutation({
+    mutationFn: ({ orderId, payload }) => apiClient.patch(`/orders/${orderId}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      refetchOrders();
+      refetchMetrics();
+      setSelectedOrderForEdit(null);
+      showToast('✓ Order details updated successfully');
+    },
+    onError: (err) => {
+      showToast(`⚠️ ${err?.response?.data?.message || 'Failed to update order'}`);
+    }
+  });
+
+  const handleOpenEditOrder = (order) => {
+    setSelectedOrderForEdit(order);
+    const addr = order.deliveryAddress || {};
+    const patient = order.patientDetails || {};
+    setEditFormData({
+      patientName: patient.patientName || order.customer?.name || order.customerName || '',
+      fatherName: patient.fatherName || '',
+      mobile: patient.mobile || order.customer?.mobile || order.customerPhone || '',
+      alternateMobile: patient.alternateMobile || '',
+      street: addr.street || '',
+      landmark: addr.landmark || '',
+      village: addr.village || '',
+      taluk: addr.taluk || '',
+      district: addr.district || 'Krishnagiri',
+      city: addr.city || 'Hosur',
+      state: addr.state || 'Tamil Nadu',
+      pincode: addr.pincode || '635109',
+      paymentMethod: order.paymentMethod || 'COD',
+      paymentStatus: order.paymentStatus || 'COD_PENDING',
+      status: order.status || 'NEW',
+      trackingNumber: order.trackingNumber === 'Pending' ? '' : (order.trackingNumber || ''),
+      courierName: order.courierName || 'India Post',
+      notes: order.notes || '',
+      grandTotal: order.grandTotal || ''
+    });
+  };
 
   // Selection toggles
   const handleSelectAll = (e) => {
@@ -250,15 +425,18 @@ export function OrderListPage({ hideHeader = false }) {
   };
 
   const handleApplyBulkStatus = () => {
-    if (!bulkStatusToApply) return;
+    if (!bulkStatusToApply) {
+      showToast('⚠️ Please select a target status from the dropdown');
+      return;
+    }
     if (selectedOrderIds.length === 0) {
-      showToast('⚠️ Please select at least one order to update');
+      showToast('⚠️ Please select at least one order using the checkboxes below');
       return;
     }
     bulkStatusMutation.mutate({
       orderIds: selectedOrderIds,
       status: bulkStatusToApply,
-      forceRevert: forceRevertChecked
+      forceRevert: forceRevertChecked || isOwner || isManager || isDistributor
     });
   };
 
@@ -322,103 +500,61 @@ export function OrderListPage({ hideHeader = false }) {
         </div>
       )}
 
-      {/* 2. Top Metrics Ribbon (2 Rows matching AyurOne Mart) */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 divide-y divide-slate-100">
-        {/* Row 1: Total Leads | Today | Orders | Today Rev */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pb-3 text-center">
-          <div className="p-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 block font-mono">
-              {metrics.totalLeads ?? 0}
-            </span>
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">
-              Total Leads
-            </span>
-          </div>
-
-          <div className="p-2 border-l border-slate-100">
-            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full inline-block mb-1 uppercase tracking-wider">
-              TODAY
-            </span>
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 block">
-              {metrics.todayOrdersCount ?? 0} Orders Today
-            </span>
-          </div>
-
-          <div className="p-2 border-l border-slate-100">
-            <span className="text-2xl sm:text-3xl font-bold text-emerald-700 block font-mono">
-              {metrics.totalOrders ?? meta.total ?? 0}
-            </span>
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">
-              Orders
-            </span>
-          </div>
-
-          <div className="p-2 border-l border-slate-100">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 block font-mono">
-              ₹{(metrics.todayRev ?? 0).toLocaleString()}
-            </span>
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">
-              Today Rev
-            </span>
-          </div>
+      {/* ── Bento KPI Metrics Grid ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="bento-card flex flex-col gap-0.5">
+          <div className="bento-metric-title">Today's Sales</div>
+          <div className="text-xl font-semibold font-mono text-slate-900 tracking-tight">₹{(metrics.todayRev ?? 0).toLocaleString()}</div>
+          <div className="text-[10px] text-emerald-600 font-medium">+{metrics.todayOrdersCount ?? 0} orders today</div>
         </div>
 
-        {/* Row 2: Followups | In Queue | Shipped | To Verify */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-3 text-center">
-          <div className="p-2">
-            <span className="text-xl sm:text-2xl font-bold text-slate-700 block font-mono">
-              {metrics.pendingFollowups ?? 0}
-            </span>
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">
-              Followups
-            </span>
-          </div>
+        <div className="bento-card flex flex-col gap-0.5">
+          <div className="bento-metric-title">Total Orders</div>
+          <div className="text-xl font-semibold font-mono text-emerald-700 tracking-tight">{metrics.totalOrders ?? meta.total ?? 0}</div>
+          <div className="text-[10px] text-slate-400 font-medium">Verified bookings</div>
+        </div>
 
-          <div className="p-2 border-l border-slate-100">
-            <span className="text-xl sm:text-2xl font-bold text-amber-600 block font-mono">
-              {metrics.inQueueCount ?? 0}
-            </span>
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">
-              In Queue
-            </span>
-          </div>
+        <div className="bento-card flex flex-col gap-0.5">
+          <div className="bento-metric-title">In Transit</div>
+          <div className="text-xl font-semibold font-mono text-indigo-600 tracking-tight">{metrics.shippedCount ?? 0}</div>
+          <div className="text-[10px] text-slate-400 font-medium">Active courier dispatch</div>
+        </div>
 
-          <div className="p-2 border-l border-slate-100">
-            <span className="text-xl sm:text-2xl font-bold text-blue-600 block font-mono">
-              {metrics.shippedCount ?? 0}
-            </span>
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">
-              Shipped
-            </span>
-          </div>
+        <div className="bento-card flex flex-col gap-0.5">
+          <div className="bento-metric-title">Packed</div>
+          <div className="text-xl font-semibold font-mono text-purple-600 tracking-tight">{metrics.packedCount ?? 0}</div>
+          <div className="text-[10px] text-slate-400 font-medium">Awaiting dispatch</div>
+        </div>
 
-          <div className="p-2 border-l border-slate-100">
-            <span className="text-xl sm:text-2xl font-bold text-slate-800 block font-mono">
-              {metrics.toVerifyCount ?? 0}
-            </span>
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">
-              To Verify
-            </span>
-          </div>
+        <div className="bento-card flex flex-col gap-0.5">
+          <div className="bento-metric-title">Verification Queue</div>
+          <div className="text-xl font-semibold font-mono text-amber-600 tracking-tight">{metrics.toVerifyCount ?? 0}</div>
+          <div className="text-[10px] text-slate-400 font-medium">Unverified bookings</div>
+        </div>
+
+        <div className="bento-card flex flex-col gap-0.5">
+          <div className="bento-metric-title">Total Leads</div>
+          <div className="text-xl font-semibold font-mono text-slate-800 tracking-tight">{metrics.totalLeads ?? 0}</div>
+          <div className="text-[10px] text-slate-400 font-medium">Inbound inquiries</div>
         </div>
       </div>
 
-      {/* Visual Fulfillment Pipeline Track */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 space-y-2">
+      {/* Fulfillment Pipeline */}
+      <div className="bento-card space-y-2">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-bold text-slate-800 tracking-tight flex items-center gap-1.5">
+          <span className="font-semibold text-slate-800 tracking-tight flex items-center gap-1.5">
             <Package className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.75} />
-            Fulfillment & Dispatch Pipeline
+            Fulfillment Pipeline
           </span>
-          <span className="text-[11px] font-semibold text-slate-400">Live Stage Distribution</span>
+          <span className="text-[11px] font-medium text-slate-400">Live Stage Distribution</span>
         </div>
         <SimplePipelineTrack
           segments={[
-            { label: 'New', count: metrics.pipelineNew ?? 14, bgColor: 'bg-blue-500', indicatorColor: 'bg-blue-500' },
-            { label: 'Packed', count: metrics.pipelinePacked ?? 28, bgColor: 'bg-purple-500', indicatorColor: 'bg-purple-500' },
-            { label: 'Shipped', count: metrics.shippedCount ?? 115, bgColor: 'bg-indigo-500', indicatorColor: 'bg-indigo-500' },
-            { label: 'Delivered', count: metrics.pipelineDelivered ?? 32, bgColor: 'bg-emerald-500', indicatorColor: 'bg-emerald-500' },
-            { label: 'RTO', count: metrics.pipelineRTO ?? 4, bgColor: 'bg-rose-500', indicatorColor: 'bg-rose-500' }
+            { label: 'New', count: metrics.newOrdersCount ?? 2, bgColor: 'bg-blue-500', indicatorColor: 'bg-blue-500' },
+            { label: 'Packed', count: metrics.packedCount ?? 0, bgColor: 'bg-purple-500', indicatorColor: 'bg-purple-500' },
+            { label: 'In Transit', count: metrics.shippedCount ?? 2, bgColor: 'bg-indigo-500', indicatorColor: 'bg-indigo-500' },
+            { label: 'Delivered', count: metrics.deliveredOrdersCount ?? 9, bgColor: 'bg-emerald-500', indicatorColor: 'bg-emerald-500' },
+            { label: 'RTO', count: metrics.rtoOrdersCount ?? 0, bgColor: 'bg-rose-500', indicatorColor: 'bg-rose-500' }
           ]}
         />
       </div>
@@ -450,21 +586,21 @@ export function OrderListPage({ hideHeader = false }) {
 
         <Button
           size="sm"
-          variant="secondary"
-          className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold text-xs shadow-xs"
+          variant="primary"
+          className="bg-indigo-950 hover:bg-indigo-900 text-white font-bold text-xs shadow-xs"
           icon={Scan}
-          onClick={() => setScanStationOpen(true)}
+          onClick={() => navigate('/scan-tracker')}
         >
-          Scan
+          📦 Scan Tracker
         </Button>
 
         <Button
           size="sm"
           variant="secondary"
           className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold text-xs shadow-xs"
-          onClick={() => setIndiaPostModalOpen(true)}
+          onClick={() => navigate('/scan-tracker?subtab=export')}
         >
-          📮 India Post
+          📮 India Post Export
         </Button>
 
         <Button
@@ -499,32 +635,50 @@ export function OrderListPage({ hideHeader = false }) {
       </div>
 
       {/* 5. Bulk Action Toolbar */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className={`rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs border transition-all ${
+        selectedOrderIds.length > 0
+          ? 'bg-amber-50/90 border-amber-300 shadow-sm ring-1 ring-amber-300'
+          : 'bg-slate-50 border-slate-200'
+      }`}>
         <div className="flex flex-wrap items-center gap-3">
           {/* Select All Checkbox */}
-          <label className="flex items-center gap-1.5 font-bold text-slate-700 cursor-pointer select-none">
+          <label className="flex items-center gap-1.5 font-bold text-slate-800 cursor-pointer select-none bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-xs">
             <input
               type="checkbox"
               checked={isAllSelected}
               onChange={handleSelectAll}
-              className="w-4 h-4 rounded text-ayur-600 focus:ring-ayur-500"
+              className="w-4 h-4 rounded text-ayur-600 focus:ring-ayur-500 cursor-pointer"
             />
-            <span>All</span>
+            <span>Select All</span>
             {selectedOrderIds.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-ayur-700 text-white text-[10px]">
-                {selectedOrderIds.length}
+              <span className="ml-1 px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold text-[10px]">
+                {selectedOrderIds.length} Selected
               </span>
             )}
           </label>
 
           {/* Update Status Dropdown */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-2 pl-2 border-l border-slate-200">
+            <span className={`text-[11px] uppercase tracking-wider font-bold ${
+              selectedOrderIds.length > 0 ? 'text-amber-900' : 'text-slate-500'
+            }`}>
+              📦 Batch Action (Update Checked Orders):
+            </span>
             <select
+              disabled={selectedOrderIds.length === 0}
               value={bulkStatusToApply}
               onChange={(e) => setBulkStatusToApply(e.target.value)}
-              className="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium outline-none focus:border-ayur-600"
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-medium outline-none transition-all ${
+                selectedOrderIds.length === 0
+                  ? 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
+                  : 'bg-white border border-amber-400 text-slate-800 focus:border-ayur-600 cursor-pointer shadow-xs'
+              }`}
             >
-              <option value="">Update status...</option>
+              <option value="">
+                {selectedOrderIds.length === 0
+                  ? '← Check order boxes below to batch update status'
+                  : 'Choose new status to apply...'}
+              </option>
               <option value="NEW">New</option>
               <option value="CONFIRMED">Confirmed</option>
               <option value="PROCESSING">Processing</option>
@@ -532,32 +686,48 @@ export function OrderListPage({ hideHeader = false }) {
               <option value="PACKED">Packed</option>
               <option value="READY_FOR_DISPATCH">Ready to Dispatch</option>
               <option value="DISPATCHED">Shipped / Dispatched</option>
+              <option value="IN_TRANSIT">In Transit</option>
+              <option value="OUT_FOR_DELIVERY">Out for Delivery</option>
               <option value="DELIVERED">Delivered</option>
+              <option value="DELIVERY_FAILED">Delivery Failed</option>
               <option value="RTO">RTO Return</option>
               <option value="CANCELLED">Cancelled</option>
             </select>
 
-            {/* Force Revert Checkbox */}
-            <label className="flex items-center gap-1 text-[11px] text-slate-600 cursor-pointer select-none">
+            {/* Force Override Toggle */}
+            <label className={`flex items-center gap-1 text-[11px] select-none bg-white px-2 py-1 rounded border border-slate-200 ${
+              selectedOrderIds.length === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer text-slate-700'
+            }`} title="Overrides state machine to permit transitioning from terminal states like Delivered or Cancelled">
               <input
+                disabled={selectedOrderIds.length === 0}
                 type="checkbox"
-                checked={forceRevertChecked}
+                checked={forceRevertChecked || isOwner || isManager || isDistributor}
                 onChange={(e) => setForceRevertChecked(e.target.checked)}
-                className="w-3.5 h-3.5 text-red-600 rounded"
+                className="w-3.5 h-3.5 text-emerald-600 rounded cursor-pointer"
               />
-              <span title="Bypasses forward state machine check">force revert</span>
+              <span className="font-semibold text-slate-700">Manager Override</span>
             </label>
 
             <Button
               size="sm"
               variant="secondary"
-              disabled={!bulkStatusToApply || selectedOrderIds.length === 0}
+              disabled={selectedOrderIds.length === 0 || !bulkStatusToApply}
               onClick={handleApplyBulkStatus}
               isLoading={bulkStatusMutation.isPending}
-              className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold"
+              className={`font-bold px-3 transition-all ${
+                selectedOrderIds.length > 0 && bulkStatusToApply
+                  ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs cursor-pointer'
+                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              }`}
             >
-              Update
+              Apply Status
             </Button>
+
+            {selectedOrderIds.length === 0 && (
+              <span className="text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 hidden sm:inline">
+                ℹ️ To view or filter orders, use the Status Filter below
+              </span>
+            )}
           </div>
 
           {/* Assign Verify Telecaller */}
@@ -629,8 +799,51 @@ export function OrderListPage({ hideHeader = false }) {
         </Button>
       </div>
 
-      {/* 7. Search & Filter Bar */}
-      <div className="bg-white p-3 rounded-xl border border-slate-200 flex flex-wrap items-center gap-2.5 text-xs shadow-sm">
+      {/* 6B. Quick Status Filter Ribbon */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        {[
+          { key: '', label: 'All Orders', count: metrics.totalOrders ?? meta.total },
+          { key: 'NEW', label: 'New', count: metrics.newOrdersCount },
+          { key: 'CONFIRMED', label: 'Confirmed', count: metrics.confirmedOrdersCount },
+          { key: 'PROCESSING', label: 'Processing', count: metrics.processingCount },
+          { key: 'PACKED', label: 'Packed', count: metrics.packedCount },
+          { key: 'IN_TRANSIT', label: 'In Transit', count: metrics.shippedCount },
+          { key: 'DELIVERED', label: 'Delivered', count: metrics.deliveredOrdersCount },
+          { key: 'RTO', label: 'RTO Return', count: metrics.rtoOrdersCount },
+          { key: 'CANCELLED', label: 'Cancelled', count: metrics.cancelledCount }
+        ].map((pill) => {
+          const isSelected = statusFilter === pill.key || (pill.key === 'IN_TRANSIT' && (statusFilter === 'DISPATCHED' || statusFilter === 'IN_TRANSIT'));
+          return (
+            <button
+              key={pill.key || 'ALL'}
+              type="button"
+              onClick={() => {
+                setStatusFilter(pill.key);
+                setPage(1);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 select-none ${
+                isSelected
+                  ? 'bg-emerald-700 text-white font-bold shadow-xs'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+              }`}
+            >
+              <span>{pill.label}</span>
+              {pill.count !== undefined && pill.count !== null && (
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+                  }`}
+                >
+                  {pill.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search & Filter Bar */}
+      <div className="bento-card flex flex-wrap items-center gap-2.5 text-xs">
         {/* Search Input */}
         <div className="relative flex-1 min-w-[200px]">
           <input
@@ -640,43 +853,48 @@ export function OrderListPage({ hideHeader = false }) {
               setSearch(e.target.value);
               setPage(1);
             }}
-            placeholder="Search name / mobile / tracking"
-            className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-ayur-600"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') refetchOrders();
+            }}
+            placeholder="Search name / mobile / tracking / order #"
+            className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-ayur-600 transition-colors"
           />
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
         </div>
 
-        {/* Date Filter */}
-        <div className="relative w-36">
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={(e) => {
-              setDateFilter(e.target.value);
-              setPage(1);
-            }}
-            className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-ayur-600 text-slate-700"
-          />
-        </div>
+        {/* Date to Date Range Filter */}
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onChange={({ startDate: s, endDate: e }) => {
+            setStartDate(s);
+            setEndDate(e);
+            setPage(1);
+          }}
+        />
 
         {/* Status Filter Dropdown */}
-        <div className="w-36">
+        <div className="w-48">
           <select
+            id="orders-status-filter"
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-ayur-600 text-slate-700"
+            className="w-full px-2.5 py-2 bg-emerald-50/60 border border-emerald-300 rounded-lg text-xs outline-none focus:bg-white focus:border-emerald-600 text-emerald-950 font-bold cursor-pointer"
           >
-            <option value="">All Status</option>
+            <option value="">All Statuses (Filter)</option>
             <option value="NEW">New</option>
             <option value="CONFIRMED">Confirmed</option>
             <option value="PROCESSING">Processing</option>
+            <option value="READY_FOR_PACKING">Ready for Packing</option>
             <option value="PACKED">Packed</option>
             <option value="READY_FOR_DISPATCH">Ready to Dispatch</option>
-            <option value="DISPATCHED">Shipped / Dispatched</option>
+            <option value="IN_TRANSIT">In Transit (Shipped)</option>
+            <option value="OUT_FOR_DELIVERY">Out for Delivery</option>
             <option value="DELIVERED">Delivered</option>
+            <option value="DELIVERY_FAILED">Delivery Failed</option>
             <option value="RTO">RTO Return</option>
             <option value="CANCELLED">Cancelled</option>
           </select>
@@ -690,7 +908,7 @@ export function OrderListPage({ hideHeader = false }) {
               setDistrictFilter(e.target.value);
               setPage(1);
             }}
-            className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-ayur-600 text-slate-700"
+            className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-ayur-600 text-slate-700 font-medium cursor-pointer"
           >
             <option value="">All Districts</option>
             {districts.map((d) => (
@@ -701,32 +919,97 @@ export function OrderListPage({ hideHeader = false }) {
           </select>
         </div>
 
+        {/* Sort By Dropdown */}
+        <div className="w-52">
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 focus-within:border-ayur-600 focus-within:bg-white transition-colors">
+            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <select
+              id="orders-sort-select"
+              value={`${sortBy}-${sortOrder}`}
+              onChange={(e) => {
+                const [field, dir] = e.target.value.split('-');
+                setSortBy(field);
+                setSortOrder(dir);
+                setPage(1);
+              }}
+              className="w-full bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer py-1"
+            >
+              <option value="createdAt-desc">📅 Date: Newest First</option>
+              <option value="createdAt-asc">📅 Date: Oldest First</option>
+              <option value="grandTotal-desc">💰 Amount: High to Low</option>
+              <option value="grandTotal-asc">💰 Amount: Low to High</option>
+              <option value="customer-asc">👤 Customer: A to Z</option>
+              <option value="customer-desc">👤 Customer: Z to A</option>
+              <option value="status-asc">🏷️ Status (A-Z)</option>
+              <option value="orderNumber-asc">🔢 Order Number (A-Z)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Direct Export Button */}
+        <ExportButton
+          onExport={handleExportOrders}
+          label={selectedOrderIds.length > 0 ? `Export (${selectedOrderIds.length})` : 'Export Orders'}
+        />
+
         {/* Action buttons */}
         <Button
           size="sm"
           variant="primary"
           onClick={() => refetchOrders()}
-          className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold px-4"
+          className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold px-4 cursor-pointer"
         >
-          Search
+          Apply
         </Button>
 
-        {(search || statusFilter || districtFilter || dateFilter) && (
+        {/* Clear Active Filters */}
+        {(statusFilter || districtFilter || startDate || endDate || search || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
           <button
             type="button"
             onClick={() => {
-              setSearch('');
               setStatusFilter('');
               setDistrictFilter('');
-              setDateFilter('');
+              setStartDate('');
+              setEndDate('');
+              setSearch('');
+              setSortBy('createdAt');
+              setSortOrder('desc');
               setPage(1);
             }}
-            className="text-xs text-slate-400 hover:text-slate-700 px-2 font-medium"
+            className="px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+            title="Reset all search, status, date, and sorting filters"
           >
-            Reset
+            <X className="w-3.5 h-3.5" />
+            <span>Reset</span>
           </button>
         )}
+
       </div>
+
+      {/* Floating Success / Error Notification Toast */}
+      {toastMsg && (
+        <div
+          className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 border text-xs font-bold rounded-2xl shadow-xl transition-all duration-200 ${
+            toastMsg.startsWith('⚠️')
+              ? 'bg-amber-50 border-amber-300 text-amber-900 ring-2 ring-amber-500/20'
+              : 'bg-emerald-50 border-emerald-300 text-emerald-900 ring-2 ring-emerald-500/20'
+          }`}
+        >
+          {toastMsg.startsWith('⚠️') ? (
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-600" />
+          ) : (
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-600" />
+          )}
+          <span>{toastMsg}</span>
+          <button
+            type="button"
+            onClick={() => setToastMsg('')}
+            className="ml-2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* 8. Orders Summary Ribbon */}
       <div className="flex items-center justify-between text-xs text-slate-600 px-1 font-medium">
@@ -742,24 +1025,6 @@ export function OrderListPage({ hideHeader = false }) {
           Showing page {page} of {meta.totalPages || 1}
         </span>
       </div>
-
-      {/* Success / Error Notification Toast */}
-      {toastMsg && (
-        <div
-          className={`flex items-center gap-2 px-4 py-2.5 border text-xs font-semibold rounded-xl ${
-            toastMsg.startsWith('⚠️')
-              ? 'bg-amber-50 border-amber-200 text-amber-800'
-              : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-          }`}
-        >
-          {toastMsg.startsWith('⚠️') ? (
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-          ) : (
-            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-          )}
-          <span>{toastMsg}</span>
-        </div>
-      )}
 
       {/* 9. ORDERS LIST (CARD VIEW OR FULL VIEW) */}
       {isLoading ? (
@@ -883,22 +1148,27 @@ export function OrderListPage({ hideHeader = false }) {
                     {/* Inline Status Dropdown */}
                     <select
                       value={order.status}
+                      disabled={singleTransitionMutation.isPending}
                       onChange={(e) => {
                         singleTransitionMutation.mutate({
                           orderId: order._id,
                           status: e.target.value,
-                          forceRevert: isOwner || isManager
+                          forceRevert: isOwner || isManager || isDistributor
                         });
                       }}
-                      className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700 outline-none focus:border-ayur-600"
+                      className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700 outline-none focus:border-ayur-600 cursor-pointer"
                     >
                       <option value="NEW">New</option>
                       <option value="CONFIRMED">Confirmed</option>
                       <option value="PROCESSING">Processing</option>
+                      <option value="READY_FOR_PACKING">Ready for Packing</option>
                       <option value="PACKED">Packed</option>
                       <option value="READY_FOR_DISPATCH">Ready to Dispatch</option>
                       <option value="DISPATCHED">Shipped</option>
+                      <option value="IN_TRANSIT">In Transit</option>
+                      <option value="OUT_FOR_DELIVERY">Out for Delivery</option>
                       <option value="DELIVERED">Delivered</option>
+                      <option value="DELIVERY_FAILED">Delivery Failed</option>
                       <option value="RTO">RTO</option>
                       <option value="CANCELLED">Cancelled</option>
                     </select>
@@ -921,6 +1191,16 @@ export function OrderListPage({ hideHeader = false }) {
                       className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold transition-colors"
                     >
                       🏷️
+                    </button>
+
+                    {/* Edit Order */}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditOrder(order)}
+                      title="Edit Order"
+                      className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center cursor-pointer"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
                     </button>
 
                     {/* View Details */}
@@ -952,7 +1232,7 @@ export function OrderListPage({ hideHeader = false }) {
         /* FULL VIEW: COMPLETE TABLE VIEW */
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
           <table className="w-full text-xs text-left">
-            <thead className="bg-slate-100 text-slate-700 uppercase tracking-wider font-semibold border-b">
+            <thead className="bg-slate-100 text-slate-700 uppercase tracking-wider font-semibold border-b select-none">
               <tr>
                 <th className="p-3 w-10">
                   <input
@@ -962,12 +1242,78 @@ export function OrderListPage({ hideHeader = false }) {
                     className="w-4 h-4 rounded text-ayur-600 focus:ring-ayur-500"
                   />
                 </th>
-                <th className="p-3">Order Number</th>
-                <th className="p-3">Customer</th>
+                <th
+                  onClick={() => handleHeaderSort('orderNumber')}
+                  className="p-3 cursor-pointer hover:bg-slate-200 transition-colors"
+                  title="Click to sort by Order Number"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Order Number</span>
+                    {sortBy === 'orderNumber' ? (
+                      <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleHeaderSort('customer')}
+                  className="p-3 cursor-pointer hover:bg-slate-200 transition-colors"
+                  title="Click to sort by Customer Name"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Customer</span>
+                    {sortBy === 'customer' ? (
+                      <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
                 <th className="p-3">Items & Kit</th>
-                <th className="p-3">Total Amount</th>
-                <th className="p-3">Status</th>
+                <th
+                  onClick={() => handleHeaderSort('grandTotal')}
+                  className="p-3 cursor-pointer hover:bg-slate-200 transition-colors"
+                  title="Click to sort by Amount"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Total Amount</span>
+                    {sortBy === 'grandTotal' ? (
+                      <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleHeaderSort('status')}
+                  className="p-3 cursor-pointer hover:bg-slate-200 transition-colors"
+                  title="Click to sort by Status"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Status</span>
+                    {sortBy === 'status' ? (
+                      <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
                 <th className="p-3">City / District</th>
+                <th
+                  onClick={() => handleHeaderSort('createdAt')}
+                  className="p-3 cursor-pointer hover:bg-slate-200 transition-colors"
+                  title="Click to sort by Date"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Date</span>
+                    {sortBy === 'createdAt' ? (
+                      <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
                 <th className="p-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -1073,7 +1419,8 @@ export function OrderListPage({ hideHeader = false }) {
           isOpen={excelImportOpen}
           onClose={() => setExcelImportOpen(false)}
           onImportSuccess={() => {
-            queryClient.invalidateQueries(['orders']);
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
+            refetchOrders();
             refetchMetrics();
             showToast('✓ Excel orders imported successfully!');
           }}
@@ -1099,7 +1446,8 @@ export function OrderListPage({ hideHeader = false }) {
           isOpen={scanStationOpen}
           onClose={() => setScanStationOpen(false)}
           onOrderUpdated={() => {
-            queryClient.invalidateQueries(['orders']);
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
+            refetchOrders();
             refetchMetrics();
           }}
         />
@@ -1165,6 +1513,300 @@ export function OrderListPage({ hideHeader = false }) {
                 className="bg-red-600 hover:bg-red-700 text-white font-bold"
               >
                 Delete Order
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 10. Edit Order Modal */}
+      {selectedOrderForEdit && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold text-sm">
+                  <Pencil className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">
+                    Edit Order #{selectedOrderForEdit.orderNumber}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">Update patient, shipping address & payment details</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedOrderForEdit(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Form Content */}
+            <div className="p-5 overflow-y-auto space-y-4 text-xs">
+              {/* Patient Details */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">1. Patient Information</h4>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Patient Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormData.patientName}
+                      onChange={(e) => setEditFormData({ ...editFormData, patientName: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-ayur-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Mobile (10 digits) *</label>
+                    <input
+                      type="tel"
+                      required
+                      value={editFormData.mobile}
+                      onChange={(e) => setEditFormData({ ...editFormData, mobile: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-ayur-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Alternate Phone</label>
+                    <input
+                      type="tel"
+                      value={editFormData.alternateMobile}
+                      onChange={(e) => setEditFormData({ ...editFormData, alternateMobile: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-ayur-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Father / Caretaker Name</label>
+                    <input
+                      type="text"
+                      value={editFormData.fatherName}
+                      onChange={(e) => setEditFormData({ ...editFormData, fatherName: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-ayur-600"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Delivery Address */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <h4 className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">2. Delivery Address</h4>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="col-span-2">
+                    <label className="block text-slate-600 font-semibold mb-1">Street / House Address</label>
+                    <input
+                      type="text"
+                      value={editFormData.street}
+                      onChange={(e) => setEditFormData({ ...editFormData, street: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-ayur-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Landmark</label>
+                    <input
+                      type="text"
+                      value={editFormData.landmark}
+                      onChange={(e) => setEditFormData({ ...editFormData, landmark: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">City / Town</label>
+                    <select
+                      value={editFormData.city}
+                      onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs"
+                    >
+                      <option value="Hosur">Hosur</option>
+                      <option value="Krishnagiri">Krishnagiri</option>
+                      <option value="Dharmapuri">Dharmapuri</option>
+                      <option value="Salem">Salem</option>
+                      <option value="Coimbatore">Coimbatore</option>
+                      <option value="Erode">Erode</option>
+                      <option value="Tirupur">Tirupur</option>
+                      <option value="Chennai">Chennai</option>
+                      <option value="Vellore">Vellore</option>
+                      <option value="Bengaluru">Bengaluru</option>
+                      <option value="Tirunelveli">Tirunelveli</option>
+                      <option value="Madurai">Madurai</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">District</label>
+                    <input
+                      type="text"
+                      value={editFormData.district}
+                      onChange={(e) => setEditFormData({ ...editFormData, district: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">State</label>
+                    <select
+                      value={editFormData.state}
+                      onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs"
+                    >
+                      <option value="Tamil Nadu">Tamil Nadu</option>
+                      <option value="Karnataka">Karnataka</option>
+                      <option value="Kerala">Kerala</option>
+                      <option value="Andhra Pradesh">Andhra Pradesh</option>
+                      <option value="Telangana">Telangana</option>
+                      <option value="Maharashtra">Maharashtra</option>
+                      <option value="Delhi">Delhi</option>
+                      <option value="Gujarat">Gujarat</option>
+                      <option value="Rajasthan">Rajasthan</option>
+                      <option value="Uttar Pradesh">Uttar Pradesh</option>
+                      <option value="West Bengal">West Bengal</option>
+                      <option value="Madhya Pradesh">Madhya Pradesh</option>
+                      <option value="Odisha">Odisha</option>
+                      <option value="Punjab">Punjab</option>
+                      <option value="Haryana">Haryana</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Pincode</label>
+                    <input
+                      type="text"
+                      value={editFormData.pincode}
+                      onChange={(e) => setEditFormData({ ...editFormData, pincode: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Order Status & Tracking */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <h4 className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">3. Status & Logistics</h4>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Order Status</label>
+                    <select
+                      value={editFormData.status}
+                      onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold"
+                    >
+                      <option value="NEW">New</option>
+                      <option value="CONFIRMED">Confirmed</option>
+                      <option value="PROCESSING">Processing</option>
+                      <option value="PACKED">Packed</option>
+                      <option value="READY_FOR_DISPATCH">Ready to Dispatch</option>
+                      <option value="DISPATCHED">Shipped / Dispatched</option>
+                      <option value="DELIVERED">Delivered</option>
+                      <option value="RTO">RTO</option>
+                      <option value="CANCELLED">Cancelled</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Courier / Service</label>
+                    <select
+                      value={editFormData.courierName}
+                      onChange={(e) => setEditFormData({ ...editFormData, courierName: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold"
+                    >
+                      <option value="India Post">India Post (Speed Post)</option>
+                      <option value="BlueDart">BlueDart</option>
+                      <option value="DTDC">DTDC</option>
+                      <option value="Delhivery">Delhivery</option>
+                      <option value="Ekart">Ekart Logistics</option>
+                      <option value="Xpressbees">Xpressbees</option>
+                      <option value="Shadowfax">Shadowfax</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Details & Total */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <h4 className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">4. Payment Details</h4>
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Payment Method</label>
+                    <select
+                      value={editFormData.paymentMethod}
+                      onChange={(e) => setEditFormData({ ...editFormData, paymentMethod: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold"
+                    >
+                      <option value="COD">COD</option>
+                      <option value="ONLINE">Online</option>
+                      <option value="UPI">UPI</option>
+                      <option value="BANK_TRANSFER">Bank Transfer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Payment Status</label>
+                    <select
+                      value={editFormData.paymentStatus}
+                      onChange={(e) => setEditFormData({ ...editFormData, paymentStatus: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold"
+                    >
+                      <option value="COD_PENDING">COD Pending</option>
+                      <option value="PENDING">Pending</option>
+                      <option value="PAID">Paid</option>
+                      <option value="FAILED">Failed</option>
+                      <option value="REFUNDED">Refunded</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Grand Total (₹)</label>
+                    <input
+                      type="number"
+                      value={editFormData.grandTotal}
+                      onChange={(e) => setEditFormData({ ...editFormData, grandTotal: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="pt-2 border-t border-slate-100">
+                <label className="block text-slate-600 font-semibold mb-1">Order Notes / Instructions</label>
+                <textarea
+                  rows={2}
+                  value={editFormData.notes}
+                  onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                  placeholder="Specific dosage instructions, customer remarks..."
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="p-4 border-t border-slate-100 flex items-center justify-end gap-2 bg-slate-50/50 rounded-b-2xl">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setSelectedOrderForEdit(null)}
+                disabled={updateOrderMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="primary"
+                isLoading={updateOrderMutation.isPending}
+                onClick={() => {
+                  if (!editFormData.patientName || !editFormData.mobile) {
+                    alert('Please enter Patient Name and Mobile');
+                    return;
+                  }
+                  updateOrderMutation.mutate({
+                    orderId: selectedOrderForEdit._id,
+                    payload: editFormData
+                  });
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+              >
+                Save Order Changes
               </Button>
             </div>
           </div>

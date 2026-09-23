@@ -231,4 +231,47 @@ describe('Leads & Telecaller CRM Integration Tests', () => {
     expect(callRes.status).toBe(201);
     expect(callRes.body.data.notes).toBe('Discussion about Kumkumadi oil completed');
   });
+
+  it('should update lead via PATCH /api/leads/:id', async () => {
+    const updateRes = await request(app)
+      .patch(`/api/leads/${createdLeadId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        name: 'Venkatesh Kumar Updated',
+        city: 'Bengaluru',
+        notes: 'Requested call back in evening'
+      });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.success).toBe(true);
+    expect(updateRes.body.data.name).toBe('Venkatesh Kumar Updated');
+    expect(updateRes.body.data.city).toBe('Bengaluru');
+  });
+
+  it('should delete lead via DELETE /api/leads/:id and clean up related records', async () => {
+    // Create a fresh lead to delete
+    const newLeadRes = await request(app)
+      .post('/api/leads')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        name: 'Lead To Delete',
+        mobile: '9112233445',
+        source: 'WHATSAPP'
+      });
+    expect(newLeadRes.status).toBe(201);
+    const toDeleteId = newLeadRes.body.data._id;
+
+    // Delete lead
+    const delRes = await request(app)
+      .delete(`/api/leads/${toDeleteId}`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+    expect(delRes.status).toBe(200);
+    expect(delRes.body.success).toBe(true);
+
+    // Verify lead is gone
+    const getRes = await request(app)
+      .get(`/api/leads/${toDeleteId}`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+    expect(getRes.status).toBe(404);
+  });
 });
+

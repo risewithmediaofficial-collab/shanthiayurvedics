@@ -7,35 +7,83 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 
 export const getInventory = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 25;
+  const isExport = req.query.export === 'true';
+  const limit = isExport ? 5000 : parseInt(req.query.limit, 10) || 25;
   const search = req.query.search?.trim();
+  const startDate = req.query.startDate;
+  const endDate = req.query.endDate;
+  const sortBy = req.query.sortBy || 'productName';
+  const sortOrder = req.query.sortOrder === 'asc' || req.query.sortOrder === '1' ? 1 : -1;
 
   const query = {};
   if (!req.branchScope.isGlobal && req.branchScope.branchId) {
     query.branchId = req.branchScope.branchId;
   }
 
+  if (startDate || endDate) {
+    query.updatedAt = {};
+    if (startDate) {
+      query.updatedAt.$gte = new Date(startDate.includes('T') ? startDate : `${startDate}T00:00:00.000Z`);
+    }
+    if (endDate) {
+      query.updatedAt.$lte = new Date(endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`);
+    }
+  }
+
+  const sortObj = {};
+  if (sortBy === 'availableQuantity' || sortBy === 'stock' || sortBy === 'quantity') {
+    sortObj.availableQuantity = sortOrder;
+  } else if (sortBy === 'reservedQuantity') {
+    sortObj.reservedQuantity = sortOrder;
+  } else if (sortBy === 'updatedAt') {
+    sortObj.updatedAt = sortOrder;
+  } else if (sortBy === 'createdAt') {
+    sortObj.createdAt = sortOrder;
+  } else {
+    sortObj['productId.name'] = sortOrder;
+  }
+
   const skip = (page - 1) * limit;
-  const [total, inventory] = await Promise.all([
+  let findQuery = Inventory.find(query)
+    .populate({
+      path: 'productId',
+      select: 'name sku category price mrp lowStockThreshold',
+      match: search ? { $or: [{ name: { $regex: search, $options: 'i' } }, { sku: { $regex: search, $options: 'i' } }] } : {}
+    })
+    .populate('batchId', 'batchNumber expiryDate mrp')
+    .populate('branchId', 'name code')
+    .sort(sortObj);
+
+  if (!isExport) {
+    findQuery = findQuery.skip(skip).limit(limit);
+  }
+
+  const [total, rawInventory] = await Promise.all([
     Inventory.countDocuments(query),
-    Inventory.find(query)
-      .populate('productId', 'name sku category price mrp lowStockThreshold')
-      .populate('batchId', 'batchNumber expiryDate mrp')
-      .populate('branchId', 'name code')
-      .sort({ 'productId.name': 1 })
-      .skip(skip)
-      .limit(limit)
-      .lean()
+    findQuery.lean()
   ]);
 
-  return ApiResponse.paginated(res, inventory, { page, limit, total }, 'Inventory records retrieved');
+  // If search was applied to populated product, filter out records where product didn't match
+  const inventory = search ? rawInventory.filter((item) => Boolean(item.productId)) : rawInventory;
+
+  return ApiResponse.paginated(
+    res,
+    inventory,
+    { page, limit: isExport ? inventory.length : limit, total: search ? inventory.length : total },
+    'Inventory records retrieved'
+  );
 });
 
 export const getStockMovements = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 25;
+  const isExport = req.query.export === 'true';
+  const limit = isExport ? 5000 : parseInt(req.query.limit, 10) || 25;
   const productId = req.query.productId;
   const type = req.query.type;
+  const startDate = req.query.startDate;
+  const endDate = req.query.endDate;
+  const sortBy = req.query.sortBy || 'createdAt';
+  const sortOrder = req.query.sortOrder === 'asc' || req.query.sortOrder === '1' ? 1 : -1;
 
   const query = {};
   if (!req.branchScope.isGlobal && req.branchScope.branchId) {
@@ -44,25 +92,48 @@ export const getStockMovements = asyncHandler(async (req, res) => {
   if (productId) query.productId = productId;
   if (type) query.type = type;
 
+  if (startDate || endDate) {
+    query.createdAt = {};
+    if (startDate) {
+      query.createdAt.$gte = new Date(startDate.includes('T') ? startDate : `${startDate}T00:00:00.000Z`);
+    }
+    if (endDate) {
+      query.createdAt.$lte = new Date(endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`);
+    }
+  }
+
+  const sortObj = {};
+  if (sortBy === 'quantity') sortObj.quantity = sortOrder;
+  else if (sortBy === 'type') sortObj.type = sortOrder;
+  else sortObj.createdAt = sortOrder;
+
   const skip = (page - 1) * limit;
+  let findQuery = StockMovement.find(query)
+    .populate('productId', 'name sku')
+    .populate('batchId', 'batchNumber')
+    .populate('branchId', 'name code')
+    .populate('performedBy', 'name email')
+    .sort(sortObj);
+
+  if (!isExport) {
+    findQuery = findQuery.skip(skip).limit(limit);
+  }
+
   const [total, movements] = await Promise.all([
     StockMovement.countDocuments(query),
-    StockMovement.find(query)
-      .populate('productId', 'name sku')
-      .populate('batchId', 'batchNumber')
-      .populate('branchId', 'name code')
-      .populate('performedBy', 'name email')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean()
+    findQuery.lean()
   ]);
 
-  return ApiResponse.paginated(res, movements, { page, limit, total }, 'Stock movements ledger retrieved');
+  return ApiResponse.paginated(
+    res,
+    movements,
+    { page, limit: isExport ? movements.length : limit, total },
+    'Stock movements ledger retrieved'
+  );
 });
 
 export const stockIn = asyncHandler(async (req, res) => {
-  const branchId = req.body.branchId || req.branchScope.branchId;
+  const branchId = req.body.branchId || (!req.branchScope?.isGlobal ? req.branchScope?.branchId : null);
   const result = await InventoryService.stockIn({
     productId: req.body.productId,
     batchId: req.body.batchId,
@@ -77,7 +148,7 @@ export const stockIn = asyncHandler(async (req, res) => {
 });
 
 export const stockOut = asyncHandler(async (req, res) => {
-  const branchId = req.body.branchId || req.branchScope.branchId;
+  const branchId = req.body.branchId || (!req.branchScope?.isGlobal ? req.branchScope?.branchId : null);
   const result = await InventoryService.stockOut({
     productId: req.body.productId,
     batchId: req.body.batchId,
@@ -92,7 +163,7 @@ export const stockOut = asyncHandler(async (req, res) => {
 });
 
 export const adjustStock = asyncHandler(async (req, res) => {
-  const branchId = req.body.branchId || req.branchScope.branchId;
+  const branchId = req.body.branchId || (!req.branchScope?.isGlobal ? req.branchScope?.branchId : null);
   const result = await InventoryService.adjustStock({
     productId: req.body.productId,
     batchId: req.body.batchId,

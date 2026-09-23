@@ -9,7 +9,9 @@ import {
   AlertTriangle,
   Building,
   PackageCheck,
-  Search
+  Search,
+  RotateCcw,
+  ArrowUpDown
 } from 'lucide-react';
 import apiClient from '../../../api/apiClient.js';
 import { useBranch } from '../../../context/BranchContext.jsx';
@@ -24,8 +26,18 @@ export function ManagerBranchOrdersTab() {
 
   const [activeTab, setActiveTab] = useState('RECEIVED'); // 'RECEIVED' or 'SENT'
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
+
+  const handleResetFilters = () => {
+    setStatusFilter('ALL');
+    setSearchQuery('');
+    setSortBy('createdAt');
+    setSortOrder('desc');
+  };
 
   // Form
   const [destinationBranchId, setDestinationBranchId] = useState('');
@@ -143,13 +155,50 @@ export function ManagerBranchOrdersTab() {
     });
   };
 
-  const filteredTransfers = allTransfers.filter((t) => {
-    if (activeTab === 'RECEIVED') {
-      return t.toBranchId?.name?.includes('Hosur') || t.toBranchId?.code === 'HSR';
-    } else {
-      return t.fromBranchId?.name?.includes('Hosur') || t.fromBranchId?.code === 'HSR';
-    }
-  });
+  const filteredTransfers = allTransfers
+    .filter((t) => {
+      // 1. Direction / Tab filter
+      const matchesTab =
+        activeTab === 'RECEIVED'
+          ? t.toBranchId?.name?.includes('Hosur') || t.toBranchId?.code === 'HSR'
+          : t.fromBranchId?.name?.includes('Hosur') || t.fromBranchId?.code === 'HSR';
+      if (!matchesTab) return false;
+
+      // 2. Status filter
+      if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
+
+      // 3. Search filter
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const ref = (t.transferNumber || '').toLowerCase();
+        const prod = (t.productId?.name || '').toLowerCase();
+        const fromB = (t.fromBranchId?.name || t.fromBranchId?.code || '').toLowerCase();
+        const toB = (t.toBranchId?.name || t.toBranchId?.code || '').toLowerCase();
+        if (!ref.includes(q) && !prod.includes(q) && !fromB.includes(q) && !toB.includes(q)) {
+          return false;
+        }
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      let valA, valB;
+      if (sortBy === 'createdAt') {
+        valA = new Date(a.createdAt || 0).getTime();
+        valB = new Date(b.createdAt || 0).getTime();
+      } else if (sortBy === 'quantity') {
+        valA = a.quantity || 0;
+        valB = b.quantity || 0;
+      } else if (sortBy === 'status') {
+        valA = a.status || '';
+        valB = b.status || '';
+      } else {
+        return 0;
+      }
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   return (
     <div className="space-y-4">
@@ -167,9 +216,9 @@ export function ManagerBranchOrdersTab() {
             🚚
           </div>
           <div>
-            <h4 className="font-bold text-sm tracking-tight text-sky-950">Inter-Branch Stock Transfer Desk</h4>
-            <p className="text-xs text-sky-800 mt-0.5">
-              Orders placed between branches are automatically accounted against inter-branch stock allocation. Maintain adequate stock reserves.
+            <h4 className="font-semibold text-sm tracking-tight text-slate-900">Inter-Branch Stock Transfers</h4>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Inward and outward stock consignments across branches.
             </p>
           </div>
         </div>
@@ -185,8 +234,35 @@ export function ManagerBranchOrdersTab() {
         </Button>
       </div>
 
+      {/* Bento KPI Summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">In Transit Consignments</div>
+          <div className="bento-metric-value text-indigo-600">
+            {allTransfers.filter(t => t.status === 'DISPATCHED').length}
+          </div>
+          <div className="text-[11px] text-slate-500 font-medium">On-route between branches</div>
+        </div>
+
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Pending Approvals</div>
+          <div className="bento-metric-value text-amber-600">
+            {allTransfers.filter(t => t.status === 'PENDING').length}
+          </div>
+          <div className="text-[11px] text-slate-500 font-medium">Awaiting branch dispatch</div>
+        </div>
+
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Received & Stocked</div>
+          <div className="bento-metric-value text-emerald-600">
+            {allTransfers.filter(t => t.status === 'RECEIVED').length}
+          </div>
+          <div className="text-[11px] text-slate-500 font-medium">Completed this month</div>
+        </div>
+      </div>
+
       {/* Sub-Tabs: Received vs Sent */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bento-card flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -213,16 +289,55 @@ export function ManagerBranchOrdersTab() {
           </button>
         </div>
 
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700"
-        >
-          <option value="ALL">All Statuses</option>
-          <option value="PENDING">Pending Approval</option>
-          <option value="DISPATCHED">In Transit / Dispatched</option>
-          <option value="RECEIVED">Received & Stocked</option>
-        </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search branch, product, ref..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-emerald-600 w-44"
+            />
+          </div>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="PENDING">Pending Approval</option>
+            <option value="DISPATCHED">In Transit / Dispatched</option>
+            <option value="RECEIVED">Received & Stocked</option>
+          </select>
+
+          <select
+            value={`${sortBy}-${sortOrder}`}
+            onChange={(e) => {
+              const [f, o] = e.target.value.split('-');
+              setSortBy(f);
+              setSortOrder(o);
+            }}
+            className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700"
+          >
+            <option value="createdAt-desc">Date: Newest First</option>
+            <option value="createdAt-asc">Date: Oldest First</option>
+            <option value="quantity-desc">Qty: High to Low</option>
+            <option value="quantity-asc">Qty: Low to High</option>
+          </select>
+
+          {(searchQuery || statusFilter !== 'ALL' || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="flex items-center gap-1 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Transfers Table */}

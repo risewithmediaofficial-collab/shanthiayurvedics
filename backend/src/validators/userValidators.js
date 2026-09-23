@@ -59,6 +59,17 @@ export const createBranchSchema = {
       })
       .optional(),
     phone: z.string().optional(),
-    email: z.string().email().optional()
+    email: z.string().email().optional().or(z.literal('')),
+    managerId: z.string().optional().nullable(),
+    managerName: z.string().optional(),
+    managerPhone: z.string().optional(),
+    distributorId: z.string().optional().nullable(),
+    distributorName: z.string().optional(),
+    distributorPhone: z.string().optional(),
+    distributorEmail: z.string().email().optional().or(z.literal('')),
+    branchType: z.enum(['COMPANY_OWNED', 'FRANCHISE']).optional(),
+    billerId: z.string().optional(),
+    gstNumber: z.string().optional(),
+    revenueSharePercent: z.number().optional()
   })
 };

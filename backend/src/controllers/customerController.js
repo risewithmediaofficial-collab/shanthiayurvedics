@@ -7,8 +7,13 @@ import { ROLES } from '../constants/roles.js';
 
 export const getCustomers = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 20;
+  const isExport = req.query.export === 'true';
+  const limit = isExport ? 5000 : parseInt(req.query.limit, 10) || 20;
   const search = req.query.search?.trim();
+  const startDate = req.query.startDate;
+  const endDate = req.query.endDate;
+  const sortBy = req.query.sortBy || 'createdAt';
+  const sortOrder = req.query.sortOrder === 'asc' || req.query.sortOrder === '1' ? 1 : -1;
 
   const query = {};
   if (!req.branchScope.isGlobal && req.branchScope.branchId) {
@@ -19,27 +24,54 @@ export const getCustomers = asyncHandler(async (req, res) => {
     query.assignedTelecallerId = req.user.id;
   }
 
+  if (startDate || endDate) {
+    query.createdAt = {};
+    if (startDate) {
+      query.createdAt.$gte = new Date(startDate.includes('T') ? startDate : `${startDate}T00:00:00.000Z`);
+    }
+    if (endDate) {
+      query.createdAt.$lte = new Date(endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`);
+    }
+  }
+
   if (search) {
     query.$or = [
       { name: { $regex: search, $options: 'i' } },
       { mobile: { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } }
+      { email: { $regex: search, $options: 'i' } },
+      { 'addresses.city': { $regex: search, $options: 'i' } }
     ];
   }
 
+  const sortObj = {};
+  if (sortBy === 'name') sortObj.name = sortOrder;
+  else if (sortBy === 'mobile') sortObj.mobile = sortOrder;
+  else if (sortBy === 'city') sortObj['addresses.city'] = sortOrder;
+  else if (sortBy === 'totalOrders') sortObj.totalOrders = sortOrder;
+  else if (sortBy === 'totalSpent') sortObj.totalSpent = sortOrder;
+  else sortObj.createdAt = sortOrder;
+
   const skip = (page - 1) * limit;
+  let findQuery = Customer.find(query)
+    .populate('branchId', 'name code')
+    .populate('assignedTelecallerId', 'name email')
+    .sort(sortObj);
+
+  if (!isExport) {
+    findQuery = findQuery.skip(skip).limit(limit);
+  }
+
   const [total, customers] = await Promise.all([
     Customer.countDocuments(query),
-    Customer.find(query)
-      .populate('branchId', 'name code')
-      .populate('assignedTelecallerId', 'name email')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean()
+    findQuery.lean()
   ]);
 
-  return ApiResponse.paginated(res, customers, { page, limit, total }, 'Customers retrieved');
+  return ApiResponse.paginated(
+    res,
+    customers,
+    { page, limit: isExport ? customers.length : limit, total },
+    'Customers retrieved'
+  );
 });
 
 export const getCustomerById = asyncHandler(async (req, res) => {

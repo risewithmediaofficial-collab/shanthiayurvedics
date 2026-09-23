@@ -4,24 +4,91 @@ import { StockTransfer } from '../models/StockTransfer.js';
 import { StockAdjustment } from '../models/StockAdjustment.js';
 import { Product } from '../models/Product.js';
 import { ProductBatch } from '../models/ProductBatch.js';
+import { Branch } from '../models/Branch.js';
 import { MOVEMENT_TYPES, MOVEMENT_REASONS, TRANSFER_STATUS } from '../constants/stockStates.js';
 import { AppError, NotFoundError } from '../utils/errors.js';
 import { AuditService } from './auditService.js';
 
 export class InventoryService {
   /**
+   * Helper to resolve batchId and branchId if either is missing or set to 'ALL'
+   */
+  static async resolveBatchAndBranch({ productId, batchId, branchId, user = null, req = null }) {
+    // 1. Resolve branchId
+    let resolvedBranchId = branchId;
+    if (!resolvedBranchId || resolvedBranchId === 'ALL') {
+      resolvedBranchId = req?.branchScope?.branchId;
+    }
+    if (!resolvedBranchId || resolvedBranchId === 'ALL') {
+      resolvedBranchId = user?.branchId || (Array.isArray(user?.branches) && user.branches[0]);
+    }
+    if (!resolvedBranchId || resolvedBranchId === 'ALL') {
+      // Check if there is an existing inventory record for this product with stock
+      const existingInv = await Inventory.findOne({ productId, availableQuantity: { $gt: 0 } }).sort({ availableQuantity: -1 });
+      if (existingInv && existingInv.branchId) {
+        resolvedBranchId = existingInv.branchId;
+      }
+    }
+    if (!resolvedBranchId || resolvedBranchId === 'ALL') {
+      const defaultBranch = (await Branch.findOne({ isActive: true })) || (await Branch.findOne());
+      resolvedBranchId = defaultBranch?._id;
+    }
+
+    // 2. Resolve batchId
+    let resolvedBatchId = batchId;
+    if (!resolvedBatchId) {
+      // If there's an inventory record for this product and branch with stock, use that batch
+      if (resolvedBranchId) {
+        const invWithBatch = await Inventory.findOne({ productId, branchId: resolvedBranchId, availableQuantity: { $gt: 0 } }).sort({ availableQuantity: -1 });
+        if (invWithBatch && invWithBatch.batchId) {
+          resolvedBatchId = invWithBatch.batchId;
+        }
+      }
+    }
+    if (!resolvedBatchId) {
+      let batch = await ProductBatch.findOne({ productId, isActive: true }).sort({ createdAt: -1 });
+      if (!batch) {
+        batch = await ProductBatch.findOne({ productId }).sort({ createdAt: -1 });
+      }
+      if (!batch) {
+        const product = await Product.findById(productId);
+        const skuPrefix = product?.sku ? product.sku.trim().toUpperCase() : 'BATCH';
+        const batchNumber = `${skuPrefix}-B26`;
+        batch = await ProductBatch.create({
+          productId,
+          batchNumber,
+          manufacturingDate: new Date(),
+          expiryDate: new Date(Date.now() + 730 * 24 * 60 * 60 * 1000),
+          mrp: product?.mrp || product?.price || 100,
+          purchasePrice: product?.costPrice || 50,
+          isActive: true
+        });
+      }
+      resolvedBatchId = batch._id;
+    }
+
+    return { resolvedBranchId, resolvedBatchId };
+  }
+
+  /**
    * Ensure Inventory document exists for product, batch, and branch
    */
   static async getOrCreateInventory(productId, batchId, branchId, session = null) {
-    let query = Inventory.findOne({ productId, batchId, branchId });
+    const { resolvedBranchId, resolvedBatchId } = await this.resolveBatchAndBranch({
+      productId,
+      batchId,
+      branchId
+    });
+
+    let query = Inventory.findOne({ productId, batchId: resolvedBatchId, branchId: resolvedBranchId });
     if (session) query = query.session(session);
     let inv = await query;
 
     if (!inv) {
       inv = new Inventory({
         productId,
-        batchId,
-        branchId,
+        batchId: resolvedBatchId,
+        branchId: resolvedBranchId,
         availableQuantity: 0,
         reservedQuantity: 0,
         allocatedQuantity: 0,
@@ -42,35 +109,48 @@ export class InventoryService {
       throw new AppError('Quantity must be greater than zero', 400);
     }
 
-    const inv = await this.getOrCreateInventory(productId, batchId, branchId, session);
+    const { resolvedBranchId, resolvedBatchId } = await this.resolveBatchAndBranch({
+      productId,
+      batchId,
+      branchId,
+      user,
+      req
+    });
+
+    const inv = await this.getOrCreateInventory(productId, resolvedBatchId, resolvedBranchId, session);
     const previousAvailable = inv.availableQuantity;
     inv.availableQuantity += quantity;
     await inv.save(session ? { session } : undefined);
 
+    const validReason = Object.values(MOVEMENT_REASONS).includes(reason)
+      ? reason
+      : MOVEMENT_REASONS.PURCHASE;
+    const finalNotes = notes || (typeof reason === 'string' && !Object.values(MOVEMENT_REASONS).includes(reason) ? reason : undefined);
+
     // Ledger Movement
     const movement = new StockMovement({
       productId,
-      batchId,
-      branchId,
+      batchId: resolvedBatchId,
+      branchId: resolvedBranchId,
       type: MOVEMENT_TYPES.IN,
       quantity,
-      reason,
-      performedBy: user.id || user._id,
+      reason: validReason,
+      performedBy: user?.id || user?._id,
       previousAvailable,
       newAvailable: inv.availableQuantity,
-      notes,
+      notes: finalNotes,
       timestamp: new Date()
     });
     await movement.save(session ? { session } : undefined);
 
     await AuditService.log({
-      userId: user.id || user._id,
-      branchId,
+      userId: user?.id || user?._id,
+      branchId: resolvedBranchId,
       action: 'STOCK_IN',
       module: 'inventory',
       resourceType: 'Inventory',
       resourceId: inv._id,
-      newValue: { productId, batchId, quantity, reason, newAvailable: inv.availableQuantity },
+      newValue: { productId, batchId: resolvedBatchId, quantity, reason: validReason, newAvailable: inv.availableQuantity },
       req
     });
 
@@ -85,7 +165,15 @@ export class InventoryService {
       throw new AppError('Quantity must be greater than zero', 400);
     }
 
-    const inv = await this.getOrCreateInventory(productId, batchId, branchId, session);
+    const { resolvedBranchId, resolvedBatchId } = await this.resolveBatchAndBranch({
+      productId,
+      batchId,
+      branchId,
+      user,
+      req
+    });
+
+    const inv = await this.getOrCreateInventory(productId, resolvedBatchId, resolvedBranchId, session);
     if (inv.availableQuantity < quantity) {
       throw new AppError(`Insufficient stock. Available: ${inv.availableQuantity}, Requested: ${quantity}`, 400);
     }
@@ -94,23 +182,29 @@ export class InventoryService {
     inv.availableQuantity -= quantity;
     await inv.save(session ? { session } : undefined);
 
+    const validReason = Object.values(MOVEMENT_REASONS).includes(reason)
+      ? reason
+      : MOVEMENT_REASONS.MANUAL_ADJUSTMENT;
+    const finalNotes = notes || (typeof reason === 'string' && !Object.values(MOVEMENT_REASONS).includes(reason) ? reason : undefined);
+
     const movement = new StockMovement({
       productId,
-      batchId,
-      branchId,
+      batchId: resolvedBatchId,
+      branchId: resolvedBranchId,
       type: MOVEMENT_TYPES.OUT,
       quantity,
-      reason,
-      performedBy: user.id || user._id,
+      reason: validReason,
+      performedBy: user?.id || user?._id,
       previousAvailable,
       newAvailable: inv.availableQuantity,
-      notes,
+      notes: finalNotes,
       timestamp: new Date()
     });
     await movement.save(session ? { session } : undefined);
 
     return { inventory: inv, movement };
   }
+
 
   /**
    * Reserve Stock for an Order (ACID transactional lock)
@@ -187,23 +281,33 @@ export class InventoryService {
    * Manual Stock Adjustment
    */
   static async adjustStock({ productId, batchId, branchId, newAvailable, reason, notes, user, req }) {
-    const inv = await this.getOrCreateInventory(productId, batchId, branchId);
+    const { resolvedBranchId, resolvedBatchId } = await this.resolveBatchAndBranch({
+      productId,
+      batchId,
+      branchId,
+      user,
+      req
+    });
+
+    const inv = await this.getOrCreateInventory(productId, resolvedBatchId, resolvedBranchId);
     const previousAvailable = inv.availableQuantity;
     const difference = newAvailable - previousAvailable;
 
     inv.availableQuantity = newAvailable;
     await inv.save();
 
+    const performedBy = user?.id || user?._id;
+
     // Record adjustment entry
     const adjustment = new StockAdjustment({
       productId,
-      batchId,
-      branchId,
+      batchId: resolvedBatchId,
+      branchId: resolvedBranchId,
       previousAvailable,
       newAvailable,
       adjustedQuantity: difference,
-      reason,
-      performedBy: user.id,
+      reason: reason || 'Physical Audit',
+      performedBy,
       notes
     });
     await adjustment.save();
@@ -211,14 +315,14 @@ export class InventoryService {
     // Record movement
     const movement = new StockMovement({
       productId,
-      batchId,
-      branchId,
+      batchId: resolvedBatchId,
+      branchId: resolvedBranchId,
       type: MOVEMENT_TYPES.ADJUSTMENT,
       quantity: Math.abs(difference),
       reason: MOVEMENT_REASONS.MANUAL_ADJUSTMENT,
       referenceType: 'StockAdjustment',
       referenceId: adjustment._id.toString(),
-      performedBy: user.id,
+      performedBy,
       previousAvailable,
       newAvailable,
       notes,
@@ -227,8 +331,8 @@ export class InventoryService {
     await movement.save();
 
     await AuditService.log({
-      userId: user.id,
-      branchId,
+      userId: performedBy,
+      branchId: resolvedBranchId,
       action: 'STOCK_ADJUSTMENT',
       module: 'inventory',
       resourceType: 'StockAdjustment',

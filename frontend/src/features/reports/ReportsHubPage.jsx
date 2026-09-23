@@ -9,6 +9,9 @@ import { Button } from '../../components/common/Button.jsx';
 import { Input } from '../../components/common/Input.jsx';
 import { Table } from '../../components/common/Table.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
+import { DateRangeFilter } from '../../components/common/DateRangeFilter.jsx';
+import { ExportButton } from '../../components/common/ExportButton.jsx';
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils.js';
 
 export function ReportsHubPage() {
   const [searchParams] = useSearchParams();
@@ -65,21 +68,50 @@ export function ReportsHubPage() {
   const salesOrders = salesReportData?.data || [];
   const salesSummary = salesReportData?.meta?.summary || {};
 
-  const handleExportCSV = () => {
-    if (salesOrders.length === 0) return;
-    const headers = ['Order Number,Customer,Total,Status,Branch,Date\n'];
-    const rows = salesOrders.map(
-      (o) =>
-        `"${o.orderNumber}","${o.customerId?.name || 'Customer'}",${o.grandTotal},"${o.status}","${o.branchId?.name || 'Hosur'}","${new Date(o.createdAt).toLocaleDateString()}"`
-    );
-    const blob = new Blob([headers.concat(rows.join('\n'))], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `shanthi_sales_report_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleExportReport = (format) => {
+    const dateStamp = new Date().toISOString().split('T')[0];
+    if (activeReport === 'SALES') {
+      if (!salesOrders.length) return;
+      const rows = salesOrders.map((o) => ({
+        'Order Reference': o.orderNumber || '',
+        'Customer Name': o.customerId?.name || 'Customer',
+        'Amount (₹)': o.grandTotal || 0,
+        'Order Status': o.status || '',
+        'Branch': o.branchId?.name || 'Hosur',
+        'Date': o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN') : ''
+      }));
+      const fileName = `Shanthi_Ayurvedas_Sales_Report_${dateStamp}`;
+      if (format === 'csv') exportToCSV(rows, fileName);
+      else exportToExcel(rows, fileName, 'Sales Report');
+    } else if (activeReport === 'LEADS') {
+      const sources = (leadReportData?.bySource || []).map((s) => ({
+        'Metric': 'Source Channel',
+        'Category / Channel': s._id || 'DIRECT',
+        'Lead Count': s.count || 0
+      }));
+      const statuses = (leadReportData?.byStatus || []).map((st) => ({
+        'Metric': 'Pipeline Status',
+        'Category / Channel': st._id || 'NEW',
+        'Lead Count': st.count || 0
+      }));
+      const rows = [...sources, ...statuses];
+      if (!rows.length) return;
+      const fileName = `Shanthi_Ayurvedas_Leads_Report_${dateStamp}`;
+      if (format === 'csv') exportToCSV(rows, fileName);
+      else exportToExcel(rows, fileName, 'Leads Funnel');
+    } else if (activeReport === 'DELIVERY') {
+      const rows = [
+        {
+          'Total Dispatched Shipments': deliveryReportData?.totalShipments || 0,
+          'Successfully Delivered': deliveryReportData?.deliveredCount || 0,
+          'Delivery Success Rate (%)': deliveryReportData?.deliverySuccessRate || 0,
+          'RTO Return Rate (%)': deliveryReportData?.rtoRate || 0
+        }
+      ];
+      const fileName = `Shanthi_Ayurvedas_Logistics_Report_${dateStamp}`;
+      if (format === 'csv') exportToCSV(rows, fileName);
+      else exportToExcel(rows, fileName, 'Logistics Report');
+    }
   };
 
   const salesColumns = [
@@ -123,11 +155,15 @@ export function ReportsHubPage() {
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Executive Reports & Analytics</h2>
           <p className="text-xs text-slate-500">Comprehensive sales volume, lead funnel, and delivery success analysis</p>
         </div>
-        {activeReport === 'SALES' && (
-          <Button variant="primary" icon={Download} onClick={handleExportCSV}>
-            Export to CSV
-          </Button>
-        )}
+        <ExportButton
+          onExport={handleExportReport}
+          label="Export Report"
+          disabled={
+            (activeReport === 'SALES' && salesOrders.length === 0) ||
+            (activeReport === 'LEADS' && !leadReportData) ||
+            (activeReport === 'DELIVERY' && !deliveryReportData)
+          }
+        />
       </div>
 
       {/* Tabs */}
@@ -159,36 +195,18 @@ export function ReportsHubPage() {
       </div>
 
       {/* Date Filter Bar */}
-      <div className="p-3 bg-white rounded-xl border border-slate-200 flex flex-wrap items-center gap-3">
-        <div className="text-xs font-semibold text-slate-700">Date Range:</div>
-        <div className="w-40">
-          <Input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-        </div>
-        <span className="text-slate-400 text-xs">to</span>
-        <div className="w-40">
-          <Input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
-        </div>
-        {(startDate || endDate) && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setStartDate('');
-              setEndDate('');
+      {activeReport !== 'DELIVERY' && (
+        <div className="bento-card p-3">
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onChange={({ startDate: s, endDate: e }) => {
+              setStartDate(s);
+              setEndDate(e);
             }}
-          >
-            Clear Filter
-          </Button>
-        )}
-      </div>
+          />
+        </div>
+      )}
 
       {/* Sales Report View */}
       {activeReport === 'SALES' && (

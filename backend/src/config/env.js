@@ -20,7 +20,7 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().default('http://localhost:5173'),
   JWT_ACCESS_SECRET: z.string().default('shanthi_crm_jwt_super_secret_access_key_2026_!@#$%^&*()'),
   JWT_REFRESH_SECRET: z.string().default('shanthi_crm_jwt_super_secret_refresh_key_2026_!@#$%^&*()'),
-  ACCESS_TOKEN_EXPIRES: z.string().default('15m'),
+  ACCESS_TOKEN_EXPIRES: z.string().default(process.env.ACCESS_TOKEN_EXPIRES || (process.env.NODE_ENV === 'production' ? '15m' : '7d')),
   REFRESH_TOKEN_EXPIRES: z.string().default('7d'),
   COOKIE_SECRET: z.string().default('shanthi_cookie_secret_key_secure_2026_xyz123'),
   FIELD_ENCRYPTION_KEY: z.string().default('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'),

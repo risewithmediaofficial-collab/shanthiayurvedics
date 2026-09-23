@@ -9,6 +9,7 @@ import {
 } from '../controllers/userController.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { requireBranchScope } from '../middleware/branchScope.js';
 import { validate } from '../middleware/validate.js';
 import {
   createUserSchema,
@@ -20,6 +21,7 @@ import { PERMISSIONS } from '../constants/permissions.js';
 const router = Router();
 
 router.use(authenticate);
+router.use(requireBranchScope);
 
 router.get('/', requirePermission(PERMISSIONS.USERS_VIEW), getUsers);
 router.post('/', requirePermission(PERMISSIONS.USERS_CREATE), validate(createUserSchema), createUser);

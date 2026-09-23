@@ -17,9 +17,10 @@ export class OrderService {
    * Create an Order with MongoDB Transaction and Stock Reservation
    */
   static async createOrder(orderData, user, req) {
+    const resolvedBranchId = orderData.branchId || (!req?.branchScope?.isGlobal ? req?.branchScope?.branchId : null) || user?.branchId || (Array.isArray(user?.branches) && user.branches[0]);
     const {
       customerId,
-      branchId = user.branchId,
+      branchId = resolvedBranchId,
       items = [],
       paymentMethod = 'COD',
       deliveryAddress,
@@ -603,7 +604,7 @@ export class OrderService {
     const defaultProduct = await Product.findOne({ isActive: { $ne: false } }).lean();
     let defaultBatch = null;
     if (defaultProduct) {
-      defaultBatch = await ProductBatch.findOne({ productId: defaultProduct._id, isBlocked: false }).lean();
+      defaultBatch = await ProductBatch.findOne({ productId: defaultProduct._id, isActive: true }).lean();
     }
 
     for (let i = 0; i < rows.length; i++) {
@@ -630,7 +631,7 @@ export class OrderService {
           }).lean();
           if (matched) {
             targetProduct = matched;
-            const b = await ProductBatch.findOne({ productId: matched._id, isBlocked: false }).lean();
+            const b = await ProductBatch.findOne({ productId: matched._id, isActive: true }).lean();
             if (b) targetBatch = b;
           }
         }
@@ -705,6 +706,144 @@ export class OrderService {
 
     return results;
   }
+
+  /**
+   * Update order details (tracking number, courier, address, patient, status, etc.)
+   */
+  static async updateOrder(orderId, updateData, user, req) {
+    const order = await Order.findById(orderId);
+    if (!order) {
+      throw new NotFoundError('Order');
+    }
+
+    // Branch scoping check
+    if (!req?.branchScope?.isGlobal && req?.branchScope?.branchId) {
+      if (order.branchId.toString() !== req.branchScope.branchId.toString()) {
+        throw new AppError('Unauthorized: Order belongs to another branch', 403);
+      }
+    }
+
+    const allowedDirectFields = [
+      'trackingNumber',
+      'courierName',
+      'paymentStatus',
+      'paymentMethod',
+      'notes',
+      'shippingDate',
+      'offerPrice',
+      'grandTotal',
+      'boxDimensions',
+      'weightGrams'
+    ];
+
+    allowedDirectFields.forEach((field) => {
+      if (updateData[field] !== undefined) {
+        order[field] = updateData[field];
+      }
+    });
+
+    if (updateData.patientDetails) {
+      order.patientDetails = {
+        ...(order.patientDetails?.toObject?.() || order.patientDetails || {}),
+        ...updateData.patientDetails
+      };
+    }
+
+    if (updateData.deliveryAddress) {
+      order.deliveryAddress = {
+        ...(order.deliveryAddress?.toObject?.() || order.deliveryAddress || {}),
+        ...updateData.deliveryAddress
+      };
+    }
+
+    const previousStatus = order.status;
+    if (updateData.status && updateData.status !== previousStatus) {
+      try {
+        await this.transitionStatus(order._id, updateData.status, {
+          changedBy: user,
+          notes: updateData.notes || `Updated via Scan Tracker / Order Management`,
+          forceRevert: true,
+          req
+        });
+      } catch (err) {
+        order.status = updateData.status;
+        await OrderStatusHistory.create({
+          orderId: order._id,
+          fromStatus: previousStatus,
+          toStatus: updateData.status,
+          changedBy: user?._id || user?.id,
+          reason: updateData.notes || 'Status updated'
+        });
+      }
+    }
+
+    await order.save();
+
+    await AuditService.log({
+      userId: user?.id || user?._id,
+      branchId: order.branchId,
+      action: 'ORDER_UPDATED',
+      module: 'orders',
+      resourceType: 'Order',
+      resourceId: order._id,
+      newValue: { trackingNumber: order.trackingNumber, status: order.status },
+      req
+    });
+
+    emitToBranch(order.branchId, 'order:updated', { order });
+    return order;
+  }
+
+  /**
+   * Delete an order and release stock if reserved
+   */
+  static async deleteOrder(orderId, user, req) {
+    const order = await Order.findById(orderId);
+    if (!order) {
+      throw new NotFoundError('Order');
+    }
+
+    if (!req?.branchScope?.isGlobal && req?.branchScope?.branchId) {
+      if (order.branchId.toString() !== req.branchScope.branchId.toString()) {
+        throw new AppError('Unauthorized: Order belongs to another branch', 403);
+      }
+    }
+
+    if (!StateMachineService.isDispatchedOrBeyond(order.status) && order.status !== ORDER_STATUS.CANCELLED) {
+      for (const item of order.items) {
+        try {
+          await InventoryService.releaseReservedStock({
+            productId: item.productId,
+            batchId: item.batchId,
+            branchId: order.branchId,
+            quantity: item.quantity,
+            orderId: order.orderNumber,
+            user,
+            req
+          });
+        } catch (e) {
+          console.warn('Could not release stock on delete:', e.message);
+        }
+      }
+    }
+
+    await Order.findByIdAndDelete(orderId);
+
+    await AuditService.log({
+      userId: user?.id || user?._id,
+      branchId: order.branchId,
+      action: 'ORDER_DELETED',
+      module: 'orders',
+      resourceType: 'Order',
+      resourceId: orderId,
+      oldValue: { orderNumber: order.orderNumber },
+      req
+    });
+
+    emitToBranch(order.branchId, 'order:deleted', { orderId });
+    return { success: true, message: 'Order deleted successfully' };
+  }
 }
 
 export default OrderService;
+

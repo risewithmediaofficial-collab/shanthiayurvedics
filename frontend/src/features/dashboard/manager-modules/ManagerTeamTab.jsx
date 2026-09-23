@@ -17,6 +17,8 @@ import {
   LayoutGrid,
   ArrowRight,
   TrendingUp,
+  RotateCcw,
+  ArrowUpDown,
   Phone
 } from 'lucide-react';
 import apiClient from '../../../api/apiClient.js';
@@ -33,8 +35,25 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
   // Default to 'table' view as requested
   const [viewMode, setViewMode] = useState('table');
   const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState('asc');
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+
+  const handleResetFilters = () => {
+    setSearch('');
+    setSortBy('name');
+    setSortOrder('asc');
+  };
+
+  const handleHeaderSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder(field === 'name' ? 'asc' : 'desc');
+    }
+  };
   const [selectedUserForReset, setSelectedUserForReset] = useState(null);
   const [newPassword, setNewPassword] = useState('');
 
@@ -123,15 +142,44 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
     }
   });
 
-  const filteredTeam = teamUsers.filter((u) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      u.name?.toLowerCase().includes(q) ||
-      (u.phone && u.phone.includes(q)) ||
-      (u.email && u.email.toLowerCase().includes(q))
-    );
-  });
+  const filteredTeam = teamUsers
+    .filter((u) => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return (
+        u.name?.toLowerCase().includes(q) ||
+        (u.phone && u.phone.includes(q)) ||
+        (u.email && u.email.toLowerCase().includes(q))
+      );
+    })
+    .sort((a, b) => {
+      let valA, valB;
+      const statsA = telecallerStatsMap.get(a._id) || {};
+      const statsB = telecallerStatsMap.get(b._id) || {};
+
+      if (sortBy === 'name') {
+        valA = (a.name || '').toLowerCase();
+        valB = (b.name || '').toLowerCase();
+      } else if (sortBy === 'calls') {
+        valA = statsA.todayCalls || 0;
+        valB = statsB.todayCalls || 0;
+      } else if (sortBy === 'orders') {
+        valA = statsA.todayOrders || 0;
+        valB = statsB.todayOrders || 0;
+      } else if (sortBy === 'leads') {
+        valA = statsA.assignedCount || 0;
+        valB = statsB.assignedCount || 0;
+      } else if (sortBy === 'revenue') {
+        valA = statsA.todaySales || 0;
+        valB = statsB.todaySales || 0;
+      } else {
+        return 0;
+      }
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   // Aggregated KPI stats
   const totalCalls = filteredTeam.reduce((acc, staff, idx) => {
@@ -164,7 +212,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
       )}
 
       {/* Top Document & Action Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+      <div className="bento-card flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
@@ -262,45 +310,76 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
         </div>
       </div>
 
-      {/* KPI Metrics Strip */}
+      {/* ── Bento KPI Metrics Strip ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Total Telecallers</div>
-          <div className="text-2xl font-bold text-slate-900 mt-1 font-mono">{filteredTeam.length}</div>
-          <div className="text-[11px] text-emerald-700 font-medium mt-0.5">100% Active on duty</div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Total Telecallers</div>
+          <div className="bento-metric-value text-slate-900">{filteredTeam.length}</div>
+          <div className="text-[11px] text-emerald-600 font-medium">100% Active on duty</div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Calls Logged Today</div>
-          <div className="text-2xl font-bold text-slate-900 mt-1 font-mono">{totalCalls}</div>
-          <div className="text-[11px] text-blue-700 font-medium mt-0.5">Across Hosur Main Desk</div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Calls Logged Today</div>
+          <div className="bento-metric-value text-blue-600">{totalCalls}</div>
+          <div className="text-[11px] text-blue-400 font-medium">Hosur Main Desk</div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Orders Closed Today</div>
-          <div className="text-2xl font-bold text-purple-700 mt-1 font-mono">{totalOrders}</div>
-          <div className="text-[11px] text-slate-500 font-medium mt-0.5">{totalLeads} leads active</div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Orders Closed Today</div>
+          <div className="bento-metric-value text-purple-600">{totalOrders}</div>
+          <div className="text-[11px] text-slate-400 font-medium">{totalLeads} leads active</div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Delivered Revenue</div>
-          <div className="text-2xl font-bold text-emerald-700 mt-1 font-mono">₹{totalRevenue.toLocaleString()}</div>
-          <div className="text-[11px] text-emerald-700 font-medium mt-0.5">Realized patient orders</div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Delivered Revenue</div>
+          <div className="bento-metric-value text-emerald-700">₹{totalRevenue.toLocaleString()}</div>
+          <div className="text-[11px] text-emerald-500 font-medium">Realized patient orders</div>
         </div>
       </div>
 
       {/* Filter & Search Toolbar */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search telecaller by name, mobile or email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none"
-          />
+      <div className="bento-card flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2 flex-1">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search telecaller by name, mobile or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none"
+            />
+          </div>
+
+          <select
+            value={`${sortBy}-${sortOrder}`}
+            onChange={(e) => {
+              const [f, o] = e.target.value.split('-');
+              setSortBy(f);
+              setSortOrder(o);
+            }}
+            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700"
+          >
+            <option value="name-asc">Name: A to Z</option>
+            <option value="name-desc">Name: Z to A</option>
+            <option value="revenue-desc">Sales: High to Low</option>
+            <option value="orders-desc">Orders: High to Low</option>
+            <option value="calls-desc">Calls: High to Low</option>
+            <option value="leads-desc">Leads: High to Low</option>
+          </select>
+
+          {(search || sortBy !== 'name' || sortOrder !== 'asc') && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="flex items-center gap-1 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
+
         <div className="text-xs text-slate-500 font-medium flex items-center gap-2 self-end sm:self-center">
           <span>Showing <strong>{filteredTeam.length}</strong> staff members</span>
           <span className="text-slate-300">|</span>
@@ -318,21 +397,78 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
           <div className="text-3xl mb-2">👥</div>
           <div className="text-sm font-bold text-slate-800">No telecallers match your search</div>
           <p className="text-xs text-slate-400 mt-1">Try searching by mobile number or name</p>
+          <button
+            type="button"
+            onClick={handleResetFilters}
+            className="mt-3 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold text-slate-700 cursor-pointer"
+          >
+            Clear Search
+          </button>
         </div>
       ) : viewMode === 'table' ? (
         /* ================= 1. TABLE VIEW (DEFAULT) ================= */
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/90 text-slate-500 uppercase tracking-wider border-b border-slate-200">
+              <thead className="bg-slate-50/90 text-slate-500 uppercase tracking-wider border-b border-slate-200 select-none">
                 <tr>
-                  <th className="py-3 px-3.5 font-bold">Staff Member</th>
+                  <th
+                    className="py-3 px-3.5 font-bold cursor-pointer hover:bg-slate-100/80 transition-colors"
+                    onClick={() => handleHeaderSort('name')}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Staff Member</span>
+                      {sortBy === 'name' && (
+                        <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </div>
+                  </th>
                   <th className="py-3 px-2.5 font-bold">Branch & Role</th>
                   <th className="py-3 px-2 font-bold text-center">Duty Status</th>
-                  <th className="py-3 px-2 font-bold text-center">Today Calls</th>
-                  <th className="py-3 px-2 font-bold text-center">Assigned Leads</th>
-                  <th className="py-3 px-2 font-bold text-center">Orders Closed</th>
-                  <th className="py-3 px-3 font-bold text-right">Delivered Revenue</th>
+                  <th
+                    className="py-3 px-2 font-bold text-center cursor-pointer hover:bg-slate-100/80 transition-colors"
+                    onClick={() => handleHeaderSort('calls')}
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span>Today Calls</span>
+                      {sortBy === 'calls' && (
+                        <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    className="py-3 px-2 font-bold text-center cursor-pointer hover:bg-slate-100/80 transition-colors"
+                    onClick={() => handleHeaderSort('leads')}
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span>Assigned Leads</span>
+                      {sortBy === 'leads' && (
+                        <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    className="py-3 px-2 font-bold text-center cursor-pointer hover:bg-slate-100/80 transition-colors"
+                    onClick={() => handleHeaderSort('orders')}
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span>Orders Closed</span>
+                      {sortBy === 'orders' && (
+                        <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    className="py-3 px-3 font-bold text-right cursor-pointer hover:bg-slate-100/80 transition-colors"
+                    onClick={() => handleHeaderSort('revenue')}
+                  >
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span>Delivered Revenue</span>
+                      {sortBy === 'revenue' && (
+                        <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </div>
+                  </th>
                   <th className="py-3 px-2 font-bold text-center">Conversion</th>
                   <th className="py-3 px-3.5 font-bold text-right">Actions</th>
                 </tr>

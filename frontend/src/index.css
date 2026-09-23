@@ -7,10 +7,56 @@
     border-color: #e2e8f0;
   }
 
+  :root {
+    font-optical-sizing: auto;
+  }
+
+  html {
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "calt", "kern";
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
   body {
-    background-color: #f1f5f9;
-    color: #0f172a;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    background-color: #f8fafc;
+    color: #1e293b;
+    font-size: 13.5px;
+    line-height: 1.55;
+    letter-spacing: -0.012em;
+    font-weight: 400;
+  }
+
+  /* ── Monospace data elements ────────────────────────────────────────
+     JetBrains Mono applied automatically to all data-display contexts:
+     prices, phone numbers, order IDs, percentages, barcodes, codes
+  ─────────────────────────────────────────────────────────────────── */
+  code, kbd, samp, pre,
+  .font-mono,
+  [class*="font-mono"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="search"][placeholder*="ID"],
+  input[type="search"][placeholder*="id"] {
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+    font-feature-settings: "calt", "liga", "zero", "tnum";
+    font-variant-numeric: tabular-nums;
+    font-variant-ligatures: contextual;
+  }
+
+  /* ── Headings (Mild, crisp, professional) ────────────────────────── */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    font-weight: 600;
+  }
+
+  /* ── Table typography ───────────────────────────────────────────── */
+  table {
+    font-variant-numeric: tabular-nums;
   }
 
   /* Custom scrollbar */
@@ -34,15 +80,46 @@
 }
 
 @layer components {
+  /* ── Bento Grid UI Tokens ────────────────────────────────────────── */
+  .bento-card {
+    @apply bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 hover:shadow-md transition-all duration-200 p-5;
+  }
+
+  .bento-card-subtle {
+    @apply bg-slate-50/70 rounded-2xl border border-slate-200/60 p-4 transition-all duration-200;
+  }
+
+  .bento-card-dark {
+    @apply bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 text-white rounded-2xl border border-emerald-900/40 shadow-sm p-5;
+  }
+
+  .bento-metric-title {
+    @apply text-[11px] font-semibold text-slate-500 uppercase tracking-wider;
+  }
+
+  .bento-metric-value {
+    @apply text-2xl sm:text-3xl font-semibold font-mono tracking-tight text-slate-900;
+  }
+
   .crm-card {
-    @apply bg-white rounded-xl border border-slate-200/80 shadow-card transition-all duration-200;
+    @apply bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all duration-200;
   }
 
   .clean-card {
-    @apply bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:border-slate-300 transition-all duration-200;
+    @apply bg-white rounded-2xl border border-slate-200/90 shadow-xs hover:border-slate-300 hover:shadow-md transition-all duration-200;
   }
 
-  /* Real-Time Icon Stroke Containers */
+  /* ── Data Table Container ──────────────────────────────────────── */
+  .data-table-card {
+    @apply bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden;
+  }
+  .data-table-head {
+    @apply bg-slate-50/90 border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500;
+  }
+  .data-table-row {
+    @apply hover:bg-slate-50/70 border-b border-slate-100 transition-colors last:border-0;
+  }
+
   .icon-box-emerald {
     @apply w-10 h-10 rounded-xl bg-emerald-50/80 border border-emerald-200/90 text-emerald-700 flex items-center justify-center shrink-0 shadow-sm;
   }

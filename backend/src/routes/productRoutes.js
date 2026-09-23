@@ -9,11 +9,13 @@ import {
 } from '../controllers/productController.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { requireBranchScope } from '../middleware/branchScope.js';
 import { PERMISSIONS } from '../constants/permissions.js';
 
 const router = Router();
 
 router.use(authenticate);
+router.use(requireBranchScope);
 
 router.get('/', requirePermission(PERMISSIONS.PRODUCTS_VIEW), getProducts);
 router.get('/:id', requirePermission(PERMISSIONS.PRODUCTS_VIEW), getProductById);

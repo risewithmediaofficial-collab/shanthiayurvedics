@@ -1,31 +1,25 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  Users,
-  PhoneCall,
-  CalendarClock,
-  UserCheck,
-  ShoppingBag,
-  Package,
-  Layers,
-  Truck,
-  RotateCcw,
-  BarChart3,
-  Settings,
-  Shield,
-  Building,
-  KeyRound,
-  ChevronDown,
-  ChevronRight,
-  Boxes,
-  Send,
-  BoxesIcon,
-  PlusCircle,
-  Clock,
-  DollarSign,
-  CreditCard
-} from 'lucide-react';
+import DashboardRounded from '@mui/icons-material/DashboardRounded';
+import ShoppingBagRounded from '@mui/icons-material/ShoppingBagRounded';
+import PeopleAltRounded from '@mui/icons-material/PeopleAltRounded';
+import Inventory2Rounded from '@mui/icons-material/Inventory2Rounded';
+import PaidRounded from '@mui/icons-material/PaidRounded';
+import AddCircleOutlineRounded from '@mui/icons-material/AddCircleOutlineRounded';
+import SendRounded from '@mui/icons-material/SendRounded';
+import CreditCardRounded from '@mui/icons-material/CreditCardRounded';
+import AccessTimeRounded from '@mui/icons-material/AccessTimeRounded';
+import LayersRounded from '@mui/icons-material/LayersRounded';
+import AllInboxRounded from '@mui/icons-material/AllInboxRounded';
+import LocalShippingRounded from '@mui/icons-material/LocalShippingRounded';
+import AssignmentReturnRounded from '@mui/icons-material/AssignmentReturnRounded';
+import DomainRounded from '@mui/icons-material/DomainRounded';
+import VpnKeyRounded from '@mui/icons-material/VpnKeyRounded';
+import SecurityRounded from '@mui/icons-material/SecurityRounded';
+import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded';
+import KeyboardArrowRightRounded from '@mui/icons-material/KeyboardArrowRightRounded';
+import PhoneInTalkRounded from '@mui/icons-material/PhoneInTalkRounded';
+import CloseRounded from '@mui/icons-material/CloseRounded';
 import { useQuery } from '@tanstack/react-query';
 
 import apiClient from '../../api/apiClient.js';
@@ -33,7 +27,7 @@ import { usePermissions } from '../../hooks/usePermissions.js';
 
 export function Sidebar({ isOpen, onClose }) {
 
-  const { hasPermission, isOwner, role } = usePermissions();
+  const { hasPermission, isOwner, isDistributor, isManager, isTelecaller, role, user } = usePermissions();
   const location = useLocation();
 
   const [openGroups, setOpenGroups] = useState({
@@ -60,6 +54,7 @@ export function Sidebar({ isOpen, onClose }) {
         return {};
       }
     },
+    enabled: Boolean(user),
     refetchInterval: 30000
   });
 
@@ -73,7 +68,8 @@ export function Sidebar({ isOpen, onClose }) {
       } catch (e) {
         return [];
       }
-    }
+    },
+    enabled: Boolean(user)
   });
 
   const ordersCount = metricsData?.totalOrders ?? 193;
@@ -88,170 +84,304 @@ export function Sidebar({ isOpen, onClose }) {
 
   const displayCallers = teamUsers.length > 0 ? teamUsers.slice(0, 5) : defaultTelecallers;
 
-  const navSections = [
-    {
-      title: 'Manager Desk',
-      items: [
-        {
-          label: 'ORDERS',
-          icon: ShoppingBag,
-          path: '/dashboard?tab=orders',
-          badge: ordersCount,
-          badgeVariant: 'primary',
-          show: hasPermission('orders.view')
-        },
-        {
-          label: 'LEADS',
-          icon: Users,
-          path: '/dashboard?tab=leads',
-          badge: leadsCount,
-          badgeVariant: 'neutral',
-          show: hasPermission('leads.view')
-        },
-        {
-          label: 'CONSULT',
-          icon: CalendarClock,
-          path: '/dashboard?tab=consult',
-          badge: 0,
-          badgeVariant: 'neutral',
-          show: true
-        },
-        {
-          label: 'STOCK',
-          icon: Package,
-          path: '/dashboard?tab=stock',
-          badge: lowStockCount,
-          badgeVariant: 'danger',
-          show: hasPermission('inventory.view')
-        },
-        {
-          label: 'TEAM',
-          icon: Users,
-          path: '/dashboard?tab=team',
-          badge: teamUsers.length || 8,
-          badgeVariant: 'neutral',
-          show: isOwner || hasPermission('users.view')
-        }
-      ]
-    },
-    {
-      title: 'Sales & Billing',
-      items: [
-        {
-          label: 'TC SALES / SALARY',
-          icon: DollarSign,
-          path: '/dashboard?tab=salary',
-          show: hasPermission('reports.view') || isOwner
-        },
-        {
-          label: 'OFFICE SALE',
-          icon: PlusCircle,
-          path: '/dashboard?tab=office_sale',
-          show: hasPermission('orders.create') || isOwner
-        },
-        {
-          label: 'BRANCH ORDERS',
-          icon: Send,
-          path: '/dashboard?tab=branch_orders',
-          show: hasPermission('inventory.transfer') || isOwner
-        },
-        {
-          label: 'TILL-DATE & WITHDRAWAL',
-          icon: CreditCard,
-          path: '/dashboard?tab=withdrawal',
-          show: isOwner || hasPermission('reports.view')
-        },
-        {
-          label: 'STUCK SHIPPED / OUTSTANDING',
-          icon: Clock,
-          path: '/dashboard?tab=stuck',
-          badge: '!',
-          badgeVariant: 'danger',
-          show: hasPermission('orders.view')
-        }
-      ]
-    },
+  let navSections = [];
 
-    {
-      title: 'Operations & Tracking',
-      groupKey: 'operations',
-      items: [
-        {
-          label: 'Operations Hub',
-          icon: Layers,
-          path: '/operations',
-          show: hasPermission('operations.view') || isOwner
-        },
-        {
-          label: 'Packing Station',
-          icon: BoxesIcon,
-          path: '/operations/packing',
-          show: hasPermission('orders.pack') || isOwner
-        },
-        {
-          label: 'Delivery Tracking',
-          icon: Truck,
-          path: '/shipping/tracking',
-          show: hasPermission('delivery.view')
-        },
-        {
-          label: 'RTO Management',
-          icon: RotateCcw,
-          path: '/rto',
-          show: hasPermission('rto.view')
-        }
-      ]
-    },
-    {
-      title: 'Administration',
-      groupKey: 'admin',
-      items: [
-        {
-          label: 'Franchise Branches',
-          icon: Building,
-          path: '/admin/branches',
-          show: isOwner || hasPermission('branches.manage')
-        },
-        {
-          label: 'Roles & RBAC',
-          icon: KeyRound,
-          path: '/admin/roles',
-          show: isOwner || hasPermission('roles.manage')
-        },
-        {
-          label: 'Audit Log Viewer',
-          icon: Shield,
-          path: '/admin/audit',
-          show: isOwner || hasPermission('audit.view')
-        }
-      ]
-    }
-  ];
+  if (isTelecaller) {
+    navSections = [
+      {
+        title: 'Telecaller Calling Desk',
+        items: [
+          {
+            label: 'MY CALL CONSOLE',
+            icon: DashboardRounded,
+            path: '/dashboard?view=telecaller',
+            show: true
+          },
+          {
+            label: 'MY ASSIGNED LEADS',
+            icon: PeopleAltRounded,
+            path: '/leads',
+            badge: leadsCount,
+            badgeVariant: 'neutral',
+            show: true
+          },
+          {
+            label: 'FOLLOW-UPS',
+            icon: AccessTimeRounded,
+            path: '/followups',
+            show: true
+          },
+          {
+            label: 'CALL HISTORY',
+            icon: PhoneInTalkRounded,
+            path: '/call-history',
+            show: true
+          },
+          {
+            label: 'CREATE ORDER',
+            icon: AddCircleOutlineRounded,
+            path: '/orders/counter-sale',
+            show: true
+          }
+        ]
+      }
+    ];
+  } else if (isDistributor) {
+    navSections = [
+      {
+        title: 'Branch Stock Desk',
+        items: [
+          {
+            label: 'STOCK OVERVIEW',
+            icon: DashboardRounded,
+            path: '/dashboard',
+            show: true
+          },
+          {
+            label: 'WAREHOUSE LEDGER',
+            icon: Inventory2Rounded,
+            path: '/inventory',
+            badge: lowStockCount,
+            badgeVariant: 'danger',
+            show: true
+          },
+          {
+            label: 'STOCK TRANSFERS',
+            icon: SendRounded,
+            path: '/inventory/transfers',
+            show: true
+          },
+          {
+            label: 'PRODUCT CATALOG',
+            icon: LayersRounded,
+            path: '/products',
+            show: true
+          }
+        ]
+      },
+      {
+        title: 'Branch Sales & Logistics',
+        items: [
+          {
+            label: 'BRANCH ORDERS',
+            icon: ShoppingBagRounded,
+            path: '/orders',
+            badge: ordersCount,
+            badgeVariant: 'primary',
+            show: true
+          },
+          {
+            label: 'COUNTER SALE',
+            icon: AddCircleOutlineRounded,
+            path: '/orders/counter-sale',
+            show: true
+          },
+          {
+            label: 'DELIVERY TRACKING',
+            icon: LocalShippingRounded,
+            path: '/shipping/tracking',
+            show: true
+          },
+          {
+            label: 'RTO MANAGEMENT',
+            icon: AssignmentReturnRounded,
+            path: '/rto',
+            show: true
+          }
+        ]
+      }
+    ];
+  } else {
+    // Manager and Owner
+    navSections = [
+      {
+        title: isOwner ? 'Enterprise Executive Desk' : 'Manager Desk',
+        items: [
+          {
+            label: 'OVERVIEW',
+            icon: DashboardRounded,
+            path: '/dashboard?tab=overview',
+            show: true
+          },
+          {
+            label: 'ORDERS',
+            icon: ShoppingBagRounded,
+            path: '/dashboard?tab=orders',
+            badge: ordersCount,
+            badgeVariant: 'primary',
+            show: hasPermission('orders.view')
+          },
+          {
+            label: 'LEADS',
+            icon: PeopleAltRounded,
+            path: '/dashboard?tab=leads',
+            badge: leadsCount,
+            badgeVariant: 'neutral',
+            show: hasPermission('leads.view')
+          },
+          {
+            label: 'STOCK',
+            icon: Inventory2Rounded,
+            path: '/dashboard?tab=stock',
+            badge: lowStockCount,
+            badgeVariant: 'danger',
+            show: hasPermission('inventory.view')
+          },
+          {
+            label: 'TEAM',
+            icon: PeopleAltRounded,
+            path: '/dashboard?tab=team',
+            badge: teamUsers.length || 8,
+            badgeVariant: 'neutral',
+            show: isOwner || hasPermission('users.view')
+          }
+        ]
+      },
+      {
+        title: 'Sales & Billing',
+        items: [
+          {
+            label: 'TC SALES / SALARY',
+            icon: PaidRounded,
+            path: '/dashboard?tab=salary',
+            show: hasPermission('reports.view') || isOwner
+          },
+          {
+            label: 'OFFICE SALE',
+            icon: AddCircleOutlineRounded,
+            path: '/dashboard?tab=office_sale',
+            show: hasPermission('orders.create') || isOwner
+          },
+          {
+            label: 'BRANCH ORDERS',
+            icon: SendRounded,
+            path: '/dashboard?tab=branch_orders',
+            show: hasPermission('inventory.transfer') || isOwner
+          },
+          {
+            label: 'TILL-DATE & WITHDRAWAL',
+            icon: CreditCardRounded,
+            path: '/dashboard?tab=withdrawal',
+            show: isOwner || hasPermission('reports.view')
+          },
+          {
+            label: 'STUCK SHIPPED / OUTSTANDING',
+            icon: AccessTimeRounded,
+            path: '/dashboard?tab=stuck',
+            badge: '!',
+            badgeVariant: 'danger',
+            show: hasPermission('orders.view')
+          }
+        ]
+      },
+      {
+        title: 'Operations & Tracking',
+        groupKey: 'operations',
+        items: [
+          {
+            label: 'Operations Hub',
+            icon: LayersRounded,
+            path: '/operations',
+            show: hasPermission('operations.view') || isOwner
+          },
+          {
+            label: 'Scan Tracker',
+            icon: AllInboxRounded,
+            path: '/scan-tracker',
+            badge: 'Live',
+            badgeVariant: 'primary',
+            show: hasPermission('orders.process') || isOwner
+          },
+          {
+            label: 'Packing Station',
+            icon: AllInboxRounded,
+            path: '/operations/packing',
+            show: hasPermission('orders.pack') || isOwner
+          },
+          {
+            label: 'Delivery Tracking',
+            icon: LocalShippingRounded,
+            path: '/shipping/tracking',
+            show: hasPermission('delivery.view')
+          },
+          {
+            label: 'RTO Management',
+            icon: AssignmentReturnRounded,
+            path: '/rto',
+            show: hasPermission('rto.view')
+          }
+        ]
+      },
+      {
+        title: 'Administration',
+        groupKey: 'admin',
+        items: [
+          {
+            label: 'Franchise Branches',
+            icon: DomainRounded,
+            path: '/admin/branches',
+            show: isOwner || hasPermission('branches.manage')
+          },
+          {
+            label: 'Roles & RBAC',
+            icon: VpnKeyRounded,
+            path: '/admin/roles',
+            show: isOwner || hasPermission('roles.manage')
+          },
+          {
+            label: 'Audit Log Viewer',
+            icon: SecurityRounded,
+            path: '/admin/audit',
+            show: isOwner || hasPermission('audit.view')
+          }
+        ]
+      }
+    ];
+  }
+
+  const roleTitle = isOwner
+    ? 'OWNER EXECUTIVE'
+    : isDistributor
+    ? 'BRANCH DISTRIBUTOR'
+    : isManager
+    ? 'BRANCH MANAGER'
+    : 'TELECALLER DESK';
 
   return (
     <>
       {/* Mobile backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs lg:hidden transition-opacity"
           onClick={onClose}
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-60 bg-white border-r border-slate-200 flex flex-col transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 shadow-sm ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 flex flex-col transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 shadow-sm ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand Header */}
-        <div className="flex items-center gap-2.5 h-16 px-4 border-b border-slate-100">
-          <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-sm flex items-center justify-center shadow-xs flex-shrink-0">
-            🌿
+        <div className="flex items-center justify-between h-16 px-4 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-sm flex items-center justify-center shadow-xs flex-shrink-0">
+              🌿
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-slate-800 leading-tight">AyurOne Mart</h1>
+              <p className="text-[10px] text-emerald-700 font-semibold tracking-widest uppercase">{roleTitle}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-sm font-bold text-slate-800 leading-tight">AyurOne Mart</h1>
-            <p className="text-[10px] text-emerald-700 font-semibold tracking-widest uppercase">MANAGER PANEL</p>
-          </div>
+          {/* Mobile close button */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg lg:hidden transition-colors"
+            aria-label="Close sidebar"
+          >
+            <CloseRounded sx={{ fontSize: 20 }} />
+          </button>
         </div>
 
         {/* Navigation */}
@@ -273,9 +403,9 @@ export function Sidebar({ isOpen, onClose }) {
                   >
                     <span>{section.title}</span>
                     {isGroupOpen ? (
-                      <ChevronDown className="w-3 h-3" />
+                      <KeyboardArrowDownRounded sx={{ fontSize: 16 }} />
                     ) : (
-                      <ChevronRight className="w-3 h-3" />
+                      <KeyboardArrowRightRounded sx={{ fontSize: 16 }} />
                     )}
                   </button>
                 ) : (
@@ -312,8 +442,8 @@ export function Sidebar({ isOpen, onClose }) {
                           }`}
                         >
                           <Icon
-                            strokeWidth={1.75}
-                            className={`w-4 h-4 flex-shrink-0 ${
+                            sx={{ fontSize: 18 }}
+                            className={`flex-shrink-0 ${
                               isActive ? 'text-white' : 'text-slate-500'
                             }`}
                           />
@@ -322,10 +452,10 @@ export function Sidebar({ isOpen, onClose }) {
                             <span
                               className={`ml-auto px-1.5 py-0.5 rounded-md text-[10px] font-black font-mono ${
                                 item.badgeVariant === 'danger'
-                                  ? 'bg-rose-500 text-white'
-                                  : isActive
-                                  ? 'bg-white/20 text-white'
-                                  : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                    ? 'bg-rose-500 text-white'
+                                    : isActive
+                                    ? 'bg-white/20 text-white'
+                                    : 'bg-slate-100 text-slate-700 border border-slate-200'
                               }`}
                             >
                               {item.badge}
@@ -340,17 +470,18 @@ export function Sidebar({ isOpen, onClose }) {
             );
           })}
 
-          {/* Active Telecallers Section */}
-          <div className="pt-3 mt-3 border-t border-slate-100 space-y-1">
-            <NavLink
-              to="/dashboard?tab=team"
-              onClick={() => onClose && onClose()}
-              className="px-2 py-1 text-[10px] font-bold text-slate-400 hover:text-emerald-700 uppercase tracking-widest flex items-center justify-between group cursor-pointer transition-colors"
-              title="Open Team Management Desk"
-            >
-              <span className="group-hover:text-emerald-700">TEAM CALLERS</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            </NavLink>
+          {/* Active Telecallers Section (Only visible for Manager & Owner) */}
+          {(isOwner || isManager) && (
+            <div className="pt-3 mt-3 border-t border-slate-100 space-y-1">
+              <NavLink
+                to="/dashboard?tab=team"
+                onClick={() => onClose && onClose()}
+                className="px-2 py-1 text-[10px] font-bold text-slate-400 hover:text-emerald-700 uppercase tracking-widest flex items-center justify-between group cursor-pointer transition-colors"
+                title="Open Team Management Desk"
+              >
+                <span className="group-hover:text-emerald-700">TEAM CALLERS</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              </NavLink>
             {displayCallers.map((tc, idx) => (
               <div
                 key={tc._id || idx}
@@ -371,11 +502,12 @@ export function Sidebar({ isOpen, onClose }) {
                   title={`Call ${tc.name}`}
                   className="text-slate-400 hover:text-emerald-700 p-0.5 shrink-0"
                 >
-                  <PhoneCall className="w-3 h-3" />
+                  <PhoneInTalkRounded sx={{ fontSize: 15 }} />
                 </a>
               </div>
             ))}
           </div>
+          )}
         </div>
 
         {/* Footer */}

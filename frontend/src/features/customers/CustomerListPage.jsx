@@ -21,11 +21,29 @@ import { Modal } from '../../components/common/Modal.jsx';
 import { Pagination } from '../../components/common/Pagination.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { OrderCreateModal } from '../orders/OrderCreateModal.jsx';
+import { DateRangeFilter } from '../../components/common/DateRangeFilter.jsx';
+import { ExportButton } from '../../components/common/ExportButton.jsx';
+import { SortDropdown } from '../../components/common/SortDropdown.jsx';
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils.js';
+
+const CUSTOMER_SORT_OPTIONS = [
+  { value: 'createdAt', label: 'Registration Date' },
+  { value: 'name', label: 'Customer Name' },
+  { value: 'totalOrders', label: 'Total Orders' },
+  { value: 'totalSpent', label: 'Lifetime Spent' },
+  { value: 'mobile', label: 'Mobile Number' },
+  { value: 'city', label: 'City / District' }
+];
 
 export function CustomerListPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [isExporting, setIsExporting] = useState(false);
   const [customerForOrder, setCustomerForOrder] = useState(null);
   const [customerToEdit, setCustomerToEdit] = useState(null);
   const [customerToDelete, setCustomerToDelete] = useState(null);
@@ -46,9 +64,19 @@ export function CustomerListPage() {
   });
 
   const { data: customerResponse, isLoading } = useQuery({
-    queryKey: ['customers', page, search],
+    queryKey: ['customers', page, search, startDate, endDate, sortBy, sortOrder],
     queryFn: async () => {
-      const res = await apiClient.get('/customers', { params: { page, limit: 15, search } });
+      const res = await apiClient.get('/customers', {
+        params: {
+          page,
+          limit: 15,
+          search,
+          startDate,
+          endDate,
+          sortBy,
+          sortOrder
+        }
+      });
       return res.data;
     }
   });
@@ -91,35 +119,69 @@ export function CustomerListPage() {
       `🌿 *Shanthi Ayurvedas Wellness*\n\n` +
         `Hello *${customer.name}*,\n` +
         `Greeting from Shanthi Ayurvedas. We hope you are feeling well!\n\n` +
-        `Would you like to re-order your Ayurvedic wellness medicines or book a follow-up doctor consultation?\n\n` +
+        `Would you like to re-order your Ayurvedic wellness medicines?\n\n` +
         `🙏 Shanthi Ayurvedas Healthcare Team`
     );
     window.open(`https://wa.me/91${cleanMobile}?text=${textMsg}`, '_blank');
   };
 
-  const handleExportCSV = () => {
-    if (customers.length === 0) return;
-    const headers = ['Customer Name', 'Mobile', 'City', 'State', 'Pincode', 'Total Orders', 'Total Spent (Rs)'];
-    const rows = customers.map((c) => {
-      const addr = c.addresses?.[0] || {};
-      return [
-        `"${c.name || ''}"`,
-        `"${c.mobile || ''}"`,
-        `"${addr.city || ''}"`,
-        `"${addr.state || ''}"`,
-        `"${addr.pincode || ''}"`,
-        `"${c.totalOrders || 0}"`,
-        `"${c.totalSpent || 0}"`
-      ];
-    });
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `shanthi_customers_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleExportCustomers = async (format) => {
+    try {
+      setIsExporting(true);
+      const res = await apiClient.get('/customers', {
+        params: {
+          search,
+          startDate,
+          endDate,
+          sortBy,
+          sortOrder,
+          export: true
+        }
+      });
+      const exportList = res.data?.data || customers;
+      if (!exportList.length) {
+        setActionMsg('⚠ No customer data to export');
+        setTimeout(() => setActionMsg(''), 3000);
+        return;
+      }
+
+      const rows = exportList.map((c) => {
+        const addr = c.addresses?.[0] || {};
+        return {
+          'Customer Name': c.name || '',
+          'Father / Spouse Name': c.fatherName || '',
+          'Mobile': c.mobile || '',
+          'Alt Mobile': c.altMobile || '',
+          'Email': c.email || '',
+          'Street Address': addr.street || '',
+          'Landmark': addr.landmark || '',
+          'City / District': addr.city || '',
+          'State': addr.state || '',
+          'Pincode': addr.pincode || '',
+          'Branch': c.branchId?.name || '',
+          'Assigned Telecaller': c.assignedTelecallerId?.name || '',
+          'Total Orders': c.totalOrders || 0,
+          'Lifetime Spent (₹)': c.totalSpent || 0,
+          'Status': c.status || 'ACTIVE',
+          'Registration Date': c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-IN') : ''
+        };
+      });
+
+      const fileName = `Shanthi_Ayurvedas_Customers_${new Date().toISOString().split('T')[0]}`;
+      if (format === 'csv') {
+        exportToCSV(rows, fileName);
+      } else {
+        exportToExcel(rows, fileName, 'Customers');
+      }
+      setActionMsg(`✓ Exported ${rows.length} customers to ${format.toUpperCase()}`);
+      setTimeout(() => setActionMsg(''), 3000);
+    } catch (err) {
+      console.error('Customer export failed:', err);
+      setActionMsg('⚠ Failed to export customers');
+      setTimeout(() => setActionMsg(''), 3000);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const columns = [
@@ -250,14 +312,11 @@ export function CustomerListPage() {
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Customer Registry</h2>
           <p className="text-xs text-slate-500">Verified buyers converted from telecaller interactions</p>
         </div>
-        <Button
-          variant="secondary"
-          icon={Download}
-          onClick={handleExportCSV}
+        <ExportButton
+          onExport={handleExportCustomers}
+          isLoading={isExporting}
           disabled={customers.length === 0}
-        >
-          Export CSV
-        </Button>
+        />
       </div>
 
       {/* Notification Toast */}
@@ -272,16 +331,67 @@ export function CustomerListPage() {
         </div>
       )}
 
-      <div className="p-3 bg-white rounded-xl border border-slate-200">
-        <Input
-          placeholder="Search by customer name or mobile..."
-          icon={Search}
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-        />
+      {/* Bento Metric Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Verified Patients & Clients</div>
+          <div className="bento-metric-value text-slate-900">{meta.total || customers.length}</div>
+          <div className="text-[11px] text-slate-500 font-medium">Ayurvedic registry</div>
+        </div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Repeat Buyers</div>
+          <div className="bento-metric-value text-emerald-700">
+            {customers.filter(c => (c.totalOrders || 0) > 1).length}
+          </div>
+          <div className="text-[11px] text-emerald-600 font-medium">Multiple courses prescribed</div>
+        </div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Lifetime Value (LTV)</div>
+          <div className="bento-metric-value text-indigo-600">
+            ₹{customers.reduce((sum, c) => sum + (c.totalSpent || 0), 0).toLocaleString()}
+          </div>
+          <div className="text-[11px] text-indigo-600 font-medium">Cumulative patient revenue</div>
+        </div>
+      </div>
+
+      {/* Unified Search, Date Range, and Sorting Controls */}
+      <div className="bento-card p-4 space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
+          <div className="lg:col-span-4">
+            <Input
+              placeholder="Search by customer name, mobile, city..."
+              icon={Search}
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="lg:col-span-5">
+            <DateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onChange={({ startDate: s, endDate: e }) => {
+                setStartDate(s);
+                setEndDate(e);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="lg:col-span-3 flex justify-end">
+            <SortDropdown
+              options={CUSTOMER_SORT_OPTIONS}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onChange={({ sortBy: sb, sortOrder: so }) => {
+                setSortBy(sb);
+                setSortOrder(so);
+                setPage(1);
+              }}
+            />
+          </div>
+        </div>
       </div>
 
       <Table

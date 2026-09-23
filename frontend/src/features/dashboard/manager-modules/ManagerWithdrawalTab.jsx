@@ -135,60 +135,60 @@ export function ManagerWithdrawalTab() {
         </div>
       )}
 
-      {/* 6 Financial Metric Cards Ribbon */}
+      {/* ── 6 Financial Metric Bento Cards ── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Total Branch Sales</div>
-          <div className="text-xl font-bold text-slate-900 mt-1 font-mono">
+        <div className="bento-card flex flex-col gap-0.5">
+          <div className="bento-metric-title">Total Branch Sales</div>
+          <div className="text-xl font-semibold font-mono text-slate-900 tracking-tight">
             ₹{metrics.totalBranchSales.toLocaleString()}
           </div>
-          <div className="text-[10px] text-slate-400 mt-0.5">Till-date bookings</div>
+          <div className="text-[10px] text-slate-400">Till-date bookings</div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Delivered Collections</div>
-          <div className="text-xl font-bold text-blue-700 mt-1 font-mono">
+        <div className="bento-card flex flex-col gap-0.5">
+          <div className="bento-metric-title">Delivered Collections</div>
+          <div className="text-xl font-semibold font-mono text-blue-600 tracking-tight">
             ₹{metrics.deliveredCollections.toLocaleString()}
           </div>
-          <div className="text-[10px] text-blue-600 mt-0.5">Realized revenue</div>
+          <div className="text-[10px] text-blue-400">Realized revenue</div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Commission Accrued</div>
-          <div className="text-xl font-bold text-purple-700 mt-1 font-mono">
+        <div className="bento-card flex flex-col gap-0.5">
+          <div className="bento-metric-title">Commission Accrued</div>
+          <div className="text-xl font-semibold font-mono text-purple-600 tracking-tight">
             ₹{metrics.commissionAccrued.toLocaleString()}
           </div>
-          <div className="text-[10px] text-purple-600 mt-0.5">Franchise margin</div>
+          <div className="text-[10px] text-purple-400">Franchise margin</div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-emerald-200/80 bg-emerald-50/30 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-800">Available Wallet</div>
-          <div className="text-xl font-bold text-emerald-700 mt-1 font-mono">
+        <div className="bento-card border-emerald-200/80 bg-emerald-50/30 flex flex-col gap-0.5">
+          <div className="bento-metric-title text-emerald-700">Available Wallet</div>
+          <div className="text-xl font-semibold font-mono text-emerald-700 tracking-tight">
             ₹{metrics.availableBalance.toLocaleString()}
           </div>
-          <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">Ready for payout</div>
+          <div className="text-[10px] text-emerald-500 font-semibold">Ready for payout</div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Total Withdrawn</div>
-          <div className="text-xl font-bold text-slate-700 mt-1 font-mono">
+        <div className="bento-card flex flex-col gap-0.5">
+          <div className="bento-metric-title">Total Withdrawn</div>
+          <div className="text-xl font-semibold font-mono text-slate-700 tracking-tight">
             ₹{metrics.totalWithdrawn.toLocaleString()}
           </div>
-          <div className="text-[10px] text-slate-400 mt-0.5">Disbursed to bank</div>
+          <div className="text-[10px] text-slate-400">Disbursed to bank</div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Pending Requests</div>
-          <div className="text-xl font-bold text-amber-600 mt-1 font-mono">
+        <div className="bento-card flex flex-col gap-0.5">
+          <div className="bento-metric-title">Pending Requests</div>
+          <div className="text-xl font-semibold font-mono text-amber-600 tracking-tight">
             ₹{metrics.pendingWithdrawal.toLocaleString()}
           </div>
-          <div className="text-[10px] text-amber-600 mt-0.5">In bank clearance</div>
+          <div className="text-[10px] text-amber-500">In bank clearance</div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left Column: Request Withdrawal Form Box */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
+        <div className="bento-card space-y-4">
           <div>
             <h4 className="font-bold text-sm text-slate-900 leading-tight">Request Payout Withdrawal</h4>
             <p className="text-xs text-slate-500 mt-0.5">Disburse available branch commission into registered bank/UPI</p>
@@ -213,7 +213,7 @@ export function ManagerWithdrawalTab() {
                   required
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
-                  className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-black text-slate-900 text-base"
+                  className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-semibold text-slate-900 text-base"
                 />
               </div>
             </div>
@@ -284,7 +284,7 @@ export function ManagerWithdrawalTab() {
         </div>
 
         {/* Right Column: Settlement History & Ledger */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col justify-between">
+        <div className="lg:col-span-2 bento-card overflow-hidden flex flex-col justify-between !p-0">
           <div>
             <div className="p-4 border-b border-slate-200 flex items-center justify-between">
               <h4 className="font-bold text-sm text-slate-900">Settlement & Withdrawal Ledger</h4>

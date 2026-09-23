@@ -35,7 +35,8 @@ export function OrderDetailsModal({
   isOpen,
   onClose,
   order,
-  onEditOrder
+  onEditOrder,
+  onDeleteOrder
 }) {
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [copiedTracking, setCopiedTracking] = useState(false);
@@ -567,6 +568,18 @@ export function OrderDetailsModal({
               <Button variant="secondary" onClick={onClose}>
                 Close
               </Button>
+              {onDeleteOrder && (
+                <Button
+                  variant="danger"
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold"
+                  onClick={() => {
+                    onClose();
+                    onDeleteOrder(d);
+                  }}
+                >
+                  Delete Order
+                </Button>
+              )}
               {onEditOrder && (
                 <Button
                   variant="primary"

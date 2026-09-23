@@ -29,16 +29,15 @@ async function runPlaywrightE2ETest() {
   try {
     // 1. Navigation & Authentication
     console.log('📍 Step 1: Navigating to CRM Portal & Login Verification');
-    await page.goto('http://localhost:5173/', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5173/login');
+    await page.waitForTimeout(1500);
 
-    if (page.url().includes('/login')) {
-      console.log('  🔑 On Login Page. Authenticating with Owner credentials...');
-      await page.fill('input[type="email"]', 'owner@shanthiayurvedas.com');
-      await page.fill('input[type="password"]', 'Password@12345');
-      await page.click('button[type="submit"]');
-      await page.waitForURL('**/dashboard**', { timeout: 10000 });
-      await page.waitForSelector('text=MANAGER', { timeout: 10000 });
-    }
+    console.log('  🔑 On Login Page. Authenticating with Owner credentials...');
+    await page.fill('#email-address', 'owner@shanthiayurvedas.com');
+    await page.fill('#password', 'Password@12345');
+    await page.click('button[type="submit"]');
+    await page.waitForURL('**/dashboard**', { timeout: 15000 });
+    await page.waitForTimeout(2000);
 
     assertTest('Redirects to /dashboard upon authentication', page.url().includes('/dashboard'));
 

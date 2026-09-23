@@ -66,9 +66,9 @@ export function OrderDetailPage() {
   const transitionMutation = useMutation({
     mutationFn: (payload) => apiClient.patch(`/orders/${id}/transition`, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries(['order', id]);
-      queryClient.invalidateQueries(['orders']);
-      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries({ queryKey: ['order', id] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setTransitionModalOpen(false);
       setTransitionNotes('');
       setCancellationReason('');
@@ -78,9 +78,9 @@ export function OrderDetailPage() {
   const editMutation = useMutation({
     mutationFn: (payload) => apiClient.patch(`/orders/${id}`, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries(['order', id]);
-      queryClient.invalidateQueries(['orders']);
-      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries({ queryKey: ['order', id] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setIsEditModalOpen(false);
     }
   });
@@ -88,8 +88,8 @@ export function OrderDetailPage() {
   const deleteMutation = useMutation({
     mutationFn: () => apiClient.delete(`/orders/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['orders']);
-      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       navigate('/orders');
     }
   });

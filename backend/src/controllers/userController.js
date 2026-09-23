@@ -10,20 +10,30 @@ export const getUsers = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit, 10) || 20;
   const search = req.query.search?.trim();
   const role = req.query.role;
-  const branchId = req.query.branchId;
+  const effectiveBranchId = (!req.branchScope?.isGlobal && req.branchScope?.branchId)
+    ? req.branchScope.branchId
+    : req.query.branchId;
 
-  const query = {};
-  if (role) query.role = role;
-  if (branchId && branchId !== 'ALL') {
-    query.$or = [{ branchId }, { branches: branchId }];
+  const conditions = [];
+  if (role) {
+    conditions.push({ role });
+  }
+  if (effectiveBranchId && effectiveBranchId !== 'ALL') {
+    conditions.push({
+      $or: [{ branchId: effectiveBranchId }, { branches: effectiveBranchId }]
+    });
   }
   if (search) {
-    query.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } },
-      { phone: { $regex: search, $options: 'i' } }
-    ];
+    conditions.push({
+      $or: [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } }
+      ]
+    });
   }
+
+  const query = conditions.length > 0 ? { $and: conditions } : {};
 
   const skip = (page - 1) * limit;
   const [total, users] = await Promise.all([

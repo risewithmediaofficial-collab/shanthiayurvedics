@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { RotateCcw, CheckCircle2, AlertTriangle, ShieldCheck, Box, Package } from 'lucide-react';
+import { RotateCcw, CheckCircle2, AlertTriangle, ShieldCheck, Box, Package, Search } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
 import { Table } from '../../components/common/Table.jsx';
@@ -10,12 +10,19 @@ import { Modal } from '../../components/common/Modal.jsx';
 import { Input } from '../../components/common/Input.jsx';
 import { Select } from '../../components/common/Select.jsx';
 import { Pagination } from '../../components/common/Pagination.jsx';
+import { DateRangeFilter } from '../../components/common/DateRangeFilter.jsx';
+import { ExportButton } from '../../components/common/ExportButton.jsx';
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils.js';
 
 export function RTOManagementPage() {
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
 
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
   const [selectedRTO, setSelectedRTO] = useState(null);
 
@@ -23,9 +30,17 @@ export function RTOManagementPage() {
   const [notes, setNotes] = useState('');
 
   const { data: rtoResponse, isLoading } = useQuery({
-    queryKey: ['rtoRecords', page],
+    queryKey: ['rtoRecords', page, search, startDate, endDate],
     queryFn: async () => {
-      const res = await apiClient.get('/rto', { params: { page, limit: 15 } });
+      const res = await apiClient.get('/rto', {
+        params: {
+          page,
+          limit: 15,
+          search,
+          startDate,
+          endDate
+        }
+      });
       return res.data;
     }
   });
@@ -51,6 +66,43 @@ export function RTOManagementPage() {
       setNotes('');
     }
   });
+
+  const handleExportRTO = async (format) => {
+    try {
+      setIsExporting(true);
+      const res = await apiClient.get('/rto', {
+        params: {
+          search,
+          startDate,
+          endDate,
+          export: true
+        }
+      });
+      const exportList = res.data?.data || rtoRecords;
+      if (!exportList.length) return;
+
+      const rows = exportList.map((r) => ({
+        'Order Number': r.orderId?.orderNumber || '',
+        'Return AWB': r.returnAwbNumber || '',
+        'Carrier': r.shipmentId?.courierName || '',
+        'RTO Reason': r.reason || '',
+        'Status': r.status || '',
+        'Condition': r.condition || 'Pending Verification',
+        'Branch': r.branchId?.name || '',
+        'Received By': r.receivedBy?.name || '',
+        'Verified By': r.verifiedBy?.name || '',
+        'Return Date': r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN') : ''
+      }));
+
+      const fileName = `Shanthi_Ayurvedas_RTO_${new Date().toISOString().split('T')[0]}`;
+      if (format === 'csv') exportToCSV(rows, fileName);
+      else exportToExcel(rows, fileName, 'RTO Recovery');
+    } catch (err) {
+      console.error('RTO export failed:', err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const columns = [
     {
@@ -121,9 +173,44 @@ export function RTOManagementPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900 tracking-tight">Return to Origin (RTO) & Stock Recovery</h2>
-        <p className="text-xs text-slate-500">Physical receipt, medicine seal verification, and conditional inventory restock</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Return to Origin (RTO) & Stock Recovery</h2>
+          <p className="text-xs text-slate-500">Physical receipt, medicine seal verification, and conditional inventory restock</p>
+        </div>
+        <ExportButton
+          onExport={handleExportRTO}
+          isLoading={isExporting}
+          disabled={rtoRecords.length === 0}
+        />
+      </div>
+
+      {/* Filter and Date Range Bar */}
+      <div className="bento-card p-4 space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
+          <div className="lg:col-span-5">
+            <Input
+              placeholder="Search by Return AWB or reason..."
+              icon={Search}
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="lg:col-span-7">
+            <DateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onChange={({ startDate: s, endDate: e }) => {
+                setStartDate(s);
+                setEndDate(e);
+                setPage(1);
+              }}
+            />
+          </div>
+        </div>
       </div>
 
       <Table

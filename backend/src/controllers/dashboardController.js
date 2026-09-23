@@ -6,9 +6,14 @@ import { ROLES } from '../constants/roles.js';
 export const getDashboardData = asyncHandler(async (req, res) => {
   const branchId = req.branchScope.isGlobal ? (req.query.branchId || 'ALL') : req.branchScope.branchId;
 
-  if (req.user.role === ROLES.OWNER || req.user.role === ROLES.DISTRIBUTOR) {
+  if (req.user.role === ROLES.OWNER) {
     const data = await DashboardService.getOwnerDashboard(branchId);
-    return ApiResponse.success(res, data, 'Owner/Distributor dashboard retrieved');
+    return ApiResponse.success(res, data, 'Owner master dashboard retrieved');
+  }
+
+  if (req.user.role === ROLES.DISTRIBUTOR) {
+    const data = await DashboardService.getDistributorDashboard(branchId, req.user.id);
+    return ApiResponse.success(res, data, 'Distributor branch stock dashboard retrieved');
   }
 
   if (req.user.role === ROLES.MANAGER) {

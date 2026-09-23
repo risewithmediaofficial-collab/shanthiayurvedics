@@ -4,6 +4,7 @@ import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { connectDB, disconnectDB } from './config/db.js';
 import { initSocketIO } from './sockets/index.js';
+import { RbacService } from './services/rbacService.js';
 
 const server = http.createServer(app);
 
@@ -15,6 +16,9 @@ const startServer = async () => {
   try {
     // Connect to database
     await connectDB();
+
+    // Auto-initialize default system roles & permissions
+    await RbacService.initializeDefaultRoles();
 
     server.listen(env.PORT, () => {
       logger.info(`🚀 Shanthi Ayurvedas CRM API running on port ${env.PORT} [${env.NODE_ENV}]`);

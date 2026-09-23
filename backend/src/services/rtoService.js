@@ -22,9 +22,10 @@ export class RTOService {
     const shipment = await Shipment.findOne({ orderId: order._id });
 
     // Transition order to RTO or DELIVERY_FAILED
+    const previousStatus = order.status;
     order.status = ORDER_STATUS.RTO;
     order.statusHistory.push({
-      fromStatus: order.status,
+      fromStatus: previousStatus,
       toStatus: ORDER_STATUS.RTO,
       changedBy: user.id || user._id,
       timestamp: new Date(),

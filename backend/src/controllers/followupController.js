@@ -5,8 +5,9 @@ import { ROLES } from '../constants/roles.js';
 
 export const getFollowups = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 20;
-  const category = req.query.category || 'TODAY';
+  const isExport = req.query.export === 'true';
+  const limit = isExport ? 5000 : (parseInt(req.query.limit, 10) || 20);
+  const category = req.query.category || req.query.filter || 'TODAY';
 
   const telecallerId = req.user.role === ROLES.TELECALLER ? req.user.id : req.query.telecallerId;
   const branchId = req.branchScope.isGlobal ? req.query.branchId : req.branchScope.branchId;
@@ -15,7 +16,7 @@ export const getFollowups = asyncHandler(async (req, res) => {
     telecallerId,
     branchId,
     category,
-    page,
+    page: isExport ? 1 : page,
     limit
   });
 

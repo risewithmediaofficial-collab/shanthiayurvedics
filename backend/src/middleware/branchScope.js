@@ -8,10 +8,23 @@ export const requireBranchScope = (req, res, next) => {
 
   const { role, branchId, branches } = req.user;
 
+  // Resolve requested branch from header, query, or body
+  const rawRequested = (
+    req.headers['x-branch-id'] ||
+    req.headers['x-branch'] ||
+    req.query?.branchId ||
+    req.body?.branchId
+  );
+  const requestedBranch = rawRequested ? rawRequested.toString().trim() : null;
+  const isExplicitBranch =
+    requestedBranch &&
+    requestedBranch !== 'ALL' &&
+    requestedBranch !== 'null' &&
+    requestedBranch !== 'undefined';
+
   if (role === ROLES.OWNER) {
-    // Owner can request any branch or view ALL branches
-    const requestedBranch = req.headers['x-branch-id'] || req.query.branchId;
-    if (requestedBranch && requestedBranch !== 'ALL') {
+    // Owner can request any branch or view ALL branches globally
+    if (isExplicitBranch) {
       req.branchScope = { branchId: requestedBranch, isGlobal: false };
     } else {
       req.branchScope = { branchId: null, isGlobal: true };
@@ -36,13 +49,12 @@ export const requireBranchScope = (req, res, next) => {
   }
 
   // If frontend passed an explicit branch, check if the user is authorized for it
-  const requestedBranch = req.headers['x-branch-id'] || req.query.branchId || req.body?.branchId;
-  if (requestedBranch && requestedBranch !== 'ALL') {
-    if (!allowedBranchIds.includes(requestedBranch.toString())) {
+  if (isExplicitBranch) {
+    if (!allowedBranchIds.includes(requestedBranch)) {
       return next(new ForbiddenError('Unauthorized branch access attempt'));
     }
     req.branchScope = {
-      branchId: requestedBranch.toString(),
+      branchId: requestedBranch,
       allowedBranchIds,
       isGlobal: false
     };

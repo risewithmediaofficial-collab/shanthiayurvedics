@@ -14,9 +14,12 @@
     "build:frontend": "npm run build --workspace=frontend",
     "build": "npm run build:frontend",
     "seed": "npm run seed --workspace=backend",
+    "clear:fake": "npm run clear:fake --workspace=backend",
     "clear": "npm run clear --workspace=backend",
     "bootstrap": "npm run bootstrap --workspace=backend",
     "test": "npm run test --workspace=backend",
+    "test:e2e": "node tests/e2e/e2e_complete_crm_audit.js",
+    "mongo": "npm run mongo --workspace=backend",
     "lint": "npm run lint --workspace=frontend"
   },
   "keywords": [

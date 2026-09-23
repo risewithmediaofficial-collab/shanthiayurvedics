@@ -168,10 +168,10 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
       return res.data?.data;
     },
     onSuccess: (newOrder) => {
-      queryClient.invalidateQueries(['orders']);
-      queryClient.invalidateQueries(['dashboard']);
-      queryClient.invalidateQueries(['inventory']);
-      queryClient.invalidateQueries(['customers']);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
       onClose();
 
       // Open WhatsApp directly with patient order confirmation text
@@ -355,11 +355,29 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
               />
             </div>
             <div>
-              <Input
+              <Select
                 label="State"
                 placeholder="Auto filled"
                 value={state}
                 onChange={(e) => setState(e.target.value)}
+                options={[
+                  { value: 'Tamil Nadu', label: 'Tamil Nadu' },
+                  { value: 'Karnataka', label: 'Karnataka' },
+                  { value: 'Kerala', label: 'Kerala' },
+                  { value: 'Andhra Pradesh', label: 'Andhra Pradesh' },
+                  { value: 'Telangana', label: 'Telangana' },
+                  { value: 'Maharashtra', label: 'Maharashtra' },
+                  { value: 'Delhi', label: 'Delhi' },
+                  { value: 'Gujarat', label: 'Gujarat' },
+                  { value: 'Rajasthan', label: 'Rajasthan' },
+                  { value: 'Uttar Pradesh', label: 'Uttar Pradesh' },
+                  { value: 'West Bengal', label: 'West Bengal' },
+                  { value: 'Madhya Pradesh', label: 'Madhya Pradesh' },
+                  { value: 'Odisha', label: 'Odisha' },
+                  { value: 'Punjab', label: 'Punjab' },
+                  { value: 'Haryana', label: 'Haryana' },
+                  { value: 'Other', label: 'Other' }
+                ]}
               />
             </div>
           </div>
@@ -428,11 +446,29 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
                   value={district}
                   onChange={(e) => setDistrict(e.target.value)}
                 />
-                <Input
+                <Select
                   label="State"
                   placeholder="State"
                   value={state}
                   onChange={(e) => setState(e.target.value)}
+                  options={[
+                    { value: 'Tamil Nadu', label: 'Tamil Nadu' },
+                    { value: 'Karnataka', label: 'Karnataka' },
+                    { value: 'Kerala', label: 'Kerala' },
+                    { value: 'Andhra Pradesh', label: 'Andhra Pradesh' },
+                    { value: 'Telangana', label: 'Telangana' },
+                    { value: 'Maharashtra', label: 'Maharashtra' },
+                    { value: 'Delhi', label: 'Delhi' },
+                    { value: 'Gujarat', label: 'Gujarat' },
+                    { value: 'Rajasthan', label: 'Rajasthan' },
+                    { value: 'Uttar Pradesh', label: 'Uttar Pradesh' },
+                    { value: 'West Bengal', label: 'West Bengal' },
+                    { value: 'Madhya Pradesh', label: 'Madhya Pradesh' },
+                    { value: 'Odisha', label: 'Odisha' },
+                    { value: 'Punjab', label: 'Punjab' },
+                    { value: 'Haryana', label: 'Haryana' },
+                    { value: 'Other', label: 'Other' }
+                  ]}
                 />
               </div>
             )}

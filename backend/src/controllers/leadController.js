@@ -8,32 +8,51 @@ import { NotFoundError } from '../utils/errors.js';
 import { ROLES } from '../constants/roles.js';
 
 export const getLeads = asyncHandler(async (req, res) => {
+  const isExport = req.query.export === 'true';
   const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 20;
+  const limit = isExport ? 5000 : parseInt(req.query.limit, 10) || 20;
   const search = req.query.search?.trim();
   const status = req.query.status;
   const source = req.query.source;
   const assignedTo = req.query.assignedTo;
+  const startDate = req.query.startDate;
+  const endDate = req.query.endDate;
+  const sortBy = req.query.sortBy || 'createdAt';
+  const sortOrder = req.query.sortOrder === 'asc' || req.query.sortOrder === '1' ? 1 : -1;
 
   const query = {};
 
   // Telecaller Ownership Filter
   if (req.user.role === ROLES.TELECALLER) {
-    // An explicit assignment grants the telecaller access even if the lead
-    // originated from another branch.
     query.assignedTo = req.user.id;
-  } else if (assignedTo) {
+  } else if (assignedTo && assignedTo !== 'ALL') {
     query.assignedTo = assignedTo;
   }
 
-  // Branch Scope Filter for supervisory views. Telecallers use assignment
-  // ownership above so assigned leads are not hidden by branch selection.
+  // Branch Scope Filter for supervisory views.
   if (req.user.role !== ROLES.TELECALLER && !req.branchScope.isGlobal && req.branchScope.branchId) {
     query.branchId = req.branchScope.branchId;
   }
 
-  if (status) query.status = status;
-  if (source) query.source = source;
+  if (status && status !== 'ALL') {
+    if (status.includes(',')) {
+      query.status = { $in: status.split(',').map((s) => s.trim()).filter(Boolean) };
+    } else {
+      query.status = status;
+    }
+  }
+
+  if (source && source !== 'ALL') query.source = source;
+
+  if (startDate || endDate) {
+    query.createdAt = {};
+    if (startDate) {
+      query.createdAt.$gte = new Date(startDate.includes('T') ? startDate : `${startDate}T00:00:00.000Z`);
+    }
+    if (endDate) {
+      query.createdAt.$lte = new Date(endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`);
+    }
+  }
 
   if (search) {
     query.$or = [
@@ -44,19 +63,34 @@ export const getLeads = asyncHandler(async (req, res) => {
     ];
   }
 
+  const sortObj = {};
+  if (sortBy === 'name') {
+    sortObj.name = sortOrder;
+  } else if (sortBy === 'status') {
+    sortObj.status = sortOrder;
+  } else if (sortBy === 'source') {
+    sortObj.source = sortOrder;
+  } else if (sortBy === 'city') {
+    sortObj.city = sortOrder;
+  } else if (sortBy === 'updatedAt') {
+    sortObj.updatedAt = sortOrder;
+  } else {
+    sortObj.createdAt = sortOrder;
+  }
+
   const skip = (page - 1) * limit;
   const [total, leads] = await Promise.all([
     Lead.countDocuments(query),
     Lead.find(query)
       .populate('assignedTo', 'name email')
       .populate('branchId', 'name code')
-      .sort({ createdAt: -1 })
+      .sort(sortObj)
       .skip(skip)
       .limit(limit)
       .lean()
   ]);
 
-  return ApiResponse.paginated(res, leads, { page, limit, total }, 'Leads retrieved successfully');
+  return ApiResponse.paginated(res, leads, { page, limit, total, sortBy, sortOrder: sortOrder === 1 ? 'asc' : 'desc' }, 'Leads retrieved successfully');
 });
 
 export const getLeadById = asyncHandler(async (req, res) => {
@@ -121,11 +155,14 @@ export const updateLead = asyncHandler(async (req, res) => {
     throw new NotFoundError('Lead');
   }
 
-  if (req.user.role === ROLES.TELECALLER && lead.assignedTo?.toString() !== req.user.id) {
-    throw new NotFoundError('Lead');
+  const updates = { ...req.body };
+  if (!updates.branchId) {
+    delete updates.branchId;
   }
+  // Remove undefined fields
+  Object.keys(updates).forEach((k) => updates[k] === undefined && delete updates[k]);
 
-  Object.assign(lead, req.body);
+  Object.assign(lead, updates);
   await lead.save();
 
   return ApiResponse.success(res, lead, 'Lead updated successfully');
@@ -137,8 +174,16 @@ export const deleteLead = asyncHandler(async (req, res) => {
     throw new NotFoundError('Lead');
   }
 
+  // Clean up associated calls and assignment logs
+  try {
+    await CallHistory.deleteMany({ leadId: lead._id });
+    await LeadAssignment.deleteMany({ leadId: lead._id });
+  } catch (e) {
+    // Non-critical cleanup
+  }
+
   await Lead.findByIdAndDelete(req.params.id);
-  return ApiResponse.success(res, null, 'Lead deleted successfully');
+  return ApiResponse.success(res, { id: req.params.id, name: lead.name }, 'Lead deleted successfully');
 });
 
 export const logCall = asyncHandler(async (req, res) => {

@@ -8,9 +8,10 @@ import { Spinner } from '../../components/common/Spinner.jsx';
 import { ManagerDashboardView } from './ManagerDashboardView.jsx';
 import { AdminDistributorDashboardView } from './AdminDistributorDashboardView.jsx';
 import { TelecallerDashboardView } from './TelecallerDashboardView.jsx';
+import { DistributorStockDashboardView } from './DistributorStockDashboardView.jsx';
 
 export function DashboardHub() {
-  const { role, isOwner, isDistributor, isManager, isTelecaller } = usePermissions();
+  const { role, isOwner, isDistributor, isManager, isTelecaller, user } = usePermissions();
   const { selectedBranchId } = useBranch();
   const [searchParams, setSearchParams] = useSearchParams();
   const [previewCaller, setPreviewCaller] = useState(null);
@@ -20,11 +21,15 @@ export function DashboardHub() {
   const callerParam = searchParams.get('caller');
   const fromParam = searchParams.get('from')?.toUpperCase();
 
-  // Determine active view:
-  //   - URL param wins if set
-  //   - Otherwise, telecallers go to TELECALLER view by default
-  //   - Everyone else gets MANAGER view by default
-  const activeView = urlView || (isTelecaller ? 'TELECALLER' : 'MANAGER');
+  // Determine role-specific default view:
+  const getRoleDefaultView = () => {
+    if (isOwner) return 'OWNER';
+    if (isDistributor) return 'DISTRIBUTOR';
+    if (isTelecaller) return 'TELECALLER';
+    return 'MANAGER';
+  };
+
+  const activeView = urlView || getRoleDefaultView();
 
   // Effective caller: either local state or URL param
   const effectiveCaller = previewCaller || (callerParam ? { name: callerParam } : null);
@@ -33,8 +38,7 @@ export function DashboardHub() {
     setPreviewCaller(caller);
     const params = {};
 
-    // Only record view param if it's not the default for this role
-    const defaultView = isTelecaller ? 'TELECALLER' : 'MANAGER';
+    const defaultView = getRoleDefaultView();
     if (newView !== defaultView) {
       params.view = newView.toLowerCase();
     }
@@ -43,14 +47,12 @@ export function DashboardHub() {
       if (caller?.name) params.caller = caller.name;
       else if (callerParam) params.caller = callerParam;
 
-      const origin = returnTo || (activeView === 'BOSS' || activeView === 'DISTRIBUTOR' ? 'boss' : 'manager');
+      const origin = returnTo || (isOwner ? 'owner' : isDistributor ? 'distributor' : 'manager');
       params.from = origin.toLowerCase();
-      // Keep tab as team so when returning, user is back on team tab
       params.tab = searchParams.get('tab') || 'team';
     } else {
-      // Returning to Manager or Boss view: keep active tab
       if (searchParams.get('tab')) params.tab = searchParams.get('tab');
-      else params.tab = 'team';
+      else params.tab = 'overview';
     }
 
     setSearchParams(params, { replace: true });
@@ -61,52 +63,64 @@ export function DashboardHub() {
     queryFn: async () => {
       const res = await apiClient.get('/dashboard');
       return res.data?.data;
-    }
+    },
+    enabled: Boolean(user)
   });
 
   if (isLoading) {
-    return <Spinner size="lg" text="Loading dashboard..." className="py-24" />;
+    return <Spinner size="lg" text="Loading role dashboard..." className="py-24" />;
   }
 
-  const canSwitchToBoss = isOwner || isDistributor;
-
-  // TELECALLER VIEW — direct login or supervisor preview (Manager / Boss)
+  // 1. TELECALLER VIEW
   if (activeView === 'TELECALLER') {
     const isSupervisor = !isTelecaller || Boolean(effectiveCaller) || Boolean(fromParam);
     return (
       <TelecallerDashboardView
         previewCaller={effectiveCaller}
-        returnView={fromParam || (isOwner || isDistributor ? 'BOSS' : 'MANAGER')}
+        returnView={fromParam || (isOwner ? 'OWNER' : isDistributor ? 'DISTRIBUTOR' : 'MANAGER')}
         onSwitchToManagerView={
           isSupervisor
             ? () => setView('MANAGER')
             : undefined
         }
         onSwitchToBossView={
-          isSupervisor && canSwitchToBoss
-            ? () => setView('BOSS')
+          isSupervisor && isOwner
+            ? () => setView('OWNER')
             : undefined
         }
       />
     );
   }
 
-  // BOSS / DISTRIBUTOR VIEW
-  if (activeView === 'BOSS' || activeView === 'DISTRIBUTOR') {
+  // 2. DISTRIBUTOR VIEW (Dedicated Branch Stock & Inventory Portal)
+  if (activeView === 'DISTRIBUTOR') {
     return (
-      <AdminDistributorDashboardView
-        onSwitchToManagerView={() => setView('MANAGER')}
-        onSwitchToTelecaller={(caller) => setView('TELECALLER', caller, 'BOSS')}
+      <DistributorStockDashboardView
+        onSwitchToManagerView={
+          isOwner
+            ? () => setView('MANAGER')
+            : undefined
+        }
       />
     );
   }
 
-  // MANAGER VIEW (default for manager, owner, distributor roles)
+  // 3. OWNER / BOSS VIEW (Master Enterprise Multi-Branch Desk)
+  if (activeView === 'OWNER' || activeView === 'BOSS') {
+    return (
+      <AdminDistributorDashboardView
+        onSwitchToManagerView={() => setView('MANAGER')}
+        onSwitchToTelecaller={(caller) => setView('TELECALLER', caller, 'OWNER')}
+      />
+    );
+  }
+
+  // 4. MANAGER VIEW (Default for Managers: Branch Operations & Team Callers)
   return (
     <ManagerDashboardView
       onSwitchToBossView={
-        canSwitchToBoss
-          ? () => setView('BOSS')
+        isOwner
+          ? () => setView('OWNER')
           : undefined
       }
       onSwitchToTelecaller={(caller) => setView('TELECALLER', caller, 'MANAGER')}

@@ -6,6 +6,7 @@ import { Inventory } from '../models/Inventory.js';
 import { CallHistory } from '../models/CallHistory.js';
 import { Branch } from '../models/Branch.js';
 import { User } from '../models/User.js';
+import { StockTransfer } from '../models/StockTransfer.js';
 import { ORDER_STATUS } from '../constants/orderStates.js';
 import { LEAD_STATUS, FOLLOWUP_STATUS } from '../constants/leadStates.js';
 import { ROLES } from '../constants/roles.js';
@@ -72,7 +73,7 @@ export class DashboardService {
       Lead.countDocuments(branchFilter),
       Lead.countDocuments({ ...branchFilter, createdAt: { $gte: startOfToday } }),
       Lead.countDocuments({ ...branchFilter, status: LEAD_STATUS.CONVERTED }),
-      Branch.find().populate('managerId', 'name phone email').lean()
+      Branch.find(branchFilter.branchId ? { _id: branchFilter.branchId } : {}).populate('managerId', 'name phone email').lean()
     ]);
 
     const allTimeRevenue = allTimeSales[0]?.total || 0;
@@ -115,7 +116,7 @@ export class DashboardService {
 
     // 3. Branch Comparison Matrix
     const branchComparison = await Order.aggregate([
-      { $match: { status: { $ne: ORDER_STATUS.CANCELLED } } },
+      { $match: { ...(branchFilter.branchId ? { branchId: branchFilter.branchId } : {}), status: { $ne: ORDER_STATUS.CANCELLED } } },
       {
         $group: {
           _id: '$branchId',
@@ -152,6 +153,12 @@ export class DashboardService {
       .limit(10)
       .lean();
 
+    // 5. Branch Telecallers
+    const branchTelecallers = await User.find({
+      role: ROLES.TELECALLER,
+      ...(branchFilter.branchId ? { $or: [{ branchId: branchFilter.branchId }, { branches: branchFilter.branchId }] } : {})
+    }).select('name email phone isActive').lean();
+
     return {
       kpis: {
         allTimeRevenue,
@@ -171,7 +178,8 @@ export class DashboardService {
       branches: franchiseBranches,
       ordersByStatus,
       branchComparison,
-      lowStockItems
+      lowStockItems,
+      telecallers: branchTelecallers
     };
   }
 
@@ -309,7 +317,10 @@ export class DashboardService {
       Order.countDocuments({ ...branchFilter, status: ORDER_STATUS.DELIVERED }),
       Order.countDocuments({ ...branchFilter, status: ORDER_STATUS.RTO }),
       Inventory.countDocuments({ ...(branchFilter.branchId ? { branchId: branchFilter.branchId } : {}), availableQuantity: { $lte: 20 } }),
-      User.find({ role: ROLES.TELECALLER, ...(branchFilter.branchId ? { branchId: branchFilter.branchId } : {}) })
+      User.find({
+        role: ROLES.TELECALLER,
+        ...(branchFilter.branchId ? { $or: [{ branchId: branchFilter.branchId }, { branches: branchFilter.branchId }] } : {})
+      })
         .select('name email phone isActive')
         .lean(),
       branchFilter.branchId ? Branch.findById(branchFilter.branchId).lean() : null
@@ -367,6 +378,111 @@ export class DashboardService {
       },
       telecallers: telecallerStats,
       branch: branchInfo || { name: 'Shanthi Ayurvedas Main Branch', code: 'MAIN' }
+    };
+  }
+
+  /**
+   * Distributor Dashboard - Branch Stock Inventory & Warehouse Transfers
+   */
+  static async getDistributorDashboard(branchId, userId) {
+    let resolvedBranchId = branchId;
+    if (!resolvedBranchId || resolvedBranchId === 'ALL') {
+      const user = await User.findById(userId).select('branchId branches').lean();
+      resolvedBranchId = user?.branchId || user?.branches?.[0];
+    }
+
+    const branchFilter = resolvedBranchId && resolvedBranchId !== 'ALL'
+      ? { branchId: new mongoose.Types.ObjectId(resolvedBranchId) }
+      : {};
+
+    // 1. Inventory counts & valuation
+    const inventoryDocs = await Inventory.find(branchFilter)
+      .populate('productId', 'name sku price lowStockThreshold category')
+      .populate('batchId', 'batchNumber expiryDate mfgDate')
+      .populate('branchId', 'name code')
+      .lean();
+
+    let totalStockUnits = 0;
+    let inventoryValuation = 0;
+    let lowStockCount = 0;
+    let outOfStockCount = 0;
+
+    const stockItems = inventoryDocs.map((inv) => {
+      const price = inv.productId?.price || 0;
+      const qty = inv.availableQuantity || 0;
+      const threshold = inv.productId?.lowStockThreshold || 20;
+      totalStockUnits += qty;
+      inventoryValuation += qty * price;
+
+      if (qty === 0) outOfStockCount++;
+      else if (qty <= threshold) lowStockCount++;
+
+      return {
+        _id: inv._id,
+        productId: inv.productId?._id,
+        productName: inv.productId?.name || 'Ayurvedic Product',
+        sku: inv.productId?.sku || 'SKU-GEN',
+        category: inv.productId?.category || 'General',
+        price,
+        batchNumber: inv.batchId?.batchNumber || 'BATCH-DEFAULT',
+        expiryDate: inv.batchId?.expiryDate,
+        availableQuantity: qty,
+        reservedQuantity: inv.reservedQuantity || 0,
+        allocatedQuantity: inv.allocatedQuantity || 0,
+        lowStockThreshold: threshold,
+        isLowStock: qty > 0 && qty <= threshold,
+        isOutOfStock: qty === 0,
+        stockValue: qty * price
+      };
+    });
+
+    // 2. Branch Info
+    const branchInfo = resolvedBranchId
+      ? await Branch.findById(resolvedBranchId).populate('managerId', 'name phone email').populate('distributorId', 'name phone email').lean()
+      : null;
+
+    // 3. Stock Transfers (both incoming and outgoing for this branch)
+    const transferFilter = resolvedBranchId
+      ? { $or: [{ fromBranchId: new mongoose.Types.ObjectId(resolvedBranchId) }, { toBranchId: new mongoose.Types.ObjectId(resolvedBranchId) }] }
+      : {};
+
+    const recentTransfers = await StockTransfer.find(transferFilter)
+      .populate('fromBranchId', 'name code')
+      .populate('toBranchId', 'name code')
+      .populate('items.productId', 'name sku')
+      .populate('requestedBy', 'name')
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean();
+
+    const pendingIncomingTransfers = recentTransfers.filter(
+      (t) => t.toBranchId?._id?.toString() === resolvedBranchId?.toString() && t.status !== 'COMPLETED' && t.status !== 'CANCELLED'
+    ).length;
+
+    // 4. Branch Orders & Sales overview for context
+    const branchOrdersFilter = resolvedBranchId ? { branchId: new mongoose.Types.ObjectId(resolvedBranchId) } : {};
+    const [branchOrdersCount, branchSalesAgg] = await Promise.all([
+      Order.countDocuments(branchOrdersFilter),
+      Order.aggregate([
+        { $match: { ...branchOrdersFilter, status: { $ne: ORDER_STATUS.CANCELLED } } },
+        { $group: { _id: null, total: { $sum: '$grandTotal' } } }
+      ])
+    ]);
+
+    return {
+      kpis: {
+        totalProducts: stockItems.length,
+        totalStockUnits,
+        inventoryValuation,
+        lowStockCount,
+        outOfStockCount,
+        pendingTransfersCount: pendingIncomingTransfers,
+        branchOrdersCount,
+        branchRevenue: branchSalesAgg[0]?.total || 0
+      },
+      stockItems: stockItems.sort((a, b) => a.availableQuantity - b.availableQuantity),
+      transfers: recentTransfers,
+      branch: branchInfo || { name: 'Assigned Branch', code: 'BR' }
     };
   }
 }

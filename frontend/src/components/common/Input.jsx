@@ -1,7 +1,8 @@
 import React, { forwardRef, useState } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Eye, EyeOff } from 'lucide-react';
+import VisibilityRounded from '@mui/icons-material/VisibilityRounded';
+import VisibilityOffRounded from '@mui/icons-material/VisibilityOffRounded';
 
 export const Input = forwardRef(function Input(
   {
@@ -44,7 +45,7 @@ export const Input = forwardRef(function Input(
       <div className="relative rounded-lg shadow-sm">
         {Icon && (
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-            <Icon className="w-4 h-4" />
+            <Icon sx={{ fontSize: 18 }} className="w-4 h-4" />
           </div>
         )}
         <input
@@ -71,13 +72,13 @@ export const Input = forwardRef(function Input(
             type="button"
             tabIndex={-1}
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none transition-colors cursor-pointer"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? (
-              <EyeOff className="w-4 h-4 text-ayur-700" />
+              <VisibilityOffRounded sx={{ fontSize: 18 }} className="text-ayur-700" />
             ) : (
-              <Eye className="w-4 h-4 text-slate-400 hover:text-slate-600" />
+              <VisibilityRounded sx={{ fontSize: 18 }} className="text-slate-400 hover:text-slate-600" />
             )}
           </button>
         )}

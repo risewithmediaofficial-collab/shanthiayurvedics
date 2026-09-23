@@ -9,7 +9,6 @@ import { Spinner } from './components/common/Spinner.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
 import ForgotPasswordPage from './features/auth/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './features/auth/ResetPasswordPage.jsx';
-import PublicConsultationBookingPage from './features/consultation/PublicConsultationBookingPage.jsx';
 import DashboardHub from './features/dashboard/DashboardHub.jsx';
 import LeadListPage from './features/leads/LeadListPage.jsx';
 import CallHistoryPage from './features/leads/CallHistoryPage.jsx';
@@ -25,6 +24,7 @@ import StuckOrdersPage from './features/orders/StuckOrdersPage.jsx';
 import OperationsHubPage from './features/operations/OperationsHubPage.jsx';
 import PackingStationPage from './features/operations/PackingStationPage.jsx';
 import DispatchQueuePage from './features/operations/DispatchQueuePage.jsx';
+import ScanTrackerPage from './features/operations/ScanTrackerPage.jsx';
 import DeliveryTrackingPage from './features/shipping/DeliveryTrackingPage.jsx';
 import RTOManagementPage from './features/rto/RTOManagementPage.jsx';
 import ReportsHubPage from './features/reports/ReportsHubPage.jsx';
@@ -61,9 +61,6 @@ export function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/book-consultation" element={<PublicConsultationBookingPage />} />
-        <Route path="/book_consultation.php" element={<PublicConsultationBookingPage />} />
-        <Route path="/consult/:branchCode" element={<PublicConsultationBookingPage />} />
       </Route>
 
       {/* Protected App Routes */}
@@ -74,10 +71,12 @@ export function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<Navigate to="/dashboard?tab=orders" replace />} />
+        <Route path="/" element={<Navigate to="/dashboard?tab=overview" replace />} />
         <Route path="/dashboard" element={<DashboardHub />} />
         <Route path="/manager" element={<DashboardHub />} />
-        <Route path="/consult" element={<Navigate to="/dashboard?tab=consult" replace />} />
+        <Route path="/consult" element={<Navigate to="/dashboard?tab=overview" replace />} />
+        <Route path="/consultations" element={<Navigate to="/dashboard?tab=overview" replace />} />
+        <Route path="/doctor-slots" element={<Navigate to="/dashboard?tab=overview" replace />} />
 
         {/* Phase 3 — Leads, Followups & Customers */}
         <Route path="/leads" element={<LeadListPage />} />
@@ -95,11 +94,9 @@ export function App() {
         <Route path="/orders" element={<OrderListPage />} />
         <Route path="/orders/counter-sale" element={<CounterSalePage />} />
         <Route path="/orders/stuck" element={<StuckOrdersPage />} />
-        <Route path="/orders/stuck-outstanding" element={<StuckOrdersPage />} />
         <Route path="/orders/:id" element={<OrderDetailPage />} />
         {/* Phase 6 — Operations */}
         <Route path="/operations" element={<OperationsHubPage />} />
-
         <Route path="/operations/packing" element={<PackingStationPage />} />
         <Route path="/operations/dispatch" element={<DispatchQueuePage />} />
 
@@ -120,6 +117,31 @@ export function App() {
         <Route path="/admin/integrations" element={<IntegrationsPage />} />
         <Route path="/admin/audit" element={<AuditLogViewerPage />} />
       </Route>
+      {/* Dedicated Standalone Scan Tracker View (Full-Screen AyurOne Mart Logistics Mode) */}
+      <Route
+        path="/scan-tracker"
+        element={
+          <ProtectedRoute>
+            <ScanTrackerPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/orders/scan-tracker"
+        element={
+          <ProtectedRoute>
+            <ScanTrackerPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/operations/scan-tracker"
+        element={
+          <ProtectedRoute>
+            <ScanTrackerPage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Catch-all 404 */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

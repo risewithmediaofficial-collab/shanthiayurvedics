@@ -148,10 +148,11 @@ export class ShippingService {
     if (status === SHIPPING_STATUS.DELIVERED) {
       const order = await Order.findById(shipment.orderId);
       if (order && order.status !== ORDER_STATUS.DELIVERED) {
+        const prevStatus = order.status;
         order.status = ORDER_STATUS.DELIVERED;
         order.paymentStatus = 'PAID';
         order.statusHistory.push({
-          fromStatus: ORDER_STATUS.DISPATCHED,
+          fromStatus: prevStatus,
           toStatus: ORDER_STATUS.DELIVERED,
           timestamp: new Date(),
           notes: 'Delivered to customer'

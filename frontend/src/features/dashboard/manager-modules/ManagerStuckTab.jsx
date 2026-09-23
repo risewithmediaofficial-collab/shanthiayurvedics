@@ -26,7 +26,25 @@ export function ManagerStuckTab() {
 
   const [agingBucket, setAgingBucket] = useState('ALL'); // 'ALL', '15_20', '20_30', '30_40', '40_PLUS'
   const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('daysElapsed');
+  const [sortOrder, setSortOrder] = useState('desc');
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
+
+  const handleResetFilters = () => {
+    setAgingBucket('ALL');
+    setSearch('');
+    setSortBy('daysElapsed');
+    setSortOrder('desc');
+  };
+
+  const handleHeaderSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder(field === 'daysElapsed' || field === 'amount' ? 'desc' : 'asc');
+    }
+  };
 
   // Fetch Stuck / Outstanding Orders
   const { data: ordersResponse, isLoading } = useQuery({
@@ -81,24 +99,47 @@ export function ManagerStuckTab() {
     return { ...ord, daysElapsed: diffDays };
   });
 
-  const filteredOrders = ordersWithAging.filter((ord) => {
-    if (agingBucket === '15_20' && (ord.daysElapsed < 15 || ord.daysElapsed > 20)) return false;
-    if (agingBucket === '20_30' && (ord.daysElapsed < 20 || ord.daysElapsed > 30)) return false;
-    if (agingBucket === '30_40' && (ord.daysElapsed < 30 || ord.daysElapsed > 40)) return false;
-    if (agingBucket === '40_PLUS' && ord.daysElapsed < 40) return false;
+  const filteredOrders = ordersWithAging
+    .filter((ord) => {
+      if (agingBucket === '15_20' && (ord.daysElapsed < 15 || ord.daysElapsed > 20)) return false;
+      if (agingBucket === '20_30' && (ord.daysElapsed < 20 || ord.daysElapsed > 30)) return false;
+      if (agingBucket === '30_40' && (ord.daysElapsed < 30 || ord.daysElapsed > 40)) return false;
+      if (agingBucket === '40_PLUS' && ord.daysElapsed < 40) return false;
 
-    if (search) {
-      const q = search.toLowerCase();
-      const pat = ord.patientDetails || {};
-      return (
-        ord.orderNumber.toLowerCase().includes(q) ||
-        (pat.patientName && pat.patientName.toLowerCase().includes(q)) ||
-        (pat.mobile && pat.mobile.includes(q)) ||
-        (ord.trackingNumber && ord.trackingNumber.toLowerCase().includes(q))
-      );
-    }
-    return true;
-  });
+      if (search) {
+        const q = search.toLowerCase();
+        const pat = ord.patientDetails || {};
+        return (
+          (ord.orderNumber && ord.orderNumber.toLowerCase().includes(q)) ||
+          (pat.patientName && pat.patientName.toLowerCase().includes(q)) ||
+          (pat.mobile && pat.mobile.includes(q)) ||
+          (ord.trackingNumber && ord.trackingNumber.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      let valA, valB;
+      if (sortBy === 'daysElapsed') {
+        valA = a.daysElapsed || 0;
+        valB = b.daysElapsed || 0;
+      } else if (sortBy === 'amount') {
+        valA = a.grandTotal || 0;
+        valB = b.grandTotal || 0;
+      } else if (sortBy === 'date') {
+        valA = new Date(a.createdAt || 0).getTime();
+        valB = new Date(b.createdAt || 0).getTime();
+      } else if (sortBy === 'orderNumber') {
+        valA = a.orderNumber || '';
+        valB = b.orderNumber || '';
+      } else {
+        return 0;
+      }
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   const totalStuckCount = ordersWithAging.length;
   const totalStuckGross = ordersWithAging.reduce((sum, o) => sum + (o.grandTotal || 1500), 0);
@@ -114,73 +155,98 @@ export function ManagerStuckTab() {
         </div>
       )}
 
-      {/* 4 KPI Cards Ribbon */}
+      {/* ── Bento Metric Strip ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Stuck Orders (&gt;15 Days)</div>
-          <div className="text-2xl font-bold text-amber-600 mt-1 font-mono">{totalStuckCount}</div>
-          <div className="text-[10px] text-amber-600 mt-0.5 font-semibold">Delayed in transit</div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Delayed Parcels</div>
+          <div className="bento-metric-value text-slate-900">{totalStuckCount}</div>
+          <div className="text-[11px] text-slate-400 font-medium">Outstanding</div>
         </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Stuck Gross Value</div>
-          <div className="text-2xl font-bold text-slate-900 mt-1 font-mono">
-            ₹{totalStuckGross.toLocaleString()}
-          </div>
-          <div className="text-[10px] text-slate-400 mt-0.5">Pending collection</div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Critical (&ge;40 Days)</div>
+          <div className="bento-metric-value text-rose-600">{criticalCount}</div>
+          <div className="text-[11px] text-rose-400 font-medium">Needs immediate action</div>
         </div>
-
-        <div className="bg-white rounded-2xl border border-rose-200/80 bg-rose-50/20 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-800">Locked Margin (40%)</div>
-          <div className="text-2xl font-bold text-rose-700 mt-1 font-mono">
-            ₹{lockedMarginReserve.toLocaleString()}
-          </div>
-          <div className="text-[10px] text-rose-600 font-semibold mt-0.5">Unreleased wallet reserve</div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Gross Stuck Turnover</div>
+          <div className="bento-metric-value text-blue-600">₹{totalStuckGross.toLocaleString()}</div>
+          <div className="text-[11px] text-blue-400 font-medium">Order value locked</div>
         </div>
-
-        <div className="bg-white rounded-2xl border border-red-200/80 bg-red-50/30 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-red-800">Critical Alerts (40d+)</div>
-          <div className="text-2xl font-bold text-red-700 mt-1 font-mono">{criticalCount}</div>
-          <div className="text-[10px] text-red-600 font-bold mt-0.5">Require RTO escalation</div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Margin Reserve</div>
+          <div className="bento-metric-value text-amber-600">₹{lockedMarginReserve.toLocaleString()}</div>
+          <div className="text-[11px] text-amber-400 font-medium">40% locked margin</div>
         </div>
       </div>
 
-      {/* Aging Buckets Filter Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            { id: 'ALL', label: `All Outstanding (${ordersWithAging.length})` },
-            { id: '15_20', label: '15 - 20 Days' },
-            { id: '20_30', label: '20 - 30 Days' },
-            { id: '30_40', label: '30 - 40 Days' },
-            { id: '40_PLUS', label: '⚠️ 40+ Days (Critical)' }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setAgingBucket(tab.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                agingBucket === tab.id
-                  ? tab.id === '40_PLUS'
-                    ? 'bg-red-700 text-white shadow-xs'
-                    : 'bg-slate-900 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      {/* ── Aging Buckets Filter Bar ── */}
+      <div className="bento-card flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { id: 'ALL', label: `All Outstanding (${ordersWithAging.length})` },
+              { id: '15_20', label: '15 - 20 Days' },
+              { id: '20_30', label: '20 - 30 Days' },
+              { id: '30_40', label: '30 - 40 Days' },
+              { id: '40_PLUS', label: '⚠️ 40+ Days (Critical)' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setAgingBucket(tab.id)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  agingBucket === tab.id
+                    ? tab.id === '40_PLUS'
+                      ? 'bg-red-700 text-white shadow-xs font-bold'
+                      : 'bg-slate-900 text-white shadow-xs font-bold'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search order, customer, tracking..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-64 pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-emerald-600"
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search order, customer, tracking..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full sm:w-56 pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-emerald-600"
+              />
+            </div>
+
+            <select
+              value={`${sortBy}-${sortOrder}`}
+              onChange={(e) => {
+                const [f, o] = e.target.value.split('-');
+                setSortBy(f);
+                setSortOrder(o);
+              }}
+              className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700"
+            >
+              <option value="daysElapsed-desc">Days: Highest First</option>
+              <option value="daysElapsed-asc">Days: Lowest First</option>
+              <option value="amount-desc">Amount: High to Low</option>
+              <option value="amount-asc">Amount: Low to High</option>
+              <option value="date-desc">Date: Newest First</option>
+              <option value="date-asc">Date: Oldest First</option>
+            </select>
+
+            {(agingBucket !== 'ALL' || search || sortBy !== 'daysElapsed' || sortOrder !== 'desc') && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="flex items-center gap-1 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -194,17 +260,54 @@ export function ManagerStuckTab() {
           <div className="text-3xl mb-2">🎉</div>
           <div className="text-sm font-bold text-slate-800">No stuck orders in this aging bucket</div>
           <p className="text-xs text-slate-400 mt-1">All branch dispatches are running within standard courier SLAs.</p>
+          <button
+            type="button"
+            onClick={handleResetFilters}
+            className="mt-3 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold text-slate-700 cursor-pointer"
+          >
+            Clear All Filters
+          </button>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200">
+              <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200 select-none">
                 <tr>
-                  <th className="py-3 px-4 font-bold">Order Details</th>
+                  <th
+                    className="py-3 px-4 font-bold cursor-pointer hover:bg-slate-100/80 transition-colors"
+                    onClick={() => handleHeaderSort('orderNumber')}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Order Details</span>
+                      {sortBy === 'orderNumber' && (
+                        <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </div>
+                  </th>
                   <th className="py-3 px-4 font-bold">Courier & Tracking</th>
-                  <th className="py-3 px-4 font-bold text-center">Days Elapsed</th>
-                  <th className="py-3 px-4 font-bold text-right">Order Amount</th>
+                  <th
+                    className="py-3 px-4 font-bold text-center cursor-pointer hover:bg-slate-100/80 transition-colors"
+                    onClick={() => handleHeaderSort('daysElapsed')}
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span>Days Elapsed</span>
+                      {sortBy === 'daysElapsed' && (
+                        <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    className="py-3 px-4 font-bold text-right cursor-pointer hover:bg-slate-100/80 transition-colors"
+                    onClick={() => handleHeaderSort('amount')}
+                  >
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span>Order Amount</span>
+                      {sortBy === 'amount' && (
+                        <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </div>
+                  </th>
                   <th className="py-3 px-4 font-bold text-center">Status</th>
                   <th className="py-3 px-4 font-bold text-right">Manager Actions</th>
                 </tr>

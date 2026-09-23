@@ -33,7 +33,6 @@ import dashboardRoutes from './routes/dashboardRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import integrationRoutes from './routes/integrationRoutes.js';
-import doctorSlotRoutes from './routes/doctorSlotRoutes.js';
 
 const app = express();
 
@@ -47,6 +46,12 @@ app.use(helmet({
 // CORS Configuration
 const allowedOrigins = [
   env.FRONTEND_URL,
+  'http://localhost:88',
+  'http://localhost:8085',
+  'http://localhost:80',
+  'http://127.0.0.1:88',
+  'http://127.0.0.1:8085',
+  'http://127.0.0.1:80',
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
@@ -66,7 +71,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Branch-ID']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Branch-ID', 'x-branch-id', 'x-branch']
 }));
 
 // Global Rate Limiting
@@ -120,7 +125,6 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/integrations', integrationRoutes);
-app.use('/api/doctors', doctorSlotRoutes);
 
 // Base API route placeholder
 app.get('/api', (req, res) => {

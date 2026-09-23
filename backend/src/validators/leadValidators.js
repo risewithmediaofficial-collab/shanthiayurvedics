@@ -6,7 +6,7 @@ const indianMobileRegex = /^[6-9]\d{9}$/;
 const optionalString = z
   .union([z.string(), z.literal(''), z.null()])
   .optional()
-  .transform((v) => (v && typeof v === 'string' && v.trim() ? v.trim() : null));
+  .transform((v) => (v === undefined ? undefined : (v && typeof v === 'string' && v.trim() ? v.trim() : null)));
 
 const optionalEmail = z
   .union([
@@ -15,7 +15,8 @@ const optionalEmail = z
     z.null()
   ])
   .optional()
-  .transform((v) => (v && typeof v === 'string' && v.trim() ? v.trim().toLowerCase() : null));
+  .transform((v) => (v === undefined ? undefined : (v && typeof v === 'string' && v.trim() ? v.trim().toLowerCase() : null)));
+
 
 export const createLeadSchema = {
   body: z.object({

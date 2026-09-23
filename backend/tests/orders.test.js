@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import request from "supertest";
 import app from "../src/app.js";
 import { User } from "../src/models/User.js";
@@ -96,4 +96,49 @@ describe("Orders Module Integration Tests", () => {
     expect(cancelRes.status).toBe(200);
     expect(cancelRes.body.data.status).toBe(ORDER_STATUS.CANCELLED);
   });
+
+  it("should update order details via PATCH /api/orders/:id", async () => {
+    const updateRes = await request(app)
+      .patch(`/api/orders/${orderId}`)
+      .set("Authorization", `Bearer ${telecallerToken}`)
+      .send({
+        notes: "Updated delivery instructions: ring bell twice",
+        deliveryAddress: {
+          street: "10 New Market Street",
+          city: "Hosur",
+          state: "Tamil Nadu",
+          pincode: "635109"
+        }
+      });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.success).toBe(true);
+    expect(updateRes.body.data.notes).toBe("Updated delivery instructions: ring bell twice");
+    expect(updateRes.body.data.deliveryAddress.street).toBe("10 New Market Street");
+  });
+
+  it("should delete order via DELETE /api/orders/:id and release reserved stock", async () => {
+    // Create a new order with reserved stock
+    const toDeleteRes = await request(app).post("/api/orders").set("Authorization", `Bearer ${telecallerToken}`).send({
+      customerId: customer._id.toString(),
+      branchId: branch._id.toString(),
+      items: [{ productId: product._id.toString(), batchId: batch._id.toString(), quantity: 2, unitPrice: 299 }],
+      paymentMethod: "COD"
+    });
+    expect(toDeleteRes.status).toBe(201);
+    const delOrderId = toDeleteRes.body.data._id;
+
+    // Delete the order
+    const delRes = await request(app)
+      .delete(`/api/orders/${delOrderId}`)
+      .set("Authorization", `Bearer ${telecallerToken}`);
+    expect(delRes.status).toBe(200);
+    expect(delRes.body.success).toBe(true);
+
+    // Verify order cannot be found
+    const getRes = await request(app)
+      .get(`/api/orders/${delOrderId}`)
+      .set("Authorization", `Bearer ${managerToken}`);
+    expect(getRes.status).toBe(404);
+  });
 });
+

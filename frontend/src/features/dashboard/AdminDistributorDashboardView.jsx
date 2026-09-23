@@ -1,51 +1,94 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Building2,
-  Store,
-  TrendingUp,
-  Users,
-  ShoppingBag,
-  Truck,
-  CheckCircle2,
-  Plus,
-  MapPin,
-  Phone,
-  Percent,
-  BarChart3,
-  Receipt,
-  ArrowRight,
-  Package,
-  UserCheck,
-  ShieldCheck,
-  XCircle,
-  HeartPulse,
-  CalendarClock,
-  Copy,
-  Check,
-  Printer,
-  Download,
-  Search,
-  Filter,
-  Calendar,
-  DollarSign,
-  Wallet,
-  CreditCard,
-  FileText,
-  Layers,
-  ExternalLink,
-  AlertTriangle,
-  Trash2,
-  UploadCloud,
-  Navigation,
-  Share2,
-  Send,
-  Smartphone,
-  ChevronDown,
-  ChevronUp
-} from 'lucide-react';
+import DomainRounded from '@mui/icons-material/DomainRounded';
+import StoreRounded from '@mui/icons-material/StoreRounded';
+import TrendingUpRounded from '@mui/icons-material/TrendingUpRounded';
+import PeopleAltRounded from '@mui/icons-material/PeopleAltRounded';
+import ShoppingBagRounded from '@mui/icons-material/ShoppingBagRounded';
+import LocalShippingRounded from '@mui/icons-material/LocalShippingRounded';
+import CheckCircleRounded from '@mui/icons-material/CheckCircleRounded';
+import AddRounded from '@mui/icons-material/AddRounded';
+import LocationOnRounded from '@mui/icons-material/LocationOnRounded';
+import PhoneRounded from '@mui/icons-material/PhoneRounded';
+import PercentRounded from '@mui/icons-material/PercentRounded';
+import BarChartRounded from '@mui/icons-material/BarChartRounded';
+import ReceiptLongRounded from '@mui/icons-material/ReceiptLongRounded';
+import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded';
+import Inventory2Rounded from '@mui/icons-material/Inventory2Rounded';
+import HowToRegRounded from '@mui/icons-material/HowToRegRounded';
+import VerifiedUserRounded from '@mui/icons-material/VerifiedUserRounded';
+import CancelRounded from '@mui/icons-material/CancelRounded';
+import MonitorHeartRounded from '@mui/icons-material/MonitorHeartRounded';
+import PendingActionsRounded from '@mui/icons-material/PendingActionsRounded';
+import ContentCopyRounded from '@mui/icons-material/ContentCopyRounded';
+import CheckRounded from '@mui/icons-material/CheckRounded';
+import PrintRounded from '@mui/icons-material/PrintRounded';
+import FileDownloadRounded from '@mui/icons-material/FileDownloadRounded';
+import SearchRounded from '@mui/icons-material/SearchRounded';
+import FilterListRounded from '@mui/icons-material/FilterListRounded';
+import CalendarTodayRounded from '@mui/icons-material/CalendarTodayRounded';
+import PaidRounded from '@mui/icons-material/PaidRounded';
+import AccountBalanceWalletRounded from '@mui/icons-material/AccountBalanceWalletRounded';
+import CreditCardRounded from '@mui/icons-material/CreditCardRounded';
+import DescriptionRounded from '@mui/icons-material/DescriptionRounded';
+import LayersRounded from '@mui/icons-material/LayersRounded';
+import OpenInNewRounded from '@mui/icons-material/OpenInNewRounded';
+import WarningAmberRounded from '@mui/icons-material/WarningAmberRounded';
+import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
+import CloudUploadRounded from '@mui/icons-material/CloudUploadRounded';
+import NavigationRounded from '@mui/icons-material/NavigationRounded';
+import ShareRounded from '@mui/icons-material/ShareRounded';
+import SendRounded from '@mui/icons-material/SendRounded';
+import SmartphoneRounded from '@mui/icons-material/SmartphoneRounded';
+import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRounded';
+import KeyboardArrowUpRounded from '@mui/icons-material/KeyboardArrowUpRounded';
+
+// MUI Icons mapped for 100% MUI icon ecosystem
+const Building2 = DomainRounded;
+const Store = StoreRounded;
+const TrendingUp = TrendingUpRounded;
+const Users = PeopleAltRounded;
+const ShoppingBag = ShoppingBagRounded;
+const Truck = LocalShippingRounded;
+const CheckCircle2 = CheckCircleRounded;
+const Plus = AddRounded;
+const MapPin = LocationOnRounded;
+const Phone = PhoneRounded;
+const Percent = PercentRounded;
+const BarChart3 = BarChartRounded;
+const Receipt = ReceiptLongRounded;
+const ArrowRight = ArrowForwardRounded;
+const Package = Inventory2Rounded;
+const UserCheck = HowToRegRounded;
+const ShieldCheck = VerifiedUserRounded;
+const XCircle = CancelRounded;
+const HeartPulse = MonitorHeartRounded;
+const CalendarClock = PendingActionsRounded;
+const Copy = ContentCopyRounded;
+const Check = CheckRounded;
+const Printer = PrintRounded;
+const Download = FileDownloadRounded;
+const Search = SearchRounded;
+const Filter = FilterListRounded;
+const Calendar = CalendarTodayRounded;
+const DollarSign = PaidRounded;
+const Wallet = AccountBalanceWalletRounded;
+const CreditCard = CreditCardRounded;
+const FileText = DescriptionRounded;
+const Layers = LayersRounded;
+const ExternalLink = OpenInNewRounded;
+const AlertTriangle = WarningAmberRounded;
+const Trash2 = DeleteOutlineRounded;
+const UploadCloud = CloudUploadRounded;
+const Navigation = NavigationRounded;
+const Share2 = ShareRounded;
+const Send = SendRounded;
+const Smartphone = SmartphoneRounded;
+const ChevronDown = KeyboardArrowDownRounded;
+const ChevronUp = KeyboardArrowUpRounded;
 import apiClient from '../../api/apiClient.js';
 import { useBranch } from '../../context/BranchContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { Button } from '../../components/common/Button.jsx';
 import { Modal } from '../../components/common/Modal.jsx';
@@ -54,6 +97,8 @@ import { Select } from '../../components/common/Select.jsx';
 import { Spinner } from '../../components/common/Spinner.jsx';
 import { SimpleProgressBar, SimplePipelineTrack } from '../../components/common/SimpleProgressBar.jsx';
 import { SimpleTrendChart } from '../../components/common/SimpleTrendChart.jsx';
+import { OrderListPage } from '../orders/OrderListPage.jsx';
+import { ManagerLeadsTab } from './manager-modules/ManagerLeadsTab.jsx';
 
 const StatCard = ({ label, value, sub, icon: Icon, color = 'green', progress = 70 }) => {
   const iconClasses = {
@@ -74,7 +119,7 @@ const StatCard = ({ label, value, sub, icon: Icon, color = 'green', progress = 7
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">{label}</span>
         <div className={iconClasses[color] || 'icon-box-emerald'}>
-          <Icon className="w-4 h-4" strokeWidth={1.75} />
+          <Icon sx={{ fontSize: 18 }} />
         </div>
       </div>
       <div>
@@ -87,6 +132,7 @@ const StatCard = ({ label, value, sub, icon: Icon, color = 'green', progress = 7
 };
 
 export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchToTelecaller }) {
+  const { user } = useAuth();
   const { selectedBranchId, selectBranch } = useBranch();
   const queryClient = useQueryClient();
 
@@ -155,7 +201,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
 
   // GST Invoice creation state
   const [gstInvoiceForm, setGstInvoiceForm] = useState({
-    invoiceNumber: `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+    invoiceNumber: 'INV-2026-8801',
     date: new Date().toISOString().split('T')[0],
     recipient: 'Sub-Distributor Retail Outlet A',
     gstin: '33AAACB1234F1Z5',
@@ -215,18 +261,6 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
     enabled: activeTab === 'LEADS' || activeTab === 'HOME'
   });
 
-  // Fetch Team / Users for TEAM tab
-  const { data: usersResponse, isLoading: isUsersLoading } = useQuery({
-    queryKey: ['admin-users', selectedBranchId],
-    queryFn: async () => {
-      const params = { limit: 50 };
-      if (selectedBranchId && selectedBranchId !== 'ALL') params.branchId = selectedBranchId;
-      const res = await apiClient.get('/users', { params });
-      return res.data;
-    },
-    enabled: activeTab === 'TEAM'
-  });
-
   const addBranchMutation = useMutation({
     mutationFn: (data) =>
       apiClient.post('/branches', {
@@ -256,19 +290,20 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
 
   const kpis = dashboardData?.kpis || {};
   const branches = dashboardData?.branches || [];
-  const activeBranch = branches.find((b) => b._id === selectedBranchId) || branches[0] || {
-    name: 'Shanthi Ayurvedas Hosur',
-    billerId: '1000058077',
-    phone: '8884747209',
-    address: { city: 'Krishnagiri', state: 'Tamil Nadu' }
+  const activeBranch = (selectedBranchId && selectedBranchId !== 'ALL'
+    ? branches.find((b) => (b._id || b.id)?.toString() === selectedBranchId?.toString())
+    : null) || (branches.length === 1 ? branches[0] : null) || {
+    name: selectedBranchId === 'ALL' ? 'All Branches (Enterprise View)' : (branches[0]?.name || 'All Branches'),
+    billerId: branches[0]?.billerId || '1000058077',
+    phone: branches[0]?.phone || '8884747209',
+    address: branches[0]?.address || { city: 'Krishnagiri', state: 'Tamil Nadu' }
   };
 
-  // 10 Tabs matching AyurOne Mart
+  // 9 Tabs matching AyurOne Mart
   const tabs = [
     { id: 'HOME',       label: 'Home / Overview',   testId: 'tab-boss-home' },
     { id: 'ORDERS',     label: 'Orders',            testId: 'tab-boss-orders' },
     { id: 'LEADS',      label: 'Leads',             testId: 'tab-boss-leads' },
-    { id: 'CONSULT',    label: 'Consult',           testId: 'tab-boss-consult' },
     { id: 'TEAM',       label: 'Team',              testId: 'tab-boss-team' },
     { id: 'PAYOUT',     label: 'Payout',            testId: 'tab-boss-payout' },
     { id: 'SETTLEMENT', label: 'Settlement',        testId: 'tab-boss-settlement' },
@@ -292,20 +327,11 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
   // Pipeline count summary
   const orderList = ordersResponse?.data || [];
   const pipelineCounts = {
-    new: orderList.filter(o => o.status === 'PENDING' || o.status === 'NEW').length || 40,
-    packed: orderList.filter(o => o.status === 'PACKED' || o.status === 'PROCESSING').length || 105,
-    shipped: orderList.filter(o => o.status === 'SHIPPED' || o.status === 'IN_TRANSIT').length || 48,
-    delivered: orderList.filter(o => o.status === 'DELIVERED').length || 0,
-    rto: orderList.filter(o => o.status === 'RTO' || o.status === 'CANCELLED').length || 0,
-    consults: 0
-  };
-
-  const bookingReferralLink = `${window.location.origin}/consult/${activeBranch.code?.toLowerCase() || 'hosur'}`;
-
-  const copyBookingLink = () => {
-    navigator.clipboard.writeText(bookingReferralLink);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2500);
+    new: orderList.filter(o => o.status === 'PENDING' || o.status === 'NEW').length,
+    packed: orderList.filter(o => o.status === 'PACKED' || o.status === 'PROCESSING' || o.status === 'READY_FOR_PACKING').length,
+    shipped: orderList.filter(o => o.status === 'SHIPPED' || o.status === 'IN_TRANSIT' || o.status === 'DISPATCHED').length,
+    delivered: orderList.filter(o => o.status === 'DELIVERED').length,
+    rto: orderList.filter(o => o.status === 'RTO' || o.status === 'CANCELLED').length
   };
 
   const handleSavePurchase = (e) => {
@@ -372,9 +398,12 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
               <span className="text-xs font-mono font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">
                 Biller ID: {activeBranch.billerId || '1000058077'}
               </span>
+              <span className="text-xs font-bold text-emerald-800 bg-emerald-100/80 border border-emerald-300 px-2.5 py-0.5 rounded-full">
+                🏷️ Brand: {user?.brand || 'Shanthi Ayurvedas'}
+              </span>
             </div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <span>{activeBranch.name || 'Shanthi Ayurvedas Hosur'}</span>
+              <span>{user?.brand ? `${user.brand} — ${activeBranch.name || 'Hosur'}` : (activeBranch.name || 'Shanthi Ayurvedas Hosur')}</span>
               <span className="text-slate-400 font-normal text-lg">— Distributor Panel</span>
             </h1>
           </div>
@@ -410,7 +439,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
         <StatCard
           label="Month Revenue"
           value={kpis.salesMonth != null ? `₹${kpis.salesMonth.toLocaleString()}` : '₹0'}
-          sub="All-time ₹368,828"
+          sub={kpis.allTimeRevenue != null ? `All-time ₹${kpis.allTimeRevenue.toLocaleString()}` : 'All-time ₹0'}
           icon={TrendingUp}
           color="green"
         />
@@ -423,7 +452,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
         />
         <StatCard
           label="Total Orders"
-          value={kpis.totalOrders ?? 193}
+          value={kpis.totalOrders ?? orderList.length}
           sub={`Shipped: ${pipelineCounts.shipped}`}
           icon={ShoppingBag}
           color="amber"
@@ -458,22 +487,22 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
         </div>
 
         {/* Tab Content Display Area */}
-        <div className="p-6">
+        <div className="p-3.5 sm:p-6">
           {/* =========================================================================
               TAB 1: HOME / DASHBOARD OVERVIEW
              ========================================================================= */}
           {activeTab === 'HOME' && (
             <div className="space-y-6">
-              {/* Doctor / Staff Payout Report Banner */}
+              {/* Staff Payout Report Banner */}
               <div className="flex items-center justify-between p-4 bg-amber-50/90 border border-amber-200 rounded-2xl">
                 <div className="flex items-center gap-3.5">
                   <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-lg flex-shrink-0 shadow-sm">
                     💰
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm text-slate-900">Doctor & Staff Payout Report</h3>
+                    <h3 className="font-bold text-sm text-slate-900">Staff Payout & Incentive Report</h3>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Consultation fees + 10% zone incentive & commission settlement
+                      Zone incentives & team commission settlement
                     </p>
                   </div>
                 </div>
@@ -516,30 +545,6 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                       Open →
                     </button>
                   )}
-                </div>
-              </div>
-
-              {/* Consultation Booking Link Box with Copy Button */}
-              <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-emerald-800 font-bold flex-shrink-0 flex items-center gap-1.5">
-                    📋 Your Consultation Booking Link
-                  </span>
-                  <span className="text-slate-400 hidden sm:inline">—</span>
-                  <span className="text-slate-500 truncate">Share with patients — leads come directly to your zone</span>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="font-mono bg-white px-2.5 py-1 rounded-lg border border-emerald-200 text-emerald-900 text-[11px] truncate max-w-xs">
-                    {bookingReferralLink}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={copyBookingLink}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-all"
-                  >
-                    {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copiedLink ? 'Copied' : 'Copy Link'}
-                  </button>
                 </div>
               </div>
 
@@ -598,19 +603,17 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                     { label: 'Packed', count: pipelineCounts.packed, bgColor: 'bg-amber-500', indicatorColor: 'bg-amber-500' },
                     { label: 'Shipped', count: pipelineCounts.shipped, bgColor: 'bg-purple-500', indicatorColor: 'bg-purple-500' },
                     { label: 'Delivered', count: pipelineCounts.delivered, bgColor: 'bg-emerald-500', indicatorColor: 'bg-emerald-500' },
-                    { label: 'RTO', count: pipelineCounts.rto, bgColor: 'bg-rose-500', indicatorColor: 'bg-rose-500' },
-                    { label: 'Consults', count: pipelineCounts.consults, bgColor: 'bg-teal-500', indicatorColor: 'bg-teal-500' }
+                    { label: 'RTO', count: pipelineCounts.rto, bgColor: 'bg-rose-500', indicatorColor: 'bg-rose-500' }
                   ]}
                 />
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                   {[
                     { label: 'New', count: pipelineCounts.new, color: 'bg-blue-50 text-blue-700 border-blue-200' },
                     { label: 'Packed', count: pipelineCounts.packed, color: 'bg-amber-50 text-amber-700 border-amber-200' },
                     { label: 'Shipped', count: pipelineCounts.shipped, color: 'bg-purple-50 text-purple-700 border-purple-200' },
                     { label: 'Delivered', count: pipelineCounts.delivered, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-                    { label: 'RTO', count: pipelineCounts.rto, color: 'bg-rose-50 text-rose-700 border-rose-200' },
-                    { label: 'Consults', count: pipelineCounts.consults, color: 'bg-teal-50 text-teal-700 border-teal-200' }
+                    { label: 'RTO', count: pipelineCounts.rto, color: 'bg-rose-50 text-rose-700 border-rose-200' }
                   ].map((pipe) => (
                     <div
                       key={pipe.label}
@@ -662,225 +665,19 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
              ========================================================================= */}
           {activeTab === 'ORDERS' && (
             <div className="space-y-4">
-              {/* View Only Notice */}
-              <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-2 text-xs text-blue-800">
-                <span>👁️</span>
-                <span className="font-semibold">View only — contact manager to update orders</span>
-              </div>
-
-              {/* Filter Section */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-wrap items-center gap-3 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-600">Date:</span>
-                  <input
-                    type="date"
-                    value={orderDateFilter}
-                    onChange={(e) => setOrderDateFilter(e.target.value)}
-                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-600">Status:</span>
-                  <select
-                    value={orderStatusFilter}
-                    onChange={(e) => setOrderStatusFilter(e.target.value)}
-                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:ring-1 focus:ring-emerald-500 focus:outline-none"
-                  >
-                    <option value="ALL">All Status</option>
-                    <option value="NEW">New</option>
-                    <option value="PACKED">Packed</option>
-                    <option value="SHIPPED">Shipped</option>
-                    <option value="DELIVERED">Delivered</option>
-                    <option value="RTO">RTO</option>
-                    <option value="CONSULTS">Consults</option>
-                  </select>
-                </div>
-
-                <button
-                  type="button"
-                  className="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg transition-all"
-                >
-                  Filter
-                </button>
-
-                {(orderDateFilter || orderStatusFilter !== 'ALL') && (
-                  <button
-                    type="button"
-                    onClick={() => { setOrderDateFilter(''); setOrderStatusFilter('ALL'); }}
-                    className="text-xs text-slate-500 hover:text-slate-800 underline ml-auto"
-                  >
-                    Clear Filter
-                  </button>
-                )}
-              </div>
-
-              {/* Orders List / Cards matching AyurOne Mart */}
-              <div className="space-y-3">
-                {[
-                  {
-                    id: 'ORD-7749',
-                    customer: 'D.Sarmila',
-                    phone: '7397519165',
-                    amount: 2600,
-                    status: 'SHIPPED',
-                    items: 'Slim 369 Kit x1, SLIM BIG x1, LIVAM LEGYUM x1',
-                    date: '31 Aug',
-                    tc: 'RATHNA',
-                    awbn: 'EZ347463165IN'
-                  },
-                  {
-                    id: 'ORD-7748',
-                    customer: 'Meenakshi Sundaram',
-                    phone: '9840212344',
-                    amount: 3200,
-                    status: 'PACKED',
-                    items: 'Ayur Slim Care 60D x1, Triphala Churna x2',
-                    date: '30 Aug',
-                    tc: 'KANAGAVALLI',
-                    awbn: null
-                  },
-                  {
-                    id: 'ORD-7747',
-                    customer: 'Karthik Raja',
-                    phone: '9443219088',
-                    amount: 1950,
-                    status: 'NEW',
-                    items: 'Medohar Guggulu x2, Herbal Detox Tea x1',
-                    date: '29 Aug',
-                    tc: 'MONIKA',
-                    awbn: null
-                  }
-                ].map((ord) => (
-                  <div
-                    key={ord.id}
-                    className="p-4 bg-white border border-slate-200 rounded-xl hover:border-slate-300 transition-all space-y-2 shadow-sm"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                          <span>{ord.customer}</span>
-                          <span className="text-xs text-slate-400 font-mono">📱 {ord.phone}</span>
-                        </div>
-                        <div className="text-xs text-slate-500 mt-0.5">
-                          📦 {ord.items}
-                        </div>
-                      </div>
-                      <div className="text-right flex flex-col items-end">
-                        <div className="text-base font-black text-slate-800 font-mono">₹{ord.amount.toLocaleString()}</div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 ${
-                          ord.status === 'SHIPPED' ? 'bg-purple-100 text-purple-700' :
-                          ord.status === 'PACKED' ? 'bg-amber-100 text-amber-700' :
-                          'bg-blue-100 text-blue-700'
-                        }`}>
-                          {ord.status}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-400">
-                      <div className="flex items-center gap-3">
-                        <span>📅 {ord.date}</span>
-                        <span>👤 TC: <strong className="text-slate-700">{ord.tc}</strong></span>
-                      </div>
-                      {ord.awbn ? (
-                        <div className="flex items-center gap-1 font-mono text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
-                          <span>📦 {ord.awbn}</span>
-                        </div>
-                      ) : (
-                        <span className="italic text-slate-300">AWBN pending</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <OrderListPage hideHeader={true} />
             </div>
           )}
 
           {/* =========================================================================
-              TAB 3: LEADS (View-Only Notice, 6-Card Ribbon, Status Breakdown)
+              TAB 3: LEADS (Live Leads Pipeline, Assignment, Edit & Delete)
              ========================================================================= */}
           {activeTab === 'LEADS' && (
             <div className="space-y-4">
-              <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-2 text-xs text-blue-800">
-                <span>👁️</span>
-                <span className="font-semibold">View only — manager handles lead assignments</span>
-              </div>
-
-              {/* 6-Card Leads Ribbon */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                {[
-                  { label: 'TOTAL', val: 0, sub: 'All leads' },
-                  { label: 'CONVERTED', val: 0, sub: 'Orders closed' },
-                  { label: 'NOT INT.', val: 0, sub: 'Not interested' },
-                  { label: 'FOLLOWUP', val: 0, sub: 'Scheduled' },
-                  { label: 'TODAY', val: 0, sub: 'Fresh leads' },
-                  { label: 'RATE', val: '0%', sub: 'Conversion' }
-                ].map((l) => (
-                  <div key={l.label} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-center">
-                    <div className="text-xs font-bold text-slate-400 uppercase">{l.label}</div>
-                    <div className="text-xl font-black text-slate-800 mt-1">{l.val}</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">{l.sub}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Lead Status Breakdown Table */}
-              <div className="p-5 bg-white border border-slate-200 rounded-xl space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Lead Status Breakdown
-                </h3>
-                <div className="text-center py-8 text-slate-400 text-xs">
-                  No leads recorded for this billing cycle yet.
-                </div>
-              </div>
+              <ManagerLeadsTab />
             </div>
           )}
 
-          {/* =========================================================================
-              TAB 4: CONSULT (Advisory Queue, 3 Summary Counters, Zero Doctor Panel)
-             ========================================================================= */}
-          {activeTab === 'CONSULT' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">Patient Wellness & Advisory Consultations</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Ayurvedic dietary guidance, telephone advisory, and walk-in support</p>
-                </div>
-                <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
-                  Hosur Center Active
-                </span>
-              </div>
-
-              {/* 3 Summary Cards */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-center">
-                  <div className="text-xs font-bold uppercase text-amber-700">QUEUED</div>
-                  <div className="text-2xl font-black text-amber-900 mt-1">0</div>
-                </div>
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center">
-                  <div className="text-xs font-bold uppercase text-emerald-700">DONE</div>
-                  <div className="text-2xl font-black text-emerald-900 mt-1">0</div>
-                </div>
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-center">
-                  <div className="text-xs font-bold uppercase text-blue-700">TOTAL</div>
-                  <div className="text-2xl font-black text-blue-900 mt-1">0</div>
-                </div>
-              </div>
-
-              {/* Recent Consultations Ledger */}
-              <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Recent Consultations
-                </h4>
-                <div className="text-center py-8 text-slate-400 text-xs flex flex-col items-center justify-center gap-1">
-                  <span className="text-lg">🏥</span>
-                  <span>No consultations recorded yet.</span>
-                  <span className="text-slate-300">Share your consultation booking link above to receive direct patient inquiries.</span>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* =========================================================================
               TAB 5: TEAM (Zone Manager, Reset Password Tool, TC Leaderboard)
@@ -1275,7 +1072,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                     {[
                       { id: 'ALL',      label: '🔲 All Streams' },
                       { id: 'APP',      label: '📱 App (FREE)' },
-                      { id: 'CONSULT',  label: '💉 Consult ₹99' },
+                      { id: 'REGIMEN',  label: '🌿 Wellness Regimen' },
                       { id: 'SERVICE',  label: '🏥 Service ₹699' },
                       { id: 'MRP_1ST',  label: '💊 10% MRP (1st)' },
                       { id: 'MRP_REP',  label: '🔄 10% MRP (Repeat)' }
@@ -1303,7 +1100,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                       <div className="text-[10px] text-slate-400 mt-0.5">0 orders</div>
                     </div>
                     <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-center">
-                      <div className="text-[10px] uppercase font-bold text-slate-400">Consult ₹99</div>
+                      <div className="text-[10px] uppercase font-bold text-slate-400">Wellness Regimen</div>
                       <div className="text-lg font-black text-slate-800 font-mono mt-1">₹0</div>
                       <div className="text-[10px] text-slate-400 mt-0.5">0 plan orders</div>
                     </div>
@@ -1339,8 +1136,8 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                     <div className="font-bold text-amber-800 flex items-center gap-1.5">
                       <span>📌 Revenue Rules Summary</span>
                     </div>
-                    <p>• <strong>Plan order</strong>: App FREE + Consult ₹99 + Service ₹250 (company share) + 10% MRP</p>
-                    <p>• <strong>Medicine only</strong>: App FREE — no consult, no service fee</p>
+                    <p>• <strong>Treatment Plan order</strong>: App FREE + Wellness Plan Regimen + Service ₹250 (company share) + 10% MRP</p>
+                    <p>• <strong>Medicine only</strong>: App FREE — no service fee</p>
                     <p>• <strong>Repeat order</strong>: 10% of new medicine MRP only</p>
                     <p>• <strong>Service split</strong>: Patient pays ₹699 → Dist keeps ₹299 → Returns ₹400 (Co ₹250, Advisory ₹150)</p>
                   </div>

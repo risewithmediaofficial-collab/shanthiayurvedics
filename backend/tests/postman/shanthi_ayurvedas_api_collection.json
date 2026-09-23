@@ -513,6 +513,170 @@
           ]
         }
       }
+    },
+    {
+      "name": "14. Shipments - List All (with status filter)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.test('Shipments array returned', function () {",
+              "    pm.expect(jsonData.data).to.be.an('array');",
+              "});",
+              "pm.test('Pagination metadata present', function () {",
+              "    pm.expect(jsonData.pagination).to.have.property('totalPages');",
+              "    pm.expect(jsonData.pagination).to.have.property('total');",
+              "    pm.expect(jsonData.pagination).to.have.property('page');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/shipping?page=1&limit=15",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "shipping"],
+          "query": [
+            { "key": "page", "value": "1" },
+            { "key": "limit", "value": "15" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "15. Shipments - Filter by DELIVERED status",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.test('All returned shipments are DELIVERED', function () {",
+              "    jsonData.data.forEach(function(s) {",
+              "        if (s.trackingStatus) {",
+              "            pm.expect(s.trackingStatus).to.eql('DELIVERED');",
+              "        }",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/shipping?status=DELIVERED",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "shipping"],
+          "query": [
+            { "key": "status", "value": "DELIVERED" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "16. Courier Import - Reject request with no file",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400 when no file uploaded', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.test('Error message about missing file', function () {",
+              "    pm.expect(jsonData.success).to.eql(false);",
+              "    pm.expect(jsonData.message).to.include('No file');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "courier",
+              "value": "AUTO",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/shipping/import-status",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "shipping", "import-status"]
+        }
+      }
+    },
+    {
+      "name": "17. Courier Providers List",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "var jsonData = pm.response.json();",
+              "pm.test('Providers list returned', function () {",
+              "    pm.expect(jsonData.data).to.be.an('array');",
+              "    pm.expect(jsonData.data.length).to.be.greaterThan(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/shipping/providers",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "shipping", "providers"]
+        }
+      }
     }
   ]
 }

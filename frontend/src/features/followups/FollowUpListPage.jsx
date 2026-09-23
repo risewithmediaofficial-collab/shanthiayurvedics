@@ -19,6 +19,8 @@ import { Badge } from '../../components/common/Badge.jsx';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Input } from '../../components/common/Input.jsx';
 import { OrderCreateModal } from '../orders/OrderCreateModal.jsx';
+import { ExportButton } from '../../components/common/ExportButton.jsx';
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils.js';
 
 export function FollowUpListPage() {
   const queryClient = useQueryClient();
@@ -31,6 +33,7 @@ export function FollowUpListPage() {
   const [completeNotes, setCompleteNotes] = useState('');
   const [followUpForOrder, setFollowUpForOrder] = useState(null);
   const [actionMsg, setActionMsg] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
 
   const [editFormData, setEditFormData] = useState({
     scheduledAt: '',
@@ -105,6 +108,53 @@ export function FollowUpListPage() {
         `🙏 Shanthi Ayurvedas Healthcare Team`
     );
     window.open(`https://wa.me/91${cleanMobile}?text=${textMsg}`, '_blank');
+  };
+
+  const handleExportFollowUps = async (format) => {
+    try {
+      setIsExporting(true);
+      const res = await apiClient.get('/followups', {
+        params: {
+          filter: activeTab,
+          export: true
+        }
+      });
+      const exportList = res.data?.data || followups;
+      if (!exportList.length) {
+        setActionMsg('⚠ No follow-ups to export');
+        setTimeout(() => setActionMsg(''), 3000);
+        return;
+      }
+
+      const rows = exportList.map((f) => ({
+        'Scheduled At': f.scheduledAt ? new Date(f.scheduledAt).toLocaleString('en-IN') : '',
+        'Contact Name': f.leadId?.name || f.customerId?.name || 'Customer',
+        'Mobile': f.leadId?.mobile || f.customerId?.mobile || '',
+        'Type': f.leadId ? 'Lead' : 'Customer',
+        'City': f.leadId?.city || '',
+        'Priority': f.priority || 'MEDIUM',
+        'Status': f.status || 'PENDING',
+        'Telecaller': f.telecallerId?.name || '',
+        'Branch': f.branchId?.name || '',
+        'Notes': f.notes || '',
+        'Created Date': f.createdAt ? new Date(f.createdAt).toLocaleDateString('en-IN') : ''
+      }));
+
+      const fileName = `Shanthi_Ayurvedas_FollowUps_${activeTab}_${new Date().toISOString().split('T')[0]}`;
+      if (format === 'csv') {
+        exportToCSV(rows, fileName);
+      } else {
+        exportToExcel(rows, fileName, `FollowUps_${activeTab}`);
+      }
+      setActionMsg(`✓ Exported ${rows.length} follow-ups to ${format.toUpperCase()}`);
+      setTimeout(() => setActionMsg(''), 3000);
+    } catch (err) {
+      console.error('Follow-ups export failed:', err);
+      setActionMsg('⚠ Failed to export follow-ups');
+      setTimeout(() => setActionMsg(''), 3000);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const columns = [
@@ -232,9 +282,16 @@ export function FollowUpListPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900 tracking-tight">Telecaller Follow-Up Queue</h2>
-        <p className="text-xs text-slate-500">Track, reschedule, and fulfill call-back commitments and customer touchpoints</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Telecaller Follow-Up Queue</h2>
+          <p className="text-xs text-slate-500">Track, reschedule, and fulfill call-back commitments and customer touchpoints</p>
+        </div>
+        <ExportButton
+          onExport={handleExportFollowUps}
+          isLoading={isExporting}
+          disabled={followups.length === 0}
+        />
       </div>
 
       {/* Notification Toast */}
@@ -249,8 +306,33 @@ export function FollowUpListPage() {
         </div>
       )}
 
+      {/* Bento Metric Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Today's Scheduled</div>
+          <div className="bento-metric-value text-slate-900">
+            {followups.filter(f => f.status === 'PENDING').length}
+          </div>
+          <div className="text-[11px] text-slate-500 font-medium">Calls due today</div>
+        </div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Overdue Inquiries</div>
+          <div className="bento-metric-value text-rose-600">
+            {followups.filter(f => f.status === 'OVERDUE' || (new Date(f.scheduledAt) < new Date() && f.status === 'PENDING')).length}
+          </div>
+          <div className="text-[11px] text-rose-500 font-medium">Pending callback</div>
+        </div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Completed Care Follow-ups</div>
+          <div className="bento-metric-value text-emerald-700">
+            {followups.filter(f => f.status === 'COMPLETED').length}
+          </div>
+          <div className="text-[11px] text-emerald-600 font-medium">Patient queries resolved</div>
+        </div>
+      </div>
+
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+      <div className="bento-card p-2.5 flex items-center gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('TODAY')}
           className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -367,7 +449,7 @@ export function FollowUpListPage() {
               label="Action Notes"
               value={editFormData.notes}
               onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
-              placeholder="Doctor advice, specific medicine inquiry..."
+              placeholder="Customer inquiry, specific medicine requirements..."
             />
             <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
               <Button variant="secondary" type="button" onClick={() => setEditModalOpen(false)} disabled={updateMutation.isPending}>

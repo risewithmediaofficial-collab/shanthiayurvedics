@@ -26,5 +26,7 @@ coverage
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
 tests/*.png
+*.backup.json
+*backup*.json
+.mongo_data/

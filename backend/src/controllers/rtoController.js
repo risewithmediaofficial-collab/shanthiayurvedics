@@ -5,9 +5,13 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 
 export const getRTORecords = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 20;
+  const isExport = req.query.export === 'true';
+  const limit = isExport ? 5000 : (parseInt(req.query.limit, 10) || 20);
   const status = req.query.status;
   const condition = req.query.condition;
+  const startDate = req.query.startDate;
+  const endDate = req.query.endDate;
+  const search = req.query.search?.trim();
 
   const query = {};
   if (!req.branchScope.isGlobal && req.branchScope.branchId) {
@@ -16,7 +20,24 @@ export const getRTORecords = asyncHandler(async (req, res) => {
   if (status) query.status = status;
   if (condition) query.condition = condition;
 
-  const skip = (page - 1) * limit;
+  if (startDate || endDate) {
+    query.createdAt = {};
+    if (startDate) {
+      query.createdAt.$gte = new Date(startDate.includes('T') ? startDate : `${startDate}T00:00:00.000Z`);
+    }
+    if (endDate) {
+      query.createdAt.$lte = new Date(endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`);
+    }
+  }
+
+  if (search) {
+    query.$or = [
+      { returnAwbNumber: { $regex: search, $options: 'i' } },
+      { reason: { $regex: search, $options: 'i' } }
+    ];
+  }
+
+  const skip = isExport ? 0 : (page - 1) * limit;
   const [total, records] = await Promise.all([
     RTORecord.countDocuments(query),
     RTORecord.find(query)

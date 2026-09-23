@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Layers, Calendar, Tag, Package, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
+import { useBranch } from '../../context/BranchContext.jsx';
 import { Table } from '../../components/common/Table.jsx';
 import { Button } from '../../components/common/Button.jsx';
 import { Input } from '../../components/common/Input.jsx';
@@ -10,14 +11,34 @@ import { Select } from '../../components/common/Select.jsx';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { Pagination } from '../../components/common/Pagination.jsx';
+import { DateRangeFilter } from '../../components/common/DateRangeFilter.jsx';
+import { ExportButton } from '../../components/common/ExportButton.jsx';
+import { SortDropdown } from '../../components/common/SortDropdown.jsx';
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils.js';
+
+const PRODUCT_SORT_OPTIONS = [
+  { value: 'name', label: 'Product Name' },
+  { value: 'price', label: 'Selling Price' },
+  { value: 'mrp', label: 'MRP' },
+  { value: 'costPrice', label: 'Cost Price' },
+  { value: 'sku', label: 'SKU Code' },
+  { value: 'createdAt', label: 'Date Added' }
+];
 
 export function ProductCatalogPage() {
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
+  const { selectedBranchId } = useBranch();
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [isExporting, setIsExporting] = useState(false);
+
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -58,10 +79,19 @@ export function ProductCatalogPage() {
   });
 
   const { data: productResponse, isLoading } = useQuery({
-    queryKey: ['products', page, search, categoryFilter],
+    queryKey: ['products', page, search, categoryFilter, selectedBranchId, sortBy, sortOrder, startDate, endDate],
     queryFn: async () => {
       const res = await apiClient.get('/products', {
-        params: { page, limit: 15, search, category: categoryFilter }
+        params: {
+          page,
+          limit: 15,
+          search,
+          category: categoryFilter,
+          sortBy,
+          sortOrder,
+          startDate,
+          endDate
+        }
       });
       return res.data;
     }
@@ -127,6 +157,59 @@ export function ProductCatalogPage() {
       setBatchData({ batchNumber: '', manufacturingDate: '', expiryDate: '', mrp: '', purchasePrice: '' });
     }
   });
+
+  const handleExportProducts = async (format) => {
+    try {
+      setIsExporting(true);
+      const res = await apiClient.get('/products', {
+        params: {
+          search,
+          category: categoryFilter,
+          sortBy,
+          sortOrder,
+          startDate,
+          endDate,
+          export: true
+        }
+      });
+      const exportList = res.data?.data || products;
+      if (!exportList.length) {
+        setActionMsg('⚠ No products to export');
+        setTimeout(() => setActionMsg(''), 3000);
+        return;
+      }
+
+      const rows = exportList.map((p) => ({
+        'SKU': p.sku || '',
+        'Product Name': p.name || '',
+        'Category': p.category || '',
+        'Unit': p.unit || '',
+        'Selling Price (₹)': p.price || 0,
+        'MRP (₹)': p.mrp || 0,
+        'Cost Price (₹)': p.costPrice || 0,
+        'Available Stock': p.availableQuantity ?? p.stock ?? 0,
+        'Reserved Stock': p.reservedQuantity || 0,
+        'Low Stock Threshold': p.lowStockThreshold || 15,
+        'Active Batches Count': p.batches?.length || 0,
+        'Date Added': p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN') : ''
+      }));
+
+      const fileName = `Shanthi_Ayurvedas_Products_${new Date().toISOString().split('T')[0]}`;
+      if (format === 'csv') {
+        exportToCSV(rows, fileName);
+      } else {
+        exportToExcel(rows, fileName, 'Products');
+      }
+      setActionMsg(`✓ Exported ${rows.length} products to ${format.toUpperCase()}`);
+      setTimeout(() => setActionMsg(''), 3000);
+    } catch (err) {
+      console.error('Products export failed:', err);
+      setActionMsg('⚠ Failed to export products');
+      setTimeout(() => setActionMsg(''), 3000);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const columns = [
     {
@@ -231,9 +314,16 @@ export function ProductCatalogPage() {
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Product Catalog & Batches</h2>
           <p className="text-xs text-slate-500">Master Ayurvedic catalog, SKU numbers, MRPs, and batch lifecycles</p>
         </div>
-        <Button variant="primary" icon={Plus} onClick={() => setCreateModalOpen(true)}>
-          New Product
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            onExport={handleExportProducts}
+            isLoading={isExporting}
+            disabled={products.length === 0}
+          />
+          <Button variant="primary" icon={Plus} onClick={() => setCreateModalOpen(true)}>
+            New Product
+          </Button>
+        </div>
       </div>
 
       {actionMsg && (
@@ -246,37 +336,81 @@ export function ProductCatalogPage() {
         </div>
       )}
 
-      {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-slate-200">
-        <div className="flex-1 min-w-[200px]">
-          <Input
-            placeholder="Search by product name or SKU..."
-            icon={Search}
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
+      {/* Bento Metric Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Catalog Formulations</div>
+          <div className="bento-metric-value text-slate-900">{meta.total || products.length}</div>
+          <div className="text-[11px] text-slate-500 font-medium">Standard catalog SKUs</div>
         </div>
-        <div className="w-48">
-          <Select
-            value={categoryFilter}
-            onChange={(e) => {
-              setCategoryFilter(e.target.value);
-              setPage(1);
-            }}
-            options={[
-              { value: '', label: 'All Categories' },
-              { value: 'OILS', label: 'Ayurvedic Oils' },
-              { value: 'CHURNAS', label: 'Choornams / Powders' },
-              { value: 'CAPSULES', label: 'Capsules / Tablets' },
-              { value: 'TONICS', label: 'Tonics / Syrups' },
-              { value: 'TABLETS', label: 'Tablets' },
-              { value: 'KITS', label: 'Treatment Kits' },
-              { value: 'OTHER', label: 'Other' }
-            ]}
-          />
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Product Categories</div>
+          <div className="bento-metric-value text-emerald-700">7</div>
+          <div className="text-[11px] text-emerald-600 font-medium">Oils, Churnas, Tonics, Kits</div>
+        </div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Batch Lifecycle Tracking</div>
+          <div className="bento-metric-value text-indigo-600">Active</div>
+          <div className="text-[11px] text-indigo-600 font-medium">Manufacturing & Expiry tracked</div>
+        </div>
+      </div>
+
+      {/* Filter Bar with Search, Category, Date Range, and Sorting */}
+      <div className="bento-card p-4 space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
+          <div className="lg:col-span-4">
+            <Input
+              placeholder="Search by product name or SKU..."
+              icon={Search}
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="lg:col-span-2">
+            <Select
+              value={categoryFilter}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                setPage(1);
+              }}
+              options={[
+                { value: '', label: 'All Categories' },
+                { value: 'OILS', label: 'Ayurvedic Oils' },
+                { value: 'CHURNAS', label: 'Choornams / Powders' },
+                { value: 'CAPSULES', label: 'Capsules / Tablets' },
+                { value: 'TONICS', label: 'Tonics / Syrups' },
+                { value: 'TABLETS', label: 'Tablets' },
+                { value: 'KITS', label: 'Treatment Kits' },
+                { value: 'OTHER', label: 'Other' }
+              ]}
+            />
+          </div>
+          <div className="lg:col-span-4">
+            <DateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onChange={({ startDate: s, endDate: e }) => {
+                setStartDate(s);
+                setEndDate(e);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="lg:col-span-2 flex justify-end">
+            <SortDropdown
+              options={PRODUCT_SORT_OPTIONS}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onChange={({ sortBy: sb, sortOrder: so }) => {
+                setSortBy(sb);
+                setSortOrder(so);
+                setPage(1);
+              }}
+            />
+          </div>
         </div>
       </div>
 

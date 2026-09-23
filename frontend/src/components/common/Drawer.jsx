@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import CloseRounded from '@mui/icons-material/CloseRounded';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -52,9 +52,9 @@ export function Drawer({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors focus:outline-none"
+              className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors focus:outline-none cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <CloseRounded sx={{ fontSize: 20 }} />
             </button>
           </div>
 

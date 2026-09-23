@@ -8,8 +8,10 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "seed": "node src/scripts/seed.js",
+    "clear:fake": "node src/scripts/deleteFakeData.js",
     "clear": "node src/scripts/clearDatabase.js --confirm",
     "bootstrap": "node src/scripts/bootstrapOwner.js",
+    "mongo": "mongod --dbpath ../.mongo_data --port 27017 --bind_ip 127.0.0.1 --wiredTigerCacheSizeGB 0.5",
     "test": "vitest run"
   },
   "dependencies": {
@@ -26,11 +28,14 @@
     "hpp": "^0.2.3",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.5",
+    "multer": "^2.4.0",
     "node-cron": "^3.0.3",
+    "pdf-parse": "^2.4.5",
     "pino": "^9.6.0",
     "pino-http": "^10.4.0",
     "pino-pretty": "^13.0.0",
     "socket.io": "^4.8.1",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.1"
   },
   "devDependencies": {

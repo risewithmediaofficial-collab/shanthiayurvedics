@@ -9,40 +9,31 @@ import {
   Users,
   CheckCircle2,
   Clock,
-  ArrowRight,
   LogOut,
   Plus,
   Search,
-  Filter,
-  DollarSign,
-  Award,
   Activity,
+  Award,
   Sparkles,
-  ChevronRight,
   RefreshCw,
   UserCheck,
   FileText,
-  AlertCircle,
-  X,
-  Send,
-  Zap,
   PhoneForwarded,
-  ShieldCheck,
   CheckCircle,
-  Stethoscope,
   HeartPulse,
-  TrendingUp,
   RotateCcw,
   Edit3,
   Truck,
-  Copy,
   ExternalLink,
   Package,
-  Eye
+  Eye,
+  Zap,
+  Trash2,
+  Pencil,
+  AlertTriangle
 } from 'lucide-react';
 import { OrderDetailsModal } from './OrderDetailsModal.jsx';
 import apiClient from '../../api/apiClient.js';
-import { usePermissions } from '../../hooks/usePermissions.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useBranch } from '../../context/BranchContext.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
@@ -50,10 +41,9 @@ import { Button } from '../../components/common/Button.jsx';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Input } from '../../components/common/Input.jsx';
 import { Select } from '../../components/common/Select.jsx';
-import { Spinner } from '../../components/common/Spinner.jsx';
 import { SimpleProgressBar } from '../../components/common/SimpleProgressBar.jsx';
 
-export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, onSwitchToBossView, returnView = 'MANAGER' }) {
+export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, onSwitchToBossView }) {
   const { user, logout } = useAuth();
   const { selectedBranchId } = useBranch();
   const queryClient = useQueryClient();
@@ -93,7 +83,6 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
     notes: ''
   });
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
-  const [isConsultModalOpen, setIsConsultModalOpen] = useState(false);
   const [isCallCentreModalOpen, setIsCallCentreModalOpen] = useState(false);
   const [isCustomerProfileModalOpen, setIsCustomerProfileModalOpen] = useState(false);
   const [activeDialerIndex, setActiveDialerIndex] = useState(0);
@@ -122,15 +111,6 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
     notes: ''
   });
 
-  const [consultForm, setConsultForm] = useState({
-    patientName: '',
-    phone: '',
-    consultType: 'Walk-in Direct',
-    preferredTime: '11:00 AM',
-    healthGoal: 'Weight Loss & Metabolism',
-    notes: ''
-  });
-
   const [callLogForm, setCallLogForm] = useState({
     leadId: '',
     phone: '',
@@ -143,7 +123,7 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
 
   // 1. Fetch Leads assigned to this caller
-  const { data: leadsData, isLoading: isLeadsLoading } = useQuery({
+  const { data: leadsData } = useQuery({
     queryKey: ['tc-leads', callerName, selectedBranchId],
     queryFn: async () => {
       try {
@@ -155,51 +135,9 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
     }
   });
 
-  // Fallback mock leads if none in database yet
+  // Telecaller leads from API
   const leads = useMemo(() => {
-    if (leadsData && leadsData.length > 0) return leadsData;
-    return [
-      {
-        _id: 'lead-1',
-        name: 'Kavitha Ramesh',
-        phone: '9845012341',
-        city: 'Hosur',
-        status: 'NEW',
-        concern: 'Weight Loss 60-Day Regimen',
-        leadScore: 85,
-        lastCall: 'Today, 10:15 AM'
-      },
-      {
-        _id: 'lead-2',
-        name: 'Suresh Kumar',
-        phone: '9845012342',
-        city: 'Krishnagiri',
-        status: 'FOLLOWUP',
-        concern: 'Belly Fat Reduction & Detox',
-        leadScore: 92,
-        lastCall: 'Yesterday, 04:30 PM'
-      },
-      {
-        _id: 'lead-3',
-        name: 'Meena Sundaram',
-        phone: '9845012343',
-        city: 'Bengaluru',
-        status: 'INTERESTED',
-        concern: 'Digestive & Metabolism Tea',
-        leadScore: 78,
-        lastCall: '06 Sep, 02:00 PM'
-      },
-      {
-        _id: 'lead-4',
-        name: 'Anand Natarajan',
-        phone: '9845012344',
-        city: 'Dharmapuri',
-        status: 'NEW',
-        concern: 'Joint Care & Herbal Oil',
-        leadScore: 70,
-        lastCall: 'Today, 11:00 AM'
-      }
-    ];
+    return Array.isArray(leadsData) ? leadsData : [];
   }, [leadsData]);
 
   // 2. Fetch Orders closed by this caller
@@ -217,50 +155,7 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
   });
 
   const orders = useMemo(() => {
-    const rawList = ordersData && ordersData.length > 0 ? ordersData : [
-      {
-        _id: 'ord-101',
-        orderNumber: 'AYUR-HSR-0891',
-        customerName: 'Priya Dharshini',
-        customerPhone: '9845019871',
-        totalAmount: 1899,
-        grandTotal: 1899,
-        paymentMethod: 'COD',
-        orderStatus: 'SHIPPED',
-        status: 'SHIPPED',
-        trackingNumber: 'IP108849201IN',
-        deliveryAddress: { street: '14 Gandhi Road', city: 'Hosur', district: 'Krishnagiri', pincode: '635109' },
-        items: [{ productName: 'Slim Herbal Decoction 500ml', quantity: 2 }]
-      },
-      {
-        _id: 'ord-102',
-        orderNumber: 'AYUR-HSR-0892',
-        customerName: 'Raghavan S',
-        customerPhone: '9845019872',
-        totalAmount: 2499,
-        grandTotal: 2499,
-        paymentMethod: 'COD',
-        orderStatus: 'DELIVERED',
-        status: 'DELIVERED',
-        trackingNumber: 'IP108849202IN',
-        deliveryAddress: { street: '8 Nehru Street', city: 'Krishnagiri', district: 'Krishnagiri', pincode: '635001' },
-        items: [{ productName: 'Ayur Slim 90-Day Kit', quantity: 1 }]
-      },
-      {
-        _id: 'ord-103',
-        orderNumber: 'AYUR-HSR-0893',
-        customerName: 'Bhuvaneshwari M',
-        customerPhone: '9845019873',
-        totalAmount: 1450,
-        grandTotal: 1450,
-        paymentMethod: 'ONLINE',
-        orderStatus: 'PACKED',
-        status: 'CONFIRMED',
-        trackingNumber: 'IP108849203IN',
-        deliveryAddress: { street: '45 Cross Rd', city: 'Bengaluru', district: 'Bengaluru', pincode: '560001' },
-        items: [{ productName: 'Triphala & Guggulu Combo', quantity: 1 }]
-      }
-    ];
+    const rawList = Array.isArray(ordersData) ? ordersData : [];
 
     return rawList.map((o) => {
       const patientName =
@@ -316,7 +211,16 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
         o.customerPhone?.includes(orderSearch) ||
         o.trackingNumber?.toLowerCase().includes(orderSearch.toLowerCase());
 
-      const matchStatus = orderStatusFilter === 'ALL' || o.status === orderStatusFilter;
+      let matchStatus = orderStatusFilter === 'ALL';
+      if (!matchStatus) {
+        if (orderStatusFilter === 'SHIPPED' || orderStatusFilter === 'IN_TRANSIT') {
+          matchStatus = ['DISPATCHED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'SHIPPED'].includes(o.status);
+        } else if (orderStatusFilter === 'CANCELLED') {
+          matchStatus = ['CANCELLED', 'RTO'].includes(o.status);
+        } else {
+          matchStatus = o.status === orderStatusFilter;
+        }
+      }
 
       return matchSearch && matchStatus;
     });
@@ -367,10 +271,92 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
     }
   });
 
+  const [selectedOrderForDelete, setSelectedOrderForDelete] = useState(null);
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (orderId) => {
+      const res = await apiClient.delete(`/orders/${orderId}`);
+      return res.data;
+    },
+    onSuccess: async () => {
+      await refetchOrders();
+      queryClient.invalidateQueries({ queryKey: ['tc-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setSelectedOrderForDelete(null);
+      setActionSuccessMsg('Order deleted and stock restored successfully!');
+      setTimeout(() => setActionSuccessMsg(''), 4000);
+    },
+    onError: (err) => {
+      alert(err.response?.data?.message || 'Failed to delete order');
+    }
+  });
+
+  // Lead Edit & Delete States & Mutations
+  const [selectedLeadForEdit, setSelectedLeadForEdit] = useState(null);
+  const [isEditLeadModalOpen, setIsEditLeadModalOpen] = useState(false);
+  const [selectedLeadForDelete, setSelectedLeadForDelete] = useState(null);
+  const [editLeadForm, setEditLeadForm] = useState({
+    name: '',
+    mobile: '',
+    city: '',
+    source: 'CALL',
+    status: 'NEW',
+    notes: ''
+  });
+
+  const handleOpenEditLead = (lead) => {
+    setSelectedLeadForEdit(lead);
+    setEditLeadForm({
+      name: lead.name || '',
+      mobile: lead.mobile || lead.phone || '',
+      city: lead.city || '',
+      source: lead.source || 'CALL',
+      status: lead.status || 'NEW',
+      notes: lead.notes || lead.concern || ''
+    });
+    setIsEditLeadModalOpen(true);
+  };
+
+  const updateLeadMutation = useMutation({
+    mutationFn: async ({ leadId, payload }) => {
+      const res = await apiClient.patch(`/leads/${leadId}`, payload);
+      return res.data;
+    },
+    onSuccess: async () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['tc-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setIsEditLeadModalOpen(false);
+      setSelectedLeadForEdit(null);
+      setActionSuccessMsg('Lead updated successfully!');
+      setTimeout(() => setActionSuccessMsg(''), 4000);
+    },
+    onError: (err) => {
+      alert(err.response?.data?.message || 'Failed to update lead');
+    }
+  });
+
+  const deleteLeadMutation = useMutation({
+    mutationFn: async (leadId) => {
+      const res = await apiClient.delete(`/leads/${leadId}`);
+      return res.data;
+    },
+    onSuccess: async () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['tc-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setSelectedLeadForDelete(null);
+      setActionSuccessMsg('Lead deleted successfully!');
+      setTimeout(() => setActionSuccessMsg(''), 4000);
+    },
+    onError: (err) => {
+      alert(err.response?.data?.message || 'Failed to delete lead');
+    }
+  });
+
   // Derived counts for KPI Ribbon
   const totalLeadsCount = leads.length;
   const followupsCount = leads.filter(l => l.status === 'FOLLOWUP' || l.status === 'NEW').length;
-  const consultsCount = 4;
   const ordersCount = orders.length;
 
   // Mutations
@@ -424,7 +410,6 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
     { id: 'HOME', label: 'Home', icon: Activity },
     { id: 'LEADS', label: `Leads (${totalLeadsCount})`, icon: Users },
     { id: 'FOLLOWUP', label: `Followup (${followupsCount})`, icon: CalendarClock },
-    { id: 'CONSULTS', label: `Consults (${consultsCount})`, icon: Stethoscope },
     { id: 'ORDERS', label: `Orders (${ordersCount})`, icon: ShoppingBag },
     { id: 'CONVERTED', label: 'Converted', icon: CheckCircle2 },
     { id: 'LEAD_BANK', label: 'Lead Bank (12)', icon: Sparkles },
@@ -591,60 +576,46 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
         </span>
       </div>
 
-      {/* 3. KPI Ribbon (4 Metrics with Stroke Icons & Progress Bars) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="clean-card p-4 space-y-2.5">
+      {/* 3. KPI Ribbon (3 Metrics with Stroke Icons & Progress Bars) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bento-card space-y-2.5">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">MY LEADS</p>
+            <p className="bento-metric-title">MY LEADS</p>
             <div className="icon-box-emerald">
               <Users className="w-4 h-4" strokeWidth={1.75} />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-slate-900 font-mono">{totalLeadsCount}</div>
-            <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">Assigned to me</p>
+            <div className="bento-metric-value text-slate-900">{totalLeadsCount}</div>
+            <p className="text-[11px] text-emerald-700 font-medium mt-0.5">Assigned to me</p>
           </div>
           <SimpleProgressBar value={Math.min(100, totalLeadsCount * 10 || 40)} max={100} size="sm" color="emerald" />
         </div>
 
-        <div className="clean-card p-4 space-y-2.5">
+        <div className="bento-card space-y-2.5">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">FOLLOWUPS</p>
+            <p className="bento-metric-title">FOLLOWUPS</p>
             <div className="icon-box-amber">
               <CalendarClock className="w-4 h-4" strokeWidth={1.75} />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-amber-700 font-mono">{followupsCount}</div>
-            <p className="text-[11px] text-slate-400 font-medium mt-0.5">Due today & overdue</p>
+            <div className="bento-metric-value text-amber-700">{followupsCount}</div>
+            <p className="text-[11px] text-slate-500 font-medium mt-0.5">Due today & overdue</p>
           </div>
           <SimpleProgressBar value={65} max={100} size="sm" color="amber" />
         </div>
 
-        <div className="clean-card p-4 space-y-2.5">
+        <div className="bento-card space-y-2.5">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">CONSULTS</p>
-            <div className="icon-box-blue">
-              <Stethoscope className="w-4 h-4" strokeWidth={1.75} />
-            </div>
-          </div>
-          <div>
-            <div className="text-2xl font-black text-blue-700 font-mono">{consultsCount}</div>
-            <p className="text-[11px] text-blue-600 font-medium mt-0.5">Scheduled inquiries</p>
-          </div>
-          <SimpleProgressBar value={50} max={100} size="sm" color="blue" />
-        </div>
-
-        <div className="clean-card p-4 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">ORDERS</p>
+            <p className="bento-metric-title">ORDERS</p>
             <div className="icon-box-purple">
               <ShoppingBag className="w-4 h-4" strokeWidth={1.75} />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-purple-700 font-mono">{ordersCount}</div>
-            <p className="text-[11px] text-slate-400 font-medium mt-0.5">Closed & dispatched</p>
+            <div className="bento-metric-value text-purple-700">{ordersCount}</div>
+            <p className="text-[11px] text-slate-500 font-medium mt-0.5">Closed & dispatched</p>
           </div>
           <SimpleProgressBar value={80} max={100} size="sm" color="purple" />
         </div>
@@ -665,16 +636,7 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
       </div>
 
       {/* 4. Quick Actions Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-        <button
-          type="button"
-          id="btn-tc-book-consult"
-          onClick={() => setIsConsultModalOpen(true)}
-          className="flex items-center justify-center gap-2 p-3 bg-white hover:bg-purple-50/70 border border-slate-200 hover:border-purple-300 rounded-xl text-xs font-bold text-slate-700 hover:text-purple-800 shadow-2xs transition-all"
-        >
-          <Stethoscope className="w-4 h-4 text-purple-600" strokeWidth={1.75} />
-          <span>Book Consult</span>
-        </button>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
 
         <button
           type="button"
@@ -771,65 +733,71 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
               </div>
 
               <div className="space-y-2.5">
-                {leads.map((lead) => (
-                  <div
-                    key={lead._id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-slate-50 hover:bg-white border border-slate-200 hover:border-slate-300 rounded-xl transition-all"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 font-black text-sm flex items-center justify-center shrink-0">
-                        {lead.name[0] || 'L'}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs sm:text-sm text-slate-900">{lead.name}</span>
-                          <Badge variant={lead.status === 'NEW' ? 'emerald' : lead.status === 'FOLLOWUP' ? 'amber' : 'neutral'} size="sm">
-                            {lead.status}
-                          </Badge>
-                          {lead.leadScore && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                              {lead.leadScore} pts
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-2">
-                          <span>{lead.phone}</span>
-                          <span>•</span>
-                          <span>{lead.concern || 'Ayurvedic Wellness'}</span>
-                          <span>•</span>
-                          <span>{lead.city || 'Hosur'}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 self-end sm:self-center">
-                      <a
-                        href={`tel:${lead.phone}`}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors"
-                      >
-                        <Phone className="w-3 h-3" />
-                        <span>Call</span>
-                      </a>
-                      <a
-                        href={`https://wa.me/91${lead.phone}?text=${encodeURIComponent('Hello ' + lead.name + ', greeting from Shanthi Ayurvedas!')}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold shadow-xs transition-colors"
-                      >
-                        <MessageSquare className="w-3 h-3 text-emerald-600" />
-                        <span>WhatsApp</span>
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenCallModal(lead)}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold shadow-xs transition-colors"
-                      >
-                        <FileText className="w-3 h-3 text-slate-500" />
-                        <span>Log Call</span>
-                      </button>
-                    </div>
+                {leads.length === 0 ? (
+                  <div className="text-center py-8 text-slate-400 text-xs font-medium bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                    No leads assigned in queue
                   </div>
-                ))}
+                ) : (
+                  leads.map((lead) => (
+                    <div
+                      key={lead._id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-slate-50 hover:bg-white border border-slate-200 hover:border-slate-300 rounded-xl transition-all"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 font-black text-sm flex items-center justify-center shrink-0">
+                          {lead.name[0] || 'L'}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-xs sm:text-sm text-slate-900">{lead.name}</span>
+                            <Badge variant={lead.status === 'NEW' ? 'emerald' : lead.status === 'FOLLOWUP' ? 'amber' : 'neutral'} size="sm">
+                              {lead.status}
+                            </Badge>
+                            {lead.leadScore && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                                {lead.leadScore} pts
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-2">
+                            <span>{lead.phone}</span>
+                            <span>•</span>
+                            <span>{lead.concern || 'Ayurvedic Wellness'}</span>
+                            <span>•</span>
+                            <span>{lead.city || 'Hosur'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 self-end sm:self-center">
+                        <a
+                          href={`tel:${lead.phone}`}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors"
+                        >
+                          <Phone className="w-3 h-3" />
+                          <span>Call</span>
+                        </a>
+                        <a
+                          href={`https://wa.me/91${lead.phone}?text=${encodeURIComponent('Hello ' + lead.name + ', greeting from Shanthi Ayurvedas!')}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold shadow-xs transition-colors"
+                        >
+                          <MessageSquare className="w-3 h-3 text-emerald-600" />
+                          <span>WhatsApp</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenCallModal(lead)}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold shadow-xs transition-colors"
+                        >
+                          <FileText className="w-3 h-3 text-slate-500" />
+                          <span>Log Call</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -872,37 +840,65 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {leads.map((l) => (
-                      <tr key={l._id} className="hover:bg-slate-50">
-                        <td className="px-3 py-3 font-semibold text-slate-800">{l.name}</td>
-                        <td className="px-3 py-3 text-slate-600 font-mono">{l.phone}</td>
-                        <td className="px-3 py-3 text-slate-600">{l.concern || 'Weight Management'}</td>
-                        <td className="px-3 py-3 text-slate-600">{l.city || 'Hosur'}</td>
-                        <td className="px-3 py-3">
-                          <Badge variant={l.status === 'NEW' ? 'emerald' : 'neutral'} size="sm">
-                            {l.status}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <a
-                              href={`tel:${l.phone}`}
-                              className="p-1 text-emerald-700 hover:bg-emerald-50 rounded"
-                              title="Call"
-                            >
-                              <Phone className="w-3.5 h-3.5" />
-                            </a>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenCallModal(l)}
-                              className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded text-[11px]"
-                            >
-                              Log Call
-                            </button>
-                          </div>
+                    {leads.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-slate-400 font-medium">
+                          No leads available in queue
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      leads.map((l) => (
+                        <tr key={l._id} className="hover:bg-slate-50">
+                          <td className="px-3 py-3 font-semibold text-slate-800">{l.name}</td>
+                          <td className="px-3 py-3 text-slate-600 font-mono">{l.phone}</td>
+                          <td className="px-3 py-3 text-slate-600">{l.concern || 'Weight Management'}</td>
+                          <td className="px-3 py-3 text-slate-600">{l.city || 'Hosur'}</td>
+                          <td className="px-3 py-3">
+                            <Badge variant={l.status === 'NEW' ? 'emerald' : 'neutral'} size="sm">
+                              {l.status}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <a
+                                href={`tel:${l.phone}`}
+                                className="p-1 text-emerald-700 hover:bg-emerald-50 rounded"
+                                title="Call"
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                              </a>
+                              {/* Edit Lead */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditLead(l)}
+                                className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                                title="Edit Lead Details"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Delete Lead */}
+                              <button
+                                type="button"
+                                onClick={() => setSelectedLeadForDelete(l)}
+                                className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                title="Delete Lead"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleOpenCallModal(l)}
+                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded text-[11px]"
+                              >
+                                Log Call
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -923,81 +919,38 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
               </div>
 
               <div className="space-y-2">
-                {leads.slice(0, 3).map((lead, idx) => (
-                  <div
-                    key={lead._id}
-                    className="p-3.5 bg-amber-50/40 border border-amber-100 rounded-xl flex items-center justify-between gap-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs">
-                        <Clock className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="font-bold text-xs sm:text-sm text-slate-900">{lead.name}</div>
-                        <div className="text-xs text-slate-500">
-                          {lead.phone} • Requested call at {idx === 0 ? '11:30 AM' : idx === 1 ? '02:15 PM' : '04:45 PM'}
+                {leads.length === 0 ? (
+                  <div className="text-center py-6 text-slate-400 text-xs font-medium">
+                    No callbacks scheduled for today
+                  </div>
+                ) : (
+                  leads.slice(0, 3).map((lead, idx) => (
+                    <div
+                      key={lead._id}
+                      className="p-3.5 bg-amber-50/40 border border-amber-100 rounded-xl flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs">
+                          <Clock className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-xs sm:text-sm text-slate-900">{lead.name}</div>
+                          <div className="text-xs text-slate-500">
+                            {lead.phone} • Requested call at {idx === 0 ? '11:30 AM' : idx === 1 ? '02:15 PM' : '04:45 PM'}
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={`tel:${lead.phone}`}
+                          className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-xs"
+                        >
+                          Call Now
+                        </a>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={`tel:${lead.phone}`}
-                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-xs"
-                      >
-                        Call Now
-                      </a>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 4: CONSULTS */}
-          {activeTab === 'CONSULTS' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Patient Consultations & Walk-in Inquiries</h3>
-                  <p className="text-xs text-slate-500">Prescription guidance, dosage consultation, and branch appointments</p>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => setIsConsultModalOpen(true)}
-                  className="bg-emerald-700 text-white text-xs font-bold"
-                >
-                  + Book Consultation
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="font-bold text-slate-900 text-xs sm:text-sm">Vimala Murugesan</div>
-                      <div className="text-xs text-slate-500">9845012355 • Hosur</div>
-                    </div>
-                    <Badge variant="emerald" size="sm">Confirmed</Badge>
-                  </div>
-                  <p className="text-xs text-slate-600">
-                    <strong>Concern:</strong> Post-pregnancy weight reduction & sluggish metabolism.
-                  </p>
-                  <div className="text-[11px] text-slate-400">Scheduled: Today 03:30 PM (Walk-in)</div>
-                </div>
-
-                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="font-bold text-slate-900 text-xs sm:text-sm">Ravi Chandran</div>
-                      <div className="text-xs text-slate-500">9845012356 • Krishnagiri</div>
-                    </div>
-                    <Badge variant="blue" size="sm">Phone Consult</Badge>
-                  </div>
-                  <p className="text-xs text-slate-600">
-                    <strong>Concern:</strong> Cholesterol & belly fat herbal formulation inquiry.
-                  </p>
-                  <div className="text-[11px] text-slate-400">Scheduled: Tomorrow 10:30 AM (Tele-call)</div>
-                </div>
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -1059,11 +1012,11 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
                     className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none"
                   >
                     <option value="ALL">All Order Statuses</option>
+                    <option value="NEW">New Order</option>
                     <option value="CONFIRMED">Confirmed</option>
                     <option value="PROCESSING">Processing</option>
-                    <option value="SHIPPED">Shipped / Dispatched</option>
+                    <option value="IN_TRANSIT">In Transit / Dispatched</option>
                     <option value="DELIVERED">Delivered</option>
-                    <option value="NEW">New Order</option>
                     <option value="CANCELLED">Cancelled / RTO</option>
                   </select>
                 </div>
@@ -1247,6 +1200,21 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
                                   >
                                     <Edit3 className="w-3 h-3 text-slate-500 group-hover/edit:text-white transition-colors" />
                                     <span>Edit</span>
+                                  </button>
+
+                                  {/* Delete Order Button */}
+                                  <button
+                                    type="button"
+                                    id={`btn-delete-order-${o._id || idx}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedOrderForDelete(o);
+                                    }}
+                                    className="px-2 py-1 bg-red-50 hover:bg-red-600 text-red-700 hover:text-white border border-red-200 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-all shadow-2xs cursor-pointer group/del"
+                                    title="Delete Order"
+                                  >
+                                    <Trash2 className="w-3 h-3 text-red-500 group-hover/del:text-white transition-colors" />
+                                    <span>Delete</span>
                                   </button>
 
                                   {/* Call Patient */}
@@ -1484,11 +1452,11 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
                   <p className="text-xs text-slate-500">Continuous calling with auto-advancing queue</p>
                 </div>
                 <span className="text-xs font-semibold text-slate-500">
-                  Lead {activeDialerIndex + 1} of {leads.length}
+                  {leads.length > 0 ? `Lead ${activeDialerIndex + 1} of ${leads.length}` : '0 Leads in Queue'}
                 </span>
               </div>
 
-              {leads[activeDialerIndex] ? (
+              {leads.length > 0 && leads[activeDialerIndex] ? (
                 <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4 max-w-xl mx-auto text-center">
                   <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 font-black text-xl flex items-center justify-center mx-auto">
                     {leads[activeDialerIndex].name[0]}
@@ -1584,10 +1552,23 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
               />
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <Input
+              <Select
                 label="City"
                 value={orderForm.city}
                 onChange={(e) => setOrderForm({ ...orderForm, city: e.target.value })}
+                options={[
+                  { value: 'Hosur', label: 'Hosur' },
+                  { value: 'Krishnagiri', label: 'Krishnagiri' },
+                  { value: 'Dharmapuri', label: 'Dharmapuri' },
+                  { value: 'Salem', label: 'Salem' },
+                  { value: 'Coimbatore', label: 'Coimbatore' },
+                  { value: 'Erode', label: 'Erode' },
+                  { value: 'Chennai', label: 'Chennai' },
+                  { value: 'Bengaluru', label: 'Bengaluru' },
+                  { value: 'Vellore', label: 'Vellore' },
+                  { value: 'Madurai', label: 'Madurai' },
+                  { value: 'Other', label: 'Other' }
+                ]}
               />
               <Input
                 label="Pincode"
@@ -1729,13 +1710,26 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">City</label>
-                    <input
+                    <select
                       id="input-edit-order-city"
-                      type="text"
                       value={editOrderForm.city}
                       onChange={(e) => setEditOrderForm({ ...editOrderForm, city: e.target.value })}
                       className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
-                    />
+                    >
+                      <option value="Hosur">Hosur</option>
+                      <option value="Krishnagiri">Krishnagiri</option>
+                      <option value="Dharmapuri">Dharmapuri</option>
+                      <option value="Salem">Salem</option>
+                      <option value="Coimbatore">Coimbatore</option>
+                      <option value="Erode">Erode</option>
+                      <option value="Tirupur">Tirupur</option>
+                      <option value="Chennai">Chennai</option>
+                      <option value="Vellore">Vellore</option>
+                      <option value="Bengaluru">Bengaluru</option>
+                      <option value="Tirunelveli">Tirunelveli</option>
+                      <option value="Madurai">Madurai</option>
+                      <option value="Other">Other</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">District</label>
@@ -1909,6 +1903,11 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
             setSelectedOrderForDetails(null);
             handleOpenEditOrder(orderToEdit);
           }}
+          onDeleteOrder={(orderToDelete) => {
+            setIsOrderDetailsModalOpen(false);
+            setSelectedOrderForDetails(null);
+            setSelectedOrderForDelete(orderToDelete);
+          }}
         />
       )}
 
@@ -1959,16 +1958,43 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
                   { value: 'Digestion & Gastric Detox', label: 'Digestion & Gastric Detox' }
                 ]}
               />
-              <Input
+              <Select
                 label="City / Town"
                 value={leadForm.city}
                 onChange={(e) => setLeadForm({ ...leadForm, city: e.target.value })}
+                options={[
+                  { value: 'Hosur', label: 'Hosur' },
+                  { value: 'Krishnagiri', label: 'Krishnagiri' },
+                  { value: 'Dharmapuri', label: 'Dharmapuri' },
+                  { value: 'Salem', label: 'Salem' },
+                  { value: 'Coimbatore', label: 'Coimbatore' },
+                  { value: 'Erode', label: 'Erode' },
+                  { value: 'Tirupur', label: 'Tirupur' },
+                  { value: 'Chennai', label: 'Chennai' },
+                  { value: 'Vellore', label: 'Vellore' },
+                  { value: 'Bengaluru', label: 'Bengaluru' },
+                  { value: 'Tirunelveli', label: 'Tirunelveli' },
+                  { value: 'Madurai', label: 'Madurai' },
+                  { value: 'Other', label: 'Other City' }
+                ]}
               />
             </div>
-            <Input
+            <Select
               label="Lead Source"
               value={leadForm.source}
               onChange={(e) => setLeadForm({ ...leadForm, source: e.target.value })}
+              options={[
+                { value: 'Call Centre / Direct', label: 'Call Centre / Direct' },
+                { value: 'WhatsApp Inbound', label: 'WhatsApp Inbound' },
+                { value: 'Facebook / Meta Ad', label: 'Facebook / Meta Ad' },
+                { value: 'Instagram Ad', label: 'Instagram Ad' },
+                { value: 'YouTube Ad', label: 'YouTube Ad' },
+                { value: 'Website / SEO', label: 'Website / SEO' },
+                { value: 'Walk-in / Clinic', label: 'Walk-in / Clinic' },
+                { value: 'Doctor Referral', label: 'Doctor Referral' },
+                { value: 'Customer Referral', label: 'Customer Referral' },
+                { value: 'Repeat / Reorder', label: 'Repeat / Reorder' }
+              ]}
             />
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="secondary" onClick={() => setIsLeadModalOpen(false)}>
@@ -1982,68 +2008,6 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
         </Modal>
       )}
 
-      {/* MODAL 3: BOOK CONSULT */}
-      {isConsultModalOpen && (
-        <Modal
-          isOpen={isConsultModalOpen}
-          onClose={() => setIsConsultModalOpen(false)}
-          title="Book Patient Consultation / Walk-in"
-        >
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              alert(`Consultation booked for ${consultForm.patientName}!`);
-              setIsConsultModalOpen(false);
-            }}
-            className="space-y-4"
-          >
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                label="Patient Name"
-                value={consultForm.patientName}
-                onChange={(e) => setConsultForm({ ...consultForm, patientName: e.target.value })}
-                required
-              />
-              <Input
-                label="Phone Number"
-                value={consultForm.phone}
-                onChange={(e) => setConsultForm({ ...consultForm, phone: e.target.value })}
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Select
-                label="Consultation Mode"
-                value={consultForm.consultType}
-                onChange={(e) => setConsultForm({ ...consultForm, consultType: e.target.value })}
-                options={[
-                  { value: 'Walk-in Direct', label: 'Walk-in (Hosur Center)' },
-                  { value: 'Phone Tele-Consult', label: 'Phone Tele-Consultation' }
-                ]}
-              />
-              <Input
-                label="Preferred Time"
-                value={consultForm.preferredTime}
-                onChange={(e) => setConsultForm({ ...consultForm, preferredTime: e.target.value })}
-              />
-            </div>
-            <Input
-              label="Health Symptoms & Advice Notes"
-              value={consultForm.notes}
-              onChange={(e) => setConsultForm({ ...consultForm, notes: e.target.value })}
-              placeholder="e.g. 5kg weight reduction goal, thyroid history"
-            />
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="secondary" onClick={() => setIsConsultModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" className="bg-purple-700 text-white font-bold">
-                Confirm Booking
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
 
       {/* MODAL 4: CALL LOG DISPOSITION */}
       {isCallCentreModalOpen && (
@@ -2188,6 +2152,198 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* EDIT LEAD MODAL */}
+      {isEditLeadModalOpen && selectedLeadForEdit && (
+        <Modal
+          isOpen={isEditLeadModalOpen}
+          onClose={() => {
+            setIsEditLeadModalOpen(false);
+            setSelectedLeadForEdit(null);
+          }}
+          title={`Edit Lead — ${selectedLeadForEdit.name}`}
+          maxWidth="max-w-md"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              updateLeadMutation.mutate({
+                leadId: selectedLeadForEdit._id,
+                payload: editLeadForm
+              });
+            }}
+            className="space-y-3.5 text-xs"
+          >
+            <div>
+              <label className="block text-slate-700 font-semibold mb-1">Lead / Patient Name *</label>
+              <input
+                type="text"
+                required
+                value={editLeadForm.name}
+                onChange={(e) => setEditLeadForm({ ...editLeadForm, name: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Phone Number *</label>
+                <input
+                  type="tel"
+                  required
+                  value={editLeadForm.mobile}
+                  onChange={(e) => setEditLeadForm({ ...editLeadForm, mobile: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">City / District</label>
+                <select
+                  value={editLeadForm.city}
+                  onChange={(e) => setEditLeadForm({ ...editLeadForm, city: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"
+                >
+                  <option value="Hosur">Hosur</option>
+                  <option value="Krishnagiri">Krishnagiri</option>
+                  <option value="Dharmapuri">Dharmapuri</option>
+                  <option value="Salem">Salem</option>
+                  <option value="Coimbatore">Coimbatore</option>
+                  <option value="Erode">Erode</option>
+                  <option value="Tirupur">Tirupur</option>
+                  <option value="Chennai">Chennai</option>
+                  <option value="Vellore">Vellore</option>
+                  <option value="Bengaluru">Bengaluru</option>
+                  <option value="Tirunelveli">Tirunelveli</option>
+                  <option value="Madurai">Madurai</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Lead Source</label>
+                <select
+                  value={editLeadForm.source}
+                  onChange={(e) => setEditLeadForm({ ...editLeadForm, source: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold"
+                >
+                  <option value="CALL">Phone Call</option>
+                  <option value="WHATSAPP">WhatsApp</option>
+                  <option value="META">Meta / Facebook</option>
+                  <option value="WEBSITE">Website</option>
+                  <option value="WALKIN">Walk-in</option>
+                  <option value="MANUAL">Manual</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Pipeline Status</label>
+                <select
+                  value={editLeadForm.status}
+                  onChange={(e) => setEditLeadForm({ ...editLeadForm, status: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold"
+                >
+                  <option value="NEW">New</option>
+                  <option value="CONTACTED">Contacted</option>
+                  <option value="INTERESTED">Interested</option>
+                  <option value="FOLLOWUP">Follow-up</option>
+                  <option value="CONVERTED">Converted</option>
+                  <option value="LOST">Lost</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-semibold mb-1">Health Concern / Notes</label>
+              <textarea
+                rows={2}
+                value={editLeadForm.notes}
+                onChange={(e) => setEditLeadForm({ ...editLeadForm, notes: e.target.value })}
+                placeholder="Product inquired, health concerns, followup remarks..."
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setIsEditLeadModalOpen(false);
+                  setSelectedLeadForEdit(null);
+                }}
+                disabled={updateLeadMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                isLoading={updateLeadMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+              >
+                Save Lead Changes
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* DELETE LEAD CONFIRMATION MODAL */}
+      {selectedLeadForDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-xl border">
+            <div className="flex items-center gap-3 text-red-600">
+              <AlertTriangle className="w-6 h-6 shrink-0" />
+              <h3 className="font-bold text-slate-900 text-sm">Delete Lead Confirmation</h3>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Are you sure you want to delete lead for <strong>{selectedLeadForDelete.name}</strong> ({selectedLeadForDelete.phone || selectedLeadForDelete.mobile})? This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button size="sm" variant="secondary" onClick={() => setSelectedLeadForDelete(null)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="danger"
+                isLoading={deleteLeadMutation.isPending}
+                onClick={() => deleteLeadMutation.mutate(selectedLeadForDelete._id)}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold"
+              >
+                Delete Lead
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE ORDER CONFIRMATION MODAL */}
+      {selectedOrderForDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-xl border">
+            <div className="flex items-center gap-3 text-red-600">
+              <AlertTriangle className="w-6 h-6 shrink-0" />
+              <h3 className="font-bold text-slate-900 text-sm">Delete Order Confirmation</h3>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Are you sure you want to delete Order #{selectedOrderForDelete.orderNumber || selectedOrderForDelete._id}? Reserved inventory will be automatically restored.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button size="sm" variant="secondary" onClick={() => setSelectedOrderForDelete(null)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="danger"
+                isLoading={deleteOrderMutation.isPending}
+                onClick={() => deleteOrderMutation.mutate(selectedOrderForDelete._id)}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold"
+              >
+                Delete Order
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

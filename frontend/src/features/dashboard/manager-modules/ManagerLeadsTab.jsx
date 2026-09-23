@@ -15,7 +15,10 @@ import {
   Calendar,
   Pencil,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  RotateCcw,
+  ArrowUpDown,
+  AlertTriangle
 } from 'lucide-react';
 import apiClient from '../../../api/apiClient.js';
 import { useBranch } from '../../../context/BranchContext.jsx';
@@ -33,9 +36,21 @@ export function ManagerLeadsTab() {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
   const [selectedLeadIds, setSelectedLeadIds] = useState([]);
   const [assignTargetTelecaller, setAssignTargetTelecaller] = useState('');
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
+
+  // Reset all filters
+  const handleResetFilters = () => {
+    setSelectedTelecallerFilter('ALL');
+    setSelectedStatusFilter('ALL');
+    setSearchQuery('');
+    setDateFilter('');
+    setSortBy('createdAt');
+    setSortOrder('desc');
+  };
 
   // Modals
   const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
@@ -49,6 +64,20 @@ export function ManagerLeadsTab() {
 
   // New Lead Form
   const [newLeadData, setNewLeadData] = useState({
+    name: '',
+    mobile: '',
+    city: '',
+    source: 'CALL',
+    status: 'NEW',
+    notes: '',
+    assignedTo: ''
+  });
+
+  // Edit & Delete Lead States
+  const [selectedLeadForEdit, setSelectedLeadForEdit] = useState(null);
+  const [isEditLeadModalOpen, setIsEditLeadModalOpen] = useState(false);
+  const [selectedLeadForDelete, setSelectedLeadForDelete] = useState(null);
+  const [editLeadData, setEditLeadData] = useState({
     name: '',
     mobile: '',
     city: '',
@@ -77,13 +106,15 @@ export function ManagerLeadsTab() {
 
   // 2. Fetch Leads
   const { data: leadsResponse, isLoading: isLeadsLoading } = useQuery({
-    queryKey: ['manager-leads-desk', selectedBranchId, selectedTelecallerFilter, selectedStatusFilter, searchQuery, dateFilter],
+    queryKey: ['manager-leads-desk', selectedBranchId, selectedTelecallerFilter, selectedStatusFilter, searchQuery, dateFilter, sortBy, sortOrder],
     queryFn: async () => {
       const params = { limit: 100 };
       if (selectedTelecallerFilter !== 'ALL') params.assignedTo = selectedTelecallerFilter;
       if (selectedStatusFilter !== 'ALL') params.status = selectedStatusFilter;
       if (searchQuery) params.search = searchQuery;
       if (dateFilter) params.startDate = dateFilter;
+      if (sortBy) params.sortBy = sortBy;
+      if (sortOrder) params.sortOrder = sortOrder;
       const res = await apiClient.get('/leads', { params });
       return res.data;
     }
@@ -121,6 +152,41 @@ export function ManagerLeadsTab() {
       setActionSuccessMsg('New lead successfully added!');
       queryClient.invalidateQueries(['manager-leads-desk']);
       setTimeout(() => setActionSuccessMsg(''), 4000);
+    }
+  });
+
+  const updateLeadMutation = useMutation({
+    mutationFn: async ({ leadId, payload }) => {
+      const res = await apiClient.patch(`/leads/${leadId}`, payload);
+      return res.data;
+    },
+    onSuccess: () => {
+      setIsEditLeadModalOpen(false);
+      setSelectedLeadForEdit(null);
+      setActionSuccessMsg('Lead updated successfully!');
+      queryClient.invalidateQueries(['manager-leads-desk']);
+      queryClient.invalidateQueries(['leads']);
+      setTimeout(() => setActionSuccessMsg(''), 4000);
+    },
+    onError: (err) => {
+      alert(err.response?.data?.message || 'Failed to update lead');
+    }
+  });
+
+  const deleteLeadMutation = useMutation({
+    mutationFn: async (leadId) => {
+      const res = await apiClient.delete(`/leads/${leadId}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      setSelectedLeadForDelete(null);
+      setActionSuccessMsg('Lead deleted successfully!');
+      queryClient.invalidateQueries(['manager-leads-desk']);
+      queryClient.invalidateQueries(['leads']);
+      setTimeout(() => setActionSuccessMsg(''), 4000);
+    },
+    onError: (err) => {
+      alert(err.response?.data?.message || 'Failed to delete lead');
     }
   });
 
@@ -187,34 +253,38 @@ export function ManagerLeadsTab() {
         </div>
       )}
 
-      {/* Top Ribbon / Metrics */}
+      {/* ── Bento Metrics Strip ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Total Leads</div>
-          <div className="text-2xl font-bold text-slate-900 mt-1 font-mono">{leads.length}</div>
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Total Leads</div>
+          <div className="bento-metric-value text-slate-900">{leads.length}</div>
+          <div className="text-[11px] text-slate-400 font-medium">Pipeline</div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">New / Unassigned</div>
-          <div className="text-2xl font-bold text-blue-700 mt-1 font-mono">
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">New / Unassigned</div>
+          <div className="bento-metric-value text-blue-600">
             {leads.filter((l) => !l.assignedTo || l.status === 'NEW').length}
           </div>
+          <div className="text-[11px] text-blue-400 font-medium">Need assignment</div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Interested / In Progress</div>
-          <div className="text-2xl font-bold text-amber-600 mt-1 font-mono">
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">In Progress</div>
+          <div className="bento-metric-value text-amber-600">
             {leads.filter((l) => l.status === 'INTERESTED' || l.status === 'CONTACTED').length}
           </div>
+          <div className="text-[11px] text-amber-400 font-medium">Interested / Contacted</div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Converted to Orders</div>
-          <div className="text-2xl font-bold text-emerald-700 mt-1 font-mono">
+        <div className="bento-card flex flex-col gap-1">
+          <div className="bento-metric-title">Converted</div>
+          <div className="bento-metric-value text-emerald-700">
             {leads.filter((l) => l.status === 'ORDER_PLACED' || l.status === 'CONVERTED').length}
           </div>
+          <div className="text-[11px] text-emerald-500 font-medium">Orders placed</div>
         </div>
       </div>
 
       {/* Action Toolbar & Bulk Assignment Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 space-y-3">
+      <div className="bento-card space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -269,9 +339,38 @@ export function ManagerLeadsTab() {
           </div>
         </div>
 
-        {/* Filter Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-3 border-t border-slate-100">
-          <div className="relative">
+        {/* Quick Status Filter Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-slate-100">
+          {[
+            { id: 'ALL', label: 'All Leads' },
+            { id: 'NEW', label: 'New' },
+            { id: 'CONTACTED', label: 'Contacted' },
+            { id: 'INTERESTED', label: 'Interested' },
+            { id: 'ORDER_PLACED', label: 'Order Placed' },
+            { id: 'CALLBACK_REQUESTED', label: 'Callback' },
+            { id: 'JUNK', label: 'Junk / Closed' }
+          ].map((statusPill) => {
+            const isActive = selectedStatusFilter === statusPill.id;
+            return (
+              <button
+                key={statusPill.id}
+                type="button"
+                onClick={() => setSelectedStatusFilter(statusPill.id)}
+                className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {statusPill.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Filter Controls Bar */}
+        <div className="flex flex-wrap items-center gap-2 pt-2">
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -315,6 +414,34 @@ export function ManagerLeadsTab() {
             onChange={(e) => setDateFilter(e.target.value)}
             className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-700 font-medium"
           />
+
+          {/* Sort Dropdown */}
+          <select
+            value={`${sortBy}-${sortOrder}`}
+            onChange={(e) => {
+              const [field, order] = e.target.value.split('-');
+              setSortBy(field);
+              setSortOrder(order);
+            }}
+            className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700"
+          >
+            <option value="createdAt-desc">Date: Newest First</option>
+            <option value="createdAt-asc">Date: Oldest First</option>
+            <option value="name-asc">Name: A to Z</option>
+            <option value="name-desc">Name: Z to A</option>
+            <option value="status-asc">Status: A to Z</option>
+          </select>
+
+          {(searchQuery || selectedTelecallerFilter !== 'ALL' || selectedStatusFilter !== 'ALL' || dateFilter || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="flex items-center gap-1 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -328,6 +455,13 @@ export function ManagerLeadsTab() {
           <div className="text-3xl mb-2">📋</div>
           <div className="text-sm font-bold text-slate-800">No leads found</div>
           <p className="text-xs text-slate-400 mt-1">Try resetting the filters or add a new lead above.</p>
+          <button
+            type="button"
+            onClick={handleResetFilters}
+            className="mt-3 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold text-slate-700 cursor-pointer"
+          >
+            Clear All Filters
+          </button>
         </div>
       ) : (
         <div className="space-y-2">
@@ -396,6 +530,38 @@ export function ManagerLeadsTab() {
                     <MessageSquare className="w-3.5 h-3.5" />
                     <span>WhatsApp</span>
                   </a>
+
+                  {/* Edit Lead Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedLeadForEdit(lead);
+                      setEditLeadData({
+                        name: lead.name || '',
+                        mobile: lead.mobile || '',
+                        city: lead.city || '',
+                        source: lead.source || 'CALL',
+                        status: lead.status || 'NEW',
+                        notes: lead.notes || '',
+                        assignedTo: lead.assignedTo?._id || lead.assignedTo || ''
+                      });
+                      setIsEditLeadModalOpen(true);
+                    }}
+                    title="Edit Lead Details"
+                    className="p-1.5 bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-700 rounded-xl text-xs font-semibold flex items-center transition-colors cursor-pointer"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* Delete Lead Button */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedLeadForDelete(lead)}
+                    title="Delete Lead"
+                    className="p-1.5 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-700 rounded-xl text-xs font-semibold flex items-center transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
 
                   <Button
                     size="sm"
@@ -570,6 +736,169 @@ export function ManagerLeadsTab() {
           }}
           initialPatientData={orderInitialData}
         />
+      )}
+
+      {/* Edit Lead Modal */}
+      {isEditLeadModalOpen && selectedLeadForEdit && (
+        <Modal
+          isOpen={isEditLeadModalOpen}
+          onClose={() => {
+            setIsEditLeadModalOpen(false);
+            setSelectedLeadForEdit(null);
+          }}
+          title={`Edit Lead — ${selectedLeadForEdit.name}`}
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-3 text-xs">
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Patient Full Name *</label>
+              <input
+                type="text"
+                required
+                value={editLeadData.name}
+                onChange={(e) => setEditLeadData({ ...editLeadData, name: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Mobile Number *</label>
+                <input
+                  type="tel"
+                  required
+                  value={editLeadData.mobile}
+                  onChange={(e) => setEditLeadData({ ...editLeadData, mobile: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">City / District</label>
+                <input
+                  type="text"
+                  value={editLeadData.city}
+                  onChange={(e) => setEditLeadData({ ...editLeadData, city: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Source</label>
+                <select
+                  value={editLeadData.source}
+                  onChange={(e) => setEditLeadData({ ...editLeadData, source: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold"
+                >
+                  <option value="CALL">Call</option>
+                  <option value="WHATSAPP">WhatsApp</option>
+                  <option value="META">Meta / Facebook</option>
+                  <option value="WEBSITE">Website</option>
+                  <option value="WALKIN">Walk-in</option>
+                  <option value="MANUAL">Manual</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Status</label>
+                <select
+                  value={editLeadData.status}
+                  onChange={(e) => setEditLeadData({ ...editLeadData, status: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold"
+                >
+                  <option value="NEW">New</option>
+                  <option value="CONTACTED">Contacted</option>
+                  <option value="INTERESTED">Interested</option>
+                  <option value="ORDER_PLACED">Order Placed</option>
+                  <option value="CALLBACK_REQUESTED">Callback Requested</option>
+                  <option value="JUNK">Junk</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Assigned Telecaller</label>
+              <select
+                value={editLeadData.assignedTo}
+                onChange={(e) => setEditLeadData({ ...editLeadData, assignedTo: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold"
+              >
+                <option value="">Leave Unassigned (Queue)</option>
+                {telecallers.map((tc) => (
+                  <option key={tc._id} value={tc._id}>
+                    {tc.name} ({tc.phone || ''})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Notes / Inquiry Description</label>
+              <textarea
+                rows={2}
+                value={editLeadData.notes}
+                onChange={(e) => setEditLeadData({ ...editLeadData, notes: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setIsEditLeadModalOpen(false);
+                  setSelectedLeadForEdit(null);
+                }}
+                disabled={updateLeadMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                isLoading={updateLeadMutation.isPending}
+                disabled={!editLeadData.name || !editLeadData.mobile}
+                onClick={() =>
+                  updateLeadMutation.mutate({
+                    leadId: selectedLeadForEdit._id,
+                    payload: editLeadData
+                  })
+                }
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+              >
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delete Lead Confirmation Modal */}
+      {selectedLeadForDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-xl border">
+            <div className="flex items-center gap-3 text-red-600">
+              <AlertTriangle className="w-6 h-6 shrink-0" />
+              <h3 className="font-bold text-slate-900 text-sm">Delete Lead Confirmation</h3>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Are you sure you want to delete lead for <strong>{selectedLeadForDelete.name}</strong> ({selectedLeadForDelete.mobile})? All call records will be cleaned up.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button size="sm" variant="secondary" onClick={() => setSelectedLeadForDelete(null)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="danger"
+                isLoading={deleteLeadMutation.isPending}
+                onClick={() => deleteLeadMutation.mutate(selectedLeadForDelete._id)}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold"
+              >
+                Delete Lead
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

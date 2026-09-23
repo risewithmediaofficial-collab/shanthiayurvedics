@@ -17,6 +17,25 @@ const userSchema = new mongoose.Schema(
       trim: true,
       index: true
     },
+    username: {
+      type: String,
+      unique: true,
+      sparse: true,
+      lowercase: true,
+      trim: true,
+      index: true
+    },
+    brand: {
+      type: String,
+      trim: true,
+      default: 'Shanthi Ayurvedas'
+    },
+    assignedBrands: [
+      {
+        type: String,
+        trim: true
+      }
+    ],
     passwordHash: {
       type: String,
       required: [true, 'Password hash is required'],

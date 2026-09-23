@@ -24,8 +24,7 @@ import './ShippingPartner.js';
 import './Shipment.js';
 import './TrackingEvent.js';
 import './RTORecord.js';
-import './Doctor.js';
-import './DoctorSlotBooking.js';
+import './Notification.js';
 
 export * from './Branch.js';
 export * from './Role.js';
@@ -53,5 +52,3 @@ export * from './Shipment.js';
 export * from './TrackingEvent.js';
 export * from './RTORecord.js';
 export * from './Notification.js';
-export * from './Doctor.js';
-export * from './DoctorSlotBooking.js';

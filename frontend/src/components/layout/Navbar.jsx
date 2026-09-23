@@ -1,10 +1,16 @@
 import React from 'react';
-import { Menu } from 'lucide-react';
+import MenuRounded from '@mui/icons-material/MenuRounded';
 import { BranchSelector } from './BranchSelector.jsx';
 import { NotificationBell } from './NotificationBell.jsx';
 import { UserMenu } from './UserMenu.jsx';
+import { AccountSwitcherPill } from './AccountSwitcher.jsx';
+
+import { useAuth } from '../../context/AuthContext.jsx';
 
 export function Navbar({ onMenuToggle }) {
+  const { user } = useAuth();
+  const isOwner = user?.role === 'OWNER';
+
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between h-14 px-4 sm:px-6 bg-white border-b border-slate-200 shadow-sm">
       {/* Left: Hamburger + Brand (mobile only) */}
@@ -15,7 +21,7 @@ export function Navbar({ onMenuToggle }) {
           className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg lg:hidden focus:outline-none transition-colors"
           aria-label="Toggle sidebar"
         >
-          <Menu className="w-5 h-5" />
+          <MenuRounded sx={{ fontSize: 22 }} />
         </button>
 
         <div className="flex items-center gap-2 lg:hidden">
@@ -31,8 +37,14 @@ export function Navbar({ onMenuToggle }) {
         </div>
       </div>
 
-      {/* Right: Branch (mobile) + Notifications + User */}
-      <div className="flex items-center gap-2">
+      {/* Right: Account Switcher (Boss only) + Branch (mobile) + Notifications + User */}
+      <div className="flex items-center gap-2 sm:gap-2.5">
+        {isOwner && (
+          <div className="hidden sm:block">
+            <AccountSwitcherPill variant="light" />
+          </div>
+        )}
+
         <div className="sm:hidden">
           <BranchSelector />
         </div>

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Bell, CheckCheck, Clock } from 'lucide-react';
+import NotificationsRounded from '@mui/icons-material/NotificationsRounded';
+import DoneAllRounded from '@mui/icons-material/DoneAllRounded';
+import AccessTimeRounded from '@mui/icons-material/AccessTimeRounded';
 import { useNotifications } from '../../context/NotificationContext.jsx';
 import { Drawer } from '../common/Drawer.jsx';
 
@@ -12,12 +14,12 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="relative p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors focus:outline-none"
+        className="relative p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors focus:outline-none cursor-pointer"
         title="Notifications"
       >
-        <Bell className="w-5 h-5" />
+        <NotificationsRounded sx={{ fontSize: 22 }} />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 flex items-center justify-center min-w-4 h-4 px-1 text-[10px] font-bold text-white bg-rose-500 rounded-full ring-2 ring-white">
+          <span className="absolute top-1 right-1 flex items-center justify-center min-w-4 h-4 px-1 text-[10px] font-bold text-white bg-rose-500 rounded-full ring-2 ring-white font-mono">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -33,9 +35,9 @@ export function NotificationBell() {
             <button
               type="button"
               onClick={markAllAsRead}
-              className="text-xs font-semibold text-ayur-700 hover:text-ayur-800 flex items-center gap-1.5"
+              className="text-xs font-semibold text-ayur-700 hover:text-ayur-800 flex items-center gap-1.5 cursor-pointer"
             >
-              <CheckCheck className="w-4 h-4" /> Mark all as read
+              <DoneAllRounded sx={{ fontSize: 16 }} /> Mark all as read
             </button>
           )
         }
@@ -63,8 +65,8 @@ export function NotificationBell() {
                   )}
                 </div>
                 <p className="text-xs text-slate-600 mt-1">{n.message}</p>
-                <div className="flex items-center gap-1 mt-2 text-[10px] text-slate-400">
-                  <Clock className="w-3 h-3" />
+                <div className="flex items-center gap-1 mt-2 text-[10px] text-slate-400 font-mono">
+                  <AccessTimeRounded sx={{ fontSize: 13 }} />
                   <span>{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
               </div>

@@ -3,7 +3,8 @@ import {
   getBranches,
   getAllBranchesAdmin,
   createBranch,
-  updateBranch
+  updateBranch,
+  deleteBranch
 } from '../controllers/branchController.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
@@ -22,5 +23,7 @@ router.get('/', getBranches);
 router.get('/admin', requirePermission(PERMISSIONS.BRANCHES_MANAGE), getAllBranchesAdmin);
 router.post('/', requirePermission(PERMISSIONS.BRANCHES_MANAGE), validate(createBranchSchema), createBranch);
 router.patch('/:id', requirePermission(PERMISSIONS.BRANCHES_MANAGE), updateBranch);
+router.put('/:id', requirePermission(PERMISSIONS.BRANCHES_MANAGE), updateBranch);
+router.delete('/:id', requirePermission(PERMISSIONS.BRANCHES_MANAGE), deleteBranch);
 
 export default router;

@@ -13,13 +13,17 @@ const COOKIE_OPTIONS = {
 };
 
 const setAuthCookies = (res, result) => {
+  const isProd = env.NODE_ENV === 'production';
+  const accessMaxAge = (isProd ? 15 : 7 * 24 * 60) * 60 * 1000; // 7 days in dev, 15m in prod
+  const refreshMaxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+
   res.cookie('accessToken', result.accessToken, {
     ...COOKIE_OPTIONS,
-    maxAge: 15 * 60 * 1000
+    maxAge: accessMaxAge
   });
   res.cookie('refreshToken', result.refreshToken, {
     ...COOKIE_OPTIONS,
-    maxAge: 7 * 24 * 60 * 60 * 1000
+    maxAge: refreshMaxAge
   });
 };
 
@@ -28,21 +32,14 @@ export const login = asyncHandler(async (req, res) => {
   const result = await AuthService.login({ email, password, req });
 
   // Set HTTP-only cookies
-  res.cookie('accessToken', result.accessToken, {
-    ...COOKIE_OPTIONS,
-    maxAge: 15 * 60 * 1000 // 15 minutes
-  });
-
-  res.cookie('refreshToken', result.refreshToken, {
-    ...COOKIE_OPTIONS,
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-  });
+  setAuthCookies(res, result);
 
   return ApiResponse.success(
     res,
     {
       user: result.user,
-      accessToken: result.accessToken
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken
     },
     'Login successful'
   );
@@ -53,21 +50,14 @@ export const refresh = asyncHandler(async (req, res) => {
   const result = await AuthService.refreshSession({ rawRefreshToken, req });
 
   // Rotate cookies
-  res.cookie('accessToken', result.accessToken, {
-    ...COOKIE_OPTIONS,
-    maxAge: 15 * 60 * 1000
-  });
-
-  res.cookie('refreshToken', result.refreshToken, {
-    ...COOKIE_OPTIONS,
-    maxAge: 7 * 24 * 60 * 60 * 1000
-  });
+  setAuthCookies(res, result);
 
   return ApiResponse.success(
     res,
     {
       user: result.user,
-      accessToken: result.accessToken
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken
     },
     'Token refreshed successfully'
   );

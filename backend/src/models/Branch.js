@@ -48,7 +48,8 @@ const branchSchema = new mongoose.Schema(
     },
     managerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+      ref: 'User',
+      index: true
     },
     managerName: {
       type: String,
@@ -57,6 +58,24 @@ const branchSchema = new mongoose.Schema(
     managerPhone: {
       type: String,
       trim: true
+    },
+    distributorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true
+    },
+    distributorName: {
+      type: String,
+      trim: true
+    },
+    distributorPhone: {
+      type: String,
+      trim: true
+    },
+    distributorEmail: {
+      type: String,
+      trim: true,
+      lowercase: true
     },
     revenueSharePercent: {
       type: Number,

@@ -10,6 +10,14 @@ import { UnauthorizedError, AppError } from '../utils/errors.js';
 
 export class AuthService {
   /**
+   * Verify an Access Token and return the decoded payload.
+   * Throws a jwt error if invalid or expired.
+   */
+  static verifyAccessToken(token) {
+    return jwt.verify(token, env.JWT_ACCESS_SECRET);
+  }
+
+  /**
    * Generate Access and Refresh Tokens
    */
   static generateTokens(payload) {
@@ -34,25 +42,29 @@ export class AuthService {
     const ipAddress = req?.ip || req?.connection?.remoteAddress || 'Unknown';
     const userAgent = req?.headers?.['user-agent'] || 'Unknown';
 
-    const normalizedEmail = email.toLowerCase().trim();
-    const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash').populate('branchId', 'name code');
+    const normalizedIdentifier = (email || '').toLowerCase().trim();
+    const user = await User.findOne({
+      $or: [{ email: normalizedIdentifier }, { username: normalizedIdentifier }]
+    })
+      .select('+passwordHash')
+      .populate('branchId', 'name code');
 
     if (!user) {
       // Record failed attempt in LoginHistory
       await LoginHistory.create({
-        email: normalizedEmail,
+        email: normalizedIdentifier,
         status: 'FAILED',
         failureReason: 'User not found',
         ipAddress,
         userAgent
       });
-      throw new UnauthorizedError('Invalid email or password');
+      throw new UnauthorizedError('Invalid email, username, or password');
     }
 
     if (!user.isActive) {
       await LoginHistory.create({
         userId: user._id,
-        email: normalizedEmail,
+        email: normalizedIdentifier,
         status: 'FAILED',
         failureReason: 'Account disabled',
         ipAddress,
@@ -65,7 +77,7 @@ export class AuthService {
       const minutesRemaining = Math.ceil((user.lockUntil - new Date()) / 60000);
       await LoginHistory.create({
         userId: user._id,
-        email: normalizedEmail,
+        email: normalizedIdentifier,
         status: 'LOCKED',
         failureReason: `Account temporarily locked. ${minutesRemaining} minutes remaining`,
         ipAddress,
@@ -80,13 +92,13 @@ export class AuthService {
       await user.recordFailedLogin();
       await LoginHistory.create({
         userId: user._id,
-        email: normalizedEmail,
+        email: normalizedIdentifier,
         status: 'FAILED',
         failureReason: 'Incorrect password',
         ipAddress,
         userAgent
       });
-      throw new UnauthorizedError('Invalid email or password');
+      throw new UnauthorizedError('Invalid email, username, or password');
     }
 
     // Reset failed login attempts and update last login
@@ -99,6 +111,9 @@ export class AuthService {
       userId: user._id.toString(),
       id: user._id.toString(),
       email: user.email,
+      username: user.username,
+      brand: user.brand || 'Shanthi Ayurvedas',
+      assignedBrands: user.assignedBrands || [],
       role: user.role,
       branchId: user.branchId?._id?.toString() || user.branchId?.toString() || null,
       branches: user.branches || []
@@ -120,7 +135,7 @@ export class AuthService {
     // Record successful login history
     await LoginHistory.create({
       userId: user._id,
-      email: normalizedEmail,
+      email: user.email,
       status: 'SUCCESS',
       ipAddress,
       userAgent
@@ -142,6 +157,9 @@ export class AuthService {
         id: user._id,
         name: user.name,
         email: user.email,
+        username: user.username,
+        brand: user.brand || 'Shanthi Ayurvedas',
+        assignedBrands: user.assignedBrands || [],
         role: user.role,
         branch: user.branchId,
         branches: user.branches,
@@ -177,7 +195,11 @@ export class AuthService {
 
     const tokenPayload = {
       userId: user._id.toString(),
+      id: user._id.toString(),
       email: user.email,
+      username: user.username,
+      brand: user.brand || 'Shanthi Ayurvedas',
+      assignedBrands: user.assignedBrands || [],
       role: user.role,
       branchId: user.branchId?.toString() || null,
       branches: user.branches || []
@@ -208,8 +230,12 @@ export class AuthService {
         id: user._id,
         name: user.name,
         email: user.email,
+        username: user.username,
+        brand: user.brand || 'Shanthi Ayurvedas',
+        assignedBrands: user.assignedBrands || [],
         role: user.role,
         branch: user.branchId,
+        branches: user.branches,
         permissions
       }
     };

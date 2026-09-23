@@ -1,5 +1,6 @@
 import { Product } from '../models/Product.js';
 import { ProductBatch } from '../models/ProductBatch.js';
+import { Inventory } from '../models/Inventory.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { NotFoundError, ConflictError } from '../utils/errors.js';
@@ -7,12 +8,28 @@ import { AuditService } from '../services/auditService.js';
 
 export const getProducts = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 20;
+  const isExport = req.query.export === 'true';
+  const limit = isExport ? 5000 : (parseInt(req.query.limit, 10) || 20);
   const search = req.query.search?.trim();
   const category = req.query.category;
+  const startDate = req.query.startDate;
+  const endDate = req.query.endDate;
+  const sortBy = req.query.sortBy || 'name';
+  const sortOrder = req.query.sortOrder === 'desc' || req.query.sortOrder === '-1' ? -1 : 1;
 
   const query = { isActive: true };
-  if (category) query.category = category;
+  if (category && category !== 'ALL') query.category = category;
+
+  if (startDate || endDate) {
+    query.createdAt = {};
+    if (startDate) {
+      query.createdAt.$gte = new Date(startDate.includes('T') ? startDate : `${startDate}T00:00:00.000Z`);
+    }
+    if (endDate) {
+      query.createdAt.$lte = new Date(endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`);
+    }
+  }
+
   if (search) {
     query.$or = [
       { name: { $regex: search, $options: 'i' } },
@@ -20,20 +37,45 @@ export const getProducts = asyncHandler(async (req, res) => {
     ];
   }
 
-  const skip = (page - 1) * limit;
+  const sortObj = {};
+  if (sortBy === 'price') sortObj.price = sortOrder;
+  else if (sortBy === 'mrp') sortObj.mrp = sortOrder;
+  else if (sortBy === 'costPrice') sortObj.costPrice = sortOrder;
+  else if (sortBy === 'sku') sortObj.sku = sortOrder;
+  else if (sortBy === 'createdAt') sortObj.createdAt = sortOrder;
+  else sortObj.name = sortOrder;
+
+  const skip = isExport ? 0 : (page - 1) * limit;
   const [total, products] = await Promise.all([
     Product.countDocuments(query),
-    Product.find(query).sort({ name: 1 }).skip(skip).limit(limit).lean()
+    Product.find(query).sort(sortObj).skip(skip).limit(limit).lean()
   ]);
 
-  // Fetch active batches for these products
+  // Fetch active batches and inventory for these products
   const productIds = products.map((p) => p._id);
-  const batches = await ProductBatch.find({ productId: { $in: productIds }, isActive: true }).lean();
+  const [batches, inventories] = await Promise.all([
+    ProductBatch.find({ productId: { $in: productIds }, isActive: true }).lean(),
+    Inventory.find({
+      productId: { $in: productIds },
+      ...(!req.branchScope?.isGlobal && req.branchScope?.branchId ? { branchId: req.branchScope.branchId } : {})
+    }).lean()
+  ]);
 
-  const productsWithBatches = products.map((p) => ({
-    ...p,
-    batches: batches.filter((b) => b.productId.toString() === p._id.toString())
-  }));
+  const productsWithBatches = products.map((p) => {
+    const pBatches = batches.filter((b) => b.productId.toString() === p._id.toString());
+    const pInventories = inventories.filter((inv) => inv.productId.toString() === p._id.toString());
+    const availableQuantity = pInventories.reduce((sum, inv) => sum + (inv.availableQuantity || 0), 0);
+    const reservedQuantity = pInventories.reduce((sum, inv) => sum + (inv.reservedQuantity || 0), 0);
+
+    return {
+      ...p,
+      batches: pBatches,
+      availableQuantity,
+      reservedQuantity,
+      stock: availableQuantity,
+      totalStock: availableQuantity
+    };
+  });
 
   return ApiResponse.paginated(res, productsWithBatches, { page, limit, total }, 'Products retrieved');
 });

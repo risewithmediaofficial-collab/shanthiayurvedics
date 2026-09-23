@@ -82,10 +82,10 @@ export function LoginPage() {
       </div>
 
       {/* ── 1-CLICK QUICK ROLE SWITCHER / LOGIN ── */}
-      <div className="p-3.5 bg-gradient-to-br from-slate-50 to-amber-50/40 rounded-2xl border border-slate-200/80 shadow-xs space-y-2.5">
+      <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 shadow-xs space-y-2.5">
         <div className="flex items-center justify-between text-[11px]">
-          <span className="font-bold text-slate-700 flex items-center gap-1">
-            <span>⚡</span>
+          <span className="font-bold text-slate-700 flex items-center gap-1.5">
+            <span className="text-amber-500">⚡</span>
             <span>4-Role Fast Account Logins</span>
           </span>
           <span className="text-[10px] text-slate-400 font-mono">Role-Isolated Desks</span>
@@ -97,16 +97,16 @@ export function LoginPage() {
             type="button"
             disabled={isLoading}
             onClick={() => handleDirectLogin('shanthi@369', 'slim369', 'Owner (Super Admin)')}
-            className="p-2.5 rounded-xl border border-amber-300 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex flex-col items-start gap-1 transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50 text-left"
+            className="p-2.5 rounded-xl border border-amber-200/90 bg-gradient-to-br from-amber-50 to-amber-100/50 hover:bg-amber-100/80 hover:border-amber-300 text-slate-900 text-xs flex flex-col items-start gap-1 transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50 text-left"
           >
             <div className="flex items-center gap-1.5 w-full">
               <span className="text-sm">👑</span>
-              <span className="font-black text-slate-950">1. Owner (Super Admin)</span>
+              <span className="font-bold text-amber-950">1. Owner (Super Admin)</span>
             </div>
-            <span className="text-[10px] text-slate-900 font-normal leading-tight">
+            <span className="text-[10px] text-amber-900/80 font-normal leading-tight">
               Manage all branches data, financials & assignments
             </span>
-            <span className="text-[9px] font-mono text-slate-950/80 bg-amber-400/80 px-1 py-0.5 rounded mt-0.5">
+            <span className="text-[9px] font-mono font-medium text-amber-900 bg-amber-100/90 border border-amber-200/80 px-1.5 py-0.5 rounded mt-0.5">
               shanthi@369
             </span>
           </button>
@@ -116,16 +116,16 @@ export function LoginPage() {
             type="button"
             disabled={isLoading}
             onClick={() => handleDirectLogin('slim369', 'slim369', 'Branch Stock Distributor')}
-            className="p-2.5 rounded-xl border border-emerald-300 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex flex-col items-start gap-1 transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50 text-left"
+            className="p-2.5 rounded-xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50 to-emerald-100/50 hover:bg-emerald-100/80 hover:border-emerald-300 text-slate-900 text-xs flex flex-col items-start gap-1 transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50 text-left"
           >
             <div className="flex items-center gap-1.5 w-full">
               <span className="text-sm">🌿</span>
-              <span className="font-black text-white">2. Branch Distributor</span>
+              <span className="font-bold text-emerald-950">2. Branch Distributor</span>
             </div>
-            <span className="text-[10px] text-emerald-100 font-normal leading-tight">
+            <span className="text-[10px] text-emerald-900/80 font-normal leading-tight">
               Manage branch stocks, warehouse ledger & transfers
             </span>
-            <span className="text-[9px] font-mono text-white/90 bg-emerald-700/80 px-1 py-0.5 rounded mt-0.5">
+            <span className="text-[9px] font-mono font-medium text-emerald-900 bg-emerald-100/90 border border-emerald-200/80 px-1.5 py-0.5 rounded mt-0.5">
               slim369
             </span>
           </button>
@@ -135,16 +135,16 @@ export function LoginPage() {
             type="button"
             disabled={isLoading}
             onClick={() => handleDirectLogin('shanthi ayurvedas office', 'slim369', 'Branch Manager')}
-            className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-900 font-black text-xs flex flex-col items-start gap-1 transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50 text-left"
+            className="p-2.5 rounded-xl border border-blue-200/90 bg-gradient-to-br from-blue-50 to-blue-100/50 hover:bg-blue-100/80 hover:border-blue-300 text-slate-900 text-xs flex flex-col items-start gap-1 transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50 text-left"
           >
             <div className="flex items-center gap-1.5 w-full">
               <span className="text-sm">👔</span>
-              <span className="font-black text-blue-950">3. Branch Manager</span>
+              <span className="font-bold text-blue-950">3. Branch Manager</span>
             </div>
-            <span className="text-[10px] text-blue-800 font-normal leading-tight">
+            <span className="text-[10px] text-blue-900/80 font-normal leading-tight">
               Manage branch orders, packing & team callers
             </span>
-            <span className="text-[9px] font-mono text-blue-900/80 bg-blue-200/60 px-1 py-0.5 rounded mt-0.5">
+            <span className="text-[9px] font-mono font-medium text-blue-900 bg-blue-100/90 border border-blue-200/80 px-1.5 py-0.5 rounded mt-0.5">
               shanthi ayurvedas office
             </span>
           </button>
@@ -154,16 +154,16 @@ export function LoginPage() {
             type="button"
             disabled={isLoading}
             onClick={() => handleDirectLogin('sathish@shanthiayurvedas.com', 'Password@12345', 'Telecaller')}
-            className="p-2.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-900 font-black text-xs flex flex-col items-start gap-1 transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50 text-left"
+            className="p-2.5 rounded-xl border border-purple-200/90 bg-gradient-to-br from-purple-50 to-purple-100/50 hover:bg-purple-100/80 hover:border-purple-300 text-slate-900 text-xs flex flex-col items-start gap-1 transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50 text-left"
           >
             <div className="flex items-center gap-1.5 w-full">
               <span className="text-sm">🎧</span>
-              <span className="font-black text-purple-950">4. Telecaller Desk</span>
+              <span className="font-bold text-purple-950">4. Telecaller Desk</span>
             </div>
-            <span className="text-[10px] text-purple-800 font-normal leading-tight">
+            <span className="text-[10px] text-purple-900/80 font-normal leading-tight">
               Calling console, follow-ups & order creation
             </span>
-            <span className="text-[9px] font-mono text-purple-900/80 bg-purple-200/60 px-1 py-0.5 rounded mt-0.5">
+            <span className="text-[9px] font-mono font-medium text-purple-900 bg-purple-100/90 border border-purple-200/80 px-1.5 py-0.5 rounded mt-0.5">
               sathish@shanthiayurvedas.com
             </span>
           </button>

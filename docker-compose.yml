@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   mongodb:
     image: mongo:7.0
@@ -20,10 +19,12 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+
   backend:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    image: shanthiayurvedics-backend:latest
     container_name: shanthi_backend
     restart: unless-stopped
     ports:
@@ -42,10 +43,12 @@ services:
       FRONTEND_URL: http://localhost:88
     networks:
       - crm-network
+
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+    image: shanthiayurvedics-frontend:latest
     container_name: shanthi_frontend
     restart: unless-stopped
     ports:
@@ -55,8 +58,10 @@ services:
       - backend
     networks:
       - crm-network
+
 volumes:
   mongodb_data:
+
 networks:
   crm-network:
     driver: bridge

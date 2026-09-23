@@ -450,10 +450,13 @@ export const seedComprehensiveData = async () => {
         { upsert: true }
       );
     }
-    logger.info(`✅ ${products.length} Products, Batches & Warehouse Inventory seeded`);
+    // 5. Customers, Leads & Orders (Optional Mock Data - Disabled by default for clean real-time stats)
+    let customersCount = 0;
+    let leadsCount = 0;
+    let ordersCount = 0;
 
-    // 5. Customers
-    const customersData = [
+    if (process.env.SEED_MOCK_TRANSACTIONS === 'true') {
+      const customersData = [
       {
         name: 'Venkatesh Raman',
         fatherName: 'Ramanathan K',
@@ -846,7 +849,13 @@ export const seedComprehensiveData = async () => {
         createdAt: new Date()
       });
     }
-    logger.info(`✅ ${callLogs.length} Telecaller Calling Logs seeded`);
+      customersCount = customers.length;
+      leadsCount = seededLeads.length;
+      ordersCount = sampleOrdersData.length;
+      logger.info(`✅ ${callLogs.length} Telecaller Calling Logs seeded`);
+    } else {
+      logger.info('✨ Clean Production Mode: 0 fake orders, 0 fake leads. Real-time stats are 100% live and fresh.');
+    }
 
     // 11. Shipping Partner Configuration
     await ShippingPartner.findOneAndUpdate(
@@ -867,9 +876,9 @@ export const seedComprehensiveData = async () => {
       branchesCount: branches.length,
       usersCount: Object.keys(usersMap).length,
       productsCount: products.length,
-      customersCount: customers.length,
-      leadsCount: seededLeads.length,
-      ordersCount: sampleOrdersData.length
+      customersCount,
+      leadsCount,
+      ordersCount
     };
   } catch (error) {
     logger.error(`❌ Comprehensive Seeding Failed: ${error.message}`);

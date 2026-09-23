@@ -153,11 +153,37 @@ export class DashboardService {
       .limit(10)
       .lean();
 
-    // 5. Branch Telecallers
+    // 5. Branch Telecallers with Live Performance Metrics
     const branchTelecallers = await User.find({
       role: ROLES.TELECALLER,
       ...(branchFilter.branchId ? { $or: [{ branchId: branchFilter.branchId }, { branches: branchFilter.branchId }] } : {})
-    }).select('name email phone isActive').lean();
+    }).select('name email phone isActive username').lean();
+
+    const telecallerPerformance = await Promise.all(
+      branchTelecallers.map(async (tc) => {
+        const [leadsCount, convertedCount, ordersAgg] = await Promise.all([
+          Lead.countDocuments({ assignedTo: tc._id }),
+          Lead.countDocuments({ assignedTo: tc._id, status: LEAD_STATUS.CONVERTED }),
+          Order.aggregate([
+            { $match: { telecallerId: tc._id, status: { $ne: ORDER_STATUS.CANCELLED } } },
+            { $group: { _id: null, total: { $sum: '$grandTotal' } } }
+          ])
+        ]);
+
+        return {
+          _id: tc._id,
+          name: tc.name || tc.username || 'Telecaller',
+          phone: tc.phone || '—',
+          email: tc.email || '',
+          leads: leadsCount,
+          converted: convertedCount,
+          revenue: ordersAgg[0]?.total || 0,
+          isActive: tc.isActive
+        };
+      })
+    );
+
+    telecallerPerformance.sort((a, b) => (b.revenue || 0) - (a.revenue || 0));
 
     return {
       kpis: {
@@ -179,7 +205,7 @@ export class DashboardService {
       ordersByStatus,
       branchComparison,
       lowStockItems,
-      telecallers: branchTelecallers
+      telecallers: telecallerPerformance
     };
   }
 

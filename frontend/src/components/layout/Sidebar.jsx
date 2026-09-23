@@ -72,17 +72,11 @@ export function Sidebar({ isOpen, onClose }) {
     enabled: Boolean(user)
   });
 
-  const ordersCount = metricsData?.totalOrders ?? 193;
-  const lowStockCount = metricsData?.lowStockCount ?? 55;
+  const ordersCount = metricsData?.totalOrders ?? 0;
+  const lowStockCount = metricsData?.lowStockCount ?? 0;
   const leadsCount = metricsData?.totalLeads ?? 0;
 
-  const defaultTelecallers = [
-    { name: 'KANAGAVALLI', phone: '9629985341', status: 'active' },
-    { name: 'AMRUTHA', phone: '9629985342', status: 'active' },
-    { name: 'PATTUSELVI', phone: '9629985343', status: 'active' }
-  ];
-
-  const displayCallers = teamUsers.length > 0 ? teamUsers.slice(0, 5) : defaultTelecallers;
+  const displayCallers = teamUsers.length > 0 ? teamUsers.slice(0, 5) : [];
 
   let navSections = [];
 
@@ -231,7 +225,7 @@ export function Sidebar({ isOpen, onClose }) {
             label: 'TEAM',
             icon: PeopleAltRounded,
             path: '/dashboard?tab=team',
-            badge: teamUsers.length || 8,
+            badge: teamUsers.length,
             badgeVariant: 'neutral',
             show: isOwner || hasPermission('users.view')
           }

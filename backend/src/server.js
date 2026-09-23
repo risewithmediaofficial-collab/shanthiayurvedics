@@ -7,6 +7,7 @@ import { initSocketIO } from './sockets/index.js';
 import { RbacService } from './services/rbacService.js';
 
 import { seedComprehensiveData } from './scripts/seed.js';
+import { deleteFakeData } from './scripts/deleteFakeData.js';
 import { User } from './models/User.js';
 
 const server = http.createServer(app);
@@ -39,6 +40,27 @@ const startServer = async () => {
       }
     } catch (seedErr) {
       logger.error(`⚠️ Initial database seeding error: ${seedErr.message}`);
+    }
+
+    // Auto-purge any legacy fake seeded orders, leads or transactions
+    try {
+      const mongoose = await import('mongoose');
+      const db = mongoose.default.connection.db;
+      if (db) {
+        const fakeOrderCount = await db.collection('orders').countDocuments({
+          $or: [
+            { orderNumber: { $regex: /^AYUR-HSR-10/ } },
+            { orderNumber: { $regex: /^AYUR-HSR-0/ } }
+          ]
+        });
+        if (fakeOrderCount > 0) {
+          logger.info(`🧹 Found ${fakeOrderCount} fake seed orders. Auto-purging fake transactions for clean real-time stats...`);
+          await deleteFakeData();
+          logger.info('✅ Fake data purge complete! Database is clean, fresh, and real-time ready.');
+        }
+      }
+    } catch (cleanErr) {
+      logger.warn(`Could not check/purge fake data on boot: ${cleanErr.message}`);
     }
 
     server.listen(env.PORT, () => {

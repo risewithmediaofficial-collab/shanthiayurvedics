@@ -102,14 +102,14 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
   const todayOrdersCount = metricsData?.todayOrdersCount ?? kpis.ordersToday ?? 0;
   const totalRevenue = metricsData?.totalRevenue ?? kpis.allTimeRevenue ?? 0;
   const shippedCount = metricsData?.shippedCount ?? kpis.shippedOrders ?? 0;
-  const deliveredCount = metricsData?.deliveredOrdersCount ?? 9;
+  const deliveredCount = metricsData?.deliveredOrdersCount ?? 0;
   const packedCount = metricsData?.packedCount ?? 0;
   const toVerifyCount = metricsData?.toVerifyCount ?? 0;
   const inQueueCount = metricsData?.inQueueCount ?? 0;
   const lowStockCount = metricsData?.lowStockCount ?? lowStockItems.length ?? 0;
   const totalLeads = metricsData?.totalLeads ?? kpis.totalLeads ?? 0;
   const conversionRate = kpis.conversionRate ?? (totalLeads > 0 ? ((kpis.convertedLeads || 0) / totalLeads * 100).toFixed(1) : '0.0');
-  const aov = kpis.aov ?? (todayOrdersCount > 0 ? Math.round(todayRev / todayOrdersCount) : 1950);
+  const aov = kpis.aov ?? (todayOrdersCount > 0 ? Math.round(todayRev / todayOrdersCount) : 0);
 
   const currentBranchObj = availableBranches.find(
     (b) => (b._id || b.id)?.toString() === selectedBranchId?.toString()

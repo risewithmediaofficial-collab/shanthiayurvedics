@@ -100,7 +100,7 @@ import { SimpleTrendChart } from '../../components/common/SimpleTrendChart.jsx';
 import { OrderListPage } from '../orders/OrderListPage.jsx';
 import { ManagerLeadsTab } from './manager-modules/ManagerLeadsTab.jsx';
 
-const StatCard = ({ label, value, sub, icon: Icon, color = 'green', progress = 70 }) => {
+const StatCard = ({ label, value, sub, icon: Icon, color = 'green', progress }) => {
   const iconClasses = {
     green: 'icon-box-emerald',
     blue: 'icon-box-blue',
@@ -114,6 +114,9 @@ const StatCard = ({ label, value, sub, icon: Icon, color = 'green', progress = 7
     purple: 'purple'
   };
 
+  const isZeroOrEmpty = !value || value === '₹0' || value === 0 || value === '0' || value === '0%' || value === '0.0%';
+  const effectiveProgress = progress !== undefined ? progress : (isZeroOrEmpty ? 0 : 100);
+
   return (
     <div className="clean-card p-4 space-y-3">
       <div className="flex items-center justify-between">
@@ -126,7 +129,7 @@ const StatCard = ({ label, value, sub, icon: Icon, color = 'green', progress = 7
         <div className="text-2xl font-black text-slate-900 font-mono tracking-tight">{value}</div>
         {sub && <p className="text-[11px] text-slate-500 font-medium mt-0.5">{sub}</p>}
       </div>
-      <SimpleProgressBar value={progress} max={100} size="sm" color={colorKey[color] || 'emerald'} />
+      <SimpleProgressBar value={effectiveProgress} max={100} size="sm" color={colorKey[color] || 'emerald'} />
     </div>
   );
 };
@@ -158,6 +161,25 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
   const [walletBalance, setWalletBalance] = useState(0);
   const [copiedLink, setCopiedLink] = useState(false);
   const [gstDetailsExpanded, setGstDetailsExpanded] = useState(false);
+  const [isPurging, setIsPurging] = useState(false);
+  const [purgeSuccess, setPurgeSuccess] = useState(false);
+
+  const handlePurgeFakeData = async () => {
+    if (!window.confirm('Reset to Clean State: This will clear all fake/dummy test orders, leads, and call logs to start 100% fresh with real-time stats. Staff accounts, branches, and products are preserved. Continue?')) {
+      return;
+    }
+    try {
+      setIsPurging(true);
+      await apiClient.post('/dashboard/purge-fake-data');
+      queryClient.invalidateQueries();
+      setPurgeSuccess(true);
+      setTimeout(() => setPurgeSuccess(false), 5000);
+    } catch (err) {
+      alert('Failed to purge test data: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsPurging(false);
+    }
+  };
 
   // Settlement & Revenue stream filter
   const [revenueStreamFilter, setRevenueStreamFilter] = useState('ALL');
@@ -178,26 +200,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
     notes: '',
     fileName: ''
   });
-  const [savedExpenses, setSavedExpenses] = useState([
-    {
-      id: 'EXP-101',
-      vendor: 'Sri Balaji Herbal Suppliers',
-      category: 'Raw Herbs Procurement',
-      amount: 14500,
-      date: '2026-09-04',
-      notes: 'Guggulu & Triphala extracts bulk packing',
-      fileName: 'receipt_balaji_0904.pdf'
-    },
-    {
-      id: 'EXP-102',
-      vendor: 'Sri Lakshmi Packaging Containers',
-      category: 'Packaging Materials',
-      amount: 6800,
-      date: '2026-09-02',
-      notes: 'Amber glass bottles and induction seals',
-      fileName: 'invoice_containers.png'
-    }
-  ]);
+  const [savedExpenses, setSavedExpenses] = useState([]);
 
   // GST Invoice creation state
   const [gstInvoiceForm, setGstInvoiceForm] = useState({
@@ -210,19 +213,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
     qty: 10,
     rate: 1800
   });
-  const [savedGstInvoices, setSavedGstInvoices] = useState([
-    {
-      id: 'INV-2026-8831',
-      date: '2026-09-01',
-      recipient: 'Krishnagiri Ayurveda Kendra',
-      gstin: '33AABCU9603R1ZM',
-      taxable: 18000,
-      cgst: 1620,
-      sgst: 1620,
-      total: 21240,
-      status: 'PAID'
-    }
-  ]);
+  const [savedGstInvoices, setSavedGstInvoices] = useState([]);
 
   // Branch creation form
   const [branchForm, setBranchForm] = useState({
@@ -312,17 +303,16 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
     { id: 'EXPENSES',   label: '🧾 Purchase Expenses', testId: 'tab-boss-expenses' }
   ];
 
-  // Telecaller Performance Leaderboard Data
-  const telecallersLeaderboard = [
-    { rank: 1, name: 'MONIKA',      phone: '9148554369', leads: 18, converted: 12, revenue: 93760 },
-    { rank: 2, name: 'Amrutha',     phone: '8147940269', leads: 15, converted: 9,  revenue: 73350 },
-    { rank: 3, name: 'RATHNA',      phone: '9566112369', leads: 14, converted: 8,  revenue: 56829 },
-    { rank: 4, name: 'KANAGAVALLI', phone: '9487572369', leads: 12, converted: 6,  revenue: 40000 },
-    { rank: 5, name: 'PIYALO',      phone: '9360448854', leads: 9,  converted: 4,  revenue: 28560 },
-    { rank: 6, name: 'ANANDHI',     phone: '8122854369', leads: 8,  converted: 4,  revenue: 28330 },
-    { rank: 7, name: 'VASUKI',      phone: '8015802369', leads: 7,  converted: 3,  revenue: 25449 },
-    { rank: 8, name: 'PATTUSELVI',  phone: '8056519369', leads: 6,  converted: 3,  revenue: 22550 }
-  ];
+  // Telecaller Performance Leaderboard Data (Real-time live stats)
+  const liveTelecallers = dashboardData?.telecallers || [];
+  const telecallersLeaderboard = liveTelecallers.map((tc, idx) => ({
+    rank: idx + 1,
+    name: tc.name || tc.username || 'Telecaller',
+    phone: tc.phone || '—',
+    leads: tc.leads || 0,
+    converted: tc.converted || 0,
+    revenue: tc.revenue || 0
+  }));
 
   // Pipeline count summary
   const orderList = ordersResponse?.data || [];
@@ -409,6 +399,20 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
+            {user?.role === 'OWNER' && (
+              <button
+                id="btn-purge-fake-data"
+                type="button"
+                disabled={isPurging}
+                onClick={handlePurgeFakeData}
+                title="Wipe fake test orders and leads to start 100% fresh with real-time stats"
+                className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 text-xs font-bold rounded-xl border border-slate-200/90 hover:border-rose-200 transition-all cursor-pointer disabled:opacity-50 shadow-2xs"
+              >
+                <span>🧹</span>
+                <span>{isPurging ? 'Purging...' : purgeSuccess ? '✅ Stats Cleaned!' : 'Clean Real-Time Reset'}</span>
+              </button>
+            )}
+
             {onSwitchToManagerView && (
               <button
                 id="btn-switch-manager-view"
@@ -800,69 +804,78 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                 </div>
 
                 <div className="divide-y divide-slate-100">
-                  {telecallersLeaderboard.map((tc) => (
-                    <div
-                      key={tc.name}
-                      onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(tc)}
-                      title={`Click to open ${tc.name}'s Telecaller Dashboard`}
-                      className="p-4 flex items-center justify-between hover:bg-emerald-50/40 transition-colors cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <div className={`w-8 h-8 rounded-xl font-black text-xs flex items-center justify-center ${
-                          tc.rank === 1 ? 'bg-amber-100 text-amber-800 border border-amber-300' :
-                          tc.rank === 2 ? 'bg-slate-200 text-slate-700' :
-                          tc.rank === 3 ? 'bg-amber-50 text-amber-700' :
-                          'bg-slate-100 text-slate-600'
-                        }`}>
-                          #{tc.rank}
-                        </div>
-                        <div>
-                          <div className="font-bold text-slate-900 group-hover:text-emerald-800 text-sm flex items-center gap-2 transition-colors">
-                            <span>{tc.name}</span>
-                            <span className="text-[10px] text-slate-400 group-hover:text-emerald-700 font-normal">→</span>
-                            <span className="text-xs font-mono text-slate-400">📱 {tc.phone}</span>
-                          </div>
-                          <div className="text-xs text-slate-400 mt-0.5">
-                            {tc.leads} leads · {tc.converted} converted
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Visual Revenue Progress Track */}
-                      <div className="flex-1 max-w-xs mx-4 hidden sm:block">
-                        <SimpleProgressBar
-                          value={tc.revenue}
-                          max={93760}
-                          size="sm"
-                          showPercentage={false}
-                          color={tc.rank === 1 ? 'emerald' : tc.rank === 2 ? 'blue' : 'amber'}
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <div className="text-base font-black text-emerald-700 font-mono">
-                            ₹{tc.revenue.toLocaleString()}
-                          </div>
-                          <div className="text-[10px] uppercase font-bold text-slate-400">Revenue</div>
-                        </div>
-                        {onSwitchToTelecaller && (
-                          <button
-                            type="button"
-                            id={`btn-boss-open-telecaller-${tc.rank}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSwitchToTelecaller(tc);
-                            }}
-                            className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-700 text-emerald-800 hover:text-white border border-emerald-200/90 text-xs font-bold rounded-xl transition-all shadow-2xs cursor-pointer flex items-center gap-1 group/btn"
-                          >
-                            <span>Dashboard</span>
-                            <span className="text-[10px] group-hover/btn:translate-x-0.5 transition-transform">→</span>
-                          </button>
-                        )}
-                      </div>
+                  {telecallersLeaderboard.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 text-xs">
+                      No telecaller performance records yet. Live real-time stats will update automatically as leads and orders are processed.
                     </div>
-                  ))}
+                  ) : (
+                    telecallersLeaderboard.map((tc) => {
+                      const maxRevenue = Math.max(...telecallersLeaderboard.map(t => t.revenue || 0), 1000);
+                      return (
+                        <div
+                          key={tc.name}
+                          onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(tc)}
+                          title={`Click to open ${tc.name}'s Telecaller Dashboard`}
+                          className="p-4 flex items-center justify-between hover:bg-emerald-50/40 transition-colors cursor-pointer group"
+                        >
+                          <div className="flex items-center gap-3.5">
+                            <div className={`w-8 h-8 rounded-xl font-black text-xs flex items-center justify-center ${
+                              tc.rank === 1 ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                              tc.rank === 2 ? 'bg-slate-200 text-slate-700' :
+                              tc.rank === 3 ? 'bg-amber-50 text-amber-700' :
+                              'bg-slate-100 text-slate-600'
+                            }`}>
+                              #{tc.rank}
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900 group-hover:text-emerald-800 text-sm flex items-center gap-2 transition-colors">
+                                <span>{tc.name}</span>
+                                <span className="text-[10px] text-slate-400 group-hover:text-emerald-700 font-normal">→</span>
+                                <span className="text-xs font-mono text-slate-400">📱 {tc.phone}</span>
+                              </div>
+                              <div className="text-xs text-slate-400 mt-0.5">
+                                {tc.leads} leads · {tc.converted} converted
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Visual Revenue Progress Track */}
+                          <div className="flex-1 max-w-xs mx-4 hidden sm:block">
+                            <SimpleProgressBar
+                              value={tc.revenue || 0}
+                              max={maxRevenue}
+                              size="sm"
+                              showPercentage={false}
+                              color={tc.rank === 1 ? 'emerald' : tc.rank === 2 ? 'blue' : 'amber'}
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <div className="text-base font-black text-emerald-700 font-mono">
+                                ₹{(tc.revenue || 0).toLocaleString()}
+                              </div>
+                              <div className="text-[10px] uppercase font-bold text-slate-400">Revenue</div>
+                            </div>
+                            {onSwitchToTelecaller && (
+                              <button
+                                type="button"
+                                id={`btn-boss-open-telecaller-${tc.rank}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSwitchToTelecaller(tc);
+                                }}
+                                className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-700 text-emerald-800 hover:text-white border border-emerald-200/90 text-xs font-bold rounded-xl transition-all shadow-2xs cursor-pointer flex items-center gap-1 group/btn"
+                              >
+                                <span>Dashboard</span>
+                                <span className="text-[10px] group-hover/btn:translate-x-0.5 transition-transform">→</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             </div>
@@ -1535,19 +1548,27 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {savedGstInvoices.map((inv) => (
-                        <tr key={inv.id} className="hover:bg-slate-50">
-                          <td className="p-3 font-bold font-mono text-slate-900">{inv.id}</td>
-                          <td className="p-3 text-slate-500">{inv.date}</td>
-                          <td className="p-3 text-slate-700">{inv.recipient}</td>
-                          <td className="p-3 text-right font-mono">₹{inv.taxable.toLocaleString()}</td>
-                          <td className="p-3 text-right font-mono text-amber-700">₹{(inv.cgst + inv.sgst).toLocaleString()}</td>
-                          <td className="p-3 text-right font-mono font-bold text-emerald-800">₹{inv.total.toLocaleString()}</td>
-                          <td className="p-3 text-center">
-                            <Badge variant="emerald" size="sm">{inv.status}</Badge>
+                      {savedGstInvoices.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="p-8 text-center text-slate-400 font-medium">
+                            No GST tax invoices created yet. Use the "Create Invoice" tab above to generate one.
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        savedGstInvoices.map((inv) => (
+                          <tr key={inv.id} className="hover:bg-slate-50">
+                            <td className="p-3 font-bold font-mono text-slate-900">{inv.id}</td>
+                            <td className="p-3 text-slate-500">{inv.date}</td>
+                            <td className="p-3 text-slate-700">{inv.recipient}</td>
+                            <td className="p-3 text-right font-mono">₹{inv.taxable.toLocaleString()}</td>
+                            <td className="p-3 text-right font-mono text-amber-700">₹{(inv.cgst + inv.sgst).toLocaleString()}</td>
+                            <td className="p-3 text-right font-mono font-bold text-emerald-800">₹{inv.total.toLocaleString()}</td>
+                            <td className="p-3 text-center">
+                              <Badge variant="emerald" size="sm">{inv.status}</Badge>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1700,20 +1721,28 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {savedExpenses.map((exp) => (
-                        <tr key={exp.id} className="hover:bg-slate-50">
-                          <td className="p-3 text-slate-500 whitespace-nowrap">{exp.date}</td>
-                          <td className="p-3 font-bold text-slate-900">{exp.vendor}</td>
-                          <td className="p-3 text-slate-600">{exp.category}</td>
-                          <td className="p-3 text-right font-black font-mono text-slate-900">
-                            ₹{exp.amount.toLocaleString()}
+                      {savedExpenses.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-slate-400 font-medium">
+                            No purchase expenses recorded yet. Use the "Add Purchase Expense" form above to record outside vendor costs.
                           </td>
-                          <td className="p-3 text-indigo-600 font-mono text-[11px]">
-                            {exp.fileName ? `📄 ${exp.fileName}` : '—'}
-                          </td>
-                          <td className="p-3 text-slate-500">{exp.notes || '—'}</td>
                         </tr>
-                      ))}
+                      ) : (
+                        savedExpenses.map((exp) => (
+                          <tr key={exp.id} className="hover:bg-slate-50">
+                            <td className="p-3 text-slate-500 whitespace-nowrap">{exp.date}</td>
+                            <td className="p-3 font-bold text-slate-900">{exp.vendor}</td>
+                            <td className="p-3 text-slate-600">{exp.category}</td>
+                            <td className="p-3 text-right font-black font-mono text-slate-900">
+                              ₹{exp.amount.toLocaleString()}
+                            </td>
+                            <td className="p-3 text-indigo-600 font-mono text-[11px]">
+                              {exp.fileName ? `📄 ${exp.fileName}` : '—'}
+                            </td>
+                            <td className="p-3 text-slate-500">{exp.notes || '—'}</td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>

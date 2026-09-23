@@ -15,16 +15,36 @@ const server = http.createServer(app);
 // Initialize Socket.IO
 const io = initSocketIO(server);
 
+// Global process safety handlers to prevent unhandled promise rejections from crashing the process
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error({ reason, promise }, '⚠️ Unhandled Promise Rejection captured:');
+});
+
+process.on('uncaughtException', (err) => {
+  logger.error({ err }, '⚠️ Uncaught Exception captured:');
+});
+
 // Start server
 const startServer = async () => {
   try {
-    // Connect to database
+    // 1. Immediately start HTTP server so Nginx upstream has active listener
+    server.listen(env.PORT, () => {
+      logger.info(`🚀 Shanthi Ayurvedas CRM API running on port ${env.PORT} [${env.NODE_ENV}]`);
+      logger.info(`🔗 API Health URL: http://localhost:${env.PORT}/health`);
+    });
+
+    // 2. Connect to database with auto-retry
     await connectDB();
 
-    // Auto-initialize default system roles & permissions
-    await RbacService.initializeDefaultRoles();
+    // 3. Auto-initialize default system roles & permissions
+    try {
+      await RbacService.initializeDefaultRoles();
+      logger.info('✅ System roles & permissions initialized.');
+    } catch (roleErr) {
+      logger.error(`⚠️ Default roles initialization error: ${roleErr.message}`);
+    }
 
-    // Auto-bootstrap staff accounts, branches, and catalogue if database is empty or default admin is missing
+    // 4. Auto-bootstrap staff accounts, branches, and catalogue if database is empty or default admin is missing
     try {
       const userCount = await User.countDocuments();
       const adminExists = await User.exists({
@@ -42,36 +62,31 @@ const startServer = async () => {
       logger.error(`⚠️ Initial database seeding error: ${seedErr.message}`);
     }
 
-    // Auto-purge any legacy fake seeded orders, leads or transactions
+    // 5. Auto-purge any legacy fake seeded orders, leads or transactions
     try {
       const mongoose = await import('mongoose');
-      const db = mongoose.default.connection.db;
+      const db = mongoose.default?.connection?.db || mongoose.connection?.db;
       if (db) {
-        const fakeOrderCount = await db.collection('orders').countDocuments({
-          $or: [
-            { orderNumber: { $regex: /^AYUR-HSR-10/ } },
-            { orderNumber: { $regex: /^AYUR-HSR-0/ } }
-          ]
-        });
-        if (fakeOrderCount > 0) {
-          logger.info(`🧹 Found ${fakeOrderCount} fake seed orders. Auto-purging fake transactions for clean real-time stats...`);
-          await deleteFakeData();
-          logger.info('✅ Fake data purge complete! Database is clean, fresh, and real-time ready.');
+        const ordersCol = await db.listCollections({ name: 'orders' }).toArray();
+        if (ordersCol.length > 0) {
+          const fakeOrderCount = await db.collection('orders').countDocuments({
+            $or: [
+              { orderNumber: { $regex: /^AYUR-HSR-10/ } },
+              { orderNumber: { $regex: /^AYUR-HSR-0/ } }
+            ]
+          });
+          if (fakeOrderCount > 0) {
+            logger.info(`🧹 Found ${fakeOrderCount} fake seed orders. Auto-purging fake transactions for clean real-time stats...`);
+            await deleteFakeData();
+            logger.info('✅ Fake data purge complete! Database is clean, fresh, and real-time ready.');
+          }
         }
       }
     } catch (cleanErr) {
       logger.warn(`Could not check/purge fake data on boot: ${cleanErr.message}`);
     }
-
-    server.listen(env.PORT, () => {
-      logger.info(`🚀 Shanthi Ayurvedas CRM API running on port ${env.PORT} [${env.NODE_ENV}]`);
-      logger.info(`🔗 API Health URL: http://localhost:${env.PORT}/health`);
-    });
   } catch (error) {
-    logger.error(`Failed to start server: ${error.message}`);
-    if (env.NODE_ENV === 'production') {
-      process.exit(1);
-    }
+    logger.error(`Failed during server initialization: ${error.message}`);
   }
 };
 

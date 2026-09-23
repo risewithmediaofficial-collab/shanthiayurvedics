@@ -1,3 +1,4 @@
+import { Router } from 'express';
 import { getDashboardData, purgeFakeData } from '../controllers/dashboardController.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireBranchScope } from '../middleware/branchScope.js';

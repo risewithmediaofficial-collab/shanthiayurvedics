@@ -7,7 +7,11 @@ export const deleteFakeData = async () => {
     await connectDB();
     logger.info('🧹 Starting deletion of fake seeded data from database...');
 
-    const db = mongoose.connection.db;
+    const db = mongoose.connection?.db;
+    if (!db) {
+      logger.warn('⚠️ Mongoose DB instance not ready, skipping fake data deletion.');
+      return {};
+    }
 
     // Collections to delete all records from
     const collectionsToClear = [

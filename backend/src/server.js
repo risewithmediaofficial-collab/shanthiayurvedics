@@ -6,6 +6,9 @@ import { connectDB, disconnectDB } from './config/db.js';
 import { initSocketIO } from './sockets/index.js';
 import { RbacService } from './services/rbacService.js';
 
+import { seedComprehensiveData } from './scripts/seed.js';
+import { User } from './models/User.js';
+
 const server = http.createServer(app);
 
 // Initialize Socket.IO
@@ -19,6 +22,24 @@ const startServer = async () => {
 
     // Auto-initialize default system roles & permissions
     await RbacService.initializeDefaultRoles();
+
+    // Auto-bootstrap staff accounts, branches, and catalogue if database is empty or default admin is missing
+    try {
+      const userCount = await User.countDocuments();
+      const adminExists = await User.exists({
+        $or: [{ username: 'shanthi@369' }, { email: 'shanthi@shanthiayurvedas.com' }]
+      });
+
+      if (userCount === 0 || !adminExists) {
+        logger.info(`🌱 Seeding initial staff accounts, branches & modules (userCount: ${userCount}, adminExists: ${Boolean(adminExists)})...`);
+        await seedComprehensiveData();
+        logger.info('✅ Initial database seed completed successfully!');
+      } else {
+        logger.info(`ℹ️ Database already initialized (${userCount} staff accounts registered).`);
+      }
+    } catch (seedErr) {
+      logger.error(`⚠️ Initial database seeding error: ${seedErr.message}`);
+    }
 
     server.listen(env.PORT, () => {
       logger.info(`🚀 Shanthi Ayurvedas CRM API running on port ${env.PORT} [${env.NODE_ENV}]`);

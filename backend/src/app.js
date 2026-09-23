@@ -46,9 +46,13 @@ app.use(helmet({
 // CORS Configuration
 const allowedOrigins = [
   env.FRONTEND_URL,
+  'http://localhost:89',
+  'http://localhost:8087',
   'http://localhost:88',
   'http://localhost:8085',
   'http://localhost:80',
+  'http://127.0.0.1:89',
+  'http://127.0.0.1:8087',
   'http://127.0.0.1:88',
   'http://127.0.0.1:8085',
   'http://127.0.0.1:80',

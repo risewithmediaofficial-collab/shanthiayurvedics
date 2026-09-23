@@ -4,7 +4,7 @@ services:
     container_name: shanthi_mongodb
     restart: unless-stopped
     ports:
-      - "27025:27017"
+      - "27026:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: SecureAdminPassword123
@@ -28,7 +28,7 @@ services:
     container_name: shanthi_backend
     restart: unless-stopped
     ports:
-      - "5009:5000"
+      - "5010:5000"
     depends_on:
       mongodb:
         condition: service_healthy
@@ -40,7 +40,7 @@ services:
       JWT_ACCESS_SECRET: default_production_super_secret_jwt_access_key_2026_shanthi_ayurvedas
       JWT_REFRESH_SECRET: default_production_super_secret_jwt_refresh_key_2026_shanthi_ayurvedas
       COOKIE_SECRET: default_production_super_secret_cookie_key_2026_shanthi_ayurvedas
-      FRONTEND_URL: http://localhost:88
+      FRONTEND_URL: http://localhost:89
     networks:
       - crm-network
 
@@ -52,8 +52,8 @@ services:
     container_name: shanthi_frontend
     restart: unless-stopped
     ports:
-      - "88:80"
-      - "8085:80"
+      - "89:80"
+      - "8087:80"
     depends_on:
       - backend
     networks:

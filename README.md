@@ -226,8 +226,9 @@ docker compose logs -f backend
 ```
 
 Access the production application at:
-- Web App: `http://localhost:88`
-- Backend API: `http://localhost:5009/api`
+- Web App: `http://localhost:89` (or `http://localhost:8087` / `http://<VPS_IP>:89`)
+- Backend API: `http://localhost:5010/api` (or `http://<VPS_IP>:5010/api`)
+- Database: `localhost:27026`
 
 ---
 

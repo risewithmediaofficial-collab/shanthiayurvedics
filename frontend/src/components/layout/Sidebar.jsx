@@ -194,13 +194,13 @@ export function Sidebar({ isOpen, onClose }) {
           {
             label: 'OVERVIEW',
             icon: DashboardRounded,
-            path: '/dashboard?tab=overview',
+            path: '/dashboard',
             show: true
           },
           {
             label: 'ORDERS',
             icon: ShoppingBagRounded,
-            path: '/dashboard?tab=orders',
+            path: '/orders',
             badge: ordersCount,
             badgeVariant: 'primary',
             show: hasPermission('orders.view')
@@ -208,7 +208,7 @@ export function Sidebar({ isOpen, onClose }) {
           {
             label: 'LEADS',
             icon: PeopleAltRounded,
-            path: '/dashboard?tab=leads',
+            path: '/leads',
             badge: leadsCount,
             badgeVariant: 'neutral',
             show: hasPermission('leads.view')
@@ -216,7 +216,7 @@ export function Sidebar({ isOpen, onClose }) {
           {
             label: 'STOCK',
             icon: Inventory2Rounded,
-            path: '/dashboard?tab=stock',
+            path: '/inventory',
             badge: lowStockCount,
             badgeVariant: 'danger',
             show: hasPermission('inventory.view')
@@ -224,7 +224,7 @@ export function Sidebar({ isOpen, onClose }) {
           {
             label: 'TEAM',
             icon: PeopleAltRounded,
-            path: '/dashboard?tab=team',
+            path: '/admin/users',
             badge: teamUsers.length,
             badgeVariant: 'neutral',
             show: isOwner || hasPermission('users.view')
@@ -237,31 +237,31 @@ export function Sidebar({ isOpen, onClose }) {
           {
             label: 'TC SALES / SALARY',
             icon: PaidRounded,
-            path: '/dashboard?tab=salary',
+            path: '/reports/tc-sales',
             show: hasPermission('reports.view') || isOwner
           },
           {
             label: 'OFFICE SALE',
             icon: AddCircleOutlineRounded,
-            path: '/dashboard?tab=office_sale',
+            path: '/orders/counter-sale',
             show: hasPermission('orders.create') || isOwner
           },
           {
             label: 'BRANCH ORDERS',
             icon: SendRounded,
-            path: '/dashboard?tab=branch_orders',
+            path: '/inventory/transfers',
             show: hasPermission('inventory.transfer') || isOwner
           },
           {
             label: 'TILL-DATE & WITHDRAWAL',
             icon: CreditCardRounded,
-            path: '/dashboard?tab=withdrawal',
+            path: '/reports/settlement',
             show: isOwner || hasPermission('reports.view')
           },
           {
             label: 'STUCK SHIPPED / OUTSTANDING',
             icon: AccessTimeRounded,
-            path: '/dashboard?tab=stuck',
+            path: '/orders/stuck',
             badge: '!',
             badgeVariant: 'danger',
             show: hasPermission('orders.view')
@@ -412,17 +412,40 @@ export function Sidebar({ isOpen, onClose }) {
                   <div className="space-y-0.5">
                     {visibleItems.map((item) => {
                       const Icon = item.icon;
-                      const currentTab = new URLSearchParams(location.search).get('tab') || 'orders';
-                      const hasTabInItem = item.path.includes('?tab=');
-                      const itemTab = hasTabInItem ? item.path.split('?tab=')[1] : null;
+                      const currentPath = location.pathname;
+                      const currentQuery = location.search;
 
-                      const isActive = itemTab
-                        ? location.pathname === '/dashboard' && currentTab === itemTab
-                        : location.pathname === item.path ||
-                          (item.path !== '/dashboard' &&
-                            !item.path.includes('?') &&
-                            location.pathname.startsWith(item.path + '/'));
+                      const isActive = (() => {
+                        if (item.path === currentPath + currentQuery) return true;
+                        if (item.path === currentPath) return true;
 
+                        if (item.path === '/dashboard') {
+                          return (currentPath === '/' || currentPath === '/dashboard') && !currentQuery.includes('view=telecaller');
+                        }
+                        if (item.path === '/orders') {
+                          return currentPath === '/orders' || (/^\/orders\/[0-9a-fA-F]{24}$/.test(currentPath));
+                        }
+                        if (item.path === '/inventory') {
+                          return currentPath === '/inventory';
+                        }
+                        if (item.path === '/admin/users') {
+                          return currentPath === '/admin/users';
+                        }
+                        if (item.path === '/reports/tc-sales') {
+                          return currentPath === '/reports/tc-sales';
+                        }
+                        if (item.path === '/reports/settlement') {
+                          return currentPath === '/reports/settlement';
+                        }
+                        if (item.path === '/shipping/tracking' || item.path === '/shipping') {
+                          return currentPath.startsWith('/shipping');
+                        }
+                        return (
+                          item.path !== '/dashboard' &&
+                          !item.path.includes('?') &&
+                          currentPath.startsWith(item.path + '/')
+                        );
+                      })();
 
                       return (
                         <NavLink
@@ -468,10 +491,10 @@ export function Sidebar({ isOpen, onClose }) {
           {(isOwner || isManager) && (
             <div className="pt-3 mt-3 border-t border-slate-100 space-y-1">
               <NavLink
-                to="/dashboard?tab=team"
+                to="/admin/users"
                 onClick={() => onClose && onClose()}
                 className="px-2 py-1 text-[10px] font-bold text-slate-400 hover:text-emerald-700 uppercase tracking-widest flex items-center justify-between group cursor-pointer transition-colors"
-                title="Open Team Management Desk"
+                title="Open Staff & Telecaller Management Desk"
               >
                 <span className="group-hover:text-emerald-700">TEAM CALLERS</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

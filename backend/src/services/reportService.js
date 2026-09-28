@@ -134,7 +134,7 @@ export class ReportService {
   }
 
   /**
-   * AyurOne Mart TC Sales / Salary Report
+   * Shanthi Ayurvedas TC Sales / Salary Report
    * Rule: 10% Commission on Catalog MRP for all DELIVERED Orders
    */
   static async getTCSalesSalaryReport({ branchId, startDate, endDate, month, year }) {
@@ -225,7 +225,7 @@ export class ReportService {
   }
 
   /**
-   * AyurOne Mart Till-Date & Withdrawal
+   * Shanthi Ayurvedas Till-Date & Withdrawal
    * 6 Financial KPIs + Withdrawal Request & Ledger
    */
   static async getTillDateWithdrawalData({ branchId }) {

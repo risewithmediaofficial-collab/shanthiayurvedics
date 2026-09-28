@@ -107,9 +107,9 @@ export function ExcelExportModal({
       XLSX.utils.book_append_sheet(wb, ws, 'Orders');
 
       if (exportFormat === 'csv') {
-        XLSX.writeFile(wb, `AyurOne_Orders_${dateStamp}.csv`, { bookType: 'csv' });
+        XLSX.writeFile(wb, `Shanthi_Ayurvedas_Orders_${dateStamp}.csv`, { bookType: 'csv' });
       } else {
-        XLSX.writeFile(wb, `AyurOne_Orders_${dateStamp}.xlsx`);
+        XLSX.writeFile(wb, `Shanthi_Ayurvedas_Orders_${dateStamp}.xlsx`);
       }
     }
 

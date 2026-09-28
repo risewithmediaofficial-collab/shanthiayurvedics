@@ -54,8 +54,8 @@ async function runPlaywrightE2ETest() {
     assertTest('Top header displays Logout button', headerText.includes('Logout'));
 
 
-    // 3. AyurOne Mart Sub-Navigation Tabs Strip
-    console.log('\n📍 Step 3: AyurOne Mart Sub-Navigation Strip (10 Modules)');
+    // 3. Shanthi Ayurvedas Sub-Navigation Tabs Strip
+    console.log('\n📍 Step 3: Shanthi Ayurvedas Sub-Navigation Strip (10 Modules)');
     const expectedTabs = [
       'ORDERS',
       'LEADS',
@@ -166,7 +166,7 @@ async function runPlaywrightE2ETest() {
     console.log('\n📍 Step 14: Verifying Sidebar Navigation & Doctor Panel Absence');
     const sidebarElement = await page.$('aside');
     const sidebarText = sidebarElement ? await sidebarElement.textContent() : '';
-    assertTest('Sidebar has AyurOne Mart branding', sidebarText.includes('AyurOne Mart') || sidebarText.includes('MANAGER PANEL'));
+    assertTest('Sidebar has Shanthi Ayurvedas branding', sidebarText.includes('Shanthi Ayurvedas') || sidebarText.includes('MANAGER PANEL'));
     assertTest('Sidebar contains active TEAM CALLERS', sidebarText.includes('TEAM CALLERS') || sidebarText.includes('KANAGAVALLI'));
     assertTest('NO Doctor Panel link exists in sidebar', !sidebarText.includes('Doctor Panel') && !sidebarText.includes('Doctor Slots'));
 

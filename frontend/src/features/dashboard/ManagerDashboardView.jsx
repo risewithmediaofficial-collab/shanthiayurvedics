@@ -14,7 +14,7 @@ import apiClient from '../../api/apiClient.js';
 import { useBranch } from '../../context/BranchContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 
-// AyurOne Mart Module Components
+// Shanthi Ayurvedas Module Components
 import { ManagerOverviewTab } from './manager-modules/ManagerOverviewTab.jsx';
 import { ManagerOrdersTab } from './manager-modules/ManagerOrdersTab.jsx';
 import { ManagerLeadsTab } from './manager-modules/ManagerLeadsTab.jsx';

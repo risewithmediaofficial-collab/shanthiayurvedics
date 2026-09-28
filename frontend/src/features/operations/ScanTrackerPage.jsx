@@ -655,7 +655,7 @@ export function ScanTrackerPage() {
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          TOP NAVBAR: Exact match to crm2.ayuronemart.com/scan_tracker.php
+          TOP NAVBAR: Shanthi Ayurvedas Scan Tracker Desk
       ───────────────────────────────────────────────────────────── */}
       <header className="w-full bg-[#1b254b] text-white px-4 sm:px-6 py-3 flex items-center justify-between border-b border-indigo-950/40 shadow-sm shrink-0">
         <div className="flex items-center gap-3">

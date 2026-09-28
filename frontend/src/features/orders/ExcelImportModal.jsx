@@ -47,7 +47,7 @@ export function ExcelImportModal({ isOpen, onClose, onImportSuccess, telecallers
 
   if (!isOpen) return null;
 
-  // Download sample template formatted specifically for AyurOne Mart / Shanthi Ayurvedas
+  // Download sample template formatted specifically for Shanthi Ayurvedas
   const handleDownloadSample = () => {
     const sampleData = [
       {
@@ -89,7 +89,7 @@ export function ExcelImportModal({ isOpen, onClose, onImportSuccess, telecallers
     const ws = XLSX.utils.json_to_sheet(sampleData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Orders_Template');
-    XLSX.writeFile(wb, 'ayurone_orders_template.xlsx');
+    XLSX.writeFile(wb, 'shanthi_ayurvedas_orders_template.xlsx');
   };
 
   // Process uploaded Excel / CSV file

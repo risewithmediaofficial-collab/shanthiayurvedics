@@ -262,7 +262,7 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
         </div>
       </div>
 
-      {/* Month & Date Filter Bar with Quick Presets (Matching AyurOne Mart) */}
+      {/* Month & Date Filter Bar with Quick Presets (Matching Shanthi Ayurvedas) */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-bold text-slate-700 mr-1">Period Preset:</span>
@@ -391,7 +391,7 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
         </div>
       </div>
 
-      {/* Salary Breakdown Table (Detailed matching AyurOne Mart) */}
+      {/* Salary Breakdown Table (Detailed matching Shanthi Ayurvedas) */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>

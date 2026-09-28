@@ -189,7 +189,7 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
             `💰 *Total Amount:* ₹${finalPayableTotal} (${paymentMethod})\n` +
             `📍 *Delivery Address:* ${street}, ${village ? village + ', ' : ''}${district}, ${state} - ${pincode}\n\n` +
             `🚚 We are preparing your parcel for dispatch with tamper-proof seal.\n` +
-            `📱 Track & view dosage guide on *my.ayuronemart.com*.\n\n` +
+            `📱 Track & view dosage guide on *my.shanthiayurvedas.com*.\n\n` +
             `Thank you for trusting Shanthi Ayurvedas! 🙏`
         );
         window.open(`https://wa.me/91${cleanMobile}?text=${textMsg}`, '_blank');
@@ -684,12 +684,12 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
           </div>
         </div>
 
-        {/* SECTION 5: 📱 Patient App — my.ayuronemart.com */}
+        {/* SECTION 5: 📱 Patient App — my.shanthiayurvedas.com */}
         <div className="p-4 bg-purple-50/70 rounded-2xl border border-purple-200 space-y-2">
           <div className="flex items-center justify-between">
             <div className="text-xs font-bold text-purple-900 flex items-center gap-1.5">
               <Smartphone className="w-4 h-4 text-purple-700" />
-              <span>Patient App — my.ayuronemart.com</span>
+              <span>Patient App — my.shanthiayurvedas.com</span>
             </div>
             <span className="text-[10px] text-purple-700 font-semibold">
               💵 COD → Basic features now • Full access after delivery

@@ -259,7 +259,7 @@ export function Breadcrumbs() {
       {/* Quick Access Tag */}
       <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-slate-400">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-        <span className="font-semibold text-slate-600">AyurOne</span>
+        <span className="font-semibold text-slate-600">Shanthi Ayurvedas</span>
         <span className="text-slate-300">•</span>
         <span>Real-Time</span>
       </div>

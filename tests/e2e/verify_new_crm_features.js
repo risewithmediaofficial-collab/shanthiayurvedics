@@ -63,7 +63,7 @@ async function verifyAllFeatures() {
     assert(bossContent.includes('Purchase Expenses'), 'Boss Tab 9: Purchase Expenses present');
 
     // 4. Test Manager View (Akash)
-    console.log('\n--- 4. Verifying Manager View & AyurOneMart Features ---');
+    console.log('\n--- 4. Verifying Manager View & Shanthi Ayurvedas Features ---');
     await page.goto('http://localhost:5173/dashboard?view=manager', { waitUntil: 'networkidle' });
     await page.waitForTimeout(1000);
 
@@ -93,7 +93,7 @@ async function verifyAllFeatures() {
     await page.waitForTimeout(1500);
 
     const officeContent = await page.textContent('body');
-    assert(officeContent.includes('Walk-in Treatment & Counter Billing Desk'), 'Office Sale header matches AyurOneMart desk');
+    assert(officeContent.includes('Walk-in Treatment & Counter Billing Desk'), 'Office Sale header matches Shanthi Ayurvedas desk');
     assert(officeContent.includes('33BNCPS0374P1ZM'), 'Displays GSTIN 33BNCPS0374P1ZM');
     assert(officeContent.includes('Health Condition / Regimen'), 'Health Condition dropdown is present');
     assert(officeContent.includes('Plan Duration'), 'Plan Duration dropdown is present');

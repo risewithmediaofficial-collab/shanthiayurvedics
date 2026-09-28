@@ -363,7 +363,7 @@ export function Sidebar({ isOpen, onClose }) {
               🌿
             </div>
             <div>
-              <h1 className="text-sm font-bold text-slate-800 leading-tight">AyurOne Mart</h1>
+              <h1 className="text-sm font-bold text-slate-800 leading-tight">Shanthi Ayurvedas</h1>
               <p className="text-[10px] text-emerald-700 font-semibold tracking-widest uppercase">{roleTitle}</p>
             </div>
           </div>

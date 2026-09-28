@@ -90,7 +90,7 @@ export function App() {
         <Route path="/inventory" element={<InventoryLedgerPage />} />
         <Route path="/inventory/transfers" element={<StockTransfersPage />} />
 
-        {/* Phase 5 — Orders & AyurOne Mart Modules */}
+        {/* Phase 5 — Orders & Shanthi Ayurvedas Modules */}
         <Route path="/orders" element={<OrderListPage />} />
         <Route path="/orders/counter-sale" element={<CounterSalePage />} />
         <Route path="/orders/stuck" element={<StuckOrdersPage />} />
@@ -117,7 +117,7 @@ export function App() {
         <Route path="/admin/integrations" element={<IntegrationsPage />} />
         <Route path="/admin/audit" element={<AuditLogViewerPage />} />
       </Route>
-      {/* Dedicated Standalone Scan Tracker View (Full-Screen AyurOne Mart Logistics Mode) */}
+      {/* Dedicated Standalone Scan Tracker View (Full-Screen Shanthi Ayurvedas Logistics Mode) */}
       <Route
         path="/scan-tracker"
         element={

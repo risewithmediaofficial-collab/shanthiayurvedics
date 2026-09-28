@@ -18,6 +18,8 @@
     "clear": "npm run clear --workspace=backend",
     "bootstrap": "npm run bootstrap --workspace=backend",
     "test": "npm run test --workspace=backend",
+    "test:frontend": "npm run test --workspace=frontend",
+    "test:all": "npm run test --workspace=backend && npm run test --workspace=frontend",
     "test:e2e": "node tests/e2e/e2e_complete_crm_audit.js",
     "mongo": "npm run mongo --workspace=backend",
     "lint": "npm run lint --workspace=frontend"
@@ -35,6 +37,7 @@
   "author": "Shanthi Ayurvedas Development Team",
   "license": "ISC",
   "devDependencies": {
-    "playwright": "^1.63.0"
+    "playwright": "^1.63.0",
+    "vite": "^8.3.1"
   }
 }

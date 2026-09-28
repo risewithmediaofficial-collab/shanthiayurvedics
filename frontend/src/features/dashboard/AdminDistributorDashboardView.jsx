@@ -290,7 +290,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
     address: branches[0]?.address || { city: 'Krishnagiri', state: 'Tamil Nadu' }
   };
 
-  // 9 Tabs matching AyurOne Mart
+  // 9 Tabs matching Shanthi Ayurvedas
   const tabs = [
     { id: 'HOME',       label: 'Home / Overview',   testId: 'tab-boss-home' },
     { id: 'ORDERS',     label: 'Orders',            testId: 'tab-boss-orders' },
@@ -438,7 +438,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
         </div>
       </div>
 
-      {/* 2. Top Summary KPI Ribbon (4 Cards matching AyurOne Mart) */}
+      {/* 2. Top Summary KPI Ribbon (4 Cards matching Shanthi Ayurvedas) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Month Revenue"
@@ -470,7 +470,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
         />
       </div>
 
-      {/* 3. Main Navigation Sub-Nav Strip (10 Tabs matching AyurOne Mart) */}
+      {/* 3. Main Navigation Sub-Nav Strip (10 Tabs matching Shanthi Ayurvedas) */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="flex items-center gap-1 overflow-x-auto px-4 pt-3 border-b border-slate-200/80 scrollbar-none bg-slate-50/50">
           {tabs.map((tab) => (
@@ -775,7 +775,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                 </Modal>
               )}
 
-              {/* Telecaller Performance Leaderboard matching AyurOne Mart */}
+              {/* Telecaller Performance Leaderboard matching Shanthi Ayurvedas */}
               <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                 <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                   <div>
@@ -1257,7 +1257,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                 </button>
               </div>
 
-              {/* 8 Franchise Tools Grid matching AyurOne Mart */}
+              {/* 8 Franchise Tools Grid matching Shanthi Ayurvedas */}
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
                   Franchise Operational Tools
@@ -1642,7 +1642,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                 ))}
               </div>
 
-              {/* Add Purchase Form matching AyurOne Mart */}
+              {/* Add Purchase Form matching Shanthi Ayurvedas */}
               {expenseSubTab === 'ADD' && (
                 <form onSubmit={handleSavePurchase} className="p-5 bg-white border border-slate-200 rounded-xl space-y-4 text-xs">
                   <h4 className="font-bold text-sm text-slate-800">+ Record a Purchase</h4>

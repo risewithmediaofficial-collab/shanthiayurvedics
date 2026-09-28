@@ -1039,7 +1039,7 @@ export function OrderListPage({ hideHeader = false }) {
           <p className="text-xs">Adjust your search or filter parameters to find matching orders.</p>
         </div>
       ) : viewMode === 'card' ? (
-        /* CARD VIEW: EXACT AYURONE MART ORDER CARDS */
+        /* CARD VIEW: EXACT SHANTHI AYURVEDAS ORDER CARDS */
         <div className="space-y-3">
           {orders.map((order) => {
             const pat = order.patientDetails || {};

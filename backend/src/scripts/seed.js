@@ -104,7 +104,7 @@ export const seedComprehensiveData = async () => {
         username: 'shanthi@369',
         email: 'shanthi@shanthiayurvedas.com',
         brand: 'Shanthi Ayurvedas',
-        assignedBrands: ['Shanthi Ayurvedas', 'Slim 369', 'AyurOne Herbals'],
+        assignedBrands: ['Shanthi Ayurvedas', 'Slim 369', 'Shanthi Herbals'],
         passwordHash: slimPasswordHash,
         role: ROLES.OWNER,
         branchId: hosurBranch._id,

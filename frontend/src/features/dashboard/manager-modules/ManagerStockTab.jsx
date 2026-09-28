@@ -836,7 +836,7 @@ export function ManagerStockTab() {
         </Modal>
       )}
 
-      {/* Modal 3: Find Duplicate Products (AyurOne Mart Feature) */}
+      {/* Modal 3: Find Duplicate Products (Shanthi Ayurvedas Feature) */}
       {isDuplicateModalOpen && (
         <Modal
           isOpen={isDuplicateModalOpen}

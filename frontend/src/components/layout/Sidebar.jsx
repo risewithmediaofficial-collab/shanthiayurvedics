@@ -356,22 +356,26 @@ export function Sidebar({ isOpen, onClose }) {
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Brand Header */}
-        <div className="flex items-center justify-between h-16 px-4.5 border-b border-slate-100 shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-sm flex items-center justify-center shadow-xs flex-shrink-0">
+        {/* Brand Header with generous top padding away from URL tab */}
+        <div className="px-5 pt-7 sm:pt-8 pb-4.5 sm:pb-5 border-b border-slate-100 flex items-start justify-between bg-white shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+          <div className="flex items-start gap-3 min-w-0 pr-2">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-base flex items-center justify-center shadow-xs flex-shrink-0 mt-0.5">
               🌿
             </div>
             <div className="min-w-0">
-              <h1 className="text-sm font-bold text-slate-800 leading-tight truncate">Shanthi Ayurvedas</h1>
-              <p className="text-[10px] text-emerald-700 font-semibold tracking-widest uppercase mt-0.5 truncate">{roleTitle}</p>
+              <h1 className="text-base font-bold text-slate-900 tracking-tight leading-snug truncate">
+                Shanthi Ayurvedas
+              </h1>
+              <p className="text-[10.5px] text-emerald-700 font-bold tracking-wider uppercase mt-1 truncate">
+                {roleTitle}
+              </p>
             </div>
           </div>
           {/* Mobile close button */}
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg lg:hidden transition-colors cursor-pointer"
+            className="rounded-xl p-2 -mr-1 -mt-0.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none cursor-pointer lg:hidden shrink-0"
             aria-label="Close sidebar"
           >
             <CloseRounded sx={{ fontSize: 20 }} />

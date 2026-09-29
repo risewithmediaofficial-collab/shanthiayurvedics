@@ -357,21 +357,21 @@ export function Sidebar({ isOpen, onClose }) {
         }`}
       >
         {/* Brand Header */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-between h-16 px-4.5 border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-sm flex items-center justify-center shadow-xs flex-shrink-0">
               🌿
             </div>
-            <div>
-              <h1 className="text-sm font-bold text-slate-800 leading-tight">Shanthi Ayurvedas</h1>
-              <p className="text-[10px] text-emerald-700 font-semibold tracking-widest uppercase">{roleTitle}</p>
+            <div className="min-w-0">
+              <h1 className="text-sm font-bold text-slate-800 leading-tight truncate">Shanthi Ayurvedas</h1>
+              <p className="text-[10px] text-emerald-700 font-semibold tracking-widest uppercase mt-0.5 truncate">{roleTitle}</p>
             </div>
           </div>
           {/* Mobile close button */}
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg lg:hidden transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg lg:hidden transition-colors cursor-pointer"
             aria-label="Close sidebar"
           >
             <CloseRounded sx={{ fontSize: 20 }} />

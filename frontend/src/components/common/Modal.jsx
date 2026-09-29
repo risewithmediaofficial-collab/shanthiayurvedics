@@ -88,23 +88,23 @@ export function Modal({
         className={`relative w-full ${getWidthClass()} h-full min-h-screen bg-white shadow-2xl flex flex-col z-10 border-l border-slate-200 animate-slide-in-right`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Sticky Header */}
+        {/* Sticky Header with generous top padding away from URL tab */}
         {(title || showClose) && (
-          <div className="shrink-0 px-6 py-4.5 border-b border-slate-100 bg-white flex items-center justify-between">
-            <div className="flex items-center gap-3 min-w-0 pr-2">
+          <div className="shrink-0 px-6 sm:px-7 pt-7 sm:pt-8 pb-4.5 sm:pb-5 border-b border-slate-100 bg-white flex items-start justify-between shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+            <div className="flex items-start gap-3.5 min-w-0 pr-3">
               {icon && (
-                <div className="w-9 h-9 rounded-xl bg-ayur-50 border border-ayur-100 flex items-center justify-center text-lg shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-ayur-50 border border-ayur-100 flex items-center justify-center text-lg shrink-0 mt-0.5 shadow-xs">
                   {icon}
                 </div>
               )}
               <div className="min-w-0">
                 {title && (
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug truncate">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug tracking-tight truncate">
                     {title}
                   </h3>
                 )}
                 {subtitle && (
-                  <p className="text-xs text-slate-500 mt-0.5 truncate">{subtitle}</p>
+                  <p className="text-xs text-slate-500 mt-1 font-medium leading-normal truncate">{subtitle}</p>
                 )}
               </div>
             </div>
@@ -114,7 +114,7 @@ export function Modal({
                 type="button"
                 onClick={onClose}
                 aria-label="Close"
-                className="shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none"
+                className="shrink-0 p-2 -mr-1 -mt-0.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>

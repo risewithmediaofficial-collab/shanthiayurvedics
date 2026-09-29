@@ -30,12 +30,13 @@ export function NotificationBell() {
         onClose={() => setIsOpen(false)}
         title="Notifications"
         subtitle={`You have ${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}`}
+        icon={<NotificationsRounded sx={{ fontSize: 22 }} />}
         footer={
           unreadCount > 0 && (
             <button
               type="button"
               onClick={markAllAsRead}
-              className="text-xs font-semibold text-ayur-700 hover:text-ayur-800 flex items-center gap-1.5 cursor-pointer"
+              className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1.5 cursor-pointer py-1 px-2 rounded-lg hover:bg-emerald-50 transition-colors"
             >
               <DoneAllRounded sx={{ fontSize: 16 }} /> Mark all as read
             </button>
@@ -44,8 +45,14 @@ export function NotificationBell() {
       >
         <div className="space-y-3">
           {notifications.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-sm">
-              No notifications yet.
+            <div className="text-center py-16 text-slate-400 text-sm flex flex-col items-center justify-center gap-2.5">
+              <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 shadow-xs">
+                <NotificationsRounded sx={{ fontSize: 26 }} />
+              </div>
+              <p className="font-semibold text-slate-700 mt-1">No notifications yet</p>
+              <p className="text-xs text-slate-400 max-w-[220px]">
+                You're all caught up! New orders, status updates, and alerts will appear here.
+              </p>
             </div>
           ) : (
             notifications.map((n) => (

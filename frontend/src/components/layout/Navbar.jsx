@@ -12,7 +12,7 @@ export function Navbar({ onMenuToggle }) {
   const isOwner = user?.role === 'OWNER';
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-14 px-4 sm:px-6 bg-white border-b border-slate-200 shadow-sm">
+    <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 sm:px-6 bg-white border-b border-slate-200 shadow-xs">
       {/* Left: Hamburger + Brand (mobile only) */}
       <div className="flex items-center gap-3">
         <button
@@ -24,8 +24,8 @@ export function Navbar({ onMenuToggle }) {
           <MenuRounded sx={{ fontSize: 22 }} />
         </button>
 
-        <div className="flex items-center gap-2 lg:hidden">
-          <div className="w-7 h-7 rounded-lg bg-ayur-700 text-white font-black text-xs flex items-center justify-center">
+        <div className="flex items-center gap-2.5 lg:hidden">
+          <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-sm flex items-center justify-center shadow-xs flex-shrink-0">
             🌿
           </div>
           <span className="text-sm font-bold text-slate-800">Shanthi Ayurvedas</span>

@@ -8,7 +8,8 @@ import {
   getStockTransfers,
   createStockTransfer,
   dispatchStockTransfer,
-  receiveStockTransfer
+  receiveStockTransfer,
+  toggleStockStatus
 } from '../controllers/inventoryController.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
@@ -25,6 +26,7 @@ router.get('/movements', requirePermission(PERMISSIONS.INVENTORY_VIEW), getStock
 router.post('/in', requirePermission(PERMISSIONS.INVENTORY_MANAGE), stockIn);
 router.post('/out', requirePermission(PERMISSIONS.INVENTORY_MANAGE), stockOut);
 router.post('/adjust', requirePermission(PERMISSIONS.INVENTORY_ADJUST), adjustStock);
+router.patch('/:id/toggle-status', requirePermission(PERMISSIONS.INVENTORY_MANAGE), toggleStockStatus);
 
 // Transfers
 router.get('/transfers', requirePermission(PERMISSIONS.INVENTORY_TRANSFER), getStockTransfers);

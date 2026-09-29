@@ -32,40 +32,27 @@ export const requireBranchScope = (req, res, next) => {
     return next();
   }
 
-  // Non-Owner users: resolve their authorized branch(es)
-  const allowedBranchIds = [];
-  if (branchId) allowedBranchIds.push(branchId.toString());
-  if (Array.isArray(branches)) {
-    branches.forEach((b) => {
-      const bId = b._id ? b._id.toString() : b.toString();
-      if (!allowedBranchIds.includes(bId)) {
-        allowedBranchIds.push(bId);
-      }
-    });
-  }
+  // Non-Owner users (Managers, Distributors, Telecallers, Staff): strictly locked to their assigned branch
+  const primaryBranchId = branchId
+    ? branchId.toString()
+    : Array.isArray(branches) && branches[0]
+      ? branches[0]._id ? branches[0]._id.toString() : branches[0].toString()
+      : null;
 
-  if (allowedBranchIds.length === 0) {
+  if (!primaryBranchId) {
     return next(new ForbiddenError('User has no authorized branch assigned'));
   }
 
-  // If frontend passed an explicit branch, check if the user is authorized for it
-  if (isExplicitBranch) {
-    if (!allowedBranchIds.includes(requestedBranch)) {
-      return next(new ForbiddenError('Unauthorized branch access attempt'));
-    }
-    req.branchScope = {
-      branchId: requestedBranch,
-      allowedBranchIds,
-      isGlobal: false
-    };
-  } else {
-    // Default to their primary branch or all assigned branches
-    req.branchScope = {
-      branchId: allowedBranchIds[0],
-      allowedBranchIds,
-      isGlobal: false
-    };
+  // If frontend passed an explicit branch, it must match the user's single assigned branch
+  if (isExplicitBranch && requestedBranch !== primaryBranchId) {
+    return next(new ForbiddenError('Unauthorized branch access attempt. You are restricted to your assigned branch.'));
   }
+
+  req.branchScope = {
+    branchId: primaryBranchId,
+    allowedBranchIds: [primaryBranchId],
+    isGlobal: false
+  };
 
   next();
 };

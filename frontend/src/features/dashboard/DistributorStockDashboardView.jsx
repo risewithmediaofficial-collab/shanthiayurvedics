@@ -46,6 +46,7 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
   const [activeTab, setActiveTab] = useState('STOCK'); // 'STOCK' | 'TRANSFERS' | 'ALERTS'
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'OUT_OF_STOCK' | 'INACTIVE'
   const [stockSortBy, setStockSortBy] = useState('productName');
   const [stockSortOrder, setStockSortOrder] = useState('asc');
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
@@ -122,6 +123,38 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
     }
   });
 
+  // Stock Active / Inactive / Out-of-Stock toggle mutation
+  const toggleStockStatusMutation = useMutation({
+    mutationFn: async ({ id, productId, currentActive }) => {
+      try {
+        const res = await apiClient.patch(`/inventory/${id}/toggle-status`, {
+          isActive: !currentActive,
+          isOutOfStockNote: currentActive ? true : false,
+          syncProduct: true
+        });
+        return res.data;
+      } catch (err) {
+        if (productId) {
+          const res = await apiClient.patch(`/products/${productId}`, {
+            isActive: !currentActive
+          });
+          return res.data;
+        }
+        throw err;
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries(['distributor-stock-dashboard']);
+      queryClient.invalidateQueries(['products']);
+      queryClient.invalidateQueries(['inventory']);
+      const newActive = !variables.currentActive;
+      showToast(newActive ? '✓ Stock item activated & marked In-Stock' : '✓ Stock item marked as INACTIVE (Noted Out of Stock)');
+    },
+    onError: (err) => {
+      alert(err.response?.data?.message || 'Failed to update stock status');
+    }
+  });
+
   if (isLoading) {
     return <Spinner size="lg" text="Loading Branch Stock Inventory..." className="py-24" />;
   }
@@ -131,14 +164,19 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
   const transfers = dashboardData?.transfers || [];
   const branch = dashboardData?.branch || {};
 
-  // Filtered Stock Items
+  // Filtered Stock Items (Search, Category & Active/Inactive/Out-of-Stock Status)
   const filteredStock = stockItems.filter((item) => {
     const matchesSearch =
       (item.productName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (item.sku || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory =
       categoryFilter === 'ALL' || (item.category || '').toLowerCase() === categoryFilter.toLowerCase();
-    return matchesSearch && matchesCategory;
+    const matchesStatus =
+      statusFilter === 'ALL' ||
+      (statusFilter === 'ACTIVE' && item.isActive !== false && item.availableQuantity > 0) ||
+      (statusFilter === 'OUT_OF_STOCK' && (item.availableQuantity === 0 || item.isActive === false || item.isOutOfStock)) ||
+      (statusFilter === 'INACTIVE' && item.isActive === false);
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
   const sortedStock = [...filteredStock].sort((a, b) => {
@@ -359,6 +397,29 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
+                {/* Status Filter Tabs (All / Active / Out of Stock / Inactive) */}
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+                  {[
+                    { id: 'ALL', label: 'All Stock' },
+                    { id: 'ACTIVE', label: 'Active' },
+                    { id: 'OUT_OF_STOCK', label: 'Out of Stock' },
+                    { id: 'INACTIVE', label: 'Inactive' }
+                  ].map((st) => (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => setStatusFilter(st.id)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                        statusFilter === st.id
+                          ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      {st.label}
+                    </button>
+                  ))}
+                </div>
+
                 {/* Sort Dropdown */}
                 <SortDropdown
                   options={DISTRIBUTOR_SORT_OPTIONS}
@@ -405,9 +466,16 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
                     </tr>
                   ) : (
                     sortedStock.map((item) => (
-                      <tr key={item._id} className="hover:bg-slate-50/60 transition-colors">
+                      <tr key={item._id} className={`transition-colors ${item.isActive === false ? 'bg-slate-50/70 opacity-80' : 'hover:bg-slate-50/60'}`}>
                         <td className="py-3 px-4">
-                          <div className="font-bold text-slate-900">{item.productName}</div>
+                          <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                            <span>{item.productName}</span>
+                            {item.isActive === false && (
+                              <span className="px-1.5 py-0.2 bg-rose-100 text-rose-700 text-[10px] font-bold rounded">
+                                Out of Stock Note
+                              </span>
+                            )}
+                          </div>
                           <div className="text-[10px] text-slate-400 font-mono mt-0.5">{item.sku}</div>
                         </td>
                         <td className="py-3 px-3">
@@ -421,7 +489,7 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
                         </td>
                         <td className="py-3 px-3 text-center">
                           <span className={`inline-block px-2 py-0.5 rounded-lg font-mono font-bold text-xs ${
-                            item.availableQuantity === 0
+                            item.availableQuantity === 0 || item.isActive === false
                               ? 'bg-rose-100 text-rose-800'
                               : item.isLowStock
                               ? 'bg-amber-100 text-amber-800'
@@ -434,40 +502,74 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
                           {item.lowStockThreshold}
                         </td>
                         <td className="py-3 px-3 text-center">
-                          <Badge
-                            variant={
-                              item.availableQuantity === 0
-                                ? 'danger'
-                                : item.isLowStock
-                                ? 'warning'
-                                : 'emerald'
-                            }
-                            size="sm"
-                          >
-                            {item.availableQuantity === 0
-                              ? 'Out of Stock'
-                              : item.isLowStock
-                              ? 'Low Stock'
-                              : 'In Stock'}
-                          </Badge>
+                          {item.isActive === false ? (
+                            <Badge variant="neutral" size="sm" className="bg-slate-100 text-slate-700 border border-slate-300 font-bold">
+                              ○ Inactive
+                            </Badge>
+                          ) : item.availableQuantity === 0 ? (
+                            <Badge variant="danger" size="sm">
+                              ● Out of Stock
+                            </Badge>
+                          ) : item.isLowStock ? (
+                            <Badge variant="warning" size="sm">
+                              ● Low Stock
+                            </Badge>
+                          ) : (
+                            <Badge variant="emerald" size="sm">
+                              ● In Stock
+                            </Badge>
+                          )}
                         </td>
                         <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
                           ₹{Math.round(item.stockValue || 0).toLocaleString()}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setTransferForm((prev) => ({
-                                ...prev,
-                                productId: item.productId || ''
-                              }));
-                              setIsRequestModalOpen(true);
-                            }}
-                            className="px-2.5 py-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors cursor-pointer"
-                          >
-                            Refill +
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            {/* Stock Active / Inactive Toggle Button */}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                toggleStockStatusMutation.mutate({
+                                  id: item._id,
+                                  productId: item.productId,
+                                  currentActive: item.isActive !== false
+                                })
+                              }
+                              disabled={toggleStockStatusMutation.isPending}
+                              title={
+                                item.isActive !== false
+                                  ? 'Click to note as Inactive / Out of Stock'
+                                  : 'Click to activate stock'
+                              }
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer select-none shadow-2xs ${
+                                item.isActive !== false
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
+                                  : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
+                              }`}
+                            >
+                              <span
+                                className={`w-2 h-2 rounded-full shrink-0 ${
+                                  item.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'
+                                }`}
+                              />
+                              <span>{item.isActive !== false ? 'Active' : 'Inactive'}</span>
+                            </button>
+
+                            {/* Refill Button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTransferForm((prev) => ({
+                                  ...prev,
+                                  productId: item.productId || ''
+                                }));
+                                setIsRequestModalOpen(true);
+                              }}
+                              className="px-2.5 py-1.5 text-[11px] font-bold text-slate-700 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg border border-slate-200 transition-colors cursor-pointer"
+                            >
+                              Refill +
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))

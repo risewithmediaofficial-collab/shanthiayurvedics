@@ -423,7 +423,7 @@ export class DashboardService {
 
     // 1. Inventory counts & valuation
     const inventoryDocs = await Inventory.find(branchFilter)
-      .populate('productId', 'name sku price lowStockThreshold category')
+      .populate('productId', 'name sku price lowStockThreshold category isActive')
       .populate('batchId', 'batchNumber expiryDate mfgDate')
       .populate('branchId', 'name code')
       .lean();
@@ -432,6 +432,7 @@ export class DashboardService {
     let inventoryValuation = 0;
     let lowStockCount = 0;
     let outOfStockCount = 0;
+    let inactiveCount = 0;
 
     const stockItems = inventoryDocs.map((inv) => {
       const price = inv.productId?.price || 0;
@@ -440,8 +441,17 @@ export class DashboardService {
       totalStockUnits += qty;
       inventoryValuation += qty * price;
 
-      if (qty === 0) outOfStockCount++;
-      else if (qty <= threshold) lowStockCount++;
+      const isItemActive = inv.isActive !== undefined ? inv.isActive : (inv.productId?.isActive !== false);
+      const isOutOfStock = qty === 0 || !isItemActive || Boolean(inv.isOutOfStockNote);
+
+      if (!isItemActive) {
+        inactiveCount++;
+        outOfStockCount++;
+      } else if (qty === 0) {
+        outOfStockCount++;
+      } else if (qty <= threshold) {
+        lowStockCount++;
+      }
 
       return {
         _id: inv._id,
@@ -456,8 +466,10 @@ export class DashboardService {
         reservedQuantity: inv.reservedQuantity || 0,
         allocatedQuantity: inv.allocatedQuantity || 0,
         lowStockThreshold: threshold,
-        isLowStock: qty > 0 && qty <= threshold,
-        isOutOfStock: qty === 0,
+        isLowStock: isItemActive && qty > 0 && qty <= threshold,
+        isOutOfStock,
+        isActive: isItemActive,
+        isOutOfStockNote: Boolean(inv.isOutOfStockNote),
         stockValue: qty * price
       };
     });
@@ -502,6 +514,7 @@ export class DashboardService {
         inventoryValuation,
         lowStockCount,
         outOfStockCount,
+        inactiveCount,
         pendingTransfersCount: pendingIncomingTransfers,
         branchOrdersCount,
         branchRevenue: branchSalesAgg[0]?.total || 0

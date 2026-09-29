@@ -8,6 +8,7 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "seed": "node src/scripts/seed.js",
+    "clean:hosur": "node src/scripts/cleanKeepOnlyHosur.js",
     "clear:fake": "node src/scripts/deleteFakeData.js",
     "clear": "node src/scripts/clearDatabase.js --confirm",
     "bootstrap": "node src/scripts/bootstrapOwner.js",

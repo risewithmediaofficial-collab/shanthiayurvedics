@@ -678,23 +678,30 @@ export function ScanTrackerPage() {
             <AccountSwitcherPill variant="dark" />
           </div>
 
-          {/* Branch Scoping Pill */}
+          {/* Branch Scoping Pill (Only Owner can switch; Manager/Distributor/Staff locked to their branch) */}
           {branches && branches.length > 0 && (
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-slate-200 text-xs font-semibold border border-white/10">
-              <Building2 className="w-3.5 h-3.5 text-amber-400" />
-              <select
-                value={selectedBranchId || 'ALL'}
-                onChange={(e) => setSelectedBranchId(e.target.value)}
-                className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL" className="bg-slate-900 text-white">All Branches</option>
-                {branches.map((b) => (
-                  <option key={b._id} value={b._id} className="bg-slate-900 text-white">
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            user?.role === 'OWNER' ? (
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-slate-200 text-xs font-semibold border border-white/10">
+                <Building2 className="w-3.5 h-3.5 text-amber-400" />
+                <select
+                  value={selectedBranchId || 'ALL'}
+                  onChange={(e) => setSelectedBranchId(e.target.value)}
+                  className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL" className="bg-slate-900 text-white">All Branches</option>
+                  {branches.map((b) => (
+                    <option key={b._id} value={b._id} className="bg-slate-900 text-white">
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-slate-200 text-xs font-semibold border border-white/10 select-none">
+                <Building2 className="w-3.5 h-3.5 text-amber-400" />
+                <span>{branches.find(b => (b._id || b.id)?.toString() === selectedBranchId?.toString())?.name || branches[0]?.name || 'Hosur Main Hub'}</span>
+              </div>
+            )
           )}
 
           {/* Refresh Queue Button */}

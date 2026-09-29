@@ -40,22 +40,29 @@ export function BranchProvider({ children }) {
             sessionStorage.setItem('active_branch_id', 'ALL');
           }
         } else {
-          const userBranchIds = (user.branches || [user.branchId || user.branch])
-            .map((b) => (typeof b === 'object' ? (b?._id || b?.id)?.toString() : b?.toString()))
-            .filter(Boolean);
+          // Strictly scope non-owners (Manager, Distributor, Telecaller) to their single assigned branch
+          const userBranchId =
+            (typeof user.branchId === 'object' ? user.branchId?._id || user.branchId?.id : user.branchId) ||
+            (typeof user.branch === 'object' ? user.branch?._id || user.branch?.id : user.branch) ||
+            (Array.isArray(user.branches) && user.branches[0]
+              ? typeof user.branches[0] === 'object'
+                ? user.branches[0]?._id || user.branches[0]?.id
+                : user.branches[0]
+              : null);
 
-          const filtered = allBranches.filter((b) => userBranchIds.includes((b._id || b.id)?.toString()));
-          const finalBranches = filtered.length > 0 ? filtered : allBranches;
+          const userBranchIdStr = userBranchId ? userBranchId.toString() : null;
+          const matchedBranch = userBranchIdStr
+            ? allBranches.find((b) => (b._id || b.id)?.toString() === userBranchIdStr)
+            : allBranches[0];
+
+          const finalBranches = matchedBranch ? [matchedBranch] : (allBranches.length > 0 ? [allBranches[0]] : []);
           setAvailableBranches(finalBranches);
 
-          const savedBranch = sessionStorage.getItem('active_branch_id');
-          if (savedBranch && finalBranches.some((b) => (b._id || b.id)?.toString() === savedBranch)) {
-            setSelectedBranchId(savedBranch);
-          } else if (finalBranches.length > 0) {
-            const firstBranchId = (finalBranches[0]._id || finalBranches[0].id)?.toString();
-            setSelectedBranchId(firstBranchId);
-            sessionStorage.setItem('active_branch_id', firstBranchId);
-          }
+          const branchIdToSet = (finalBranches[0]?._id || finalBranches[0]?.id)?.toString() || '';
+          setSelectedBranchId(branchIdToSet);
+          try {
+            sessionStorage.setItem('active_branch_id', branchIdToSet);
+          } catch {}
         }
       } catch {
         const fallback = user.branches || [];
@@ -67,6 +74,11 @@ export function BranchProvider({ children }) {
   }, [user]);
 
   const selectBranch = (branchId) => {
+    // Only OWNER can switch branches; Managers, Distributors & Staff are locked to their own branch
+    if (user?.role !== 'OWNER') {
+      return;
+    }
+
     const targetBranch = branchId || 'ALL';
     setSelectedBranchId(targetBranch);
     try {

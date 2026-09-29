@@ -5,12 +5,18 @@ import { useBranch } from '../../context/BranchContext.jsx';
 export function BranchSelector() {
   const { selectedBranchId, selectBranch, availableBranches = [], isOwner } = useBranch();
 
-  if (!isOwner && availableBranches.length <= 1) {
+  // Non-owners (Managers, Distributors, Staff) are strictly locked to their assigned branch
+  if (!isOwner) {
     const singleBranch = availableBranches[0];
     return (
-      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-ayur-50/80 border border-ayur-200/80 rounded-lg text-xs font-semibold text-ayur-800">
-        <Building2 className="w-3.5 h-3.5 text-ayur-600" />
-        <span>{singleBranch?.name || 'Branch'}</span>
+      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50/90 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-800 shadow-2xs select-none">
+        <Building2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+        <span className="truncate max-w-[240px]">{singleBranch?.name || 'Hosur Main Hub'}</span>
+        {singleBranch?.code && (
+          <span className="text-[10px] px-1.5 py-0.5 bg-emerald-200/60 rounded text-emerald-900 font-bold ml-0.5">
+            {singleBranch.code}
+          </span>
+        )}
       </div>
     );
   }

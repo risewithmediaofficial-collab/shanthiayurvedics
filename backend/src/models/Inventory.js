@@ -49,6 +49,15 @@ const inventorySchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true
+    },
+    isOutOfStockNote: {
+      type: Boolean,
+      default: false
     }
   },
   {

@@ -235,3 +235,53 @@ export const receiveStockTransfer = asyncHandler(async (req, res) => {
   );
   return ApiResponse.success(res, transfer, 'Stock transfer received and verified');
 });
+
+export const toggleStockStatus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { isActive, isOutOfStockNote } = req.body;
+
+  const inv = await Inventory.findById(id).populate('productId');
+  if (!inv) {
+    // If id might be a productId directly
+    const product = await Product.findById(id);
+    if (product) {
+      product.isActive = isActive !== undefined ? Boolean(isActive) : !product.isActive;
+      await product.save();
+      await Inventory.updateMany({ productId: product._id }, { $set: { isActive: product.isActive, isOutOfStockNote: !product.isActive } });
+      return ApiResponse.success(res, product, `Product stock marked as ${product.isActive ? 'Active' : 'Inactive'}`);
+    }
+    throw new NotFoundError('Inventory or Product record');
+  }
+
+  if (isActive !== undefined) {
+    inv.isActive = Boolean(isActive);
+  } else {
+    inv.isActive = !inv.isActive;
+  }
+
+  if (isOutOfStockNote !== undefined) {
+    inv.isOutOfStockNote = Boolean(isOutOfStockNote);
+  } else {
+    inv.isOutOfStockNote = !inv.isActive;
+  }
+
+  await inv.save();
+
+  // Keep Product.isActive in sync
+  if (inv.productId) {
+    await Product.findByIdAndUpdate(inv.productId._id || inv.productId, {
+      isActive: inv.isActive
+    });
+  }
+
+  return ApiResponse.success(
+    res,
+    {
+      _id: inv._id,
+      productId: inv.productId?._id,
+      isActive: inv.isActive,
+      isOutOfStockNote: inv.isOutOfStockNote
+    },
+    `Stock item marked as ${inv.isActive ? 'Active' : 'Inactive (Out of Stock)'}`
+  );
+});

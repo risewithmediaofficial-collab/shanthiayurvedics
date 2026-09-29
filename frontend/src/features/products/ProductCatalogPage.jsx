@@ -251,10 +251,37 @@ export function ProductCatalogPage() {
       )
     },
     {
+      header: 'Status',
+      cell: (row) => (
+        <Badge
+          variant={row.isActive !== false ? 'emerald' : 'neutral'}
+          size="sm"
+          className={row.isActive === false ? 'bg-slate-100 text-slate-700 border border-slate-300 font-bold' : ''}
+        >
+          {row.isActive !== false ? '● Active' : '○ Inactive'}
+        </Badge>
+      )
+    },
+    {
       header: 'Actions',
       align: 'right',
       cell: (row) => (
         <div className="flex items-center justify-end gap-1.5">
+          {/* Stock Active/Inactive Toggle Button */}
+          <button
+            type="button"
+            onClick={() => editProductMutation.mutate({ id: row._id, data: { isActive: row.isActive === false } })}
+            title={row.isActive !== false ? 'Click to mark as Inactive' : 'Click to mark as Active'}
+            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer select-none shadow-2xs ${
+              row.isActive !== false
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
+                : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full shrink-0 ${row.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+            <span>{row.isActive !== false ? 'Active' : 'Inactive'}</span>
+          </button>
+
           <Button
             size="sm"
             variant="outline"

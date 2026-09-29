@@ -139,6 +139,26 @@ export function ManagerStockTab() {
     }
   });
 
+  // Toggle Product Active / Inactive / Out-of-Stock Status
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ productId, currentActive }) => {
+      const res = await apiClient.patch(`/products/${productId}`, {
+        isActive: !currentActive
+      });
+      return res.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['manager-stock-matrix'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['distributor-stock-dashboard'] });
+      setActionSuccessMsg(`Product marked as ${!variables.currentActive ? 'ACTIVE' : 'INACTIVE (Out of Stock Note)'}`);
+      setTimeout(() => setActionSuccessMsg(''), 4000);
+    },
+    onError: (err) => {
+      alert(err.response?.data?.message || 'Failed to toggle product status');
+    }
+  });
+
   const handleQuickInlineAdjust = (product, delta) => {
     const finalBranchId = selectedBranchId && selectedBranchId !== 'ALL' ? selectedBranchId : branches[0]?._id;
     adjustStockMutation.mutate({
@@ -617,7 +637,11 @@ export function ManagerStockTab() {
                         </div>
                       </td>
                       <td className="py-3 px-4 text-center">
-                        {stockQty <= 0 ? (
+                        {prod.isActive === false ? (
+                          <Badge variant="neutral" size="sm" className="bg-slate-100 text-slate-700 border border-slate-300 font-bold">
+                            ○ Inactive
+                          </Badge>
+                        ) : stockQty <= 0 ? (
                           <Badge variant="danger" size="sm">Out of Stock</Badge>
                         ) : isLow ? (
                           <Badge variant="danger" size="sm">Low Stock (&le;{threshold})</Badge>
@@ -626,18 +650,48 @@ export function ManagerStockTab() {
                         )}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedProductForAdjust(prod);
-                            setTargetBranchId(selectedBranchId && selectedBranchId !== 'ALL' ? selectedBranchId : (branches[0]?._id || ''));
-                            setIsAdjustModalOpen(true);
-                          }}
-                          className="text-xs"
-                        >
-                          Batch Adjust
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toggleActiveMutation.mutate({
+                                productId: prod._id,
+                                currentActive: prod.isActive !== false
+                              })
+                            }
+                            disabled={toggleActiveMutation.isPending}
+                            title={
+                              prod.isActive !== false
+                                ? 'Click to note as Inactive / Out of Stock'
+                                : 'Click to activate stock'
+                            }
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer select-none shadow-2xs ${
+                              prod.isActive !== false
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
+                                : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
+                            }`}
+                          >
+                            <span
+                              className={`w-2 h-2 rounded-full shrink-0 ${
+                                prod.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'
+                              }`}
+                            />
+                            <span>{prod.isActive !== false ? 'Active' : 'Inactive'}</span>
+                          </button>
+
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedProductForAdjust(prod);
+                              setTargetBranchId(selectedBranchId && selectedBranchId !== 'ALL' ? selectedBranchId : (branches[0]?._id || ''));
+                              setIsAdjustModalOpen(true);
+                            }}
+                            className="text-xs"
+                          >
+                            Batch Adjust
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );

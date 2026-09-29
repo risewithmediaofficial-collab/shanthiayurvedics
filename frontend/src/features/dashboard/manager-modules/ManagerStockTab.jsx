@@ -21,6 +21,7 @@ import { Button } from '../../../components/common/Button.jsx';
 import { Badge } from '../../../components/common/Badge.jsx';
 import { Modal } from '../../../components/common/Modal.jsx';
 import { Spinner } from '../../../components/common/Spinner.jsx';
+import { DateRangeFilter } from '../../../components/common/DateRangeFilter.jsx';
 
 export function ManagerStockTab() {
   const { selectedBranchId, branches = [] } = useBranch();
@@ -29,6 +30,7 @@ export function ManagerStockTab() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -272,6 +274,7 @@ export function ManagerStockTab() {
     setSearch('');
     setFilterStatus('ALL');
     setCategoryFilter('ALL');
+    setDateRange({ startDate: '', endDate: '' });
     setSortBy('name');
     setSortOrder('asc');
   };
@@ -288,6 +291,15 @@ export function ManagerStockTab() {
         if (filterStatus === 'OUT_OF_STOCK' && stockQty > 0) return false;
 
         if (categoryFilter !== 'ALL' && p.category !== categoryFilter) return false;
+
+        if (dateRange.startDate || dateRange.endDate) {
+          const rawDate = p.updatedAt || p.createdAt;
+          if (rawDate) {
+            const d = new Date(rawDate).toISOString().slice(0, 10);
+            if (dateRange.startDate && d < dateRange.startDate) return false;
+            if (dateRange.endDate && d > dateRange.endDate) return false;
+          }
+        }
 
         if (search) {
           const q = search.toLowerCase();
@@ -434,6 +446,14 @@ export function ManagerStockTab() {
             </select>
           )}
 
+          {/* Date Quick Filter (Today, Yesterday, This Month, Date-to-Date) */}
+          <DateRangeFilter
+            startDate={dateRange.startDate}
+            endDate={dateRange.endDate}
+            onChange={setDateRange}
+            label="Stock Date"
+          />
+
           {/* Sort Dropdown */}
           <select
             value={`${sortBy}-${sortOrder}`}
@@ -455,7 +475,7 @@ export function ManagerStockTab() {
             <option value="sku-asc">SKU: A to Z</option>
           </select>
 
-          {(search || filterStatus !== 'ALL' || categoryFilter !== 'ALL' || sortBy !== 'name' || sortOrder !== 'asc') && (
+          {(search || filterStatus !== 'ALL' || categoryFilter !== 'ALL' || sortBy !== 'name' || sortOrder !== 'asc' || dateRange.startDate || dateRange.endDate) && (
             <button
               type="button"
               onClick={handleResetFilters}
@@ -509,10 +529,10 @@ export function ManagerStockTab() {
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div className={`bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden ${sortedAndFilteredProducts.length > 10 ? 'max-h-[560px] overflow-y-auto relative scrollbar-thin' : ''}`}>
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200 select-none">
+              <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs text-slate-500 uppercase tracking-wider border-b border-slate-200 shadow-2xs select-none">
                 <tr>
                   <th
                     className="py-3 px-4 font-bold cursor-pointer hover:bg-slate-100/80 transition-colors"

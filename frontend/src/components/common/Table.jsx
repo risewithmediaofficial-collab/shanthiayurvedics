@@ -13,13 +13,16 @@ export function Table({
   pagination,
   onPageChange,
   className,
-  onRowClick
+  onRowClick,
+  maxRows = 10
 }) {
+  const shouldInlineScroll = data.length > maxRows;
+
   return (
-    <div className={twMerge('w-full overflow-hidden bg-white rounded-xl border border-slate-200 shadow-card', className)}>
-      <div className="overflow-x-auto">
-        <table className="crm-table">
-          <thead>
+    <div className={twMerge('w-full overflow-hidden bg-white rounded-xl border border-slate-200 shadow-card flex flex-col', className)}>
+      <div className={twMerge('overflow-x-auto overflow-y-auto relative scrollbar-thin', shouldInlineScroll && 'max-h-[540px]')}>
+        <table className="crm-table w-full">
+          <thead className={shouldInlineScroll ? 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-xs border-b border-slate-200' : ''}>
             <tr>
               {columns.map((col, idx) => (
                 <th key={col.key || idx} className={twMerge(col.className, col.align === 'right' && 'text-right', col.align === 'center' && 'text-center')}>

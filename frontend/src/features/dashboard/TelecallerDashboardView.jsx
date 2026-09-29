@@ -42,6 +42,7 @@ import { Modal } from '../../components/common/Modal.jsx';
 import { Input } from '../../components/common/Input.jsx';
 import { Select } from '../../components/common/Select.jsx';
 import { SimpleProgressBar } from '../../components/common/SimpleProgressBar.jsx';
+import { DateRangeFilter } from '../../components/common/DateRangeFilter.jsx';
 
 export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, onSwitchToBossView }) {
   const { user, logout } = useAuth();
@@ -121,6 +122,8 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
   });
 
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [leadsDateRange, setLeadsDateRange] = useState({ startDate: '', endDate: '' });
+  const [ordersDateRange, setOrdersDateRange] = useState({ startDate: '', endDate: '' });
 
   // 1. Fetch Leads assigned to this caller
   const { data: leadsData } = useQuery({
@@ -139,6 +142,27 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
   const leads = useMemo(() => {
     return Array.isArray(leadsData) ? leadsData : [];
   }, [leadsData]);
+
+  const filteredLeads = useMemo(() => {
+    return leads.filter((l) => {
+      if (leadsDateRange.startDate || leadsDateRange.endDate) {
+        if (l.createdAt) {
+          const itemDate = new Date(l.createdAt).toISOString().slice(0, 10);
+          if (leadsDateRange.startDate && itemDate < leadsDateRange.startDate) return false;
+          if (leadsDateRange.endDate && itemDate > leadsDateRange.endDate) return false;
+        }
+      }
+      if (customerSearchQuery) {
+        const q = customerSearchQuery.toLowerCase();
+        return (
+          l.name?.toLowerCase().includes(q) ||
+          l.phone?.includes(q) ||
+          l.concern?.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [leads, customerSearchQuery, leadsDateRange]);
 
   // 2. Fetch Orders closed by this caller
   const { data: ordersData, refetch: refetchOrders } = useQuery({
@@ -222,9 +246,17 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
         }
       }
 
+      if (ordersDateRange.startDate || ordersDateRange.endDate) {
+        if (o.createdAt) {
+          const itemDate = new Date(o.createdAt).toISOString().slice(0, 10);
+          if (ordersDateRange.startDate && itemDate < ordersDateRange.startDate) return false;
+          if (ordersDateRange.endDate && itemDate > ordersDateRange.endDate) return false;
+        }
+      }
+
       return matchSearch && matchStatus;
     });
-  }, [orders, orderSearch, orderStatusFilter]);
+  }, [orders, orderSearch, orderStatusFilter, ordersDateRange]);
 
   const handleOpenOrderDetails = (order) => {
     setSelectedOrderForDetails(order);
@@ -810,13 +842,14 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
                   <h3 className="text-sm font-bold text-slate-900">Assigned Patient Inquiries</h3>
                   <p className="text-xs text-slate-500">Filter, search, and manage your pipeline</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Input
                     placeholder="Search by patient name or phone..."
                     value={customerSearchQuery}
                     onChange={(e) => setCustomerSearchQuery(e.target.value)}
-                    className="w-64 text-xs"
+                    className="w-48 sm:w-64 text-xs"
                   />
+                  <DateRangeFilter value={leadsDateRange} onChange={setLeadsDateRange} />
                   <Button
                     size="sm"
                     onClick={() => setIsLeadModalOpen(true)}
@@ -827,9 +860,9 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <div className={`overflow-x-auto rounded-xl border border-slate-200 ${filteredLeads.length > 10 ? 'max-h-[560px] overflow-y-auto scrollbar-thin relative' : ''}`}>
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
+                  <thead className={`bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold ${filteredLeads.length > 10 ? 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-2xs' : ''}`}>
                     <tr>
                       <th className="px-3 py-2.5">Patient Name</th>
                       <th className="px-3 py-2.5">Phone</th>
@@ -840,14 +873,14 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {leads.length === 0 ? (
+                    {filteredLeads.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="py-8 text-center text-slate-400 font-medium">
                           No leads available in queue
                         </td>
                       </tr>
                     ) : (
-                      leads.map((l) => (
+                      filteredLeads.map((l) => (
                         <tr key={l._id} className="hover:bg-slate-50">
                           <td className="px-3 py-3 font-semibold text-slate-800">{l.name}</td>
                           <td className="px-3 py-3 text-slate-600 font-mono">{l.phone}</td>
@@ -994,7 +1027,7 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
 
               {/* Filter & Search Toolbar */}
               <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="relative flex-1 max-w-md">
+                <div className="relative flex-1 max-w-sm">
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
@@ -1005,7 +1038,9 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
                   />
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <DateRangeFilter value={ordersDateRange} onChange={setOrdersDateRange} />
+
                   <select
                     value={orderStatusFilter}
                     onChange={(e) => setOrderStatusFilter(e.target.value)}
@@ -1024,9 +1059,9 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
 
               {/* Orders Data Table */}
               <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
-                <div className="overflow-x-auto">
+                <div className={`overflow-x-auto ${filteredOrders.length > 10 ? 'max-h-[560px] overflow-y-auto scrollbar-thin relative' : ''}`}>
                   <table className="w-full text-xs text-left">
-                    <thead className="bg-slate-50/90 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
+                    <thead className={`bg-slate-50/95 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold ${filteredOrders.length > 10 ? 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-2xs' : ''}`}>
                       <tr>
                         <th className="px-3.5 py-3">Order ID</th>
                         <th className="px-3.5 py-3">Patient</th>

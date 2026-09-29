@@ -1,8 +1,9 @@
-import React from 'react';
-import { Calendar, X, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Calendar, X } from 'lucide-react';
 
 /**
- * Reusable Date-to-Date range filter component with quick presets
+ * Reusable Date-to-Date range filter component with quick presets & custom date pickers
+ * Supports: All Time | Today | Yesterday | This Month | Date to Date
  * @param {string} startDate - 'YYYY-MM-DD'
  * @param {string} endDate - 'YYYY-MM-DD'
  * @param {Function} onChange - ({ startDate, endDate }) => void
@@ -12,8 +13,10 @@ export function DateRangeFilter({
   startDate = '',
   endDate = '',
   onChange,
-  label = 'Date Range'
+  label = 'Date'
 }) {
+  const [showCustomPicker, setShowCustomPicker] = useState(false);
+
   const formatDateStr = (date) => {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -21,122 +24,142 @@ export function DateRangeFilter({
     return `${y}-${m}-${d}`;
   };
 
-  const handlePreset = (presetKey) => {
+  const getTodayStr = () => formatDateStr(new Date());
+
+  const getYesterdayStr = () => {
+    const yest = new Date();
+    yest.setDate(yest.getDate() - 1);
+    return formatDateStr(yest);
+  };
+
+  const getThisMonthStartStr = () => {
     const today = new Date();
-    let start = '';
-    let end = formatDateStr(today);
+    return formatDateStr(new Date(today.getFullYear(), today.getMonth(), 1));
+  };
+
+  // Determine which preset is currently active
+  const activePreset = (() => {
+    if (!startDate && !endDate) return 'ALL';
+    const todayStr = getTodayStr();
+    const yestStr = getYesterdayStr();
+    const monthStartStr = getThisMonthStartStr();
+
+    if (startDate === todayStr && endDate === todayStr) return 'TODAY';
+    if (startDate === yestStr && endDate === yestStr) return 'YESTERDAY';
+    if (startDate === monthStartStr && (endDate === todayStr || !endDate)) return 'THIS_MONTH';
+    return 'CUSTOM';
+  })();
+
+  const handleSelectPreset = (presetKey) => {
+    const todayStr = getTodayStr();
 
     switch (presetKey) {
+      case 'ALL':
+        setShowCustomPicker(false);
+        onChange({ startDate: '', endDate: '' });
+        break;
       case 'TODAY':
-        start = end;
+        setShowCustomPicker(false);
+        onChange({ startDate: todayStr, endDate: todayStr });
         break;
       case 'YESTERDAY': {
-        const yest = new Date();
-        yest.setDate(yest.getDate() - 1);
-        start = formatDateStr(yest);
-        end = start;
-        break;
-      }
-      case 'LAST_7_DAYS': {
-        const d7 = new Date();
-        d7.setDate(d7.getDate() - 6);
-        start = formatDateStr(d7);
+        const yestStr = getYesterdayStr();
+        setShowCustomPicker(false);
+        onChange({ startDate: yestStr, endDate: yestStr });
         break;
       }
       case 'THIS_MONTH': {
-        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-        start = formatDateStr(firstDay);
+        const monthStartStr = getThisMonthStartStr();
+        setShowCustomPicker(false);
+        onChange({ startDate: monthStartStr, endDate: todayStr });
         break;
       }
-      case 'LAST_30_DAYS': {
-        const d30 = new Date();
-        d30.setDate(d30.getDate() - 29);
-        start = formatDateStr(d30);
-        break;
-      }
-      case 'CLEAR':
-        start = '';
-        end = '';
+      case 'CUSTOM':
+        setShowCustomPicker(true);
+        if (!startDate) {
+          onChange({ startDate: getThisMonthStartStr(), endDate: todayStr });
+        }
         break;
       default:
         break;
     }
-
-    onChange({ startDate: start, endDate: end });
   };
 
   const hasActiveFilter = Boolean(startDate || endDate);
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-xs">
-      {/* Date Pickers Container */}
-      <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border bg-white shadow-2xs transition-colors ${
-        hasActiveFilter ? 'border-indigo-400 ring-2 ring-indigo-50' : 'border-slate-200 hover:border-slate-300'
-      }`}>
-        <Calendar className={`w-3.5 h-3.5 shrink-0 ${hasActiveFilter ? 'text-indigo-600' : 'text-slate-400'}`} />
-        
-        <div className="flex items-center gap-1">
-          <div className="flex flex-col">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">From</span>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => onChange({ startDate: e.target.value, endDate })}
-              className="text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer p-0"
-              title="Filter from date"
-            />
+      {/* Quick Filter Preset Pills */}
+      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+        {[
+          { key: 'ALL', label: 'All Time' },
+          { key: 'TODAY', label: 'Today' },
+          { key: 'YESTERDAY', label: 'Yesterday' },
+          { key: 'THIS_MONTH', label: 'This Month' },
+          { key: 'CUSTOM', label: '📅 Date to Date' }
+        ].map((preset) => {
+          const isActive = activePreset === preset.key;
+          return (
+            <button
+              key={preset.key}
+              type="button"
+              onClick={() => handleSelectPreset(preset.key)}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                isActive
+                  ? 'bg-white text-emerald-800 shadow-2xs font-bold border border-emerald-200/60'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+            >
+              {preset.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Date-to-Date Inputs (shown when CUSTOM or when active filter is set) */}
+      {(showCustomPicker || activePreset === 'CUSTOM') && (
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-emerald-300 bg-emerald-50/40 shadow-2xs animate-in fade-in">
+          <Calendar className="w-3.5 h-3.5 shrink-0 text-emerald-700" />
+          
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase">From:</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => onChange({ startDate: e.target.value, endDate })}
+                className="text-xs font-semibold text-slate-800 bg-white px-1.5 py-0.5 rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                title="Start Date"
+              />
+            </div>
+
+            <span className="text-slate-400 font-bold">→</span>
+
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase">To:</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => onChange({ startDate, endDate: e.target.value })}
+                className="text-xs font-semibold text-slate-800 bg-white px-1.5 py-0.5 rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                title="End Date"
+              />
+            </div>
           </div>
 
-          <span className="text-slate-300 font-bold px-0.5">→</span>
-
-          <div className="flex flex-col">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">To</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => onChange({ startDate, endDate: e.target.value })}
-              className="text-xs font-semibold text-slate-800 bg-transparent focus:outline-none cursor-pointer p-0"
-              title="Filter to date"
-            />
-          </div>
-        </div>
-
-        {hasActiveFilter && (
           <button
             type="button"
-            onClick={() => handlePreset('CLEAR')}
-            className="p-0.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors ml-1 cursor-pointer"
-            title="Clear date filter"
+            onClick={() => handleSelectPreset('ALL')}
+            className="p-1 rounded-full hover:bg-emerald-100 text-emerald-700 transition-colors ml-0.5 cursor-pointer"
+            title="Reset to All Time"
           >
             <X className="w-3.5 h-3.5" />
           </button>
-        )}
-      </div>
-
-      {/* Quick Presets Dropdown */}
-      <div className="relative">
-        <select
-          onChange={(e) => {
-            if (e.target.value) {
-              handlePreset(e.target.value);
-              e.target.value = '';
-            }
-          }}
-          defaultValue=""
-          className="px-2 py-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none cursor-pointer shadow-2xs"
-          title="Quick date presets"
-        >
-          <option value="" disabled>⚡ Quick Presets</option>
-          <option value="TODAY">Today</option>
-          <option value="YESTERDAY">Yesterday</option>
-          <option value="LAST_7_DAYS">Last 7 Days</option>
-          <option value="THIS_MONTH">This Month</option>
-          <option value="LAST_30_DAYS">Last 30 Days</option>
-          {hasActiveFilter && <option value="CLEAR">Clear Dates</option>}
-        </select>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default DateRangeFilter;
+

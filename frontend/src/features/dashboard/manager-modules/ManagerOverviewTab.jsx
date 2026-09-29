@@ -73,7 +73,7 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
     queryKey: ['manager-overview-recent-orders', selectedBranchId],
     queryFn: async () => {
       try {
-        const res = await apiClient.get('/orders', { params: { limit: 6, page: 1 } });
+        const res = await apiClient.get('/orders', { params: { limit: 20, page: 1 } });
         return res.data?.data?.orders || res.data?.data || [];
       } catch (e) {
         return [];
@@ -533,7 +533,7 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
             <Building className="w-4 h-4 text-slate-400" />
           </div>
 
-          <div className="space-y-2.5">
+          <div className={`space-y-2.5 ${branchesList.length > 10 ? 'max-h-[340px] overflow-y-auto scrollbar-thin pr-1' : ''}`}>
             {branchesList.map((branch) => {
               const brId = (branch._id || branch.id)?.toString();
               const isSelected = selectedBranchId?.toString() === brId;
@@ -583,7 +583,7 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
         <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 hover:shadow-md transition-all p-5 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              Recent Transactions
+              Recent Transactions ({recentOrdersData.length})
             </span>
             <button
               type="button"
@@ -604,19 +604,19 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
               No recent orders found.
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className={`overflow-x-auto ${recentOrdersData.length > 10 ? 'max-h-[380px] overflow-y-auto scrollbar-thin relative' : ''}`}>
               <table className="w-full text-left text-xs">
-                <thead>
+                <thead className={recentOrdersData.length > 10 ? 'sticky top-0 z-10 bg-white/95 backdrop-blur-xs border-b border-slate-200 shadow-2xs' : ''}>
                   <tr className="border-b border-slate-100 text-slate-400 font-medium uppercase tracking-wider text-[10px]">
-                    <th className="pb-2">Order</th>
-                    <th className="pb-2">Customer</th>
-                    <th className="pb-2">Amount</th>
-                    <th className="pb-2">Status</th>
-                    <th className="pb-2 text-right">Action</th>
+                    <th className="pb-2 pt-1">Order</th>
+                    <th className="pb-2 pt-1">Customer</th>
+                    <th className="pb-2 pt-1">Amount</th>
+                    <th className="pb-2 pt-1">Status</th>
+                    <th className="pb-2 pt-1 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {recentOrdersData.slice(0, 5).map((order) => {
+                  {recentOrdersData.map((order) => {
                     const orderNum = order.orderNumber || order._id?.slice(-6)?.toUpperCase();
                     const custName = order.customerName || order.customerId?.name || 'Customer';
                     const total = order.grandTotal || order.totalAmount || 0;

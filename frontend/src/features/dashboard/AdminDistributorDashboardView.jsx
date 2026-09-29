@@ -803,7 +803,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                   </div>
                 </div>
 
-                <div className="divide-y divide-slate-100">
+                <div className={`divide-y divide-slate-100 ${telecallersLeaderboard.length > 10 ? 'max-h-[540px] overflow-y-auto scrollbar-thin' : ''}`}>
                   {telecallersLeaderboard.length === 0 ? (
                     <div className="p-8 text-center text-slate-400 text-xs">
                       No telecaller performance records yet. Live real-time stats will update automatically as leads and orders are processed.
@@ -1179,30 +1179,32 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                     <div className="p-3.5 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-700">
                       Settlement & Payout History
                     </div>
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="bg-slate-50/50 border-b border-slate-200 text-slate-500 uppercase tracking-wider">
-                          <th className="text-left p-3 font-semibold">Settlement ID</th>
-                          <th className="text-left p-3 font-semibold">Period</th>
-                          <th className="text-right p-3 font-semibold">Gross Collected</th>
-                          <th className="text-right p-3 font-semibold">TDS / Share</th>
-                          <th className="text-right p-3 font-semibold">Net Disbursed</th>
-                          <th className="text-center p-3 font-semibold">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-slate-600">
-                        <tr>
-                          <td className="p-3 font-mono font-bold text-slate-800">STL-2026-08B</td>
-                          <td className="p-3">16 Aug – 31 Aug 2026</td>
-                          <td className="p-3 text-right font-mono">₹48,200</td>
-                          <td className="p-3 text-right font-mono text-slate-500">₹7,230</td>
-                          <td className="p-3 text-right font-mono font-bold text-emerald-800">₹40,970</td>
-                          <td className="p-3 text-center">
-                            <Badge variant="emerald" size="sm">SETTLED</Badge>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                    <div className="overflow-x-auto max-h-[500px] overflow-y-auto scrollbar-thin relative">
+                      <table className="w-full text-xs">
+                        <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs border-b border-slate-200 shadow-2xs">
+                          <tr className="text-slate-500 uppercase tracking-wider">
+                            <th className="text-left p-3 font-semibold">Settlement ID</th>
+                            <th className="text-left p-3 font-semibold">Period</th>
+                            <th className="text-right p-3 font-semibold">Gross Collected</th>
+                            <th className="text-right p-3 font-semibold">TDS / Share</th>
+                            <th className="text-right p-3 font-semibold">Net Disbursed</th>
+                            <th className="text-center p-3 font-semibold">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-slate-600">
+                          <tr>
+                            <td className="p-3 font-mono font-bold text-slate-800">STL-2026-08B</td>
+                            <td className="p-3">16 Aug – 31 Aug 2026</td>
+                            <td className="p-3 text-right font-mono">₹48,200</td>
+                            <td className="p-3 text-right font-mono text-slate-500">₹7,230</td>
+                            <td className="p-3 text-right font-mono font-bold text-emerald-800">₹40,970</td>
+                            <td className="p-3 text-center">
+                              <Badge variant="emerald" size="sm">SETTLED</Badge>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1535,18 +1537,19 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
               {/* History Sub-Tab */}
               {gstSubTab === 'HISTORY' && (
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider">
-                        <th className="text-left p-3 font-semibold">Invoice #</th>
-                        <th className="text-left p-3 font-semibold">Date</th>
-                        <th className="text-left p-3 font-semibold">Recipient</th>
-                        <th className="text-right p-3 font-semibold">Taxable</th>
-                        <th className="text-right p-3 font-semibold">Total GST</th>
-                        <th className="text-right p-3 font-semibold">Grand Total</th>
-                        <th className="text-center p-3 font-semibold">Status</th>
-                      </tr>
-                    </thead>
+                  <div className={`overflow-x-auto ${savedGstInvoices.length > 10 ? 'max-h-[520px] overflow-y-auto scrollbar-thin relative' : ''}`}>
+                    <table className="w-full text-xs">
+                      <thead className={savedGstInvoices.length > 10 ? 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-2xs border-b border-slate-200' : 'bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider'}>
+                        <tr className="text-slate-500 uppercase tracking-wider">
+                          <th className="text-left p-3 font-semibold">Invoice #</th>
+                          <th className="text-left p-3 font-semibold">Date</th>
+                          <th className="text-left p-3 font-semibold">Recipient</th>
+                          <th className="text-right p-3 font-semibold">Taxable</th>
+                          <th className="text-right p-3 font-semibold">Total GST</th>
+                          <th className="text-right p-3 font-semibold">Grand Total</th>
+                          <th className="text-center p-3 font-semibold">Status</th>
+                        </tr>
+                      </thead>
                     <tbody className="divide-y divide-slate-100">
                       {savedGstInvoices.length === 0 ? (
                         <tr>
@@ -1571,6 +1574,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                       )}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               )}
 
@@ -1709,17 +1713,18 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
               {/* History Sub-Tab */}
               {expenseSubTab === 'HISTORY' && (
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider">
-                        <th className="text-left p-3 font-semibold">Date</th>
-                        <th className="text-left p-3 font-semibold">Vendor / Item</th>
-                        <th className="text-left p-3 font-semibold">Category</th>
-                        <th className="text-right p-3 font-semibold">Amount ₹</th>
-                        <th className="text-left p-3 font-semibold">Receipt</th>
-                        <th className="text-left p-3 font-semibold">Notes</th>
-                      </tr>
-                    </thead>
+                  <div className={`overflow-x-auto ${savedExpenses.length > 10 ? 'max-h-[520px] overflow-y-auto scrollbar-thin relative' : ''}`}>
+                    <table className="w-full text-xs">
+                      <thead className={savedExpenses.length > 10 ? 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-2xs border-b border-slate-200' : 'bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider'}>
+                        <tr className="text-slate-500 uppercase tracking-wider">
+                          <th className="text-left p-3 font-semibold">Date</th>
+                          <th className="text-left p-3 font-semibold">Vendor / Item</th>
+                          <th className="text-left p-3 font-semibold">Category</th>
+                          <th className="text-right p-3 font-semibold">Amount ₹</th>
+                          <th className="text-left p-3 font-semibold">Receipt</th>
+                          <th className="text-left p-3 font-semibold">Notes</th>
+                        </tr>
+                      </thead>
                     <tbody className="divide-y divide-slate-100">
                       {savedExpenses.length === 0 ? (
                         <tr>
@@ -1745,6 +1750,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                       )}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               )}
             </div>

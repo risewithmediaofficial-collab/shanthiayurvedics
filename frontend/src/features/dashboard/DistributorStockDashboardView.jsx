@@ -30,12 +30,15 @@ import { Spinner } from '../../components/common/Spinner.jsx';
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils.js';
 import { ExportButton } from '../../components/common/ExportButton.jsx';
 import { SortDropdown } from '../../components/common/SortDropdown.jsx';
+import { DateRangeFilter } from '../../components/common/DateRangeFilter.jsx';
 
 const DISTRIBUTOR_SORT_OPTIONS = [
   { value: 'productName', label: '📦 Product Name' },
   { value: 'availableQuantity', label: '📊 Available Stock' },
   { value: 'price', label: '💰 Unit Price' },
-  { value: 'valuation', label: '💎 Stock Valuation' }
+  { value: 'valuation', label: '💎 Stock Valuation' },
+  { value: 'updatedAt', label: '🕒 Date Updated' },
+  { value: 'expiryDate', label: '⏳ Expiry Date' }
 ];
 
 export function DistributorStockDashboardView({ onSwitchToManagerView }) {
@@ -47,6 +50,8 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'OUT_OF_STOCK' | 'INACTIVE'
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
+  const [transferDateRange, setTransferDateRange] = useState({ startDate: '', endDate: '' });
   const [stockSortBy, setStockSortBy] = useState('productName');
   const [stockSortOrder, setStockSortOrder] = useState('asc');
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
@@ -164,7 +169,7 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
   const transfers = dashboardData?.transfers || [];
   const branch = dashboardData?.branch || {};
 
-  // Filtered Stock Items (Search, Category & Active/Inactive/Out-of-Stock Status)
+  // Filtered Stock Items (Search, Category, Status & Date Range)
   const filteredStock = stockItems.filter((item) => {
     const matchesSearch =
       (item.productName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -176,7 +181,18 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
       (statusFilter === 'ACTIVE' && item.isActive !== false && item.availableQuantity > 0) ||
       (statusFilter === 'OUT_OF_STOCK' && (item.availableQuantity === 0 || item.isActive === false || item.isOutOfStock)) ||
       (statusFilter === 'INACTIVE' && item.isActive === false);
-    return matchesSearch && matchesCategory && matchesStatus;
+
+    const matchesDate = (() => {
+      if (!dateRange.startDate && !dateRange.endDate) return true;
+      const rawDate = item.updatedAt || item.createdAt || item.expiryDate;
+      if (!rawDate) return true;
+      const d = new Date(rawDate).toISOString().slice(0, 10);
+      if (dateRange.startDate && d < dateRange.startDate) return false;
+      if (dateRange.endDate && d > dateRange.endDate) return false;
+      return true;
+    })();
+
+    return matchesSearch && matchesCategory && matchesStatus && matchesDate;
   });
 
   const sortedStock = [...filteredStock].sort((a, b) => {
@@ -185,11 +201,25 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
     if (stockSortBy === 'valuation') {
       valA = (a.availableQuantity || 0) * (a.price || 0);
       valB = (b.availableQuantity || 0) * (b.price || 0);
+    } else if (stockSortBy === 'updatedAt' || stockSortBy === 'expiryDate') {
+      valA = new Date(valA || 0).getTime();
+      valB = new Date(valB || 0).getTime();
     }
     if (typeof valA === 'string') {
       return stockSortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
     }
     return stockSortOrder === 'asc' ? (valA || 0) - (valB || 0) : (valB || 0) - (valA || 0);
+  });
+
+  // Filtered Transfers (with Transfer Date Range)
+  const filteredTransfers = transfers.filter((t) => {
+    if (!transferDateRange.startDate && !transferDateRange.endDate) return true;
+    const rawDate = t.createdAt || t.updatedAt;
+    if (!rawDate) return true;
+    const d = new Date(rawDate).toISOString().slice(0, 10);
+    if (transferDateRange.startDate && d < transferDateRange.startDate) return false;
+    if (transferDateRange.endDate && d > transferDateRange.endDate) return false;
+    return true;
   });
 
   const handleExportBranchStock = (format = 'excel') => {
@@ -397,6 +427,14 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
+                {/* Date Quick Filter (Today, Yesterday, This Month, Date-to-Date) */}
+                <DateRangeFilter
+                  startDate={dateRange.startDate}
+                  endDate={dateRange.endDate}
+                  onChange={setDateRange}
+                  label="Stock Date"
+                />
+
                 {/* Status Filter Tabs (All / Active / Out of Stock / Inactive) */}
                 <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
                   {[
@@ -443,10 +481,11 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
               </div>
             </div>
 
-            <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            {/* Inline scroll container for products over 10 items with sticky header */}
+            <div className={`overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl relative scrollbar-thin ${sortedStock.length > 10 ? 'max-h-[520px]' : ''}`}>
               <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+                <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 shadow-2xs">
+                  <tr>
                     <th className="py-3 px-4">Product & SKU</th>
                     <th className="py-3 px-3">Batch & Expiry</th>
                     <th className="py-3 px-3">Unit Price</th>
@@ -583,22 +622,30 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
         {/* Tab 2: STOCK TRANSFERS */}
         {activeTab === 'TRANSFERS' && (
           <div className="p-4 sm:p-5 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-wrap">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Inter-Branch & Warehouse Stock Transfers</h3>
                 <p className="text-xs text-slate-500">
                   Track incoming replenishment shipments from central fulfillment hubs to this branch.
                 </p>
               </div>
-              <Button variant="primary" icon={Plus} size="sm" onClick={() => setIsRequestModalOpen(true)}>
-                New Request
-              </Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <DateRangeFilter
+                  startDate={transferDateRange.startDate}
+                  endDate={transferDateRange.endDate}
+                  onChange={setTransferDateRange}
+                  label="Transfer Date"
+                />
+                <Button variant="primary" icon={Plus} size="sm" onClick={() => setIsRequestModalOpen(true)}>
+                  New Request
+                </Button>
+              </div>
             </div>
 
-            <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <div className={`overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl relative scrollbar-thin ${filteredTransfers.length > 10 ? 'max-h-[520px]' : ''}`}>
               <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+                <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 shadow-2xs">
+                  <tr>
                     <th className="py-3 px-4">Transfer #</th>
                     <th className="py-3 px-3">From (Source)</th>
                     <th className="py-3 px-3">To (Destination)</th>
@@ -609,14 +656,14 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {transfers.length === 0 ? (
+                  {filteredTransfers.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
-                        No transfer records for this branch yet.
+                        No transfer records matching filter for this branch.
                       </td>
                     </tr>
                   ) : (
-                    transfers.map((t) => (
+                    filteredTransfers.map((t) => (
                       <tr key={t._id} className="hover:bg-slate-50/60 transition-colors">
                         <td className="py-3 px-4 font-mono font-bold text-slate-900">
                           {t.transferNumber}
@@ -695,7 +742,7 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ${lowStockAlerts.length > 9 ? 'max-h-[520px] overflow-y-auto p-1 scrollbar-thin' : ''}`}>
               {lowStockAlerts.map((item) => (
                 <div key={item._id} className="p-4 bg-white border border-slate-200 rounded-xl shadow-xs space-y-3">
                   <div className="flex items-start justify-between">

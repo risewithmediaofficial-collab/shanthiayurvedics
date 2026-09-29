@@ -19,6 +19,7 @@ import { Button } from '../../../components/common/Button.jsx';
 import { Badge } from '../../../components/common/Badge.jsx';
 import { Modal } from '../../../components/common/Modal.jsx';
 import { Spinner } from '../../../components/common/Spinner.jsx';
+import { DateRangeFilter } from '../../../components/common/DateRangeFilter.jsx';
 
 export function ManagerStuckTab() {
   const { selectedBranchId } = useBranch();
@@ -26,6 +27,7 @@ export function ManagerStuckTab() {
 
   const [agingBucket, setAgingBucket] = useState('ALL'); // 'ALL', '15_20', '20_30', '30_40', '40_PLUS'
   const [search, setSearch] = useState('');
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [sortBy, setSortBy] = useState('daysElapsed');
   const [sortOrder, setSortOrder] = useState('desc');
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
@@ -33,6 +35,7 @@ export function ManagerStuckTab() {
   const handleResetFilters = () => {
     setAgingBucket('ALL');
     setSearch('');
+    setDateRange({ startDate: '', endDate: '' });
     setSortBy('daysElapsed');
     setSortOrder('desc');
   };
@@ -105,6 +108,14 @@ export function ManagerStuckTab() {
       if (agingBucket === '20_30' && (ord.daysElapsed < 20 || ord.daysElapsed > 30)) return false;
       if (agingBucket === '30_40' && (ord.daysElapsed < 30 || ord.daysElapsed > 40)) return false;
       if (agingBucket === '40_PLUS' && ord.daysElapsed < 40) return false;
+
+      if (dateRange.startDate || dateRange.endDate) {
+        if (ord.createdAt) {
+          const itemDate = new Date(ord.createdAt).toISOString().slice(0, 10);
+          if (dateRange.startDate && itemDate < dateRange.startDate) return false;
+          if (dateRange.endDate && itemDate > dateRange.endDate) return false;
+        }
+      }
 
       if (search) {
         const q = search.toLowerCase();
@@ -219,6 +230,8 @@ export function ManagerStuckTab() {
               />
             </div>
 
+            <DateRangeFilter value={dateRange} onChange={setDateRange} />
+
             <select
               value={`${sortBy}-${sortOrder}`}
               onChange={(e) => {
@@ -236,7 +249,7 @@ export function ManagerStuckTab() {
               <option value="date-asc">Date: Oldest First</option>
             </select>
 
-            {(agingBucket !== 'ALL' || search || sortBy !== 'daysElapsed' || sortOrder !== 'desc') && (
+            {(agingBucket !== 'ALL' || search || sortBy !== 'daysElapsed' || sortOrder !== 'desc' || dateRange.startDate || dateRange.endDate) && (
               <button
                 type="button"
                 onClick={handleResetFilters}
@@ -270,9 +283,9 @@ export function ManagerStuckTab() {
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className={`overflow-x-auto ${filteredOrders.length > 10 ? 'max-h-[560px] overflow-y-auto scrollbar-thin relative' : ''}`}>
             <table className="min-w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200 select-none">
+              <thead className={`bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200 select-none ${filteredOrders.length > 10 ? 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-2xs' : ''}`}>
                 <tr>
                   <th
                     className="py-3 px-4 font-bold cursor-pointer hover:bg-slate-100/80 transition-colors"

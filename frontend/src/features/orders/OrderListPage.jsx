@@ -1230,9 +1230,9 @@ export function OrderListPage({ hideHeader = false }) {
         </div>
       ) : (
         /* FULL VIEW: COMPLETE TABLE VIEW */
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div className={`bg-white rounded-2xl border border-slate-200 overflow-x-auto overflow-y-auto relative scrollbar-thin shadow-sm ${orders.length > 10 ? 'max-h-[580px]' : ''}`}>
           <table className="w-full text-xs text-left">
-            <thead className="bg-slate-100 text-slate-700 uppercase tracking-wider font-semibold border-b select-none">
+            <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur-xs text-slate-700 uppercase tracking-wider font-semibold border-b shadow-2xs select-none">
               <tr>
                 <th className="p-3 w-10">
                   <input

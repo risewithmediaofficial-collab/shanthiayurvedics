@@ -1271,9 +1271,9 @@ export function ScanTrackerPage() {
                   </button>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className={`overflow-x-auto ${filteredExportOrders.length > 10 ? 'max-h-[560px] overflow-y-auto scrollbar-thin relative' : ''}`}>
                   <table className="w-full text-left text-xs">
-                    <thead>
+                    <thead className={filteredExportOrders.length > 10 ? 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-2xs border-b border-slate-200' : ''}>
                       <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 font-semibold text-[11px]">
                         <th className="p-3">#</th>
                         <th className="p-3">Order Ref</th>
@@ -1607,9 +1607,9 @@ export function ScanTrackerPage() {
                   No RTO return orders found for this branch.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className={`overflow-x-auto ${filteredRtoOrders.length > 10 ? 'max-h-[560px] overflow-y-auto scrollbar-thin relative' : ''}`}>
                   <table className="w-full text-left text-xs">
-                    <thead>
+                    <thead className={filteredRtoOrders.length > 10 ? 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-2xs border-b border-slate-200' : ''}>
                       <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 font-semibold text-[11px]">
                         <th className="p-3">Order #</th>
                         <th className="p-3">Customer</th>
@@ -1704,9 +1704,9 @@ export function ScanTrackerPage() {
                   No orders marked as Delivered yet.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className={`overflow-x-auto ${deliveredOrders.length > 10 ? 'max-h-[560px] overflow-y-auto scrollbar-thin relative' : ''}`}>
                   <table className="w-full text-left text-xs">
-                    <thead>
+                    <thead className={deliveredOrders.length > 10 ? 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-2xs border-b border-slate-200' : ''}>
                       <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 font-semibold text-[11px]">
                         <th className="p-3">Order #</th>
                         <th className="p-3">Customer</th>

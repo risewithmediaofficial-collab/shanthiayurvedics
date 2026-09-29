@@ -10,7 +10,9 @@ import {
   Building,
   ArrowDownRight,
   Receipt,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ArrowUpDown,
+  RotateCcw
 } from 'lucide-react';
 import apiClient from '../../../api/apiClient.js';
 import { useBranch } from '../../../context/BranchContext.jsx';
@@ -18,6 +20,7 @@ import { Button } from '../../../components/common/Button.jsx';
 import { Badge } from '../../../components/common/Badge.jsx';
 import { Modal } from '../../../components/common/Modal.jsx';
 import { Spinner } from '../../../components/common/Spinner.jsx';
+import { DateRangeFilter } from '../../../components/common/DateRangeFilter.jsx';
 
 export function ManagerWithdrawalTab() {
   const { selectedBranchId } = useBranch();
@@ -80,6 +83,26 @@ export function ManagerWithdrawalTab() {
   const data = withdrawalData || fallbackData;
   const metrics = data.metrics || fallbackData.metrics;
   const ledger = data.ledger || fallbackData.ledger;
+
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
+  const [sortBy, setSortBy] = useState('date-desc');
+
+  const filteredLedger = ledger
+    .filter((item) => {
+      if (dateRange.startDate || dateRange.endDate) {
+        const itemDate = new Date(item.requestedAt).toISOString().slice(0, 10);
+        if (dateRange.startDate && itemDate < dateRange.startDate) return false;
+        if (dateRange.endDate && itemDate > dateRange.endDate) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'date-desc') return new Date(b.requestedAt) - new Date(a.requestedAt);
+      if (sortBy === 'date-asc') return new Date(a.requestedAt) - new Date(b.requestedAt);
+      if (sortBy === 'amount-desc') return b.amount - a.amount;
+      if (sortBy === 'amount-asc') return a.amount - b.amount;
+      return 0;
+    });
 
   // Submit Withdrawal Request Mutation
   const withdrawalMutation = useMutation({
@@ -286,14 +309,42 @@ export function ManagerWithdrawalTab() {
         {/* Right Column: Settlement History & Ledger */}
         <div className="lg:col-span-2 bento-card overflow-hidden flex flex-col justify-between !p-0">
           <div>
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <h4 className="font-bold text-sm text-slate-900">Settlement & Withdrawal Ledger</h4>
-              <span className="text-xs text-slate-500 font-mono">Branch ID: 108</span>
+            <div className="p-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-sm text-slate-900">Settlement & Withdrawal Ledger</h4>
+                <span className="text-xs text-slate-500 font-mono">Branch ID: 108</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <DateRangeFilter value={dateRange} onChange={setDateRange} />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-2.5 py-1 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs"
+                >
+                  <option value="date-desc">Newest First</option>
+                  <option value="date-asc">Oldest First</option>
+                  <option value="amount-desc">Amount: High to Low</option>
+                  <option value="amount-asc">Amount: Low to High</option>
+                </select>
+                {(dateRange.startDate || dateRange.endDate || sortBy !== 'date-desc') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDateRange({ startDate: '', endDate: '' });
+                      setSortBy('date-desc');
+                    }}
+                    className="p-1 hover:bg-rose-50 text-rose-600 rounded-lg cursor-pointer"
+                    title="Reset filters"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className={`overflow-x-auto ${filteredLedger.length > 10 ? 'max-h-[500px] overflow-y-auto scrollbar-thin relative' : ''}`}>
               <table className="min-w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                <thead className={`bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200 ${filteredLedger.length > 10 ? 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-2xs' : ''}`}>
                   <tr>
                     <th className="py-3 px-4 font-bold">Request ID</th>
                     <th className="py-3 px-4 font-bold">Date & Time</th>
@@ -304,29 +355,37 @@ export function ManagerWithdrawalTab() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {ledger.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3 px-4 font-bold font-mono text-slate-900">{item.id}</td>
-                      <td className="py-3 px-4 text-slate-600">
-                        {new Date(item.requestedAt).toLocaleDateString('en-GB')}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-black text-slate-900 text-sm">
-                        ₹{item.amount.toLocaleString()}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-800">{item.payoutMode}</div>
-                        <div className="text-[10px] text-slate-400 font-mono truncate max-w-xs">{item.bankAccount}</div>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <Badge variant={item.status === 'PROCESSED' ? 'emerald' : 'warning'} size="sm">
-                          {item.status}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4 font-mono text-slate-500 text-[11px]">
-                        {item.referenceNo || 'Pending Clearance'}
+                  {filteredLedger.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-slate-400">
+                        No settlements found matching the selected dates.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredLedger.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3 px-4 font-bold font-mono text-slate-900">{item.id}</td>
+                        <td className="py-3 px-4 text-slate-600">
+                          {new Date(item.requestedAt).toLocaleDateString('en-GB')}
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-black text-slate-900 text-sm">
+                          ₹{item.amount.toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-slate-800">{item.payoutMode}</div>
+                          <div className="text-[10px] text-slate-400 font-mono truncate max-w-xs">{item.bankAccount}</div>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <Badge variant={item.status === 'PROCESSED' ? 'emerald' : 'warning'} size="sm">
+                            {item.status}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 font-mono text-slate-500 text-[11px]">
+                          {item.referenceNo || 'Pending Clearance'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

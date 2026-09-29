@@ -19,6 +19,7 @@ import { Button } from '../../../components/common/Button.jsx';
 import { Badge } from '../../../components/common/Badge.jsx';
 import { Modal } from '../../../components/common/Modal.jsx';
 import { Spinner } from '../../../components/common/Spinner.jsx';
+import { DateRangeFilter } from '../../../components/common/DateRangeFilter.jsx';
 
 export function ManagerBranchOrdersTab() {
   const { selectedBranchId, branches = [] } = useBranch();
@@ -27,6 +28,7 @@ export function ManagerBranchOrdersTab() {
   const [activeTab, setActiveTab] = useState('RECEIVED'); // 'RECEIVED' or 'SENT'
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -35,6 +37,7 @@ export function ManagerBranchOrdersTab() {
   const handleResetFilters = () => {
     setStatusFilter('ALL');
     setSearchQuery('');
+    setDateRange({ startDate: '', endDate: '' });
     setSortBy('createdAt');
     setSortOrder('desc');
   };
@@ -178,6 +181,17 @@ export function ManagerBranchOrdersTab() {
           return false;
         }
       }
+
+      // 4. Date filter (Today, Yesterday, This Month, Date-to-Date)
+      if (dateRange.startDate || dateRange.endDate) {
+        const rawDate = t.createdAt || t.updatedAt;
+        if (rawDate) {
+          const d = new Date(rawDate).toISOString().slice(0, 10);
+          if (dateRange.startDate && d < dateRange.startDate) return false;
+          if (dateRange.endDate && d > dateRange.endDate) return false;
+        }
+      }
+
       return true;
     })
     .sort((a, b) => {
@@ -290,6 +304,14 @@ export function ManagerBranchOrdersTab() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Date Quick Filter (Today, Yesterday, This Month, Date-to-Date) */}
+          <DateRangeFilter
+            startDate={dateRange.startDate}
+            endDate={dateRange.endDate}
+            onChange={setDateRange}
+            label="Orders Date"
+          />
+
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -327,7 +349,7 @@ export function ManagerBranchOrdersTab() {
             <option value="quantity-asc">Qty: Low to High</option>
           </select>
 
-          {(searchQuery || statusFilter !== 'ALL' || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
+          {(searchQuery || statusFilter !== 'ALL' || sortBy !== 'createdAt' || sortOrder !== 'desc' || dateRange.startDate || dateRange.endDate) && (
             <button
               type="button"
               onClick={handleResetFilters}
@@ -351,10 +373,10 @@ export function ManagerBranchOrdersTab() {
           <div className="text-sm font-bold text-slate-800">No branch transfer orders in this queue</div>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div className={`bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden ${filteredTransfers.length > 10 ? 'max-h-[540px] overflow-y-auto relative scrollbar-thin' : ''}`}>
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200">
+              <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs text-slate-500 uppercase tracking-wider border-b border-slate-200 shadow-2xs">
                 <tr>
                   <th className="py-3 px-4 font-bold">Transfer Ref</th>
                   <th className="py-3 px-4 font-bold">From Branch → To Branch</th>

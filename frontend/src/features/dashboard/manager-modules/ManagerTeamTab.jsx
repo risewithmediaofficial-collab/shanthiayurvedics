@@ -27,6 +27,7 @@ import { Button } from '../../../components/common/Button.jsx';
 import { Badge } from '../../../components/common/Badge.jsx';
 import { Modal } from '../../../components/common/Modal.jsx';
 import { Spinner } from '../../../components/common/Spinner.jsx';
+import { DateRangeFilter } from '../../../components/common/DateRangeFilter.jsx';
 
 export function ManagerTeamTab({ onSwitchToTelecaller }) {
   const { selectedBranchId } = useBranch();
@@ -35,6 +36,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
   // Default to 'table' view as requested
   const [viewMode, setViewMode] = useState('table');
   const [search, setSearch] = useState('');
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
@@ -42,6 +44,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
 
   const handleResetFilters = () => {
     setSearch('');
+    setDateRange({ startDate: '', endDate: '' });
     setSortBy('name');
     setSortOrder('asc');
   };
@@ -144,6 +147,13 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
 
   const filteredTeam = teamUsers
     .filter((u) => {
+      if (dateRange.startDate || dateRange.endDate) {
+        if (u.createdAt) {
+          const itemDate = new Date(u.createdAt).toISOString().slice(0, 10);
+          if (dateRange.startDate && itemDate < dateRange.startDate) return false;
+          if (dateRange.endDate && itemDate > dateRange.endDate) return false;
+        }
+      }
       if (!search) return true;
       const q = search.toLowerCase();
       return (
@@ -338,9 +348,9 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
       </div>
 
       {/* Filter & Search Toolbar */}
-      <div className="bento-card flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bento-card flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 flex-1">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -350,6 +360,8 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
               className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-emerald-600 outline-none"
             />
           </div>
+
+          <DateRangeFilter value={dateRange} onChange={setDateRange} />
 
           <select
             value={`${sortBy}-${sortOrder}`}
@@ -368,7 +380,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
             <option value="leads-desc">Leads: High to Low</option>
           </select>
 
-          {(search || sortBy !== 'name' || sortOrder !== 'asc') && (
+          {(search || sortBy !== 'name' || sortOrder !== 'asc' || dateRange.startDate || dateRange.endDate) && (
             <button
               type="button"
               onClick={handleResetFilters}
@@ -408,9 +420,9 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
       ) : viewMode === 'table' ? (
         /* ================= 1. TABLE VIEW (DEFAULT) ================= */
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className={`overflow-x-auto ${filteredTeam.length > 10 ? 'max-h-[560px] overflow-y-auto scrollbar-thin relative' : ''}`}>
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/90 text-slate-500 uppercase tracking-wider border-b border-slate-200 select-none">
+              <thead className={`bg-slate-50/95 text-slate-500 uppercase tracking-wider border-b border-slate-200 select-none ${filteredTeam.length > 10 ? 'sticky top-0 z-10 backdrop-blur-xs shadow-2xs' : ''}`}>
                 <tr>
                   <th
                     className="py-3 px-3.5 font-bold cursor-pointer hover:bg-slate-100/80 transition-colors"

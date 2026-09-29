@@ -22,6 +22,7 @@ import { Button } from '../../../components/common/Button.jsx';
 import { Badge } from '../../../components/common/Badge.jsx';
 import { Modal } from '../../../components/common/Modal.jsx';
 import { Spinner } from '../../../components/common/Spinner.jsx';
+import { DateRangeFilter } from '../../../components/common/DateRangeFilter.jsx';
 
 export function ManagerSalaryTab({ onSwitchToTelecaller }) {
   const { selectedBranchId } = useBranch();
@@ -29,6 +30,7 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState(String(currentDate.getMonth() + 1));
   const [selectedYear, setSelectedYear] = useState(String(currentDate.getFullYear()));
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [periodPreset, setPeriodPreset] = useState('THIS_MONTH');
   const [selectedCallerForSlip, setSelectedCallerForSlip] = useState(null);
   const [isBulkPdfModalOpen, setIsBulkPdfModalOpen] = useState(false);
@@ -38,6 +40,7 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
 
   const handleResetFilters = () => {
     setSearch('');
+    setDateRange({ startDate: '', endDate: '' });
     setSortBy('commissionEarned');
     setSortOrder('desc');
   };
@@ -411,6 +414,13 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
               />
             </div>
 
+            <DateRangeFilter
+              startDate={dateRange.startDate}
+              endDate={dateRange.endDate}
+              onChange={setDateRange}
+              label="Salary Period"
+            />
+
             <select
               value={`${sortBy}-${sortOrder}`}
               onChange={(e) => {
@@ -428,7 +438,7 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
               <option value="name-desc">Name: Z to A</option>
             </select>
 
-            {(search || sortBy !== 'commissionEarned' || sortOrder !== 'desc') && (
+            {(search || sortBy !== 'commissionEarned' || sortOrder !== 'desc' || dateRange.startDate || dateRange.endDate) && (
               <button
                 type="button"
                 onClick={handleResetFilters}
@@ -441,9 +451,9 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className={`overflow-x-auto overflow-y-auto relative scrollbar-thin ${filteredCallers.length > 10 ? 'max-h-[540px]' : ''}`}>
           <table className="min-w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200 select-none">
+            <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs text-slate-500 uppercase tracking-wider border-b border-slate-200 shadow-2xs select-none">
               <tr>
                 <th
                   className="py-3 px-4 font-bold cursor-pointer hover:bg-slate-100/80 transition-colors"

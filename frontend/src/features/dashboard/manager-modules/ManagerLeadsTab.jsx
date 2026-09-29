@@ -26,6 +26,7 @@ import { Badge } from '../../../components/common/Badge.jsx';
 import { Button } from '../../../components/common/Button.jsx';
 import { Modal } from '../../../components/common/Modal.jsx';
 import { Spinner } from '../../../components/common/Spinner.jsx';
+import { DateRangeFilter } from '../../../components/common/DateRangeFilter.jsx';
 import { OrderCreateModal } from '../../orders/OrderCreateModal.jsx';
 
 export function ManagerLeadsTab() {
@@ -35,7 +36,7 @@ export function ManagerLeadsTab() {
   const [selectedTelecallerFilter, setSelectedTelecallerFilter] = useState('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [selectedLeadIds, setSelectedLeadIds] = useState([]);
@@ -47,7 +48,7 @@ export function ManagerLeadsTab() {
     setSelectedTelecallerFilter('ALL');
     setSelectedStatusFilter('ALL');
     setSearchQuery('');
-    setDateFilter('');
+    setDateRange({ startDate: '', endDate: '' });
     setSortBy('createdAt');
     setSortOrder('desc');
   };
@@ -106,13 +107,14 @@ export function ManagerLeadsTab() {
 
   // 2. Fetch Leads
   const { data: leadsResponse, isLoading: isLeadsLoading } = useQuery({
-    queryKey: ['manager-leads-desk', selectedBranchId, selectedTelecallerFilter, selectedStatusFilter, searchQuery, dateFilter, sortBy, sortOrder],
+    queryKey: ['manager-leads-desk', selectedBranchId, selectedTelecallerFilter, selectedStatusFilter, searchQuery, dateRange.startDate, dateRange.endDate, sortBy, sortOrder],
     queryFn: async () => {
       const params = { limit: 100 };
       if (selectedTelecallerFilter !== 'ALL') params.assignedTo = selectedTelecallerFilter;
       if (selectedStatusFilter !== 'ALL') params.status = selectedStatusFilter;
       if (searchQuery) params.search = searchQuery;
-      if (dateFilter) params.startDate = dateFilter;
+      if (dateRange.startDate) params.startDate = dateRange.startDate;
+      if (dateRange.endDate) params.endDate = dateRange.endDate;
       if (sortBy) params.sortBy = sortBy;
       if (sortOrder) params.sortOrder = sortOrder;
       const res = await apiClient.get('/leads', { params });
@@ -408,11 +410,11 @@ export function ManagerLeadsTab() {
             <option value="JUNK">Junk / Closed</option>
           </select>
 
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-700 font-medium"
+          <DateRangeFilter
+            startDate={dateRange.startDate}
+            endDate={dateRange.endDate}
+            onChange={setDateRange}
+            label="Lead Date"
           />
 
           {/* Sort Dropdown */}
@@ -432,7 +434,7 @@ export function ManagerLeadsTab() {
             <option value="status-asc">Status: A to Z</option>
           </select>
 
-          {(searchQuery || selectedTelecallerFilter !== 'ALL' || selectedStatusFilter !== 'ALL' || dateFilter || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
+          {(searchQuery || selectedTelecallerFilter !== 'ALL' || selectedStatusFilter !== 'ALL' || dateRange.startDate || dateRange.endDate || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
             <button
               type="button"
               onClick={handleResetFilters}
@@ -464,7 +466,7 @@ export function ManagerLeadsTab() {
           </button>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className={`space-y-2 ${leads.length > 10 ? 'max-h-[580px] overflow-y-auto pr-1 relative scrollbar-thin' : ''}`}>
           {leads.map((lead) => {
             const isSelected = selectedLeadIds.includes(lead._id);
             const cleanMobile = (lead.mobile || '').replace(/\D/g, '').slice(-10);

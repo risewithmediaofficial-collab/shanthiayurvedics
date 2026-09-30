@@ -1,16 +1,16 @@
+import { assertRecordAccess } from '../utils/recordScope.js';
 import { FollowUp } from '../models/FollowUp.js';
 import { NotFoundError } from '../utils/errors.js';
 import { FOLLOWUP_STATUS } from '../constants/leadStates.js';
 import { AuditService } from './auditService.js';
+import { businessDateBoundaries } from '../utils/businessTime.js';
 
 export class FollowupService {
   /**
    * List follow-ups categorized by today, overdue, upcoming
    */
   static async getCategorizedFollowups({ telecallerId, branchId, category, page = 1, limit = 20 }) {
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    const { startOfToday, endOfToday } = businessDateBoundaries();
 
     const baseFilter = {};
     if (telecallerId) baseFilter.telecallerId = telecallerId;
@@ -58,9 +58,7 @@ export class FollowupService {
    * Get count breakdown for today, overdue, upcoming
    */
   static async getCounts({ telecallerId, branchId }) {
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    const { startOfToday, endOfToday } = businessDateBoundaries();
 
     const scopeFilter = {};
     if (telecallerId) scopeFilter.telecallerId = telecallerId;
@@ -100,6 +98,8 @@ export class FollowupService {
       throw new NotFoundError('FollowUp');
     }
 
+    assertRecordAccess(followup, user, req, 'telecallerId', 'FollowUp');
+    if (followup.status === FOLLOWUP_STATUS.COMPLETED) return followup;
     followup.status = FOLLOWUP_STATUS.COMPLETED;
     followup.completedAt = new Date();
     followup.completionNotes = completionNotes;

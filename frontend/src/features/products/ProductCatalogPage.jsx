@@ -98,12 +98,12 @@ export function ProductCatalogPage() {
   });
 
   const products = productResponse?.data || [];
-  const meta = productResponse?.meta || { page: 1, totalPages: 1, total: 0 };
+  const meta = productResponse?.pagination || productResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
   const createProductMutation = useMutation({
     mutationFn: (data) => apiClient.post('/products', data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['products']);
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       setCreateModalOpen(false);
       setActionMsg('✓ Product created successfully');
       setTimeout(() => setActionMsg(''), 3000);
@@ -128,7 +128,7 @@ export function ProductCatalogPage() {
   const editProductMutation = useMutation({
     mutationFn: ({ id, data }) => apiClient.patch(`/products/${id}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['products']);
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       setEditModalOpen(false);
       setSelectedProduct(null);
       setActionMsg('✓ Product updated successfully');
@@ -139,7 +139,7 @@ export function ProductCatalogPage() {
   const deleteProductMutation = useMutation({
     mutationFn: (id) => apiClient.delete(`/products/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['products']);
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       setDeleteModalOpen(false);
       setProductToDelete(null);
       setActionMsg('✓ Product removed successfully');
@@ -150,7 +150,7 @@ export function ProductCatalogPage() {
   const addBatchMutation = useMutation({
     mutationFn: ({ productId, data }) => apiClient.post(`/products/${productId}/batches`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['products']);
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       setBatchModalOpen(false);
       setActionMsg('✓ Batch added successfully');
       setTimeout(() => setActionMsg(''), 3000);

@@ -243,6 +243,12 @@ export const deleteBranch = asyncHandler(async (req, res) => {
   const oldValue = branch.toObject();
   await Branch.findByIdAndDelete(req.params.id);
 
+  // Unassign users from this deleted branch
+  await User.updateMany(
+    { $or: [{ branchId: branch._id }, { branches: branch._id }] },
+    { $unset: { branchId: 1 }, $pull: { branches: branch._id } }
+  );
+
   await AuditService.log({
     userId: req.user.id,
     branchId: branch._id,

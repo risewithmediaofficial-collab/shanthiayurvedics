@@ -22,9 +22,11 @@ import { Badge } from '../../components/common/Badge.jsx';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Input } from '../../components/common/Input.jsx';
 import { Select } from '../../components/common/Select.jsx';
+import { useBranch } from '../../context/BranchContext.jsx';
 
 export function BranchManagementPage() {
   const queryClient = useQueryClient();
+  const { selectedBranchId, selectBranch } = useBranch();
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -154,8 +156,8 @@ export function BranchManagementPage() {
         }
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['branches']);
-      queryClient.invalidateQueries(['admin-users-list']);
+      queryClient.invalidateQueries({ queryKey: ['branches'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
       setCreateModalOpen(false);
       setFormData(initialFormState);
       showToast('✓ Branch created and assigned successfully');
@@ -189,8 +191,8 @@ export function BranchManagementPage() {
         }
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['branches']);
-      queryClient.invalidateQueries(['admin-users-list']);
+      queryClient.invalidateQueries({ queryKey: ['branches'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
       setEditModalOpen(false);
       setSelectedBranchForEdit(null);
       showToast('✓ Branch and assignments updated successfully');
@@ -202,9 +204,15 @@ export function BranchManagementPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id) => apiClient.delete(`/branches/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['branches']);
-      queryClient.invalidateQueries(['admin-users-list']);
+    onSuccess: (_, deletedId) => {
+      // If the deleted branch was selected in the top bar, immediately switch back to 'ALL'
+      if (selectedBranchId === deletedId || String(selectedBranchId) === String(deletedId)) {
+        selectBranch('ALL');
+      }
+      queryClient.invalidateQueries({ queryKey: ['branches'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-distributor-dashboard'] });
       setDeleteModalOpen(false);
       setSelectedBranchForDelete(null);
       showToast('✓ Branch deleted successfully');
@@ -728,30 +736,53 @@ export function BranchManagementPage() {
         </form>
       </Modal>
 
-      {/* ── DELETE BRANCH CONFIRMATION MODAL ── */}
+      {/* ── DELETE BRANCH CONFIRMATION DIALOG (CENTERED MODAL) ── */}
       {deleteModalOpen && selectedBranchForDelete && (
-        <Modal
-          isOpen={deleteModalOpen}
-          onClose={() => setDeleteModalOpen(false)}
-          title="Delete Branch Location"
-          maxWidth="max-w-md"
-        >
-          <div className="space-y-4">
-            <div className="flex items-start gap-3 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800">
-              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-              <div className="text-xs space-y-1">
-                <p className="font-bold">Are you sure you want to delete this branch?</p>
-                <p>
-                  Branch: <strong className="font-mono text-slate-900">{selectedBranchForDelete.name} ({selectedBranchForDelete.code})</strong>
-                </p>
-                <p className="text-slate-600">
-                  This action will permanently delete the branch record and unbind associated assignments.
-                </p>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+            onClick={() => !deleteMutation.isPending && setDeleteModalOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Dialog Box */}
+          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 z-10 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+                <AlertTriangle className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Confirm Branch Deletion</h3>
+                <p className="text-xs text-slate-500">Please confirm before deleting this branch</p>
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-              <Button variant="secondary" type="button" onClick={() => setDeleteModalOpen(false)}>
+            <div className="p-4 bg-rose-50/70 border border-rose-200/80 rounded-xl text-xs space-y-2.5 text-rose-900">
+              <p className="font-semibold text-rose-950">
+                Are you sure you want to permanently delete this branch?
+              </p>
+              <div className="p-3 bg-white rounded-lg border border-rose-200 font-mono font-bold text-slate-900 flex items-center justify-between shadow-2xs">
+                <span className="truncate pr-2">{selectedBranchForDelete.name}</span>
+                <span className="text-xs text-rose-700 bg-rose-100/80 px-2 py-0.5 rounded font-mono shrink-0">
+                  {selectedBranchForDelete.code}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                ⚠️ <strong>Warning:</strong> This action cannot be undone. Any managers, distributors, or team members assigned to this branch will be detached, and the branch will be removed from all dropdown selectors.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <Button
+                variant="secondary"
+                type="button"
+                disabled={deleteMutation.isPending}
+                onClick={() => {
+                  setDeleteModalOpen(false);
+                  setSelectedBranchForDelete(null);
+                }}
+              >
                 Cancel
               </Button>
               <Button
@@ -760,11 +791,11 @@ export function BranchManagementPage() {
                 isLoading={deleteMutation.isPending}
                 onClick={() => deleteMutation.mutate(selectedBranchForDelete._id)}
               >
-                Delete Branch
+                Yes, Delete Branch
               </Button>
             </div>
           </div>
-        </Modal>
+        </div>
       )}
     </div>
   );

@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import { useDialog } from './useDialog.js';
+import React, { useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import CloseRounded from '@mui/icons-material/CloseRounded';
 import { clsx } from 'clsx';
@@ -15,26 +16,14 @@ export function Drawer({
   size = 'max-w-md',
   footer
 }) {
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose?.();
-      }
-    };
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
+  const panelRef = useRef(null);
+  const titleId = useId();
+  useDialog(isOpen, onClose, panelRef);
 
   if (!isOpen) return null;
 
   const drawerContent = (
-    <div className="fixed inset-0 z-[100] overflow-hidden" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[100] overflow-hidden" role="dialog" aria-modal="true" aria-labelledby={title ? titleId : undefined} aria-label={title ? undefined : "Dialog"}>
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity animate-fade-in"
@@ -43,7 +32,7 @@ export function Drawer({
       />
 
       <div className={clsx('fixed inset-y-0 flex max-w-full', position === 'right' ? 'right-0' : 'left-0')}>
-        <div className={twMerge('w-screen h-full bg-white shadow-2xl flex flex-col border-l border-slate-200 animate-slide-in-right', size)}>
+        <div ref={panelRef} tabIndex={-1} className={twMerge('w-screen h-full bg-white shadow-2xl flex flex-col border-l border-slate-200 animate-slide-in-right', size)}>
           {/* Header with generous top padding away from URL tab and clean text alignment */}
           <div className="px-6 sm:px-7 pt-7 sm:pt-8 pb-4.5 sm:pb-5 border-b border-slate-100 flex items-start justify-between bg-white shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
             <div className="flex items-start gap-3.5 min-w-0 pr-3">
@@ -53,7 +42,7 @@ export function Drawer({
                 </div>
               )}
               <div className="min-w-0">
-                {title && <h3 className="text-lg font-bold text-slate-900 tracking-tight leading-snug">{title}</h3>}
+                {title && <h3 id={titleId} className="text-lg font-bold text-slate-900 tracking-tight leading-snug">{title}</h3>}
                 {subtitle && <p className="text-xs text-slate-500 mt-1 font-medium leading-normal">{subtitle}</p>}
               </div>
             </div>

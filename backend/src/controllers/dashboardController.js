@@ -26,15 +26,5 @@ export const getDashboardData = asyncHandler(async (req, res) => {
     return ApiResponse.success(res, data, 'Telecaller dashboard retrieved');
   }
 
-  const fallback = await DashboardService.getOwnerDashboard(branchId);
-  return ApiResponse.success(res, fallback, 'Dashboard retrieved');
-});
-
-export const purgeFakeData = asyncHandler(async (req, res) => {
-  if (req.user.role !== ROLES.OWNER && req.user.role !== ROLES.MANAGER) {
-    return ApiResponse.error(res, 'Unauthorized to purge data', 403);
-  }
-  const { deleteFakeData } = await import('../scripts/deleteFakeData.js');
-  const summary = await deleteFakeData();
-  return ApiResponse.success(res, summary, 'Fake transaction data purged successfully. Real-time stats are 100% clean and fresh.');
+  return ApiResponse.error(res, 'This role does not have a dashboard', 403);
 });

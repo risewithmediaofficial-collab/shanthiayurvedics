@@ -1,3 +1,4 @@
+import { assertRecordAccess, assertBranchAccess, assertTelecallerBranch } from '../utils/recordScope.js';
 import { Lead } from '../models/Lead.js';
 import { Customer } from '../models/Customer.js';
 import { Branch } from '../models/Branch.js';
@@ -87,6 +88,10 @@ export class LeadService {
       branchId = defaultBranch?._id;
     }
 
+    assertBranchAccess(branchId, creatorUser, req);
+    if (creatorUser.role === 'TELECALLER') data = { ...data, assignedTo: creatorUser.id };
+    if (data.assignedTo) assertTelecallerBranch(await User.findById(data.assignedTo), branchId);
+
     // Resolve source
     const rawSource = (data.source || LEAD_SOURCES.MANUAL).toString().toUpperCase();
     const source = LEAD_SOURCES[rawSource] || LEAD_SOURCES.MANUAL;
@@ -160,6 +165,7 @@ export class LeadService {
       throw new NotFoundError('Lead');
     }
 
+    assertRecordAccess(lead, telecallerUser, req, 'assignedTo', 'Lead');
     const rawCallStatus = (callData.callStatus || callData.outcome || CALL_STATUS.INTERESTED).toString().toUpperCase();
     const callStatus = CALL_STATUS[rawCallStatus] || rawCallStatus;
     const notes = callData.notes || 'Call logged';
@@ -168,6 +174,9 @@ export class LeadService {
     const priority = callData.priority || 'MEDIUM';
     const updateLeadStatus = callData.updateLeadStatus;
 
+    if (!Object.values(CALL_STATUS).includes(callStatus)) throw new AppError('Select a valid call outcome', 400);
+    if (nextFollowUpAt && Number.isNaN(new Date(nextFollowUpAt).getTime())) throw new AppError('Enter a valid follow-up date', 400);
+    if (!Number.isFinite(callDurationSeconds) || callDurationSeconds < 0) throw new AppError('Enter a valid call duration', 400);
     // 1. Create append-only call history record
     const callLog = new CallHistory({
       leadId: lead._id,
@@ -249,6 +258,8 @@ export class LeadService {
       throw new AppError('Lead can only be assigned to an active telecaller', 400);
     }
 
+    assertRecordAccess(lead, managerUser, req, 'assignedTo', 'Lead');
+    assertTelecallerBranch(telecaller, lead.branchId);
     const previousAssigned = lead.assignedTo;
     lead.assignedTo = newTelecallerId;
     await lead.save();
@@ -290,15 +301,16 @@ export class LeadService {
       throw new AppError('No leads selected for assignment', 400);
     }
     const updated = [];
+    const failed = [];
     for (const id of leadIds) {
       try {
         const lead = await this.reassignLead(id, newTelecallerId, reason, managerUser, req);
         updated.push(lead._id);
       } catch (err) {
-        // continue
+        failed.push({ id, message: err.message });
       }
     }
-    return { assignedCount: updated.length, leadIds: updated };
+    return { assignedCount: updated.length, failedCount: failed.length, failed, leadIds: updated };
   }
 }
 

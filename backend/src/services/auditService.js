@@ -1,15 +1,17 @@
 import { AuditLog } from '../models/AuditLog.js';
 import { logger } from '../config/logger.js';
+import { dateRange, pagination } from '../utils/queryHelpers.js';
 
 // Sensitive keys to sanitize out of audit logs
-const SENSITIVE_FIELDS = ['password', 'passwordHash', 'refreshToken', 'token', 'secret', 'passwordResetToken'];
+const SENSITIVE_FIELDS = new Set(['password', 'passwordhash', 'refreshtoken', 'accesstoken', 'token', 'secret', 'passwordresettoken', 'authorization', 'cookie']);
 
 const sanitizeData = (data) => {
   if (!data || typeof data !== 'object') return data;
+  if (data instanceof Date || typeof data.toHexString === 'function') return data;
   const sanitized = Array.isArray(data) ? [...data] : { ...data };
 
   for (const key of Object.keys(sanitized)) {
-    if (SENSITIVE_FIELDS.includes(key.toLowerCase())) {
+    if (SENSITIVE_FIELDS.has(key.toLowerCase())) {
       sanitized[key] = '[REDACTED]';
     } else if (typeof sanitized[key] === 'object' && sanitized[key] !== null) {
       sanitized[key] = sanitizeData(sanitized[key]);
@@ -39,7 +41,7 @@ export class AuditService {
         branchId,
         action,
         module,
-        resourceType,
+        resourceType: resourceType || module || 'System',
         resourceId: resourceId ? resourceId.toString() : null,
         oldValue: sanitizeData(oldValue),
         newValue: sanitizeData(newValue),
@@ -66,15 +68,14 @@ export class AuditService {
     startDate,
     endDate
   }) {
+    ({ page, limit } = pagination({ page, limit }));
     const filter = {};
     if (module) filter.module = module;
     if (action) filter.action = action;
     if (userId) filter.userId = userId;
     if (branchId && branchId !== 'ALL') filter.branchId = branchId;
     if (startDate || endDate) {
-      filter.timestamp = {};
-      if (startDate) filter.timestamp.$gte = new Date(startDate);
-      if (endDate) filter.timestamp.$lte = new Date(endDate);
+      filter.timestamp = dateRange(startDate, endDate);
     }
 
     const skip = (page - 1) * limit;

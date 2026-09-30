@@ -4,11 +4,12 @@ import { CourierFactory } from '../integrations/couriers/CourierFactory.js';
 import { processImportFile } from '../services/courierImportService.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { recordScope } from '../utils/recordScope.js';
+import { NotFoundError } from '../utils/errors.js';
+import { pagination, escapeSearch, dateRange } from '../utils/queryHelpers.js';
 
 export const getShipments = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page, 10) || 1;
-  const isExport = req.query.export === 'true';
-  const limit = isExport ? 5000 : (parseInt(req.query.limit, 10) || 20);
+  const { page, limit, isExport } = pagination(req.query);
   const trackingStatus = req.query.status;
   const startDate = req.query.startDate;
   const endDate = req.query.endDate;
@@ -21,19 +22,13 @@ export const getShipments = asyncHandler(async (req, res) => {
   if (trackingStatus) query.trackingStatus = trackingStatus;
 
   if (startDate || endDate) {
-    query.createdAt = {};
-    if (startDate) {
-      query.createdAt.$gte = new Date(startDate.includes('T') ? startDate : `${startDate}T00:00:00.000Z`);
-    }
-    if (endDate) {
-      query.createdAt.$lte = new Date(endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`);
-    }
+    query.createdAt = dateRange(startDate, endDate);
   }
 
   if (search) {
     query.$or = [
-      { awbNumber: { $regex: search, $options: 'i' } },
-      { courierName: { $regex: search, $options: 'i' } }
+      { awbNumber: { $regex: escapeSearch(search), $options: 'i' } },
+      { courierName: { $regex: escapeSearch(search), $options: 'i' } }
     ];
   }
 
@@ -76,7 +71,9 @@ export const getTracking = asyncHandler(async (req, res) => {
 
 export const addTrackingEvent = asyncHandler(async (req, res) => {
   const { awbNumber } = req.params;
-  const event = await ShippingService.logTrackingEvent(awbNumber, req.body);
+  const authorizedShipment = await Shipment.exists({ awbNumber, ...recordScope(req.user, req) });
+  if (!authorizedShipment) throw new NotFoundError('Shipment');
+  const event = await ShippingService.logTrackingEvent(awbNumber, req.body, req.user, req);
   return ApiResponse.created(res, event, 'Tracking event added');
 });
 
@@ -98,7 +95,8 @@ export const importCourierStatus = asyncHandler(async (req, res) => {
     req.file.mimetype,
     req.file.originalname,
     courier,
-    req.user
+    req.user,
+    req.branchScope
   );
 
   return ApiResponse.success(res, summary, `Import complete. ${summary.updated} shipment(s) updated.`);

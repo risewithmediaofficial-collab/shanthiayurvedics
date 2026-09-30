@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import { useDialog } from './useDialog.js';
+import React, { useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -28,22 +29,9 @@ export function Modal({
   icon = null
 }) {
   /* ── lock background scroll & ESC key ── */
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    const onKey = (e) => {
-      if (e.key === 'Escape') onClose?.();
-    };
-    window.addEventListener('keydown', onKey);
-
-    return () => {
-      document.body.style.overflow = prev || '';
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [isOpen, onClose]);
+  const panelRef = useRef(null);
+  const titleId = useId();
+  useDialog(isOpen, onClose, panelRef);
 
   if (!isOpen) return null;
 
@@ -74,7 +62,7 @@ export function Modal({
     <div
       className="fixed inset-0 z-[100] flex justify-end overflow-hidden"
       role="dialog"
-      aria-modal="true"
+      aria-modal="true" aria-labelledby={title ? titleId : undefined} aria-label={title ? undefined : "Dialog"}
     >
       {/* Backdrop */}
       <div
@@ -85,6 +73,8 @@ export function Modal({
 
       {/* Full-Height Right Drawer Panel */}
       <div
+        ref={panelRef}
+        tabIndex={-1}
         className={`relative w-full ${getWidthClass()} h-full min-h-screen bg-white shadow-2xl flex flex-col z-10 border-l border-slate-200 animate-slide-in-right`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -99,7 +89,7 @@ export function Modal({
               )}
               <div className="min-w-0">
                 {title && (
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug tracking-tight truncate">
+                  <h3 id={titleId} className="text-base sm:text-lg font-bold text-slate-900 leading-snug tracking-tight truncate">
                     {title}
                   </h3>
                 )}

@@ -69,7 +69,7 @@ export const logCallSchema = {
     callStatus: z.string().optional(),
     outcome: z.string().optional(),
     notes: z.string().min(1, 'Call notes are required'),
-    callDurationSeconds: z.number().min(0).optional().default(0),
+    callDurationSeconds: z.number().min(0).optional(),
     durationSeconds: z.number().min(0).optional(),
     nextFollowUpAt: z.union([z.string(), z.literal(''), z.null()]).optional(),
     nextFollowUpDate: z.union([z.string(), z.literal(''), z.null()]).optional(),

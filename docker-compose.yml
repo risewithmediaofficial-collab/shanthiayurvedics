@@ -1,20 +1,17 @@
-services:
+﻿services:
   mongodb:
     image: mongo:7.0
-    container_name: shanthi_mongodb
     restart: unless-stopped
-    ports:
-      - "27026:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: SecureAdminPassword123
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: shanthi_ayurvedas_crm
     volumes:
       - mongodb_data:/data/db
     networks:
       - crm-network
     healthcheck:
-      test: ["CMD-SHELL", "mongosh -u admin -p SecureAdminPassword123 --authenticationDatabase admin --eval \"db.adminCommand('ping')\" || mongosh --eval \"db.adminCommand('ping')\""]
+      test: ["CMD-SHELL", "mongosh --quiet -u \"$$MONGO_INITDB_ROOT_USERNAME\" -p \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --eval 'db.adminCommand({ ping: 1 })' >/dev/null"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,38 +21,39 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    image: shanthiayurvedics-backend:latest
-    container_name: shanthi_backend
     restart: unless-stopped
-    ports:
-      - "5010:5000"
     depends_on:
       mongodb:
         condition: service_healthy
     environment:
       PORT: "5000"
       NODE_ENV: production
-      MONGO_URI: mongodb://admin:SecureAdminPassword123@mongodb:27017/shanthi_ayurvedas_crm?authSource=admin
-      MONGODB_URI: mongodb://admin:SecureAdminPassword123@mongodb:27017/shanthi_ayurvedas_crm?authSource=admin
-      JWT_ACCESS_SECRET: default_production_super_secret_jwt_access_key_2026_shanthi_ayurvedas
-      JWT_REFRESH_SECRET: default_production_super_secret_jwt_refresh_key_2026_shanthi_ayurvedas
-      COOKIE_SECRET: default_production_super_secret_cookie_key_2026_shanthi_ayurvedas
-      FRONTEND_URL: http://localhost:89
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD}@mongodb:27017/shanthi_ayurvedas_crm?authSource=admin
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?Set JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET}
+      COOKIE_SECRET: ${COOKIE_SECRET:?Set COOKIE_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL:?Set FRONTEND_URL}
+      TRUST_PROXY_HOPS: "1"
+      DB_MAX_POOL_SIZE: ${DB_MAX_POOL_SIZE:-20}
     networks:
       - crm-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
-    image: shanthiayurvedics-frontend:latest
-    container_name: shanthi_frontend
     restart: unless-stopped
     ports:
-      - "89:80"
-      - "8087:80"
+      - "${CRM_PORT:-89}:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - crm-network
 

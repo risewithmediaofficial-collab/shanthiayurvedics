@@ -5,6 +5,7 @@ const baseURL = import.meta.env.VITE_API_URL || '/api';
 export const apiClient = axios.create({
   baseURL,
   withCredentials: true, // sends HTTP-only cookies
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -70,6 +71,7 @@ apiClient.interceptors.response.use(
     }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -92,11 +94,13 @@ apiClient.interceptors.response.use(
         const res = await axios.post(
           `${baseURL}/auth/refresh`,
           { refreshToken: rawRefreshToken },
-          { withCredentials: true }
+          { withCredentials: true, timeout: 15000 }
         );
 
         const newAccessToken = res.data?.data?.accessToken;
         const newRefreshToken = res.data?.data?.refreshToken;
+        if (!newAccessToken) throw new Error('Session refresh returned no access token');
+        apiClient.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
 
         if (newAccessToken && typeof window !== 'undefined') {
           localStorage.setItem('auth_access_token', newAccessToken);
@@ -104,6 +108,7 @@ apiClient.interceptors.response.use(
         }
 
         processQueue(null, newAccessToken);
+        window.dispatchEvent(new CustomEvent('auth:token_refreshed', { detail: res.data.data }));
 
         if (newAccessToken) {
           originalRequest.headers = originalRequest.headers || {};
@@ -112,6 +117,8 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
+        // An outage is recoverable; only an explicit authentication rejection ends the session.
+        if (![400, 401, 403].includes(refreshError.response?.status)) return Promise.reject(refreshError);
         try {
           localStorage.removeItem('auth_access_token');
           localStorage.removeItem('auth_refresh_token');

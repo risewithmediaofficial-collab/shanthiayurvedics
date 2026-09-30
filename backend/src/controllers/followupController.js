@@ -2,11 +2,10 @@ import { FollowupService } from '../services/followupService.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ROLES } from '../constants/roles.js';
+import { pagination } from '../utils/queryHelpers.js';
 
 export const getFollowups = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page, 10) || 1;
-  const isExport = req.query.export === 'true';
-  const limit = isExport ? 5000 : (parseInt(req.query.limit, 10) || 20);
+  const { page, limit, isExport } = pagination(req.query);
   const category = req.query.category || req.query.filter || 'TODAY';
 
   const telecallerId = req.user.role === ROLES.TELECALLER ? req.user.id : req.query.telecallerId;

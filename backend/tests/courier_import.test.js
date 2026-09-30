@@ -9,6 +9,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
+import mongoose from 'mongoose';
 import xlsx from 'xlsx';
 import app from '../src/app.js';
 import { User } from '../src/models/User.js';
@@ -239,6 +240,26 @@ describe('POST /api/shipping/import-status — API integration', () => {
     const s = await Shipment.findOne({ awbNumber: AWB_1 });
     expect(s.trackingStatus).toBe(SHIPPING_STATUS.DELIVERED);
     expect(s.actualDeliveryDate).toBeTruthy();
+    const order = await Order.findById(s.orderId);
+    expect(order.status).toBe(ORDER_STATUS.DELIVERED);
+    expect(order.paymentStatus).toBe('COD_PENDING');
+  });
+
+  it('does not import or edit a shipment from another branch', async () => {
+    const otherBranch = await Branch.create({ name: 'Other Import Branch', code: 'OIB' });
+    const awb = 'OTHERBRANCHAWB001';
+    await Shipment.create({ orderId: new mongoose.Types.ObjectId(), branchId: otherBranch._id, courierName: 'India Post', awbNumber: awb, trackingStatus: SHIPPING_STATUS.IN_TRANSIT });
+    const buffer = buildExcelBuffer([['Tracking Number', 'Status'], [awb, 'Delivered']]);
+    const imported = await request(app).post('/api/shipping/import-status')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .attach('file', buffer, { filename: 'other-branch.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    expect(imported.status).toBe(200);
+    expect(imported.body.data.matched).toBe(0);
+    expect((await Shipment.findOne({ awbNumber: awb })).trackingStatus).toBe(SHIPPING_STATUS.IN_TRANSIT);
+    const edit = await request(app).post(`/api/shipping/track/${awb}/events`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ status: SHIPPING_STATUS.DELIVERED, activity: 'Unauthorized' });
+    expect(edit.status).toBe(404);
   });
 
   it('should have updated shipment2 trackingStatus to IN_TRANSIT in DB', async () => {

@@ -1,3 +1,7 @@
+import { AuditService } from '../services/auditService.js';
+import { AppError } from '../utils/errors.js';
+import { recordScope } from '../utils/recordScope.js';
+import { pagination, escapeSearch, dateRange } from '../utils/queryHelpers.js';
 import { Lead } from '../models/Lead.js';
 import { CallHistory } from '../models/CallHistory.js';
 import { LeadAssignment } from '../models/LeadAssignment.js';
@@ -8,10 +12,8 @@ import { NotFoundError } from '../utils/errors.js';
 import { ROLES } from '../constants/roles.js';
 
 export const getLeads = asyncHandler(async (req, res) => {
-  const isExport = req.query.export === 'true';
-  const page = parseInt(req.query.page, 10) || 1;
-  const limit = isExport ? 5000 : parseInt(req.query.limit, 10) || 20;
-  const search = req.query.search?.trim();
+  const { page, limit } = pagination(req.query);
+  const search = req.query.search ? escapeSearch(req.query.search.trim()) : '';
   const status = req.query.status;
   const source = req.query.source;
   const assignedTo = req.query.assignedTo;
@@ -20,7 +22,7 @@ export const getLeads = asyncHandler(async (req, res) => {
   const sortBy = req.query.sortBy || 'createdAt';
   const sortOrder = req.query.sortOrder === 'asc' || req.query.sortOrder === '1' ? 1 : -1;
 
-  const query = {};
+  const query = recordScope(req.user, req, 'assignedTo');
 
   // Telecaller Ownership Filter
   if (req.user.role === ROLES.TELECALLER) {
@@ -45,13 +47,7 @@ export const getLeads = asyncHandler(async (req, res) => {
   if (source && source !== 'ALL') query.source = source;
 
   if (startDate || endDate) {
-    query.createdAt = {};
-    if (startDate) {
-      query.createdAt.$gte = new Date(startDate.includes('T') ? startDate : `${startDate}T00:00:00.000Z`);
-    }
-    if (endDate) {
-      query.createdAt.$lte = new Date(endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`);
-    }
+    query.createdAt = dateRange(startDate, endDate);
   }
 
   if (search) {
@@ -156,6 +152,9 @@ export const updateLead = asyncHandler(async (req, res) => {
   }
 
   const updates = { ...req.body };
+  if (updates.branchId && updates.branchId !== lead.branchId.toString()) throw new AppError('Use a dedicated reassignment workflow to move records between branches', 400);
+  if (updates.assignedTo !== undefined && String(updates.assignedTo || '') !== String(lead.assignedTo || '')) throw new AppError('Use Assign lead to change its owner', 400);
+  const oldValue = lead.toObject();
   if (!updates.branchId) {
     delete updates.branchId;
   }
@@ -165,6 +164,7 @@ export const updateLead = asyncHandler(async (req, res) => {
   Object.assign(lead, updates);
   await lead.save();
 
+  await AuditService.log({ userId: req.user.id, branchId: lead.branchId, action: 'LEAD_UPDATED', module: 'leads', resourceType: 'Lead', resourceId: lead._id, oldValue, newValue: lead.toObject(), req });
   return ApiResponse.success(res, lead, 'Lead updated successfully');
 });
 
@@ -174,14 +174,8 @@ export const deleteLead = asyncHandler(async (req, res) => {
     throw new NotFoundError('Lead');
   }
 
-  // Clean up associated calls and assignment logs
-  try {
-    await CallHistory.deleteMany({ leadId: lead._id });
-    await LeadAssignment.deleteMany({ leadId: lead._id });
-  } catch (e) {
-    // Non-critical cleanup
-  }
-
+  // Retain append-only call and assignment history for the audit trail.
+  await AuditService.log({ userId: req.user.id, branchId: lead.branchId, action: 'LEAD_DELETED', module: 'leads', resourceType: 'Lead', resourceId: lead._id, oldValue: lead.toObject(), req });
   await Lead.findByIdAndDelete(req.params.id);
   return ApiResponse.success(res, { id: req.params.id, name: lead.name }, 'Lead deleted successfully');
 });
@@ -204,9 +198,9 @@ export const bulkAssignLeads = asyncHandler(async (req, res) => {
 });
 
 export const getCallHistory = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 20;
-  const query = {};
+  const { page, limit } = pagination(req.query);
+  const query = recordScope(req.user, req, 'telecallerId');
+  if (req.user.role !== ROLES.TELECALLER && req.query.telecallerId) query.telecallerId = req.query.telecallerId;
 
   if (!req.branchScope.isGlobal && req.branchScope.branchId) {
     query.branchId = req.branchScope.branchId;

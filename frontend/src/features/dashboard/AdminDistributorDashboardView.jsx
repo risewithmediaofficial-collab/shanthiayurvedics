@@ -161,26 +161,6 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
   const [walletBalance, setWalletBalance] = useState(0);
   const [copiedLink, setCopiedLink] = useState(false);
   const [gstDetailsExpanded, setGstDetailsExpanded] = useState(false);
-  const [isPurging, setIsPurging] = useState(false);
-  const [purgeSuccess, setPurgeSuccess] = useState(false);
-
-  const handlePurgeFakeData = async () => {
-    if (!window.confirm('Reset to Clean State: This will clear all fake/dummy test orders, leads, and call logs to start 100% fresh with real-time stats. Staff accounts, branches, and products are preserved. Continue?')) {
-      return;
-    }
-    try {
-      setIsPurging(true);
-      await apiClient.post('/dashboard/purge-fake-data');
-      queryClient.invalidateQueries();
-      setPurgeSuccess(true);
-      setTimeout(() => setPurgeSuccess(false), 5000);
-    } catch (err) {
-      alert('Failed to purge test data: ' + (err.response?.data?.message || err.message));
-    } finally {
-      setIsPurging(false);
-    }
-  };
-
   // Settlement & Revenue stream filter
   const [revenueStreamFilter, setRevenueStreamFilter] = useState('ALL');
   const [settlementDateRange, setSettlementDateRange] = useState({
@@ -204,14 +184,14 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
 
   // GST Invoice creation state
   const [gstInvoiceForm, setGstInvoiceForm] = useState({
-    invoiceNumber: 'INV-2026-8801',
+    invoiceNumber: '',
     date: new Date().toISOString().split('T')[0],
-    recipient: 'Sub-Distributor Retail Outlet A',
-    gstin: '33AAACB1234F1Z5',
-    itemName: 'Slim 369 Ayurvedic Wellness Combo Kit',
-    hsn: '30049011',
-    qty: 10,
-    rate: 1800
+    recipient: '',
+    gstin: '',
+    itemName: '',
+    hsn: '',
+    qty: '',
+    rate: ''
   });
   const [savedGstInvoices, setSavedGstInvoices] = useState([]);
 
@@ -263,8 +243,8 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
         address: { street: data.street, city: data.city, state: data.state, pincode: data.pincode }
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['admin-distributor-dashboard']);
-      queryClient.invalidateQueries(['branches']);
+      queryClient.invalidateQueries({ queryKey: ['admin-distributor-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['branches'] });
       setIsAddBranchModalOpen(false);
       setBranchForm({
         name: '', code: '', branchType: 'FRANCHISE', phone: '', email: '',
@@ -349,12 +329,14 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
 
   const handleCreateGstInvoice = (e) => {
     e.preventDefault();
-    const taxable = (parseFloat(gstInvoiceForm.qty) || 1) * (parseFloat(gstInvoiceForm.rate) || 0);
+    const qty = parseFloat(gstInvoiceForm.qty) || 0;
+    const rate = parseFloat(gstInvoiceForm.rate) || 0;
+    const taxable = qty * rate;
     const cgst = taxable * 0.09;
     const sgst = taxable * 0.09;
     const total = taxable + cgst + sgst;
     const newInv = {
-      id: gstInvoiceForm.invoiceNumber,
+      id: gstInvoiceForm.invoiceNumber || `INV-${Date.now()}`,
       date: gstInvoiceForm.date,
       recipient: gstInvoiceForm.recipient,
       gstin: gstInvoiceForm.gstin,
@@ -365,6 +347,16 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
       status: 'PAID'
     };
     setSavedGstInvoices([newInv, ...savedGstInvoices]);
+    setGstInvoiceForm({
+      invoiceNumber: '',
+      date: new Date().toISOString().split('T')[0],
+      recipient: '',
+      gstin: '',
+      itemName: '',
+      hsn: '',
+      qty: '',
+      rate: ''
+    });
     setGstSubTab('HISTORY');
   };
 
@@ -399,20 +391,6 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            {user?.role === 'OWNER' && (
-              <button
-                id="btn-purge-fake-data"
-                type="button"
-                disabled={isPurging}
-                onClick={handlePurgeFakeData}
-                title="Wipe fake test orders and leads to start 100% fresh with real-time stats"
-                className="flex items-center gap-1.5 px-3 py-2.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 text-xs font-bold rounded-xl border border-slate-200/90 hover:border-rose-200 transition-all cursor-pointer disabled:opacity-50 shadow-2xs"
-              >
-                <span>🧹</span>
-                <span>{isPurging ? 'Purging...' : purgeSuccess ? '✅ Stats Cleaned!' : 'Clean Real-Time Reset'}</span>
-              </button>
-            )}
-
             {onSwitchToManagerView && (
               <button
                 id="btn-switch-manager-view"
@@ -520,37 +498,43 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
               </div>
 
               {/* Zone Manager Card */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-800 font-black text-base flex items-center justify-center flex-shrink-0">
-                    A
-                  </div>
-                  <div>
-                    <div className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                      <span>Akash</span>
-                      <span className="text-xs font-medium text-slate-500">· Zone Manager</span>
+              {activeBranch.managerName ? (
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-800 font-black text-base flex items-center justify-center flex-shrink-0">
+                      {activeBranch.managerName.charAt(0).toUpperCase()}
                     </div>
-                    <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
-                      <span>@shanthi ayurvedas office</span>
-                      <span>·</span>
-                      <span className="font-mono">📱 9629985345</span>
+                    <div>
+                      <div className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                        <span>{activeBranch.managerName}</span>
+                        <span className="text-xs font-medium text-slate-500">· Zone Manager</span>
+                      </div>
+                      <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
+                        <span>{activeBranch.name || 'Branch'}</span>
+                        {activeBranch.managerPhone && (
+                          <>
+                            <span>·</span>
+                            <span className="font-mono">📱 {activeBranch.managerPhone}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  {onSwitchToManagerView && (
-                    <button
-                      id="btn-boss-open-manager"
-                      type="button"
-                      onClick={onSwitchToManagerView}
-                      className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl shadow-sm transition-all"
-                    >
-                      Open →
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {onSwitchToManagerView && (
+                      <button
+                        id="btn-boss-open-manager"
+                        type="button"
+                        onClick={onSwitchToManagerView}
+                        className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl shadow-sm transition-all"
+                      >
+                        Open →
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
+              ) : null}
 
               {/* Minimalist Visual Sales & Volume Curve */}
               <div className="clean-card p-5 space-y-3 bg-gradient-to-br from-white via-white to-slate-50/50">
@@ -561,26 +545,26 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                       Weekly Zone Revenue Velocity & Bookings
                     </h3>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Daily fulfillment turnover for Krishnagiri & Bangalore South distribution network
+                      Daily fulfillment turnover for {activeBranch.name || 'distribution network'}
                     </p>
                   </div>
                   <div className="flex items-center gap-3 text-xs font-mono">
-                    <span className="text-slate-500">Run-Rate: <strong className="text-slate-800">₹24.8k / day</strong></span>
+                    <span className="text-slate-500">Run-Rate: <strong className="text-slate-800">{kpis.salesMonth > 0 ? `₹${Math.round(kpis.salesMonth / 30).toLocaleString()} / day` : '₹0 / day'}</strong></span>
                     <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                      Healthy COD Flow
+                      COD Flow
                     </span>
                   </div>
                 </div>
 
                 <SimpleTrendChart
                   data={[
-                    { label: 'Mon', value: 38200 },
-                    { label: 'Tue', value: 44500 },
-                    { label: 'Wed', value: 41200 },
-                    { label: 'Thu', value: 58900 },
-                    { label: 'Fri', value: 52400 },
-                    { label: 'Sat', value: 68700 },
-                    { label: 'Sun', value: 49300 }
+                    { label: 'Mon', value: 0 },
+                    { label: 'Tue', value: 0 },
+                    { label: 'Wed', value: 0 },
+                    { label: 'Thu', value: 0 },
+                    { label: 'Fri', value: 0 },
+                    { label: 'Sat', value: 0 },
+                    { label: 'Sun', value: 0 }
                   ]}
                   dataKey="value"
                   xAxisKey="label"
@@ -689,43 +673,52 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
           {activeTab === 'TEAM' && (
             <div className="space-y-6">
               {/* Zone Manager Card with Direct Link */}
-              <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-800 font-black text-lg flex items-center justify-center flex-shrink-0">
-                    A
-                  </div>
-                  <div>
-                    <div className="font-bold text-slate-900 text-base flex items-center gap-2">
-                      <span>Akash</span>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
-                        Zone Manager
-                      </span>
+              {activeBranch.managerName ? (
+                <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-800 font-black text-lg flex items-center justify-center flex-shrink-0">
+                      {activeBranch.managerName.charAt(0).toUpperCase()}
                     </div>
-                    <div className="text-xs text-slate-500 mt-0.5">
-                      @shanthi ayurvedas office · 📱 9629985345
+                    <div>
+                      <div className="font-bold text-slate-900 text-base flex items-center gap-2">
+                        <span>{activeBranch.managerName}</span>
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                          Zone Manager
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        {activeBranch.name || 'Branch'} {activeBranch.managerPhone ? `· 📱 ${activeBranch.managerPhone}` : ''}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsResetPassModalOpen(true)}
-                    className="px-3.5 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all shadow-sm"
-                  >
-                    Reset Password
-                  </button>
-                  {onSwitchToManagerView && (
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={onSwitchToManagerView}
-                      className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1"
+                      onClick={() => setIsResetPassModalOpen(true)}
+                      className="px-3.5 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all shadow-sm"
                     >
-                      Panel →
+                      Reset Password
                     </button>
-                  )}
+                    {onSwitchToManagerView && (
+                      <button
+                        type="button"
+                        onClick={onSwitchToManagerView}
+                        className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1"
+                      >
+                        Panel →
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="p-5 bg-slate-50 border border-dashed border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-slate-600">
+                  <div>
+                    <span className="font-bold text-slate-800">No Branch Manager Assigned</span>
+                    <p className="text-slate-400 mt-0.5">Go to Team Management to create or assign a manager for {activeBranch.name || 'this branch'}.</p>
+                  </div>
+                </div>
+              )}
 
               {/* Reset Password Modal */}
               {isResetPassModalOpen && (
@@ -733,7 +726,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                   isOpen={isResetPassModalOpen}
                   onClose={() => { setIsResetPassModalOpen(false); setResetPassSuccess(false); setNewManagerPass(''); }}
                   title="Reset Manager Password"
-                  subtitle="Update password for Akash (Zone Manager)"
+                  subtitle={`Update password for ${activeBranch.managerName || 'Zone Manager'}`}
                   maxWidth="max-w-md"
                 >
                   <form onSubmit={(e) => {
@@ -749,7 +742,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                     {resetPassSuccess ? (
                       <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        Password updated successfully for Akash!
+                        Password updated successfully!
                       </div>
                     ) : (
                       <>
@@ -1193,13 +1186,8 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-600">
                           <tr>
-                            <td className="p-3 font-mono font-bold text-slate-800">STL-2026-08B</td>
-                            <td className="p-3">16 Aug – 31 Aug 2026</td>
-                            <td className="p-3 text-right font-mono">₹48,200</td>
-                            <td className="p-3 text-right font-mono text-slate-500">₹7,230</td>
-                            <td className="p-3 text-right font-mono font-bold text-emerald-800">₹40,970</td>
-                            <td className="p-3 text-center">
-                              <Badge variant="emerald" size="sm">SETTLED</Badge>
+                            <td colSpan={6} className="p-8 text-center text-slate-400">
+                              No settlement records found.
                             </td>
                           </tr>
                         </tbody>
@@ -1215,15 +1203,15 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center">
                       <div className="text-[10px] uppercase font-bold text-slate-500">Advisory Sessions Done</div>
-                      <div className="text-xl font-black text-emerald-800 font-mono mt-1">23</div>
+                      <div className="text-xl font-black text-emerald-800 font-mono mt-1">0</div>
                     </div>
                     <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl text-center">
                       <div className="text-[10px] uppercase font-bold text-slate-500">Dietary Treatment Plans</div>
-                      <div className="text-xl font-black text-indigo-800 font-mono mt-1">11</div>
+                      <div className="text-xl font-black text-indigo-800 font-mono mt-1">0</div>
                     </div>
                     <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-center">
                       <div className="text-[10px] uppercase font-bold text-slate-500">Accrued Advisory Incentives</div>
-                      <div className="text-xl font-black text-amber-800 font-mono mt-1">₹4,950</div>
+                      <div className="text-xl font-black text-amber-800 font-mono mt-1">₹0</div>
                     </div>
                   </div>
 
@@ -1446,6 +1434,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <Input
                       label="Invoice Number *"
+                      placeholder="e.g. INV-001"
                       value={gstInvoiceForm.invoiceNumber}
                       onChange={(e) => setGstInvoiceForm({ ...gstInvoiceForm, invoiceNumber: e.target.value })}
                     />
@@ -1457,6 +1446,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                     />
                     <Input
                       label="Recipient / Sub-Distributor *"
+                      placeholder="Enter recipient or sub-distributor name"
                       value={gstInvoiceForm.recipient}
                       onChange={(e) => setGstInvoiceForm({ ...gstInvoiceForm, recipient: e.target.value })}
                     />
@@ -1465,46 +1455,58 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                     <Input
                       label="Item / Formulation *"
+                      placeholder="Enter medicine or product name"
                       value={gstInvoiceForm.itemName}
                       onChange={(e) => setGstInvoiceForm({ ...gstInvoiceForm, itemName: e.target.value })}
                     />
                     <Input
                       label="HSN / SAC Code"
+                      placeholder="e.g. 30049011"
                       value={gstInvoiceForm.hsn}
                       onChange={(e) => setGstInvoiceForm({ ...gstInvoiceForm, hsn: e.target.value })}
                     />
                     <Input
                       label="Quantity *"
                       type="number"
+                      placeholder="0"
                       value={gstInvoiceForm.qty}
                       onChange={(e) => setGstInvoiceForm({ ...gstInvoiceForm, qty: e.target.value })}
                     />
                     <Input
                       label="Unit Rate ₹ *"
                       type="number"
+                      placeholder="0.00"
                       value={gstInvoiceForm.rate}
                       onChange={(e) => setGstInvoiceForm({ ...gstInvoiceForm, rate: e.target.value })}
                     />
                   </div>
 
-                  <div className="p-3.5 bg-slate-50 rounded-xl space-y-1 font-mono text-xs">
-                    <div className="flex justify-between text-slate-600">
-                      <span>Taxable Value:</span>
-                      <span>₹{((gstInvoiceForm.qty || 1) * (gstInvoiceForm.rate || 0)).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-slate-600">
-                      <span>CGST (9%):</span>
-                      <span>₹{(((gstInvoiceForm.qty || 1) * (gstInvoiceForm.rate || 0)) * 0.09).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-slate-600">
-                      <span>SGST (9%):</span>
-                      <span>₹{(((gstInvoiceForm.qty || 1) * (gstInvoiceForm.rate || 0)) * 0.09).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-emerald-800 pt-1 border-t border-slate-200">
-                      <span>Total Invoice Value:</span>
-                      <span>₹{(((gstInvoiceForm.qty || 1) * (gstInvoiceForm.rate || 0)) * 1.18).toFixed(2)}</span>
-                    </div>
-                  </div>
+                  {(() => {
+                    const taxableVal = (Number(gstInvoiceForm.qty) || 0) * (Number(gstInvoiceForm.rate) || 0);
+                    const cgstVal = taxableVal * 0.09;
+                    const sgstVal = taxableVal * 0.09;
+                    const totalVal = taxableVal + cgstVal + sgstVal;
+                    return (
+                      <div className="p-3.5 bg-slate-50 rounded-xl space-y-1 font-mono text-xs">
+                        <div className="flex justify-between text-slate-600">
+                          <span>Taxable Value:</span>
+                          <span>₹{taxableVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-600">
+                          <span>CGST (9%):</span>
+                          <span>₹{cgstVal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-600">
+                          <span>SGST (9%):</span>
+                          <span>₹{sgstVal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between font-bold text-emerald-800 pt-1 border-t border-slate-200">
+                          <span>Total Invoice Value:</span>
+                          <span>₹{totalVal.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <div className="flex justify-end">
                     <Button variant="primary" type="submit">
@@ -1515,24 +1517,28 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
               )}
 
               {/* Monthly Rollup Sub-Tab */}
-              {gstSubTab === 'MONTHLY' && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center">
-                      <div className="text-xs text-slate-500 font-semibold uppercase">Total Taxable Value</div>
-                      <div className="text-xl font-black text-emerald-800 font-mono mt-1">₹18,000</div>
-                    </div>
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-center">
-                      <div className="text-xs text-slate-500 font-semibold uppercase">Output GST (18%)</div>
-                      <div className="text-xl font-black text-amber-800 font-mono mt-1">₹3,240</div>
-                    </div>
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-center">
-                      <div className="text-xs text-slate-500 font-semibold uppercase">Eligible ITC</div>
-                      <div className="text-xl font-black text-blue-800 font-mono mt-1">₹900</div>
+              {gstSubTab === 'MONTHLY' && (() => {
+                const totalTaxable = savedGstInvoices.reduce((sum, inv) => sum + (Number(inv.taxable) || 0), 0);
+                const outputGst = savedGstInvoices.reduce((sum, inv) => sum + ((Number(inv.cgst) || 0) + (Number(inv.sgst) || 0)), 0);
+                return (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center">
+                        <div className="text-xs text-slate-500 font-semibold uppercase">Total Taxable Value</div>
+                        <div className="text-xl font-black text-emerald-800 font-mono mt-1">₹{totalTaxable.toLocaleString()}</div>
+                      </div>
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-center">
+                        <div className="text-xs text-slate-500 font-semibold uppercase">Output GST (18%)</div>
+                        <div className="text-xl font-black text-amber-800 font-mono mt-1">₹{outputGst.toLocaleString()}</div>
+                      </div>
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-center">
+                        <div className="text-xs text-slate-500 font-semibold uppercase">Eligible ITC</div>
+                        <div className="text-xl font-black text-blue-800 font-mono mt-1">₹0</div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* History Sub-Tab */}
               {gstSubTab === 'HISTORY' && (
@@ -1840,37 +1846,21 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
         <Modal
           isOpen={isMapModalOpen}
           onClose={() => setIsMapModalOpen(false)}
-          title="Karnataka & Tamil Nadu Franchise Map"
-          subtitle="Active logistics hubs and retail branches"
+          title="Active Branches & Franchise Locations"
+          subtitle="Branch locations and logistics centers"
           maxWidth="max-w-lg"
         >
           <div className="space-y-3 text-xs">
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1">
-              <div className="font-bold text-emerald-900 flex items-center gap-1.5">
-                <span>📍 Hosur Main Hub (Headquarters)</span>
-                <Badge variant="emerald" size="sm">Primary Hub</Badge>
+            {branches.map((b, idx) => (
+              <div key={b._id || idx} className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1">
+                <div className="font-bold text-emerald-900 flex items-center gap-1.5">
+                  <span>📍 {b.name}</span>
+                  <Badge variant={idx === 0 ? "emerald" : "neutral"} size="sm">{b.branchType || 'Branch'}</Badge>
+                </div>
+                <p className="text-slate-600">{b.address?.street ? `${b.address.street}, ` : ''}{b.address?.city || 'Hosur'}, {b.address?.state || 'Tamil Nadu'} {b.address?.pincode || ''}</p>
+                <p className="text-slate-500 font-mono">Contact: {b.phone || '—'}</p>
               </div>
-              <p className="text-slate-600">SIPCOT Industrial Area, Hosur, Krishnagiri District, TN 635126</p>
-              <p className="text-slate-500 font-mono">Coverage: Hosur, Dharmapuri, Krishnagiri · Contact: 8884747209</p>
-            </div>
-
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-              <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                <span>📍 Bangalore South Distribution Center</span>
-                <Badge variant="neutral" size="sm">Active Outpost</Badge>
-              </div>
-              <p className="text-slate-600">Jayanagar 4th Block, Bengaluru, Karnataka 560011</p>
-              <p className="text-slate-500 font-mono">Coverage: Bangalore South, Electronic City, Anekal · Contact: 9845012390</p>
-            </div>
-
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-              <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                <span>📍 Salem Regional Franchise</span>
-                <Badge variant="neutral" size="sm">Active Outpost</Badge>
-              </div>
-              <p className="text-slate-600">Fairlands, Salem, Tamil Nadu 636016</p>
-              <p className="text-slate-500 font-mono">Coverage: Salem, Attur, Mettur · Contact: 9443219088</p>
-            </div>
+            ))}
 
             <div className="flex justify-end pt-2">
               <Button variant="secondary" onClick={() => setIsMapModalOpen(false)}>Close</Button>
@@ -1885,7 +1875,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
           isOpen={isRouteModalOpen}
           onClose={() => setIsRouteModalOpen(false)}
           title="Route Orders to Branches"
-          subtitle="Intelligent regional consignment routing"
+          subtitle="Regional consignment routing"
           maxWidth="max-w-md"
         >
           <div className="space-y-3 text-xs text-slate-600">
@@ -1893,11 +1883,11 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
             <div className="p-3 bg-slate-50 rounded-xl space-y-1 font-mono">
               <div className="flex justify-between">
                 <span>Pending for Routing:</span>
-                <span className="font-bold text-slate-900">0 consignments</span>
+                <span className="font-bold text-slate-900">{pipelineCounts.new} consignments</span>
               </div>
               <div className="flex justify-between">
-                <span>Direct Hosur Hub:</span>
-                <span className="font-bold text-emerald-800">48 shipped</span>
+                <span>Direct Branch Hub:</span>
+                <span className="font-bold text-emerald-800">{pipelineCounts.shipped} shipped</span>
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
@@ -1955,28 +1945,15 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
           isOpen={isAdsModalOpen}
           onClose={() => setIsAdsModalOpen(false)}
           title="Meta Ads Agent (Facebook & Instagram)"
-          subtitle="Franchise advertising campaign & lead generator"
+          subtitle="Advertising campaigns & lead generator"
           maxWidth="max-w-md"
         >
           <div className="space-y-3.5 text-xs text-slate-600">
-            <div className="p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl space-y-1">
-              <div className="font-bold text-blue-900">Campaign: Slim 369 Ayurvedic Weight Loss</div>
-              <div className="text-slate-500">Status: <strong className="text-emerald-700">Active · Optimizing for Leads</strong></div>
-              <div className="text-[11px] text-slate-400">Target Area: Krishnagiri & Bangalore South radius (25km)</div>
-            </div>
-            <div className="grid grid-cols-2 gap-3 text-center">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <div className="text-slate-400 text-[10px] uppercase">Daily Budget</div>
-                <div className="font-black text-slate-800 font-mono text-sm mt-0.5">₹1,500/day</div>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <div className="text-slate-400 text-[10px] uppercase">Cost Per Lead</div>
-                <div className="font-black text-emerald-800 font-mono text-sm mt-0.5">₹42.50</div>
-              </div>
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center text-slate-400">
+              No active Meta ad campaigns linked yet. Connect your Meta Ad Account in settings to sync campaigns.
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="secondary" onClick={() => setIsAdsModalOpen(false)}>Close</Button>
-              <Button variant="primary" onClick={() => setIsAdsModalOpen(false)}>Sync Meta Leads</Button>
             </div>
           </div>
         </Modal>

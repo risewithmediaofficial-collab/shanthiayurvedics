@@ -49,9 +49,9 @@ export function PackingStationPage() {
   const packMutation = useMutation({
     mutationFn: ({ orderId, data }) => apiClient.post(`/operations/orders/${orderId}/pack`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['packingQueue']);
-      queryClient.invalidateQueries(['orders']);
-      queryClient.invalidateQueries(['operationsSummary']);
+      queryClient.invalidateQueries({ queryKey: ['packingQueue'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['operationsSummary'] });
       setPackModalOpen(false);
     }
   });

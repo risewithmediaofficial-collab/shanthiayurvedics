@@ -113,7 +113,7 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
         notes: data.notes
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['distributor-stock-dashboard']);
+      queryClient.invalidateQueries({ queryKey: ['distributor-stock-dashboard'] });
       setIsRequestModalOpen(false);
       setTransferForm({
         fromBranchId: '',
@@ -149,9 +149,9 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
       }
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries(['distributor-stock-dashboard']);
-      queryClient.invalidateQueries(['products']);
-      queryClient.invalidateQueries(['inventory']);
+      queryClient.invalidateQueries({ queryKey: ['distributor-stock-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
       const newActive = !variables.currentActive;
       showToast(newActive ? '✓ Stock item activated & marked In-Stock' : '✓ Stock item marked as INACTIVE (Noted Out of Stock)');
     },

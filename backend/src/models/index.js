@@ -25,6 +25,7 @@ import './Shipment.js';
 import './TrackingEvent.js';
 import './RTORecord.js';
 import './Notification.js';
+import './WithdrawalRequest.js';
 
 export * from './Branch.js';
 export * from './Role.js';
@@ -52,3 +53,4 @@ export * from './Shipment.js';
 export * from './TrackingEvent.js';
 export * from './RTORecord.js';
 export * from './Notification.js';
+export * from './WithdrawalRequest.js';

@@ -46,22 +46,22 @@ export function RTOManagementPage() {
   });
 
   const rtoRecords = rtoResponse?.data || [];
-  const meta = rtoResponse?.meta || { page: 1, totalPages: 1, total: 0 };
+  const meta = rtoResponse?.pagination || rtoResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
   const receiveMutation = useMutation({
     mutationFn: (id) => apiClient.patch(`/rto/${id}/receive`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['rtoRecords']);
-      queryClient.invalidateQueries(['operationsSummary']);
+      queryClient.invalidateQueries({ queryKey: ['rtoRecords'] });
+      queryClient.invalidateQueries({ queryKey: ['operationsSummary'] });
     }
   });
 
   const verifyMutation = useMutation({
     mutationFn: ({ id, data }) => apiClient.patch(`/rto/${id}/verify`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['rtoRecords']);
-      queryClient.invalidateQueries(['inventory']);
-      queryClient.invalidateQueries(['operationsSummary']);
+      queryClient.invalidateQueries({ queryKey: ['rtoRecords'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['operationsSummary'] });
       setVerifyModalOpen(false);
       setNotes('');
     }

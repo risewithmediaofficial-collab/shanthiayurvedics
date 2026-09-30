@@ -5,10 +5,12 @@ import {
   getDeliveryReport,
   getTCSalesSalary,
   getTillDateWithdrawal,
-  createWithdrawalRequest
+  createWithdrawalRequest,
+  settleWithdrawalRequest
 } from '../controllers/reportController.js';
 import { authenticate } from '../middleware/auth.js';
-import { requirePermission } from '../middleware/rbac.js';
+import { requirePermission, requireRole } from '../middleware/rbac.js';
+import { ROLES } from '../constants/roles.js';
 import { requireBranchScope } from '../middleware/branchScope.js';
 import { PERMISSIONS } from '../constants/permissions.js';
 
@@ -22,7 +24,8 @@ router.get('/leads', requirePermission(PERMISSIONS.REPORTS_VIEW), getLeadReport)
 router.get('/delivery', requirePermission(PERMISSIONS.REPORTS_VIEW), getDeliveryReport);
 router.get('/tc-salary', requirePermission(PERMISSIONS.REPORTS_VIEW), getTCSalesSalary);
 router.get('/till-date-withdrawal', requirePermission(PERMISSIONS.REPORTS_VIEW), getTillDateWithdrawal);
-router.post('/withdrawal-request', requirePermission(PERMISSIONS.REPORTS_VIEW), createWithdrawalRequest);
+router.post('/withdrawal-request', requireRole(ROLES.MANAGER), requirePermission(PERMISSIONS.REPORTS_VIEW), createWithdrawalRequest);
+router.patch('/withdrawal-request/:id', requireRole(ROLES.OWNER), settleWithdrawalRequest);
 
 export default router;
 

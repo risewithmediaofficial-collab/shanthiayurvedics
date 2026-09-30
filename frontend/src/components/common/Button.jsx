@@ -44,11 +44,12 @@ export function Button({
     <button
       type={type}
       disabled={disabled || isLoading}
+      aria-busy={isLoading || undefined}
       className={twMerge(clsx(baseStyles, variants[variant], sizes[size], className))}
       {...props}
     >
       {isLoading ? (
-        <CircularProgress size={spinnerSizes[size] || 16} color="inherit" thickness={4.5} />
+        <CircularProgress size={spinnerSizes[size] || 16} color="inherit" thickness={4.5} aria-hidden="true" />
       ) : (
         Icon && iconPosition === 'left' && <Icon sx={{ fontSize: 18 }} className="w-4 h-4" />
       )}

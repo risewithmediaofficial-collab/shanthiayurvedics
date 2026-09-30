@@ -43,35 +43,11 @@ export class AuthService {
     const userAgent = req?.headers?.['user-agent'] || 'Unknown';
 
     const normalizedIdentifier = (email || '').toLowerCase().trim();
-    let user = await User.findOne({
+    const user = await User.findOne({
       $or: [{ email: normalizedIdentifier }, { username: normalizedIdentifier }]
     })
       .select('+passwordHash')
       .populate('branchId', 'name code');
-
-    // On-the-fly auto-seed if database is empty or default staff account is missing
-    if (!user) {
-      const defaultStaffAccounts = [
-        'shanthi@369', 'shanthi@shanthiayurvedas.com',
-        'slim369', 'slim369@shanthiayurvedas.com',
-        'shanthi ayurvedas office', 'akash.manager@shanthiayurvedas.com',
-        'sathish@shanthiayurvedas.com', 'owner@shanthiayurvedas.com'
-      ];
-      try {
-        const totalUsers = await User.countDocuments();
-        if (totalUsers === 0 || defaultStaffAccounts.includes(normalizedIdentifier)) {
-          const { seedComprehensiveData } = await import('../scripts/seed.js');
-          await seedComprehensiveData();
-          user = await User.findOne({
-            $or: [{ email: normalizedIdentifier }, { username: normalizedIdentifier }]
-          })
-            .select('+passwordHash')
-            .populate('branchId', 'name code');
-        }
-      } catch {
-        // Fallback to normal error handling if seeding fails
-      }
-    }
 
     if (!user) {
       // Record failed attempt in LoginHistory
@@ -97,30 +73,7 @@ export class AuthService {
       throw new AppError('Your account has been deactivated. Please contact your administrator.', 403);
     }
 
-    // Verify password with self-healing for default/demo credentials
-    let isMatch = await user.verifyPassword(password);
-    if (!isMatch && (password === 'slim369' || password === 'Password@12345')) {
-      const defaultStaffAccounts = [
-        'shanthi@369', 'shanthi@shanthiayurvedas.com',
-        'slim369', 'slim369@shanthiayurvedas.com',
-        'shanthi ayurvedas office', 'akash.manager@shanthiayurvedas.com',
-        'sathish@shanthiayurvedas.com', 'owner@shanthiayurvedas.com'
-      ];
-      if (
-        defaultStaffAccounts.includes(normalizedIdentifier) ||
-        defaultStaffAccounts.includes(user.username) ||
-        defaultStaffAccounts.includes(user.email)
-      ) {
-        isMatch = true;
-        user.passwordHash = await User.hashPassword(password);
-        user.failedLoginAttempts = 0;
-        user.isLocked = false;
-        user.lockUntil = null;
-        await user.save({ validateBeforeSave: false });
-      }
-    }
-
-    if (user.isAccountLocked() && !isMatch) {
+    if (user.isAccountLocked()) {
       const minutesRemaining = Math.ceil((user.lockUntil - new Date()) / 60000);
       await LoginHistory.create({
         userId: user._id,
@@ -133,6 +86,7 @@ export class AuthService {
       throw new AppError(`Account is temporarily locked due to repeated failed logins. Please try again in ${minutesRemaining} minutes.`, 429);
     }
 
+    const isMatch = await user.verifyPassword(password);
     if (!isMatch) {
       await user.recordFailedLogin();
       await LoginHistory.create({
@@ -224,9 +178,15 @@ export class AuthService {
     }
 
     const refreshTokenHash = crypto.createHash('sha256').update(rawRefreshToken).digest('hex');
-    const session = await Session.findOne({ refreshTokenHash, isValid: true }).populate('userId');
+    // Consume the token atomically: simultaneous refreshes cannot both rotate it.
+    // MongoDB TTL cleanup is asynchronous, so enforce expiration here as well.
+    const session = await Session.findOneAndUpdate(
+      { refreshTokenHash, isValid: true, expiresAt: { $gt: new Date() } },
+      { $set: { isValid: false } },
+      { new: false }
+    ).populate('userId');
 
-    if (!session || !session.userId || !session.userId.isActive) {
+    if (!session || !session.userId || !session.userId.isActive || session.userId.isAccountLocked()) {
       // Possible token reuse attack or invalid session -> revoke session
       if (session) {
         session.isValid = false;

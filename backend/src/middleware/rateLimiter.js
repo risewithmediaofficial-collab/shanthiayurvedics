@@ -5,6 +5,7 @@ export const globalRateLimiter = rateLimit({
   max: 1000, // limit each IP to 1000 requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.path === '/health' || req.path.startsWith('/health/') || req.path.startsWith('/api/health'),
   message: {
     success: false,
     message: 'Too many requests from this IP. Please try again later.'
@@ -16,6 +17,7 @@ export const authRateLimiter = rateLimit({
   max: 20, // limit each IP to 20 login/auth requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: true,
   message: {
     success: false,
     message: 'Too many authentication attempts. Please try again in 15 minutes.'

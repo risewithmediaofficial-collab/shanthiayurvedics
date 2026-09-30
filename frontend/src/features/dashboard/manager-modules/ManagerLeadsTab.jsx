@@ -92,16 +92,8 @@ export function ManagerLeadsTab() {
   const { data: telecallers = [] } = useQuery({
     queryKey: ['manager-telecallers', selectedBranchId],
     queryFn: async () => {
-      try {
-        const res = await apiClient.get('/users', { params: { role: 'TELECALLER' } });
-        return res.data?.data || [];
-      } catch (e) {
-        return [
-          { _id: 'tc-1', name: 'KANAGAVALLI', phone: '9629985341' },
-          { _id: 'tc-2', name: 'AMRUTHA', phone: '9629985342' },
-          { _id: 'tc-3', name: 'PATTUSELVI', phone: '9629985343' }
-        ];
-      }
+      const res = await apiClient.get('/users', { params: { role: 'TELECALLER' } });
+      return res.data?.data || [];
     }
   });
 
@@ -138,7 +130,7 @@ export function ManagerLeadsTab() {
       setSelectedLeadIds([]);
       setAssignTargetTelecaller('');
       setActionSuccessMsg(data.message || 'Leads successfully assigned to telecaller!');
-      queryClient.invalidateQueries(['manager-leads-desk']);
+      queryClient.invalidateQueries({ queryKey: ['manager-leads-desk'] });
       setTimeout(() => setActionSuccessMsg(''), 4000);
     }
   });
@@ -152,7 +144,7 @@ export function ManagerLeadsTab() {
       setIsAddLeadModalOpen(false);
       setNewLeadData({ name: '', mobile: '', city: '', source: 'CALL', status: 'NEW', notes: '', assignedTo: '' });
       setActionSuccessMsg('New lead successfully added!');
-      queryClient.invalidateQueries(['manager-leads-desk']);
+      queryClient.invalidateQueries({ queryKey: ['manager-leads-desk'] });
       setTimeout(() => setActionSuccessMsg(''), 4000);
     }
   });
@@ -166,8 +158,8 @@ export function ManagerLeadsTab() {
       setIsEditLeadModalOpen(false);
       setSelectedLeadForEdit(null);
       setActionSuccessMsg('Lead updated successfully!');
-      queryClient.invalidateQueries(['manager-leads-desk']);
-      queryClient.invalidateQueries(['leads']);
+      queryClient.invalidateQueries({ queryKey: ['manager-leads-desk'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
       setTimeout(() => setActionSuccessMsg(''), 4000);
     },
     onError: (err) => {
@@ -183,8 +175,8 @@ export function ManagerLeadsTab() {
     onSuccess: () => {
       setSelectedLeadForDelete(null);
       setActionSuccessMsg('Lead deleted successfully!');
-      queryClient.invalidateQueries(['manager-leads-desk']);
-      queryClient.invalidateQueries(['leads']);
+      queryClient.invalidateQueries({ queryKey: ['manager-leads-desk'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
       setTimeout(() => setActionSuccessMsg(''), 4000);
     },
     onError: (err) => {
@@ -202,7 +194,7 @@ export function ManagerLeadsTab() {
       setActiveLeadForCall(null);
       setCallNotes('');
       setActionSuccessMsg('Call log updated successfully');
-      queryClient.invalidateQueries(['manager-leads-desk']);
+      queryClient.invalidateQueries({ queryKey: ['manager-leads-desk'] });
       setTimeout(() => setActionSuccessMsg(''), 4000);
     }
   });

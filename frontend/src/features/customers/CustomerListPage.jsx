@@ -84,7 +84,7 @@ export function CustomerListPage() {
   const updateCustomerMutation = useMutation({
     mutationFn: ({ id, payload }) => apiClient.patch(`/customers/${id}`, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries(['customers']);
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
       setCustomerToEdit(null);
       setActionMsg('✓ Customer profile updated successfully');
       setTimeout(() => setActionMsg(''), 3000);
@@ -98,7 +98,7 @@ export function CustomerListPage() {
   const deleteCustomerMutation = useMutation({
     mutationFn: (id) => apiClient.delete(`/customers/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['customers']);
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
       setCustomerToDelete(null);
       setActionMsg('✓ Customer removed successfully');
       setTimeout(() => setActionMsg(''), 3000);
@@ -110,7 +110,7 @@ export function CustomerListPage() {
   });
 
   const customers = customerResponse?.data || [];
-  const meta = customerResponse?.meta || { page: 1, totalPages: 1, total: 0 };
+  const meta = customerResponse?.pagination || customerResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
   const handleOpenWhatsApp = (customer) => {
     const cleanMobile = (customer.mobile || '').replace(/\D/g, '').slice(-10);

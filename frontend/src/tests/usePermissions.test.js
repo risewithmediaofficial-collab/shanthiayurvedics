@@ -67,14 +67,22 @@ describe('usePermissions — hasPermission()', () => {
     expect(result.current.hasPermission('admin.destroy_world')).toBe(true);
   });
 
-  it('should return true for MANAGER regardless of permission', () => {
+  it('should require an actual grant for MANAGER', () => {
     const { result } = renderWithUser({ role: 'MANAGER', permissions: [] });
-    expect(result.current.hasPermission('orders.view')).toBe(true);
+    expect(result.current.hasPermission('orders.view')).toBe(false);
   });
 
-  it('should return true for DISTRIBUTOR regardless of permission', () => {
+  it('should require an actual grant for DISTRIBUTOR', () => {
     const { result } = renderWithUser({ role: 'DISTRIBUTOR', permissions: [] });
-    expect(result.current.hasPermission('inventory.view')).toBe(true);
+    expect(result.current.hasPermission('inventory.view')).toBe(false);
+  });
+
+  it('restores the standard telecaller desk for a session without grants', () => {
+    const { result } = renderWithUser({ role: 'TELECALLER' });
+    expect(result.current.hasPermission('leads.view')).toBe(true);
+    expect(result.current.hasPermission('followups.view')).toBe(true);
+    expect(result.current.hasPermission('orders.create')).toBe(true);
+    expect(result.current.hasPermission('branches.manage')).toBe(false);
   });
 
   it('should return true for TELECALLER when they have the permission', () => {
@@ -156,9 +164,10 @@ describe('usePermissions — permissions array', () => {
     expect(result.current.permissions).toEqual(['orders.view']);
   });
 
-  it('should default to empty array when user has no permissions field', () => {
+  it('should restore standard telecaller grants when an old session has no permissions field', () => {
     const { result } = renderWithUser({ role: 'TELECALLER' });
-    expect(result.current.permissions).toEqual([]);
+    expect(result.current.permissions).toContain('leads.view');
+    expect(result.current.permissions).not.toContain('branches.manage');
   });
 });
 

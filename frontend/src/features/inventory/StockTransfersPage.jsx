@@ -56,12 +56,12 @@ export function StockTransfersPage() {
   });
 
   const transfers = transfersResponse?.data || [];
-  const meta = transfersResponse?.meta || { page: 1, totalPages: 1, total: 0 };
+  const meta = transfersResponse?.pagination || transfersResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
   const createMutation = useMutation({
     mutationFn: (data) => apiClient.post('/inventory/transfers', data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['stockTransfers']);
+      queryClient.invalidateQueries({ queryKey: ['stockTransfers'] });
       setCreateModalOpen(false);
       setQuantity('');
       setNotes('');
@@ -70,14 +70,14 @@ export function StockTransfersPage() {
 
   const dispatchMutation = useMutation({
     mutationFn: (id) => apiClient.patch(`/inventory/transfers/${id}/dispatch`, { carrierDetails: 'Internal Van' }),
-    onSuccess: () => queryClient.invalidateQueries(['stockTransfers'])
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['stockTransfers'] })
   });
 
   const receiveMutation = useMutation({
     mutationFn: (id) => apiClient.patch(`/inventory/transfers/${id}/receive`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['stockTransfers']);
-      queryClient.invalidateQueries(['inventory']);
+      queryClient.invalidateQueries({ queryKey: ['stockTransfers'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
     }
   });
 

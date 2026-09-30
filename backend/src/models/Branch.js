@@ -79,7 +79,14 @@ const branchSchema = new mongoose.Schema(
     },
     revenueSharePercent: {
       type: Number,
-      default: 0
+      default: 0,
+      min: 0,
+      max: 100
+    },
+    withdrawalCommitted: {
+      type: Number,
+      default: 0,
+      min: 0
     },
     isActive: {
       type: Boolean,

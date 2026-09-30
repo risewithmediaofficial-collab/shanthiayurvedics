@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
 import { useBranch } from '../../context/BranchContext.jsx';
 import { Spinner } from '../../components/common/Spinner.jsx';
-import { ManagerDashboardView } from './ManagerDashboardView.jsx';
-import { AdminDistributorDashboardView } from './AdminDistributorDashboardView.jsx';
-import { TelecallerDashboardView } from './TelecallerDashboardView.jsx';
-import { DistributorStockDashboardView } from './DistributorStockDashboardView.jsx';
+const ManagerDashboardView = lazy(() => import('./ManagerDashboardView.jsx'));
+const AdminDistributorDashboardView = lazy(() => import('./AdminDistributorDashboardView.jsx'));
+const TelecallerDashboardView = lazy(() => import('./TelecallerDashboardView.jsx'));
+const DistributorStockDashboardView = lazy(() => import('./DistributorStockDashboardView.jsx'));
+
+const DashboardLoading = () => <Spinner size="lg" text="Loading dashboard..." className="py-24" />;
 
 export function DashboardHub() {
   const { role, isOwner, isDistributor, isManager, isTelecaller, user } = usePermissions();
@@ -29,10 +31,11 @@ export function DashboardHub() {
     return 'MANAGER';
   };
 
-  const activeView = urlView || getRoleDefaultView();
+  const allowedViews = isOwner ? ['OWNER', 'BOSS', 'MANAGER', 'DISTRIBUTOR', 'TELECALLER'] : isTelecaller ? ['TELECALLER'] : isDistributor ? ['DISTRIBUTOR'] : ['MANAGER', 'TELECALLER'];
+  const activeView = allowedViews.includes(urlView) ? urlView : getRoleDefaultView();
 
   // Effective caller: either local state or URL param
-  const effectiveCaller = previewCaller || (callerParam ? { name: callerParam } : null);
+  const effectiveCaller = isTelecaller ? null : previewCaller || (callerParam ? { name: callerParam, _id: searchParams.get('callerId') } : null);
 
   const setView = (newView, caller = null, returnTo = null) => {
     setPreviewCaller(caller);
@@ -44,6 +47,7 @@ export function DashboardHub() {
     }
 
     if (newView === 'TELECALLER') {
+      if (caller?._id || caller?.id) params.callerId = caller._id || caller.id;
       if (caller?.name) params.caller = caller.name;
       else if (callerParam) params.caller = callerParam;
 
@@ -73,9 +77,9 @@ export function DashboardHub() {
 
   // 1. TELECALLER VIEW
   if (activeView === 'TELECALLER') {
-    const isSupervisor = !isTelecaller || Boolean(effectiveCaller) || Boolean(fromParam);
+    const isSupervisor = !isTelecaller;
     return (
-      <TelecallerDashboardView
+      <Suspense fallback={<DashboardLoading />}><TelecallerDashboardView
         previewCaller={effectiveCaller}
         returnView={fromParam || (isOwner ? 'OWNER' : isDistributor ? 'DISTRIBUTOR' : 'MANAGER')}
         onSwitchToManagerView={
@@ -88,43 +92,43 @@ export function DashboardHub() {
             ? () => setView('OWNER')
             : undefined
         }
-      />
+      /></Suspense>
     );
   }
 
   // 2. DISTRIBUTOR VIEW (Dedicated Branch Stock & Inventory Portal)
   if (activeView === 'DISTRIBUTOR') {
     return (
-      <DistributorStockDashboardView
+      <Suspense fallback={<DashboardLoading />}><DistributorStockDashboardView
         onSwitchToManagerView={
           isOwner
             ? () => setView('MANAGER')
             : undefined
         }
-      />
+      /></Suspense>
     );
   }
 
   // 3. OWNER / BOSS VIEW (Master Enterprise Multi-Branch Desk)
   if (activeView === 'OWNER' || activeView === 'BOSS') {
     return (
-      <AdminDistributorDashboardView
+      <Suspense fallback={<DashboardLoading />}><AdminDistributorDashboardView
         onSwitchToManagerView={() => setView('MANAGER')}
         onSwitchToTelecaller={(caller) => setView('TELECALLER', caller, 'OWNER')}
-      />
+      /></Suspense>
     );
   }
 
   // 4. MANAGER VIEW (Default for Managers: Branch Operations & Team Callers)
   return (
-    <ManagerDashboardView
+    <Suspense fallback={<DashboardLoading />}><ManagerDashboardView
       onSwitchToBossView={
         isOwner
           ? () => setView('OWNER')
           : undefined
       }
       onSwitchToTelecaller={(caller) => setView('TELECALLER', caller, 'MANAGER')}
-    />
+    /></Suspense>
   );
 }
 

@@ -15,12 +15,14 @@ export class ApiResponse {
     return this.success(res, data, message, 201, meta);
   }
 
-  static paginated(res, data = [], pagination = {}, message = 'Data fetched successfully') {
+  static paginated(res, data = [], pagination = {}, message = 'Data fetched successfully', extra = {}) {
     return res.status(200).json({
+      ...extra,
       success: true,
       message,
       data,
       pagination: {
+        ...pagination,
         page: Number(pagination.page) || 1,
         limit: Number(pagination.limit) || 20,
         total: Number(pagination.total) || 0,

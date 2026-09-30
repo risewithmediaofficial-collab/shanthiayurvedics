@@ -19,7 +19,11 @@ import {
   TrendingUp,
   RotateCcw,
   ArrowUpDown,
-  Phone
+  Phone,
+  Pencil,
+  Trash2,
+  Power,
+  AlertTriangle
 } from 'lucide-react';
 import apiClient from '../../../api/apiClient.js';
 import { useBranch } from '../../../context/BranchContext.jsx';
@@ -41,6 +45,11 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
   const [sortOrder, setSortOrder] = useState('asc');
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
+  const [selectedUserForDelete, setSelectedUserForDelete] = useState(null);
+  const [editFormData, setEditFormData] = useState({ name: '', phone: '', email: '' });
 
   const handleResetFilters = () => {
     setSearch('');
@@ -80,18 +89,8 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
   const { data: teamUsers = [], isLoading } = useQuery({
     queryKey: ['manager-team-users', selectedBranchId],
     queryFn: async () => {
-      try {
-        const res = await apiClient.get('/users', { params: { role: 'TELECALLER' } });
-        const list = res.data?.data || [];
-        if (list.length > 0) return list;
-      } catch (e) {
-        // fallback
-      }
-      return [
-        { _id: 'tc-1', name: 'PATTUSELVI', phone: '8056519369', email: 'pattuselvi@shanthiayurvedas.com', isActive: true },
-        { _id: 'tc-2', name: 'VASUKI', phone: '8015802369', email: 'vasuki@shanthiayurvedas.com', isActive: true },
-        { _id: 'tc-3', name: 'ANANDHI', phone: '8122854369', email: 'anandhi@shanthiayurvedas.com', isActive: true }
-      ];
+      const res = await apiClient.get('/users', { params: { role: 'TELECALLER' } });
+      return res.data?.data || [];
     }
   });
 
@@ -118,7 +117,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
     onSuccess: () => {
       setIsAddUserModalOpen(false);
       setNewStaffData({ name: '', email: '', phone: '', password: '', role: 'TELECALLER' });
-      queryClient.invalidateQueries(['manager-team-users']);
+      queryClient.invalidateQueries({ queryKey: ['manager-team-users'] });
       setActionSuccessMsg('New telecaller onboarded successfully!');
       setTimeout(() => setActionSuccessMsg(''), 4000);
     },
@@ -130,7 +129,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
   // Reset Password Mutation
   const resetPasswordMutation = useMutation({
     mutationFn: async ({ userId, password }) => {
-      const res = await apiClient.patch(`/users/${userId}/reset-password`, { password });
+      const res = await apiClient.post(`/users/${userId}/reset-password`, { password });
       return res.data;
     },
     onSuccess: () => {
@@ -142,6 +141,42 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
     },
     onError: (err) => {
       alert(err.response?.data?.message || 'Failed to reset password');
+    }
+  });
+
+  // Edit Telecaller Mutation
+  const editUserMutation = useMutation({
+    mutationFn: async ({ userId, data }) => {
+      const res = await apiClient.patch(`/users/${userId}`, data);
+      return res.data;
+    },
+    onSuccess: () => {
+      setIsEditModalOpen(false);
+      setSelectedUserForEdit(null);
+      queryClient.invalidateQueries({ queryKey: ['manager-team-users'] });
+      setActionSuccessMsg('Telecaller details updated successfully!');
+      setTimeout(() => setActionSuccessMsg(''), 4000);
+    },
+    onError: (err) => {
+      alert(err.response?.data?.message || 'Failed to update user');
+    }
+  });
+
+  // Toggle Disable/Enable Mutation
+  const toggleStatusMutation = useMutation({
+    mutationFn: async (userId) => {
+      const res = await apiClient.patch(`/users/${userId}/toggle-status`);
+      return res.data;
+    },
+    onSuccess: (_, userId) => {
+      setIsDeleteModalOpen(false);
+      setSelectedUserForDelete(null);
+      queryClient.invalidateQueries({ queryKey: ['manager-team-users'] });
+      setActionSuccessMsg('Account status updated successfully!');
+      setTimeout(() => setActionSuccessMsg(''), 4000);
+    },
+    onError: (err) => {
+      alert(err.response?.data?.message || 'Failed to update status');
     }
   });
 
@@ -194,22 +229,22 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
   // Aggregated KPI stats
   const totalCalls = filteredTeam.reduce((acc, staff, idx) => {
     const stats = telecallerStatsMap.get(staff._id) || {};
-    return acc + (stats.todayCalls ?? (idx === 0 ? 32 : idx === 1 ? 28 : 25));
+    return acc + (stats.todayCalls ?? 0);
   }, 0);
 
   const totalLeads = filteredTeam.reduce((acc, staff, idx) => {
     const stats = telecallerStatsMap.get(staff._id) || {};
-    return acc + (stats.assignedCount ?? (idx === 0 ? 14 : idx === 1 ? 9 : 11));
+    return acc + (stats.assignedCount ?? 0);
   }, 0);
 
   const totalOrders = filteredTeam.reduce((acc, staff, idx) => {
     const stats = telecallerStatsMap.get(staff._id) || {};
-    return acc + (stats.todayOrders ?? (idx === 0 ? 6 : idx === 1 ? 4 : 5));
+    return acc + (stats.todayOrders ?? 0);
   }, 0);
 
   const totalRevenue = filteredTeam.reduce((acc, staff, idx) => {
     const stats = telecallerStatsMap.get(staff._id) || {};
-    return acc + (stats.todaySales ?? (idx === 0 ? 18500 : idx === 1 ? 12400 : 14200));
+    return acc + (stats.todaySales ?? 0);
   }, 0);
 
   return (
@@ -302,7 +337,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
             variant="secondary"
             id="btn-top-open-telecaller"
             icon={Users}
-            onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(filteredTeam[0] || { name: 'PATTUSELVI' })}
+            onClick={() => onSwitchToTelecaller && onSwitchToTelecaller(filteredTeam[0])}
             className="bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 text-xs font-bold shadow-xs"
           >
             Open Telecaller Console →
@@ -489,10 +524,10 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
                 {filteredTeam.map((staff, idx) => {
                   const stats = telecallerStatsMap.get(staff._id) || {};
                   const cleanPhone = (staff.phone || '9629985341').replace(/\D/g, '').slice(-10);
-                  const todayLeads = stats.assignedCount ?? (idx === 0 ? 14 : idx === 1 ? 9 : 11);
-                  const todayCalls = stats.todayCalls ?? (idx === 0 ? 32 : idx === 1 ? 28 : 25);
-                  const orders = stats.todayOrders ?? (idx === 0 ? 6 : idx === 1 ? 4 : 5);
-                  const revenue = stats.todaySales ?? (idx === 0 ? 18500 : idx === 1 ? 12400 : 14200);
+                  const todayLeads = stats.assignedCount ?? 0;
+                  const todayCalls = stats.todayCalls ?? 0;
+                  const orders = stats.todayOrders ?? 0;
+                  const revenue = stats.todaySales ?? 0;
                   const conversion = todayLeads > 0 ? Math.round((orders / todayLeads) * 100) : 40;
 
                   return (
@@ -620,6 +655,20 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
                             <PhoneCall className="w-3.5 h-3.5" />
                           </a>
 
+                          {/* Edit Telecaller */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedUserForEdit(staff);
+                              setEditFormData({ name: staff.name, phone: staff.phone || '', email: staff.email || '' });
+                              setIsEditModalOpen(true);
+                            }}
+                            title="Edit Telecaller Details"
+                            className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-xs font-semibold inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+
                           {/* Reset Password */}
                           <button
                             type="button"
@@ -631,6 +680,23 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
                             className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
                           >
                             <KeyRound className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Disable / Delete */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedUserForDelete(staff);
+                              setIsDeleteModalOpen(true);
+                            }}
+                            title={staff.isActive ? 'Disable Account' : 'Enable Account'}
+                            className={`p-1.5 border rounded-lg text-xs font-semibold inline-flex items-center justify-center transition-colors cursor-pointer shadow-2xs ${
+                              staff.isActive
+                                ? 'bg-rose-50 hover:bg-rose-100 text-rose-600 border-rose-200'
+                                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-200'
+                            }`}
+                          >
+                            <Power className="w-3.5 h-3.5" />
                           </button>
 
                           {/* Print ID Card quick action */}
@@ -660,10 +726,10 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
           {filteredTeam.map((staff, idx) => {
             const stats = telecallerStatsMap.get(staff._id) || {};
             const cleanPhone = (staff.phone || '9629985341').replace(/\D/g, '').slice(-10);
-            const todayLeads = stats.assignedCount ?? (idx === 0 ? 14 : idx === 1 ? 9 : 11);
-            const todayCalls = stats.todayCalls ?? (idx === 0 ? 32 : idx === 1 ? 28 : 25);
-            const orders = stats.todayOrders ?? (idx === 0 ? 6 : idx === 1 ? 4 : 5);
-            const revenue = stats.todaySales ?? (idx === 0 ? 18500 : idx === 1 ? 12400 : 14200);
+            const todayLeads = stats.assignedCount ?? 0;
+            const todayCalls = stats.todayCalls ?? 0;
+            const orders = stats.todayOrders ?? 0;
+            const revenue = stats.todaySales ?? 0;
             const conversion = todayLeads > 0 ? Math.round((orders / todayLeads) * 100) : 40;
 
             return (
@@ -742,10 +808,10 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
                     <span>Open {staff.name}'s Dashboard →</span>
                   </button>
 
-                  <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <a
                       href={`tel:${cleanPhone}`}
-                      className="flex-1 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
+                      className="py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
                     >
                       <PhoneCall className="w-3.5 h-3.5" />
                       <span>Call</span>
@@ -754,13 +820,42 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
                     <button
                       type="button"
                       onClick={() => {
+                        setSelectedUserForEdit(staff);
+                        setEditFormData({ name: staff.name, phone: staff.phone || '', email: staff.email || '' });
+                        setIsEditModalOpen(true);
+                      }}
+                      className="py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer border border-amber-200"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
                         setSelectedUserForReset(staff);
                         setIsResetPasswordModalOpen(true);
                       }}
-                      className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                      className="py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                     >
                       <KeyRound className="w-3.5 h-3.5" />
                       <span>Reset Pass</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedUserForDelete(staff);
+                        setIsDeleteModalOpen(true);
+                      }}
+                      className={`py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer border ${
+                        staff.isActive
+                          ? 'bg-rose-50 hover:bg-rose-100 text-rose-600 border-rose-200'
+                          : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                      }`}
+                    >
+                      <Power className="w-3.5 h-3.5" />
+                      <span>{staff.isActive ? 'Disable' : 'Enable'}</span>
                     </button>
                   </div>
                 </div>
@@ -896,6 +991,109 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
         </Modal>
       )}
 
+      {/* ── Edit Telecaller Modal ── */}
+      {isEditModalOpen && selectedUserForEdit && (
+        <Modal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          title={`Edit: ${selectedUserForEdit.name}`}
+          maxWidth="max-w-md"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              editUserMutation.mutate({ userId: selectedUserForEdit._id, data: editFormData });
+            }}
+            className="space-y-3 text-xs"
+          >
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Full Name *</label>
+              <input
+                type="text"
+                required
+                value={editFormData.name}
+                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Mobile Phone</label>
+              <input
+                type="tel"
+                value={editFormData.phone}
+                onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                placeholder="9629980000"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Email Address</label>
+              <input
+                type="email"
+                value={editFormData.email}
+                onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                placeholder="staff@shanthiayurvedas.com"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <Button variant="secondary" type="button" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+              <Button
+                type="submit"
+                variant="primary"
+                isLoading={editUserMutation.isPending}
+                className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+              >
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* ── Disable / Enable Confirmation Modal ── */}
+      {isDeleteModalOpen && selectedUserForDelete && (
+        <Modal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          title={selectedUserForDelete.isActive ? 'Disable Account' : 'Enable Account'}
+          maxWidth="max-w-sm"
+        >
+          <div className="space-y-4 text-xs">
+            <div className={`flex items-start gap-3 p-4 rounded-xl border ${
+              selectedUserForDelete.isActive
+                ? 'bg-rose-50 border-rose-200 text-rose-800'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+            }`}>
+              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-sm">
+                  {selectedUserForDelete.isActive
+                    ? `Disable ${selectedUserForDelete.name}'s account?`
+                    : `Re-enable ${selectedUserForDelete.name}'s account?`}
+                </p>
+                <p className="mt-1 text-[11px] opacity-80">
+                  {selectedUserForDelete.isActive
+                    ? 'This will immediately log them out of all devices and prevent login until re-enabled.'
+                    : 'This will restore their login access immediately.'}
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="secondary" type="button" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+              <Button
+                variant={selectedUserForDelete.isActive ? 'danger' : 'success'}
+                icon={Power}
+                isLoading={toggleStatusMutation.isPending}
+                onClick={() => toggleStatusMutation.mutate(selectedUserForDelete._id)}
+              >
+                {selectedUserForDelete.isActive ? 'Yes, Disable Account' : 'Yes, Enable Account'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* ID Card Printable Modal */}
       {isIdCardModalOpen && (
         <Modal
@@ -922,7 +1120,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
                   {selectedStaffForDoc?.name?.slice(0, 2).toUpperCase() || 'PA'}
                 </div>
                 <div>
-                  <h4 className="font-black text-base leading-tight uppercase">{selectedStaffForDoc?.name || 'PATTUSELVI'}</h4>
+                  <h4 className="font-black text-base leading-tight uppercase">{selectedStaffForDoc?.name || 'Staff member'}</h4>
                   <p className="text-xs text-emerald-200 font-semibold mt-0.5">TELECALLER & PATIENT COUNSELOR</p>
                   <p className="text-[10px] text-white/70 font-mono mt-1">EMP ID: SH-TC-108</p>
                 </div>
@@ -966,7 +1164,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
             </div>
 
             <p><strong>Date:</strong> {new Date().toLocaleDateString('en-GB')}</p>
-            <p>To: <strong>{selectedStaffForDoc?.name || 'PATTUSELVI'}</strong></p>
+            <p>To: <strong>{selectedStaffForDoc?.name || 'Staff member'}</strong></p>
             <p>Dear {selectedStaffForDoc?.name || 'Staff Member'},</p>
             <p>
               We are pleased to appoint you as a <strong>Telecaller & Customer Care Executive</strong> at
@@ -1018,7 +1216,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
             <h3 className="font-serif font-black text-xl text-amber-950 tracking-wider">CERTIFICATE OF EXCELLENCE</h3>
             <p className="text-xs text-slate-600 italic">This is proudly presented to</p>
             <h2 className="text-2xl font-black text-emerald-900 underline decoration-amber-400 underline-offset-8">
-              {selectedStaffForDoc?.name || 'PATTUSELVI'}
+              {selectedStaffForDoc?.name || 'Staff member'}
             </h2>
             <p className="text-xs text-slate-700 max-w-sm mx-auto">
               In recognition of outstanding dedication, patient care counseling, and exceptional sales achievement

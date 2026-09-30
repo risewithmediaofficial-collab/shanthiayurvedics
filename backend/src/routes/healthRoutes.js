@@ -21,7 +21,7 @@ router.get('/live', (req, res) => {
 
 router.get('/ready', (req, res) => {
   const dbStatus = mongoose.connection.readyState === 1 ? 'CONNECTED' : 'DISCONNECTED';
-  const isReady = mongoose.connection.readyState === 1;
+  const isReady = mongoose.connection.readyState === 1 && req.app.locals.isReady !== false;
 
   if (!isReady) {
     return ApiResponse.error(res, 'Service not ready: Database disconnected', 503, { dbStatus });

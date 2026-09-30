@@ -16,6 +16,11 @@ const bootstrapOwner = async () => {
   await connectDB();
   await RbacService.initializeDefaultRoles();
 
+  const existingOwner = await User.findOne({ role: ROLES.OWNER });
+  if (existingOwner) {
+    throw new Error('An owner already exists. Use account administration instead of bootstrap.');
+  }
+
   const branch = await Branch.findOneAndUpdate(
     { code: 'MAIN' },
     { name: 'Main Branch', code: 'MAIN', branchType: 'COMPANY_OWNED', isActive: true },
@@ -23,9 +28,7 @@ const bootstrapOwner = async () => {
   );
 
   const passwordHash = await User.hashPassword(password);
-  await User.findOneAndUpdate(
-    { email },
-    {
+  await User.create({
       name,
       email,
       passwordHash,
@@ -33,9 +36,7 @@ const bootstrapOwner = async () => {
       branchId: branch._id,
       branches: [branch._id],
       isActive: true
-    },
-    { upsert: true, new: true, runValidators: true }
-  );
+    });
 
   console.log(`Bootstrap owner ready: ${email}`);
 };

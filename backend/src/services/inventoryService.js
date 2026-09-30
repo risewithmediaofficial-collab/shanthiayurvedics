@@ -209,72 +209,73 @@ export class InventoryService {
   /**
    * Reserve Stock for an Order (ACID transactional lock)
    */
-  static async reserveStock({ productId, batchId, branchId, quantity, orderId, user, req, session = null }) {
+  static async reserveStock({ productId, batchId, branchId, quantity, orderId, user, session = null }) {
+    if (!Number.isInteger(Number(quantity)) || Number(quantity) <= 0) throw new AppError('Quantity must be a positive whole number', 400);
     const inv = await this.getOrCreateInventory(productId, batchId, branchId, session);
-
-    if (inv.availableQuantity < quantity) {
-      const product = await Product.findById(productId);
-      throw new AppError(
-        `Insufficient available stock for "${product?.name || 'Product'}". Available: ${inv.availableQuantity}, Requested: ${quantity}`,
-        400
-      );
+    const updated = await Inventory.findOneAndUpdate(
+      { _id: inv._id, availableQuantity: { $gte: Number(quantity) } },
+      { $inc: { availableQuantity: -Number(quantity), reservedQuantity: Number(quantity) } },
+      { new: true, session }
+    );
+    if (!updated) {
+      const current = await Inventory.findById(inv._id).session(session);
+      const product = await Product.findById(productId).session(session);
+      throw new AppError(`Insufficient available stock for "${product?.name || 'Product'}". Available: ${current?.availableQuantity ?? 0}, Requested: ${quantity}`, 400);
     }
-
-    const previousAvailable = inv.availableQuantity;
-    inv.availableQuantity -= quantity;
-    inv.reservedQuantity += quantity;
-    await inv.save(session ? { session } : undefined);
-
     const movement = new StockMovement({
-      productId,
-      batchId,
-      branchId,
-      type: MOVEMENT_TYPES.RESERVE,
-      quantity,
-      reason: MOVEMENT_REASONS.ORDER_RESERVATION,
-      referenceType: 'Order',
+      productId, batchId, branchId, type: MOVEMENT_TYPES.RESERVE,
+      quantity, reason: MOVEMENT_REASONS.ORDER_RESERVATION, referenceType: 'Order',
       referenceId: orderId ? orderId.toString() : null,
       performedBy: user.id || user._id,
-      previousAvailable,
-      newAvailable: inv.availableQuantity,
-      notes: `Reserved for Order ${orderId}`,
-      timestamp: new Date()
+      previousAvailable: updated.availableQuantity + Number(quantity),
+      newAvailable: updated.availableQuantity,
+      notes: `Reserved for Order ${orderId}`, timestamp: new Date()
     });
     await movement.save(session ? { session } : undefined);
-
-    return { inventory: inv, movement };
+    return { inventory: updated, movement };
   }
 
-  /**
-   * Release Reserved Stock on Order Cancellation
-   */
-  static async releaseReservedStock({ productId, batchId, branchId, quantity, orderId, user, req, session = null }) {
+  static async releaseReservedStock({ productId, batchId, branchId, quantity, orderId, user, session = null }) {
+    if (!Number.isInteger(Number(quantity)) || Number(quantity) <= 0) throw new AppError('Quantity must be a positive whole number', 400);
     const inv = await this.getOrCreateInventory(productId, batchId, branchId, session);
-
-    const actualQuantity = Math.min(inv.reservedQuantity, quantity);
-    const previousAvailable = inv.availableQuantity;
-    inv.reservedQuantity = Math.max(0, inv.reservedQuantity - actualQuantity);
-    inv.availableQuantity += actualQuantity;
-    await inv.save(session ? { session } : undefined);
-
+    const updated = await Inventory.findOneAndUpdate(
+      { _id: inv._id, reservedQuantity: { $gte: Number(quantity) } },
+      { $inc: { reservedQuantity: -Number(quantity), availableQuantity: Number(quantity) } },
+      { new: true, session }
+    );
+    if (!updated) throw new AppError('Reserved stock is insufficient to release this order. Please reconcile inventory.', 409);
     const movement = new StockMovement({
-      productId,
-      batchId,
-      branchId,
-      type: MOVEMENT_TYPES.RELEASE,
-      quantity: actualQuantity,
-      reason: MOVEMENT_REASONS.ORDER_CANCELLATION,
-      referenceType: 'Order',
+      productId, batchId, branchId, type: MOVEMENT_TYPES.RELEASE,
+      quantity, reason: MOVEMENT_REASONS.ORDER_CANCELLATION, referenceType: 'Order',
       referenceId: orderId ? orderId.toString() : null,
       performedBy: user.id || user._id,
-      previousAvailable,
-      newAvailable: inv.availableQuantity,
-      notes: `Released from cancelled Order ${orderId}`,
-      timestamp: new Date()
+      previousAvailable: updated.availableQuantity - Number(quantity),
+      newAvailable: updated.availableQuantity,
+      notes: `Released from Order ${orderId}`, timestamp: new Date()
     });
     await movement.save(session ? { session } : undefined);
+    return { inventory: updated, movement };
+  }
 
-    return { inventory: inv, movement };
+  static async dispatchReservedStock({ productId, batchId, branchId, quantity, orderId, user, session = null }) {
+    const inv = await this.getOrCreateInventory(productId, batchId, branchId, session);
+    const updated = await Inventory.findOneAndUpdate(
+      { _id: inv._id, reservedQuantity: { $gte: Number(quantity) } },
+      { $inc: { reservedQuantity: -Number(quantity), dispatchedQuantity: Number(quantity) } },
+      { new: true, session }
+    );
+    if (!updated) throw new AppError('Reserved stock is insufficient to dispatch this order. Please reconcile inventory.', 409);
+    const movement = new StockMovement({
+      productId, batchId, branchId, type: MOVEMENT_TYPES.OUT,
+      quantity, reason: MOVEMENT_REASONS.ORDER_DISPATCH, referenceType: 'Order',
+      referenceId: orderId ? orderId.toString() : null,
+      performedBy: user.id || user._id,
+      previousAvailable: updated.availableQuantity,
+      newAvailable: updated.availableQuantity,
+      notes: `Dispatched Order ${orderId}`, timestamp: new Date()
+    });
+    await movement.save(session ? { session } : undefined);
+    return { inventory: updated, movement };
   }
 
   /**

@@ -13,6 +13,9 @@ import { authenticate } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { requireBranchScope } from '../middleware/branchScope.js';
 import { PERMISSIONS } from '../constants/permissions.js';
+import { scopeRecord } from '../middleware/scopeRecord.js';
+import { Order } from '../models/Order.js';
+import { Shipment } from '../models/Shipment.js';
 
 const router = Router();
 
@@ -42,6 +45,8 @@ router.get('/track/:awbNumber', getTracking);
 
 router.use(authenticate);
 router.use(requireBranchScope);
+router.param('orderId', scopeRecord(Order, 'telecallerId'));
+router.param('id', scopeRecord(Shipment));
 
 router.get('/', requirePermission(PERMISSIONS.SHIPPING_VIEW), getShipments);
 router.get('/providers', requirePermission(PERMISSIONS.SHIPPING_VIEW), getCourierProviders);

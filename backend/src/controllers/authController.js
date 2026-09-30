@@ -4,6 +4,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { env } from '../config/env.js';
 import { User } from '../models/User.js';
 import { AuditService } from '../services/auditService.js';
+import { RbacService } from '../services/rbacService.js';
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -103,6 +104,7 @@ export const getSession = asyncHandler(async (req, res) => {
       return ApiResponse.success(res, {
         user: refreshed.user,
         accessToken: refreshed.accessToken,
+        refreshToken: refreshed.refreshToken,
         isAuthenticated: true
       }, 'Session refreshed');
     }
@@ -116,7 +118,8 @@ export const getSession = asyncHandler(async (req, res) => {
       .populate('branches', 'name code')
       .lean();
 
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || (user.lockUntil && new Date(user.lockUntil) > new Date()) ||
+        (user.passwordChangedAt && decoded.iat < Math.floor(new Date(user.passwordChangedAt).getTime() / 1000))) {
       return ApiResponse.success(res, { user: null, isAuthenticated: false }, 'Session inactive');
     }
 
@@ -128,12 +131,17 @@ export const getSession = asyncHandler(async (req, res) => {
           name: user.name,
           email: user.email,
           role: user.role,
+          permissions: await RbacService.getPermissionsForRole(user.role),
+          username: user.username,
+          brand: user.brand,
+          assignedBrands: user.assignedBrands || [],
           branchId: user.branchId?._id || user.branchId,
           branchName: user.branchId?.name,
           branchCode: user.branchId?.code,
           branches: user.branches || [],
           isActive: user.isActive
         },
+        accessToken: token,
         isAuthenticated: true
       },
       'Active session retrieved'
@@ -144,6 +152,7 @@ export const getSession = asyncHandler(async (req, res) => {
       return ApiResponse.success(res, {
         user: refreshed.user,
         accessToken: refreshed.accessToken,
+        refreshToken: refreshed.refreshToken,
         isAuthenticated: true
       }, 'Session refreshed');
     }

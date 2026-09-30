@@ -13,7 +13,7 @@ export class RbacService {
     }
 
     const role = await Role.findOne({ name: roleName.toUpperCase() }).lean();
-    if (role && role.permissions && role.permissions.length > 0) {
+    if (role && Array.isArray(role.permissions)) {
       return role.permissions;
     }
 
@@ -52,12 +52,12 @@ export class RbacService {
     for (const [roleName, permissions] of Object.entries(DEFAULT_ROLE_PERMISSIONS)) {
       await Role.findOneAndUpdate(
         { name: roleName },
-        {
+        { $setOnInsert: {
           name: roleName,
           description: `Default system role: ${roleName}`,
           permissions,
           isSystemRole: true
-        },
+        } },
         { upsert: true }
       );
     }

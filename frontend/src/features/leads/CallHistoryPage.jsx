@@ -1,3 +1,4 @@
+import { useBranch } from '../../context/BranchContext.jsx';
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PhoneCall, Calendar, Clock, User, CheckCircle2, MessageSquare, Phone } from 'lucide-react';
@@ -6,19 +7,20 @@ import { Table } from '../../components/common/Table.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { Pagination } from '../../components/common/Pagination.jsx';
 
-export function CallHistoryPage() {
+export function CallHistoryPage({ callerId } = {}) {
+  const { selectedBranchId } = useBranch();
   const [page, setPage] = useState(1);
 
   const { data: callsResponse, isLoading } = useQuery({
-    queryKey: ['callHistory', page],
+    queryKey: ['callHistory', selectedBranchId, callerId, page],
     queryFn: async () => {
-      const res = await apiClient.get('/leads/calls/history', { params: { page, limit: 15 } });
+      const res = await apiClient.get('/leads/calls/history', { params: { page, limit: 15, telecallerId: callerId } });
       return res.data;
     }
   });
 
   const calls = callsResponse?.data || [];
-  const meta = callsResponse?.meta || { page: 1, totalPages: 1, total: 0 };
+  const meta = callsResponse?.pagination || callsResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
   const handleOpenWhatsApp = (row) => {
     const mobile = row.leadId?.mobile || row.customerId?.mobile || '';
@@ -67,7 +69,7 @@ export function CallHistoryPage() {
     },
     {
       header: 'Outcome',
-      cell: (row) => getOutcomeBadge(row.outcome)
+      cell: (row) => getOutcomeBadge(row.callStatus || row.outcome)
     },
     {
       header: 'Notes & Discussion',

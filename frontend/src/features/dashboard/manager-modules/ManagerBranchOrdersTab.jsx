@@ -101,8 +101,8 @@ export function ManagerBranchOrdersTab() {
   const receiveMutation = useMutation({
     mutationFn: (id) => apiClient.patch(`/inventory/transfers/${id}/receive`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['manager-branch-transfers']);
-      queryClient.invalidateQueries(['manager-stock-matrix']);
+      queryClient.invalidateQueries({ queryKey: ['manager-branch-transfers'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-stock-matrix'] });
       setActionSuccessMsg('Stock transfer accepted and inventory updated!');
       setTimeout(() => setActionSuccessMsg(''), 4000);
     },
@@ -116,7 +116,7 @@ export function ManagerBranchOrdersTab() {
   const dispatchMutation = useMutation({
     mutationFn: (id) => apiClient.patch(`/inventory/transfers/${id}/dispatch`, { carrierDetails: 'Internal Courier' }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['manager-branch-transfers']);
+      queryClient.invalidateQueries({ queryKey: ['manager-branch-transfers'] });
       setActionSuccessMsg('Consignment dispatched to destination branch!');
       setTimeout(() => setActionSuccessMsg(''), 4000);
     },
@@ -134,7 +134,7 @@ export function ManagerBranchOrdersTab() {
     },
     onSuccess: () => {
       setIsCreateModalOpen(false);
-      queryClient.invalidateQueries(['manager-branch-transfers']);
+      queryClient.invalidateQueries({ queryKey: ['manager-branch-transfers'] });
       setActionSuccessMsg('Stock transfer request submitted!');
       setTimeout(() => setActionSuccessMsg(''), 4000);
     },

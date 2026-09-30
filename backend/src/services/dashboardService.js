@@ -10,21 +10,14 @@ import { StockTransfer } from '../models/StockTransfer.js';
 import { ORDER_STATUS } from '../constants/orderStates.js';
 import { LEAD_STATUS, FOLLOWUP_STATUS } from '../constants/leadStates.js';
 import { ROLES } from '../constants/roles.js';
+import { businessDateBoundaries } from '../utils/businessTime.js';
 
 export class DashboardService {
   /**
    * Helper: Date ranges
    */
   static getDateBoundaries() {
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
-    const endOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59);
-    const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
-    startOfWeek.setHours(0, 0, 0, 0);
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-
-    return { startOfToday, startOfYesterday, endOfYesterday, startOfWeek, startOfMonth };
+    return businessDateBoundaries();
   }
 
   /**
@@ -102,8 +95,8 @@ export class DashboardService {
           ordersCount,
           totalRevenue: revenueAgg[0]?.total || 0,
           telecallerCount,
-          managerName: br.managerName || br.managerId?.name || (br.code === 'HSR' ? 'Dr Shanthi' : 'Deepak Manager'),
-          managerPhone: br.managerPhone || br.managerId?.phone || (br.code === 'HSR' ? '9629985345' : '9842133445')
+          managerName: br.managerName || br.managerId?.name || '',
+          managerPhone: br.managerPhone || br.managerId?.phone || ''
         };
       })
     );
@@ -213,7 +206,7 @@ export class DashboardService {
    * Telecaller Dashboard
    */
   static async getTelecallerDashboard(userId, branchId) {
-    const { startOfToday } = this.getDateBoundaries();
+    const { startOfToday, endOfToday } = this.getDateBoundaries();
     const userObjectId = new mongoose.Types.ObjectId(userId);
     const user = await User.findById(userObjectId).select('branchId').lean();
     const branchFilter = branchId && branchId !== 'ALL' ? { branchId: new mongoose.Types.ObjectId(branchId) } : user?.branchId ? { branchId: user.branchId } : {};
@@ -231,7 +224,7 @@ export class DashboardService {
       FollowUp.countDocuments({
         telecallerId: userObjectId,
         status: FOLLOWUP_STATUS.PENDING,
-        scheduledAt: { $gte: startOfToday, $lte: new Date(Date.now() + 24 * 60 * 60 * 1000) }
+        scheduledAt: { $gte: startOfToday, $lte: endOfToday }
       }),
       FollowUp.countDocuments({
         telecallerId: userObjectId,

@@ -16,6 +16,7 @@ import { Order } from '../models/Order.js';
 import { TrackingEvent } from '../models/TrackingEvent.js';
 import { SHIPPING_STATUS } from '../constants/shippingStates.js';
 import { ORDER_STATUS } from '../constants/orderStates.js';
+import { advanceOrderToDelivered } from './deliveryTransition.js';
 
 // ── Status Mapping Tables ────────────────────────────────────────────────────
 
@@ -141,7 +142,7 @@ function resolveStatus(rawStatus, courier = 'AUTO') {
  * @param {object} actorUser   - req.user (for audit / logging context)
  * @returns {Promise<ImportSummary>}
  */
-export async function processImportFile(fileBuffer, mimetype, originalname, courier = 'AUTO', actorUser = {}) {
+export async function processImportFile(fileBuffer, mimetype, originalname, courier = 'AUTO', actorUser = {}, branchScope = null) {
   // Step 1 — Parse file into raw rows
   const parsedRows = await parseFile(fileBuffer, mimetype, originalname);
 
@@ -165,7 +166,10 @@ export async function processImportFile(fileBuffer, mimetype, originalname, cour
 
   // Step 3 — Look up shipments in bulk
   const awbNumbers = uniqueRows.map((r) => r.awbNumber);
-  const existingShipments = await Shipment.find({ awbNumber: { $in: awbNumbers } })
+  const existingShipments = await Shipment.find({
+    awbNumber: { $in: awbNumbers },
+    ...(branchScope && !branchScope.isGlobal ? { branchId: branchScope.branchId } : {})
+  })
     .select('_id awbNumber orderId trackingStatus')
     .lean();
 
@@ -277,24 +281,17 @@ export async function processImportFile(fileBuffer, mimetype, originalname, cour
     ORDER_STATUS.DELIVERY_FAILED,
   ];
 
-  if (orderIdsToMarkDelivered.length > 0) {
-    await Order.updateMany(
-      {
-        _id: { $in: orderIdsToMarkDelivered },
-        status: { $in: DELIVERABLE_ORDER_STATES }
-      },
-      {
-        $set: { status: ORDER_STATUS.DELIVERED, paymentStatus: 'PAID' },
-        $push: {
-          statusHistory: {
-            fromStatus: null, // we don't know exact prev without fetching each
-            toStatus: ORDER_STATUS.DELIVERED,
-            timestamp: new Date(),
-            notes: 'Auto-updated to DELIVERED via courier status bulk import'
-          }
-        }
+  for (const orderId of orderIdsToMarkDelivered) {
+    try {
+      const order = await Order.findById(orderId).select('status').lean();
+      if (order && DELIVERABLE_ORDER_STATES.includes(order.status)) {
+        await advanceOrderToDelivered(orderId, actorUser, { branchScope });
+      } else if (order?.status !== ORDER_STATUS.DELIVERED) {
+        summary.errors.push({ orderId: String(orderId), message: order ? `Order is ${order.status}; manual review required` : 'Order not found' });
       }
-    );
+    } catch (error) {
+      summary.errors.push({ orderId: String(orderId), message: error.message });
+    }
   }
 
   return summary;

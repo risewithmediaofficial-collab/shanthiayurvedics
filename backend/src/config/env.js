@@ -13,6 +13,8 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.string().default('5000').transform((val) => parseInt(val, 10)),
+  DB_MAX_POOL_SIZE: z.coerce.number().int().min(2).max(200).default(20),
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
   MONGO_URI: z
     .string()
     .optional()
@@ -43,7 +45,19 @@ const parseEnv = () => {
       process.exit(1);
     }
   }
-  return result.success ? result.data : envSchema.parse({});
+  const config = result.success ? result.data : envSchema.parse({});
+  if (config.NODE_ENV === 'production') {
+    for (const key of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'COOKIE_SECRET']) {
+      const secret = process.env[key];
+      if (!secret || secret.length < 32 || /^(your_|default_|shanthi_)/i.test(secret)) {
+        throw new Error(`Set a unique ${key} of at least 32 characters for production.`);
+      }
+    }
+    if (config.JWT_ACCESS_SECRET === config.JWT_REFRESH_SECRET) {
+      throw new Error('Access and refresh secrets must differ.');
+    }
+  }
+  return config;
 };
 
 export const env = parseEnv();

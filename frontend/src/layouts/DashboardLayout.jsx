@@ -22,7 +22,7 @@ export function DashboardLayout() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
+      <div className="flex h-dvh items-center justify-center bg-slate-50">
         <Spinner size="lg" text="Authenticating session..." />
       </div>
     );
@@ -34,6 +34,7 @@ export function DashboardLayout() {
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       {/* Sidebar Navigation */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -42,6 +43,8 @@ export function DashboardLayout() {
         <Navbar onMenuToggle={() => setSidebarOpen(!sidebarOpen)} sidebarOpen={sidebarOpen} />
         
         <main
+          id="main-content"
+          tabIndex={-1}
           ref={mainScrollRef}
           className="flex-1 overflow-y-auto overflow-x-hidden p-2.5 sm:p-4 md:p-6"
         >

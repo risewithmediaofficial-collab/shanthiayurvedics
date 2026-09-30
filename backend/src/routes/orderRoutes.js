@@ -1,3 +1,5 @@
+import { Order } from '../models/Order.js';
+import { scopeRecord } from '../middleware/scopeRecord.js';
 import { Router } from 'express';
 import {
   getOrders,
@@ -24,6 +26,7 @@ const router = Router();
 
 router.use(authenticate);
 router.use(requireBranchScope);
+router.param('id', scopeRecord(Order, 'telecallerId'));
 
 // General & Metrics
 router.get('/', requirePermission(PERMISSIONS.ORDERS_VIEW), getOrders);

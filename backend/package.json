@@ -12,6 +12,7 @@
     "clear:fake": "node src/scripts/deleteFakeData.js",
     "clear": "node src/scripts/clearDatabase.js --confirm",
     "bootstrap": "node src/scripts/bootstrapOwner.js",
+    "clean:bootstrap": "node src/scripts/cleanAndBootstrap.js",
     "mongo": "mongod --dbpath ../.mongo_data --port 27017 --bind_ip 127.0.0.1 --wiredTigerCacheSizeGB 0.5",
     "test": "vitest run"
   },

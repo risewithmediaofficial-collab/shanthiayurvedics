@@ -24,7 +24,7 @@ export function IntegrationsPage() {
   const updateCourierMutation = useMutation({
     mutationFn: (data) => apiClient.post('/integrations/courier', data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['integrations']);
+      queryClient.invalidateQueries({ queryKey: ['integrations'] });
       setApiKey('');
     }
   });

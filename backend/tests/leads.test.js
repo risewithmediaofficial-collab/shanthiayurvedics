@@ -213,7 +213,8 @@ describe('Leads & Telecaller CRM Integration Tests', () => {
       .send({
         name: 'Test Outcome Lead',
         mobile: '8877665544',
-        source: 'WHATSAPP'
+        source: 'WHATSAPP',
+        assignedTo: telecaller1._id.toString()
       });
 
     const leadId = res.body.data._id;

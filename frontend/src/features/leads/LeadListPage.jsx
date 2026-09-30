@@ -1,3 +1,4 @@
+import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -42,7 +43,7 @@ const LEAD_SORT_OPTIONS = [
   { value: 'updatedAt', label: '⏱️ Last Activity' }
 ];
 
-export function LeadListPage() {
+export function LeadListPage({ callerId } = {}) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { hasPermission, isTelecaller } = usePermissions();
@@ -56,6 +57,8 @@ export function LeadListPage() {
   const [endDate, setEndDate] = useState('');
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
+
+  const debouncedSearch = useDebouncedValue(search);
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -103,10 +106,10 @@ export function LeadListPage() {
 
   // Fetch Leads
   const { data: leadsResponse, isLoading } = useQuery({
-    queryKey: ['leads', page, search, statusFilter, sourceFilter, startDate, endDate, sortBy, sortOrder, selectedBranchId],
+    queryKey: ['leads', callerId, page, debouncedSearch, statusFilter, sourceFilter, startDate, endDate, sortBy, sortOrder, selectedBranchId],
     queryFn: async () => {
-      const params = { page, limit: 15, sortBy, sortOrder };
-      if (search?.trim()) params.search = search.trim();
+      const params = { page, limit: 15, sortBy, sortOrder, assignedTo: callerId };
+      if (debouncedSearch?.trim()) params.search = debouncedSearch.trim();
       if (statusFilter && statusFilter !== 'ALL') params.status = statusFilter;
       if (sourceFilter && sourceFilter !== 'ALL') params.source = sourceFilter;
       if (startDate) params.startDate = startDate;
@@ -117,10 +120,10 @@ export function LeadListPage() {
   });
 
   const leads = leadsResponse?.data || [];
-  const meta = leadsResponse?.meta || { page: 1, totalPages: 1, total: 0 };
+  const meta = leadsResponse?.pagination || leadsResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
   const { data: telecallersResponse } = useQuery({
-    queryKey: ['lead-telecallers'],
+    queryKey: ['lead-telecallers', selectedBranchId],
     queryFn: async () => {
       const res = await apiClient.get('/users', { params: { role: 'TELECALLER', limit: 100 } });
       return res.data?.data || [];
@@ -136,8 +139,8 @@ export function LeadListPage() {
       reason: 'Assigned from Leads Desk'
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['leads']);
-      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setLeadActionMsg('✓ Lead assigned to telecaller successfully');
       setTimeout(() => setLeadActionMsg(''), 3000);
     },
@@ -155,8 +158,8 @@ export function LeadListPage() {
         setDuplicateWarning(res.data.data?.existingLead || res.data.data?.existingCustomer || res.data.data);
         return;
       }
-      queryClient.invalidateQueries(['leads']);
-      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setIsCreateModalOpen(false);
       setFormData({ name: '', mobile: '', email: '', whatsappNumber: '', source: 'CALL', city: '', notes: '' });
       setDuplicateWarning(null);
@@ -208,9 +211,9 @@ export function LeadListPage() {
   const logCallMutation = useMutation({
     mutationFn: ({ leadId, data }) => apiClient.post(`/leads/${leadId}/calls`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['leads']);
-      queryClient.invalidateQueries(['dashboard']);
-      queryClient.invalidateQueries(['callHistory']);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['callHistory'] });
       setIsCallModalOpen(false);
       setCallData({ outcome: 'CONNECTED_INTERESTED', durationSeconds: 120, notes: '', nextFollowUpDate: '', nextFollowUpNotes: '' });
       setCallError('');
@@ -228,8 +231,8 @@ export function LeadListPage() {
   const updateLeadMutation = useMutation({
     mutationFn: ({ leadId, payload }) => apiClient.patch(`/leads/${leadId}`, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries(['leads']);
-      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setIsEditModalOpen(false);
       setLeadToEdit(null);
       setLeadActionMsg('✓ Lead updated successfully');
@@ -246,8 +249,8 @@ export function LeadListPage() {
   const deleteLeadMutation = useMutation({
     mutationFn: (leadId) => apiClient.delete(`/leads/${leadId}`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['leads']);
-      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setIsDeleteModalOpen(false);
       setLeadToDelete(null);
       setLeadActionMsg('✓ Lead deleted successfully');
@@ -294,7 +297,7 @@ export function LeadListPage() {
     try {
       setLeadActionMsg('⏳ Preparing leads for export...');
       const params = {
-        export: true,
+        export: true, assignedTo: callerId,
         sortBy,
         sortOrder
       };

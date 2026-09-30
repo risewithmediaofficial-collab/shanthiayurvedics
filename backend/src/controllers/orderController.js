@@ -1,4 +1,7 @@
+import { recordScope } from '../utils/recordScope.js';
+import { pagination, escapeSearch, dateRange } from '../utils/queryHelpers.js';
 import mongoose from 'mongoose';
+import { businessDateBoundaries } from '../utils/businessTime.js';
 import { Order } from '../models/Order.js';
 import { OrderStatusHistory } from '../models/OrderStatusHistory.js';
 import { Inventory } from '../models/Inventory.js';
@@ -10,20 +13,18 @@ import { NotFoundError } from '../utils/errors.js';
 import { ROLES } from '../constants/roles.js';
 
 export const getOrders = asyncHandler(async (req, res) => {
-  const isExport = req.query.export === 'true';
-  const page = parseInt(req.query.page, 10) || 1;
-  const limit = isExport ? 5000 : parseInt(req.query.limit, 10) || 20;
+  const { page, limit } = pagination(req.query);
   const status = req.query.status;
   const district = req.query.district?.trim();
   const startDate = req.query.startDate;
   const endDate = req.query.endDate;
-  const search = req.query.search?.trim();
+  const search = req.query.search ? escapeSearch(req.query.search.trim()) : '';
   const paymentMethod = req.query.paymentMethod;
   const telecallerId = req.query.telecallerId;
   const sortBy = req.query.sortBy || 'createdAt';
   const sortOrder = req.query.sortOrder === 'asc' || req.query.sortOrder === '1' ? 1 : -1;
 
-  const query = {};
+  const query = recordScope(req.user, req, 'telecallerId');
   if (!req.branchScope.isGlobal && req.branchScope.branchId) {
     query.branchId = req.branchScope.branchId;
   }
@@ -54,13 +55,7 @@ export const getOrders = asyncHandler(async (req, res) => {
   }
 
   if (startDate || endDate) {
-    query.createdAt = {};
-    if (startDate) {
-      query.createdAt.$gte = new Date(startDate.includes('T') ? startDate : `${startDate}T00:00:00.000Z`);
-    }
-    if (endDate) {
-      query.createdAt.$lte = new Date(endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`);
-    }
+    query.createdAt = dateRange(startDate, endDate);
   }
 
   if (search) {
@@ -118,7 +113,8 @@ export const getOrders = asyncHandler(async (req, res) => {
           ...(query.branchId && mongoose.Types.ObjectId.isValid(query.branchId)
             ? { branchId: new mongoose.Types.ObjectId(query.branchId) }
             : {}),
-          status: { $ne: 'CANCELLED' }
+          ...(query.telecallerId ? { telecallerId: new mongoose.Types.ObjectId(query.telecallerId) } : {}),
+          $and: [{ status: { $ne: 'CANCELLED' } }]
         }
       },
       { $group: { _id: null, total: { $sum: '$grandTotal' } } }
@@ -230,7 +226,7 @@ export const importExcelOrders = asyncHandler(async (req, res) => {
 });
 
 export const exportOrders = asyncHandler(async (req, res) => {
-  const query = {};
+  const query = recordScope(req.user, req, 'telecallerId');
   if (!req.branchScope.isGlobal && req.branchScope.branchId) {
     query.branchId = req.branchScope.branchId;
   }
@@ -255,6 +251,7 @@ export const exportOrders = asyncHandler(async (req, res) => {
     .populate('telecallerId', 'name')
     .populate('branchId', 'name code')
     .sort({ createdAt: -1 })
+    .limit(5000)
     .lean();
 
   return ApiResponse.success(res, orders, `Export data retrieved for ${orders.length} orders`);
@@ -268,11 +265,10 @@ export const getOrderMetricsSummary = asyncHandler(async (req, res) => {
     ? new mongoose.Types.ObjectId(branchId)
     : null;
 
-  const branchFilter = branchId ? { branchId } : {};
-  const branchAggFilter = branchObjectId ? { branchId: branchObjectId } : {};
+  const branchFilter = recordScope(req.user, req, 'telecallerId');
+  const branchAggFilter = { ...(branchObjectId ? { branchId: branchObjectId } : {}), ...(branchFilter.telecallerId ? { telecallerId: new mongoose.Types.ObjectId(branchFilter.telecallerId) } : {}) };
 
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
+  const { startOfToday } = businessDateBoundaries();
 
   const [
     totalOrders,
@@ -305,7 +301,7 @@ export const getOrderMetricsSummary = asyncHandler(async (req, res) => {
       { $match: { ...branchAggFilter, status: { $ne: 'CANCELLED' } } },
       { $group: { _id: null, total: { $sum: '$grandTotal' } } }
     ]),
-    Lead.countDocuments(branchFilter),
+    Lead.countDocuments(recordScope(req.user, req, 'assignedTo')),
     Order.countDocuments({ ...branchFilter, status: 'DELIVERED' }),
     Order.countDocuments({ ...branchFilter, status: 'NEW' }),
     Order.countDocuments({ ...branchFilter, status: 'CONFIRMED' }),
@@ -335,7 +331,7 @@ export const getOrderMetricsSummary = asyncHandler(async (req, res) => {
 });
 
 export const getDistinctDistricts = asyncHandler(async (req, res) => {
-  const districts = await Order.distinct('deliveryAddress.district');
+  const districts = await Order.distinct('deliveryAddress.district', recordScope(req.user, req, 'telecallerId'));
   const filtered = districts.filter(Boolean).sort();
   return ApiResponse.success(res, filtered, 'Districts retrieved');
 });

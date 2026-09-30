@@ -1,4 +1,7 @@
 import mongoose from 'mongoose';
+import { randomUUID } from 'node:crypto';
+import { assertRecordAccess, assertBranchAccess, recordScope, assertTelecallerBranch } from '../utils/recordScope.js';
+import { User } from '../models/User.js';
 import { Order } from '../models/Order.js';
 import { OrderStatusHistory } from '../models/OrderStatusHistory.js';
 import { Customer } from '../models/Customer.js';
@@ -27,6 +30,18 @@ export class OrderService {
       notes
     } = orderData;
 
+    assertBranchAccess(branchId, user, req);
+    if (!branchId) throw new AppError('Select a branch before creating an order', 400);
+    if (!Array.isArray(items)) throw new AppError('Order items must be an array', 400);
+    for (const item of items) {
+      if (!Number.isInteger(Number(item.quantity)) || Number(item.quantity) <= 0) throw new AppError('Item quantity must be a positive whole number', 400);
+      for (const key of ['unitPrice', 'discount']) {
+        if (item[key] !== undefined && (!Number.isFinite(Number(item[key])) || Number(item[key]) < 0)) throw new AppError('Item prices and discounts must be valid positive amounts', 400);
+      }
+    }
+    for (const key of ['shippingCharge', 'discountTotal', 'offerPrice']) {
+      if (orderData[key] !== undefined && (!Number.isFinite(Number(orderData[key])) || Number(orderData[key]) < 0)) throw new AppError('Order amounts must be valid positive amounts', 400);
+    }
     let targetCustomerId = customerId;
     let customer = null;
 
@@ -34,7 +49,7 @@ export class OrderService {
       customer = await Customer.findById(targetCustomerId);
     } else if (orderData.patientName && orderData.mobile) {
       // Find existing customer by mobile or create new customer on the fly
-      customer = await Customer.findOne({ mobile: orderData.mobile.trim() });
+      customer = await Customer.findOne({ mobile: orderData.mobile.trim(), branchId });
       if (!customer) {
         customer = await Customer.create({
           name: orderData.patientName.trim(),
@@ -62,9 +77,11 @@ export class OrderService {
       throw new NotFoundError('Customer or Patient details');
     }
 
+    assertRecordAccess(customer, user, req, 'assignedTelecallerId', 'Customer');
+
     // Generate unique order number (e.g. ORD-20260825-9831)
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const randomSuffix = randomUUID().slice(0, 8).toUpperCase();
     const orderNumber = `ORD-${dateStr}-${randomSuffix}`;
 
     // Use withTransaction for atomic stock reservation
@@ -87,7 +104,9 @@ export class OrderService {
           throw new NotFoundError(`ProductBatch ${item.batchId}`);
         }
 
-        const unitPrice = item.unitPrice || product.price;
+        if (batch.productId.toString() !== product._id.toString()) throw new AppError('The selected batch does not belong to this product', 400);
+        const unitPrice = Number(item.unitPrice ?? product.price);
+        if (Number(item.discount || 0) > unitPrice) throw new AppError('Discount cannot exceed the item price', 400);
         const discount = item.discount || 0;
         const quantity = item.quantity;
         const itemTotal = (unitPrice - discount) * quantity;
@@ -220,11 +239,26 @@ export class OrderService {
       throw new NotFoundError('Order');
     }
 
+    assertRecordAccess(order, changedBy, req, 'telecallerId', 'Order');
+    if (!Object.values(ORDER_STATUS).includes(targetStatus)) throw new AppError('Unknown order status', 400);
     const previousStatus = order.status;
+    if (previousStatus === targetStatus) return order;
 
     // Validate state machine rule unless forceRevert is explicitly granted
-    if (!forceRevert) {
-      StateMachineService.validateOrderTransition(previousStatus, targetStatus);
+    StateMachineService.validateOrderTransition(previousStatus, targetStatus);
+
+    // Move reserved units out of the outstanding queue exactly once on dispatch.
+    if (targetStatus === ORDER_STATUS.DISPATCHED) {
+      for (const item of order.items) {
+        await InventoryService.dispatchReservedStock({
+          productId: item.productId,
+          batchId: item.batchId,
+          branchId: order.branchId,
+          quantity: item.quantity,
+          orderId: order.orderNumber,
+          user: changedBy
+        });
+      }
     }
 
     // If order is cancelled and was never dispatched, release reserved stock
@@ -244,23 +278,6 @@ export class OrderService {
       }
       if (cancellationReason) {
         order.cancellationReason = cancellationReason;
-      }
-    } else if (previousStatus === ORDER_STATUS.CANCELLED && targetStatus !== ORDER_STATUS.CANCELLED) {
-      // If force reverting back from CANCELLED to an active state, attempt to re-reserve stock
-      for (const item of order.items) {
-        try {
-          await InventoryService.reserveStock({
-            productId: item.productId,
-            batchId: item.batchId,
-            branchId: order.branchId,
-            quantity: item.quantity,
-            orderId: order.orderNumber,
-            user: changedBy,
-            req
-          });
-        } catch (e) {
-          // Continue if stock reservation fails
-        }
       }
     }
 
@@ -314,12 +331,22 @@ export class OrderService {
    * Update Order Details
    */
   static async updateOrder(orderId, updateData, user, req) {
-    const order = await Order.findById(orderId);
+    let order = await Order.findById(orderId);
     if (!order) {
       throw new NotFoundError('Order');
     }
 
+    assertRecordAccess(order, user, req, 'telecallerId', 'Order');
+    for (const key of ['grandTotal', 'offerPrice']) {
+      if (updateData[key] !== undefined && (!Number.isFinite(Number(updateData[key])) || Number(updateData[key]) < 0)) throw new AppError('Order amounts must be non-negative numbers', 400);
+    }
     const oldValue = order.toObject();
+    if (updateData.status && updateData.status !== order.status) {
+      order = await this.transitionStatus(orderId, updateData.status, { changedBy: user, notes: updateData.notes, req });
+    }
+    for (const key of ['courierName', 'shippingDate', 'boxDimensions', 'weightGrams']) {
+      if (updateData[key] !== undefined) order[key] = updateData[key];
+    }
 
     if (updateData.patientDetails) {
       order.patientDetails = {
@@ -369,9 +396,7 @@ export class OrderService {
       order.grandTotal = Number(updateData.grandTotal);
     }
 
-    if (updateData.status && updateData.status !== order.status) {
-      order.status = updateData.status;
-    }
+
 
     if (updateData.paymentMethod) {
       order.paymentMethod = updateData.paymentMethod;
@@ -418,6 +443,9 @@ export class OrderService {
       throw new NotFoundError('Order');
     }
 
+    assertRecordAccess(order, user, req, 'telecallerId', 'Order');
+    if (StateMachineService.isDispatchedOrBeyond(order.status)) throw new AppError('Dispatched orders must be retained. Use the returns workflow.', 409);
+
     // If order was not yet dispatched/delivered and not cancelled, release reserved stock
     if (!StateMachineService.isDispatchedOrBeyond(order.status) && order.status !== ORDER_STATUS.CANCELLED) {
       for (const item of order.items) {
@@ -443,7 +471,6 @@ export class OrderService {
       }
     }
 
-    await OrderStatusHistory.deleteMany({ orderId: order._id });
     await Order.findByIdAndDelete(orderId);
 
     await AuditService.log({
@@ -499,8 +526,11 @@ export class OrderService {
    * Bulk assign orders to a telecaller / verifier
    */
   static async bulkAssignVerification(orderIds = [], telecallerId, user, req) {
+    const telecaller = await User.findById(telecallerId);
+    const orders = await Order.find({ _id: { $in: orderIds }, ...recordScope(user, req, 'telecallerId') });
+    for (const order of orders) assertTelecallerBranch(telecaller, order.branchId);
     const result = await Order.updateMany(
-      { _id: { $in: orderIds } },
+      { _id: { $in: orders.map((order) => order._id) } },
       { $set: { assignedVerifierId: telecallerId, telecallerId } }
     );
 
@@ -527,7 +557,7 @@ export class OrderService {
     for (const orderId of orderIds) {
       try {
         const order = await Order.findById(orderId);
-        if (!order) continue;
+        assertRecordAccess(order, user, req, 'telecallerId', 'Order');
 
         order.isVerified = true;
         order.verifiedBy = user.id || user._id;
@@ -569,6 +599,7 @@ export class OrderService {
    */
   static async autoDispatchOrders(branchId, user, req) {
     const query = {
+      ...recordScope(user, req, 'telecallerId'),
       status: { $in: [ORDER_STATUS.PACKED, ORDER_STATUS.READY_FOR_DISPATCH] }
     };
     if (branchId && branchId !== 'ALL') {
@@ -580,6 +611,7 @@ export class OrderService {
 
     for (const order of ordersToDispatch) {
       try {
+        if (order.status === ORDER_STATUS.PACKED) await this.transitionStatus(order._id, ORDER_STATUS.READY_FOR_DISPATCH, { changedBy: user, req });
         const updated = await this.transitionStatus(order._id, ORDER_STATUS.DISPATCHED, {
           changedBy: user,
           notes: 'Auto-dispatched from manager panel',
@@ -707,143 +739,6 @@ export class OrderService {
     return results;
   }
 
-  /**
-   * Update order details (tracking number, courier, address, patient, status, etc.)
-   */
-  static async updateOrder(orderId, updateData, user, req) {
-    const order = await Order.findById(orderId);
-    if (!order) {
-      throw new NotFoundError('Order');
-    }
-
-    // Branch scoping check
-    if (!req?.branchScope?.isGlobal && req?.branchScope?.branchId) {
-      if (order.branchId.toString() !== req.branchScope.branchId.toString()) {
-        throw new AppError('Unauthorized: Order belongs to another branch', 403);
-      }
-    }
-
-    const allowedDirectFields = [
-      'trackingNumber',
-      'courierName',
-      'paymentStatus',
-      'paymentMethod',
-      'notes',
-      'shippingDate',
-      'offerPrice',
-      'grandTotal',
-      'boxDimensions',
-      'weightGrams'
-    ];
-
-    allowedDirectFields.forEach((field) => {
-      if (updateData[field] !== undefined) {
-        order[field] = updateData[field];
-      }
-    });
-
-    if (updateData.patientDetails) {
-      order.patientDetails = {
-        ...(order.patientDetails?.toObject?.() || order.patientDetails || {}),
-        ...updateData.patientDetails
-      };
-    }
-
-    if (updateData.deliveryAddress) {
-      order.deliveryAddress = {
-        ...(order.deliveryAddress?.toObject?.() || order.deliveryAddress || {}),
-        ...updateData.deliveryAddress
-      };
-    }
-
-    const previousStatus = order.status;
-    if (updateData.status && updateData.status !== previousStatus) {
-      try {
-        await this.transitionStatus(order._id, updateData.status, {
-          changedBy: user,
-          notes: updateData.notes || `Updated via Scan Tracker / Order Management`,
-          forceRevert: true,
-          req
-        });
-      } catch (err) {
-        order.status = updateData.status;
-        await OrderStatusHistory.create({
-          orderId: order._id,
-          fromStatus: previousStatus,
-          toStatus: updateData.status,
-          changedBy: user?._id || user?.id,
-          reason: updateData.notes || 'Status updated'
-        });
-      }
-    }
-
-    await order.save();
-
-    await AuditService.log({
-      userId: user?.id || user?._id,
-      branchId: order.branchId,
-      action: 'ORDER_UPDATED',
-      module: 'orders',
-      resourceType: 'Order',
-      resourceId: order._id,
-      newValue: { trackingNumber: order.trackingNumber, status: order.status },
-      req
-    });
-
-    emitToBranch(order.branchId, 'order:updated', { order });
-    return order;
-  }
-
-  /**
-   * Delete an order and release stock if reserved
-   */
-  static async deleteOrder(orderId, user, req) {
-    const order = await Order.findById(orderId);
-    if (!order) {
-      throw new NotFoundError('Order');
-    }
-
-    if (!req?.branchScope?.isGlobal && req?.branchScope?.branchId) {
-      if (order.branchId.toString() !== req.branchScope.branchId.toString()) {
-        throw new AppError('Unauthorized: Order belongs to another branch', 403);
-      }
-    }
-
-    if (!StateMachineService.isDispatchedOrBeyond(order.status) && order.status !== ORDER_STATUS.CANCELLED) {
-      for (const item of order.items) {
-        try {
-          await InventoryService.releaseReservedStock({
-            productId: item.productId,
-            batchId: item.batchId,
-            branchId: order.branchId,
-            quantity: item.quantity,
-            orderId: order.orderNumber,
-            user,
-            req
-          });
-        } catch (e) {
-          console.warn('Could not release stock on delete:', e.message);
-        }
-      }
-    }
-
-    await Order.findByIdAndDelete(orderId);
-
-    await AuditService.log({
-      userId: user?.id || user?._id,
-      branchId: order.branchId,
-      action: 'ORDER_DELETED',
-      module: 'orders',
-      resourceType: 'Order',
-      resourceId: orderId,
-      oldValue: { orderNumber: order.orderNumber },
-      req
-    });
-
-    emitToBranch(order.branchId, 'order:deleted', { orderId });
-    return { success: true, message: 'Order deleted successfully' };
-  }
 }
 
 export default OrderService;
-

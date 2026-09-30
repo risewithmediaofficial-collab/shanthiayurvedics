@@ -1,3 +1,5 @@
+import { Lead } from '../models/Lead.js';
+import { scopeRecord } from '../middleware/scopeRecord.js';
 import { Router } from 'express';
 import {
   getLeads,
@@ -26,6 +28,7 @@ const router = Router();
 
 router.use(authenticate);
 router.use(requireBranchScope);
+router.param('id', scopeRecord(Lead, 'assignedTo'));
 
 router.get('/', requirePermission(PERMISSIONS.LEADS_VIEW), getLeads);
 router.get('/calls/history', requirePermission(PERMISSIONS.LEADS_VIEW), getCallHistory);

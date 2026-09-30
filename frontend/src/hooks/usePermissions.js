@@ -1,4 +1,5 @@
 import { useAuth } from '../context/AuthContext.jsx';
+import { hasPermissionForUser, permissionsForUser } from './permissionPolicy.js';
 
 export function usePermissions() {
   const { user } = useAuth();
@@ -8,23 +9,21 @@ export function usePermissions() {
   const isManager = user?.role === 'MANAGER';
   const isTelecaller = user?.role === 'TELECALLER';
 
-  const userPermissions = Array.isArray(user?.permissions) ? user.permissions : [];
+  const userPermissions = permissionsForUser(user);
 
   const hasPermission = (permission) => {
-    if (!permission) return true;
-    if (isOwner || isDistributor || isManager) return true; // Owner, Distributor and Manager have full supervisory access
-    return userPermissions.includes(permission);
+    return hasPermissionForUser(user, permission);
   };
 
   const hasAnyPermission = (permissions = []) => {
     if (!permissions || permissions.length === 0) return true;
-    if (isOwner || isDistributor || isManager) return true;
+    if (isOwner) return true;
     return permissions.some((perm) => userPermissions.includes(perm));
   };
 
   const hasAllPermissions = (permissions = []) => {
     if (!permissions || permissions.length === 0) return true;
-    if (isOwner || isDistributor || isManager) return true;
+    if (isOwner) return true;
     return permissions.every((perm) => userPermissions.includes(perm));
   };
 

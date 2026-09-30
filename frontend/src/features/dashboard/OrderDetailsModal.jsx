@@ -87,7 +87,7 @@ export function OrderDetailsModal({
       '';
 
     const status = (base.status || base.orderStatus || 'CONFIRMED').toUpperCase();
-    const grandTotal = Number(base.grandTotal ?? base.totalAmount ?? base.subtotal ?? 1850);
+    const grandTotal = Number(base.grandTotal ?? base.totalAmount ?? base.subtotal ?? 0);
     const subtotal = Number(base.subtotal || grandTotal);
     const shippingCharge = Number(base.shippingCharge || 0);
     const discountTotal = Number(base.discountTotal || 0);
@@ -365,7 +365,7 @@ export function OrderDetailsModal({
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400">Attending Telecaller:</span>
                   <span className="font-semibold text-slate-800">
-                    {d.telecallerId?.name || 'ANANDHI (Hosur Hub)'}
+                    {d.telecallerId?.name || 'Unassigned'}
                   </span>
                 </div>
               </div>

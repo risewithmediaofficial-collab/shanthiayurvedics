@@ -9,9 +9,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "oxlint",
-    "test": "npx vitest run --config vitest.config.js",
-    "test:watch": "npx vitest --config vitest.config.js",
-    "test:coverage": "npx vitest run --coverage --config vitest.config.js"
+    "test": "vitest run --config vitest.config.js",
+    "test:watch": "vitest --config vitest.config.js",
+    "test:coverage": "vitest run --coverage --config vitest.config.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

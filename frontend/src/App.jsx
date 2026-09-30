@@ -1,42 +1,45 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { lazy, Suspense } from 'react';
+import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { AuthLayout } from './layouts/AuthLayout.jsx';
 import { DashboardLayout } from './layouts/DashboardLayout.jsx';
 import { useAuth } from './context/AuthContext.jsx';
 import { Spinner } from './components/common/Spinner.jsx';
+import { hasPermissionForUser } from './hooks/permissionPolicy.js';
 
 // Feature Pages
-import LoginPage from './features/auth/LoginPage.jsx';
-import ForgotPasswordPage from './features/auth/ForgotPasswordPage.jsx';
-import ResetPasswordPage from './features/auth/ResetPasswordPage.jsx';
-import DashboardHub from './features/dashboard/DashboardHub.jsx';
-import LeadListPage from './features/leads/LeadListPage.jsx';
-import CallHistoryPage from './features/leads/CallHistoryPage.jsx';
-import FollowUpListPage from './features/followups/FollowUpListPage.jsx';
-import CustomerListPage from './features/customers/CustomerListPage.jsx';
-import ProductCatalogPage from './features/products/ProductCatalogPage.jsx';
-import InventoryLedgerPage from './features/inventory/InventoryLedgerPage.jsx';
-import StockTransfersPage from './features/inventory/StockTransfersPage.jsx';
-import OrderListPage from './features/orders/OrderListPage.jsx';
-import OrderDetailPage from './features/orders/OrderDetailPage.jsx';
-import CounterSalePage from './features/orders/CounterSalePage.jsx';
-import StuckOrdersPage from './features/orders/StuckOrdersPage.jsx';
-import OperationsHubPage from './features/operations/OperationsHubPage.jsx';
-import PackingStationPage from './features/operations/PackingStationPage.jsx';
-import DispatchQueuePage from './features/operations/DispatchQueuePage.jsx';
-import ScanTrackerPage from './features/operations/ScanTrackerPage.jsx';
-import DeliveryTrackingPage from './features/shipping/DeliveryTrackingPage.jsx';
-import RTOManagementPage from './features/rto/RTOManagementPage.jsx';
-import ReportsHubPage from './features/reports/ReportsHubPage.jsx';
-import BranchManagementPage from './features/administration/BranchManagementPage.jsx';
-import UserManagementPage from './features/administration/UserManagementPage.jsx';
-import RolesManagementPage from './features/administration/RolesManagementPage.jsx';
-import IntegrationsPage from './features/administration/IntegrationsPage.jsx';
-import AuditLogViewerPage from './features/administration/AuditLogViewerPage.jsx';
+const LoginPage = lazy(() => import('./features/auth/LoginPage.jsx'));
+const ForgotPasswordPage = lazy(() => import('./features/auth/ForgotPasswordPage.jsx'));
+const ResetPasswordPage = lazy(() => import('./features/auth/ResetPasswordPage.jsx'));
+const DashboardHub = lazy(() => import('./features/dashboard/DashboardHub.jsx'));
+const LeadListPage = lazy(() => import('./features/leads/LeadListPage.jsx'));
+const CallHistoryPage = lazy(() => import('./features/leads/CallHistoryPage.jsx'));
+const FollowUpListPage = lazy(() => import('./features/followups/FollowUpListPage.jsx'));
+const CustomerListPage = lazy(() => import('./features/customers/CustomerListPage.jsx'));
+const ProductCatalogPage = lazy(() => import('./features/products/ProductCatalogPage.jsx'));
+const InventoryLedgerPage = lazy(() => import('./features/inventory/InventoryLedgerPage.jsx'));
+const StockTransfersPage = lazy(() => import('./features/inventory/StockTransfersPage.jsx'));
+const OrderListPage = lazy(() => import('./features/orders/OrderListPage.jsx'));
+const OrderDetailPage = lazy(() => import('./features/orders/OrderDetailPage.jsx'));
+const CounterSalePage = lazy(() => import('./features/orders/CounterSalePage.jsx'));
+const StuckOrdersPage = lazy(() => import('./features/orders/StuckOrdersPage.jsx'));
+const OperationsHubPage = lazy(() => import('./features/operations/OperationsHubPage.jsx'));
+const PackingStationPage = lazy(() => import('./features/operations/PackingStationPage.jsx'));
+const DispatchQueuePage = lazy(() => import('./features/operations/DispatchQueuePage.jsx'));
+const ScanTrackerPage = lazy(() => import('./features/operations/ScanTrackerPage.jsx'));
+const DeliveryTrackingPage = lazy(() => import('./features/shipping/DeliveryTrackingPage.jsx'));
+const RTOManagementPage = lazy(() => import('./features/rto/RTOManagementPage.jsx'));
+const ReportsHubPage = lazy(() => import('./features/reports/ReportsHubPage.jsx'));
+const BranchManagementPage = lazy(() => import('./features/administration/BranchManagementPage.jsx'));
+const UserManagementPage = lazy(() => import('./features/administration/UserManagementPage.jsx'));
+const RolesManagementPage = lazy(() => import('./features/administration/RolesManagementPage.jsx'));
+const IntegrationsPage = lazy(() => import('./features/administration/IntegrationsPage.jsx'));
+const AuditLogViewerPage = lazy(() => import('./features/administration/AuditLogViewerPage.jsx'));
 
 // Protected Route Guard
 function ProtectedRoute({ children }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, authError, checkAuth } = useAuth();
+  const location = useLocation();
+  if (authError) return <div role="alert" className="mx-auto my-20 max-w-md rounded-xl border bg-white p-8 text-center"><h1 className="text-xl font-semibold">Connection interrupted</h1><p className="mt-3 text-slate-600">{authError}</p><button className="mt-5 rounded-lg bg-emerald-700 px-4 py-2 text-white" onClick={checkAuth}>Try again</button></div>;
 
   if (isLoading) {
     return (
@@ -47,15 +50,27 @@ function ProtectedRoute({ children }) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return children;
 }
 
+const routePermissions = {
+  '/leads': 'leads.view', '/leads/calls': 'leads.view', '/call-history': 'leads.view', '/followups': 'followups.view', '/customers': 'customers.view',
+  '/products': 'products.view', '/inventory': 'inventory.view', '/inventory/transfers': 'inventory.transfer', '/orders': 'orders.view', '/orders/counter-sale': 'orders.create', '/orders/stuck': 'orders.view', '/orders/:id': 'orders.view',
+  '/operations': 'operations.view', '/operations/packing': 'orders.pack', '/operations/dispatch': 'orders.dispatch', '/shipping': 'shipping.view', '/shipping/tracking': 'shipping.view', '/rto': 'rto.view', '/reports': 'reports.view', '/reports/tc-sales': 'reports.view', '/reports/settlement': 'reports.view',
+  '/admin/branches': 'branches.manage', '/admin/users': 'users.view', '/admin/roles': 'roles.manage', '/admin/integrations': 'integrations.manage', '/admin/audit': 'audit.view'
+};
+function Allowed({ permission, children }) {
+  const { user } = useAuth();
+  if (hasPermissionForUser(user, permission)) return children;
+  return <div role="alert" className="rounded-xl border border-slate-200 bg-white p-8 text-center"><h1 className="text-xl font-semibold">Access restricted</h1><p className="mt-2 text-slate-600">Your account does not have access to this module. Contact your administrator.</p><Link className="mt-4 inline-block font-semibold text-emerald-700" to="/dashboard">Return to dashboard</Link></div>;
+}
+
 export function App() {
   return (
-    <Routes>
+    <Suspense fallback={<Spinner size="lg" text="Loading workspace?" className="py-24" />}><Routes>
       {/* Public Auth Routes */}
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<LoginPage />} />
@@ -79,50 +94,50 @@ export function App() {
         <Route path="/doctor-slots" element={<Navigate to="/dashboard?tab=overview" replace />} />
 
         {/* Phase 3 — Leads, Followups & Customers */}
-        <Route path="/leads" element={<LeadListPage />} />
-        <Route path="/leads/calls" element={<CallHistoryPage />} />
-        <Route path="/call-history" element={<CallHistoryPage />} />
-        <Route path="/followups" element={<FollowUpListPage />} />
-        <Route path="/customers" element={<CustomerListPage />} />
+        <Route path="/leads" element={<Allowed permission={routePermissions['/leads']}><LeadListPage /></Allowed>} />
+        <Route path="/leads/calls" element={<Allowed permission={routePermissions['/leads/calls']}><CallHistoryPage /></Allowed>} />
+        <Route path="/call-history" element={<Allowed permission={routePermissions['/call-history']}><CallHistoryPage /></Allowed>} />
+        <Route path="/followups" element={<Allowed permission={routePermissions['/followups']}><FollowUpListPage /></Allowed>} />
+        <Route path="/customers" element={<Allowed permission={routePermissions['/customers']}><CustomerListPage /></Allowed>} />
 
         {/* Phase 4 — Products & Inventory */}
-        <Route path="/products" element={<ProductCatalogPage />} />
-        <Route path="/inventory" element={<InventoryLedgerPage />} />
-        <Route path="/inventory/transfers" element={<StockTransfersPage />} />
+        <Route path="/products" element={<Allowed permission={routePermissions['/products']}><ProductCatalogPage /></Allowed>} />
+        <Route path="/inventory" element={<Allowed permission={routePermissions['/inventory']}><InventoryLedgerPage /></Allowed>} />
+        <Route path="/inventory/transfers" element={<Allowed permission={routePermissions['/inventory/transfers']}><StockTransfersPage /></Allowed>} />
 
         {/* Phase 5 — Orders & Shanthi Ayurvedas Modules */}
-        <Route path="/orders" element={<OrderListPage />} />
-        <Route path="/orders/counter-sale" element={<CounterSalePage />} />
-        <Route path="/orders/stuck" element={<StuckOrdersPage />} />
-        <Route path="/orders/:id" element={<OrderDetailPage />} />
+        <Route path="/orders" element={<Allowed permission={routePermissions['/orders']}><OrderListPage /></Allowed>} />
+        <Route path="/orders/counter-sale" element={<Allowed permission={routePermissions['/orders/counter-sale']}><CounterSalePage /></Allowed>} />
+        <Route path="/orders/stuck" element={<Allowed permission={routePermissions['/orders/stuck']}><StuckOrdersPage /></Allowed>} />
+        <Route path="/orders/:id" element={<Allowed permission={routePermissions['/orders/:id']}><OrderDetailPage /></Allowed>} />
         {/* Phase 6 — Operations */}
-        <Route path="/operations" element={<OperationsHubPage />} />
-        <Route path="/operations/packing" element={<PackingStationPage />} />
-        <Route path="/operations/dispatch" element={<DispatchQueuePage />} />
+        <Route path="/operations" element={<Allowed permission={routePermissions['/operations']}><OperationsHubPage /></Allowed>} />
+        <Route path="/operations/packing" element={<Allowed permission={routePermissions['/operations/packing']}><PackingStationPage /></Allowed>} />
+        <Route path="/operations/dispatch" element={<Allowed permission={routePermissions['/operations/dispatch']}><DispatchQueuePage /></Allowed>} />
 
         {/* Phase 7 & 8 — Shipping & RTO */}
-        <Route path="/shipping" element={<DeliveryTrackingPage />} />
-        <Route path="/shipping/tracking" element={<DeliveryTrackingPage />} />
-        <Route path="/rto" element={<RTOManagementPage />} />
+        <Route path="/shipping" element={<Allowed permission={routePermissions['/shipping']}><DeliveryTrackingPage /></Allowed>} />
+        <Route path="/shipping/tracking" element={<Allowed permission={routePermissions['/shipping/tracking']}><DeliveryTrackingPage /></Allowed>} />
+        <Route path="/rto" element={<Allowed permission={routePermissions['/rto']}><RTOManagementPage /></Allowed>} />
 
         {/* Phase 9 — Reports & Finance */}
-        <Route path="/reports" element={<ReportsHubPage />} />
-        <Route path="/reports/tc-sales" element={<ReportsHubPage />} />
-        <Route path="/reports/settlement" element={<ReportsHubPage />} />
+        <Route path="/reports" element={<Allowed permission={routePermissions['/reports']}><ReportsHubPage /></Allowed>} />
+        <Route path="/reports/tc-sales" element={<Allowed permission={routePermissions['/reports/tc-sales']}><ReportsHubPage /></Allowed>} />
+        <Route path="/reports/settlement" element={<Allowed permission={routePermissions['/reports/settlement']}><ReportsHubPage /></Allowed>} />
 
         {/* Phase 2 & 10 — Administration */}
-        <Route path="/admin/branches" element={<BranchManagementPage />} />
-        <Route path="/admin/users" element={<UserManagementPage />} />
-        <Route path="/admin/roles" element={<RolesManagementPage />} />
-        <Route path="/admin/integrations" element={<IntegrationsPage />} />
-        <Route path="/admin/audit" element={<AuditLogViewerPage />} />
+        <Route path="/admin/branches" element={<Allowed permission={routePermissions['/admin/branches']}><BranchManagementPage /></Allowed>} />
+        <Route path="/admin/users" element={<Allowed permission={routePermissions['/admin/users']}><UserManagementPage /></Allowed>} />
+        <Route path="/admin/roles" element={<Allowed permission={routePermissions['/admin/roles']}><RolesManagementPage /></Allowed>} />
+        <Route path="/admin/integrations" element={<Allowed permission={routePermissions['/admin/integrations']}><IntegrationsPage /></Allowed>} />
+        <Route path="/admin/audit" element={<Allowed permission={routePermissions['/admin/audit']}><AuditLogViewerPage /></Allowed>} />
       </Route>
       {/* Dedicated Standalone Scan Tracker View (Full-Screen Shanthi Ayurvedas Logistics Mode) */}
       <Route
         path="/scan-tracker"
         element={
           <ProtectedRoute>
-            <ScanTrackerPage />
+            <Allowed permission="operations.view"><ScanTrackerPage /></Allowed>
           </ProtectedRoute>
         }
       />
@@ -130,7 +145,7 @@ export function App() {
         path="/orders/scan-tracker"
         element={
           <ProtectedRoute>
-            <ScanTrackerPage />
+            <Allowed permission="operations.view"><ScanTrackerPage /></Allowed>
           </ProtectedRoute>
         }
       />
@@ -138,14 +153,14 @@ export function App() {
         path="/operations/scan-tracker"
         element={
           <ProtectedRoute>
-            <ScanTrackerPage />
+            <Allowed permission="operations.view"><ScanTrackerPage /></Allowed>
           </ProtectedRoute>
         }
       />
 
       {/* Catch-all 404 */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+      <Route path="*" element={<div className="max-w-lg mx-auto p-10 text-center"><h1 className="text-2xl font-semibold">Page not found</h1><p className="my-4 text-slate-600">The page may have moved or the link may be incorrect.</p><Link to="/dashboard" className="font-semibold text-emerald-700">Return to dashboard</Link></div>} />
+    </Routes></Suspense>
   );
 }
 

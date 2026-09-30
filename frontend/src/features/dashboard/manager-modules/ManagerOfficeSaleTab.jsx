@@ -243,8 +243,8 @@ export function ManagerOfficeSaleTab() {
       setLandmark('');
       setIncludeServiceFee(false);
       setActionSuccessMsg('Treatment Order & Tax Bill generated successfully!');
-      queryClient.invalidateQueries(['orders']);
-      queryClient.invalidateQueries(['sidebar-metrics']);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-metrics'] });
       setTimeout(() => setActionSuccessMsg(''), 5000);
     } catch (e) {
       // Local fallback receipt

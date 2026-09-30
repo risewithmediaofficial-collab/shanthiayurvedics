@@ -18,7 +18,7 @@ export function AuditLogViewerPage() {
   });
 
   const logs = auditResponse?.data || [];
-  const meta = auditResponse?.meta || { page: 1, totalPages: 1, total: 0 };
+  const meta = auditResponse?.pagination || auditResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
   const columns = [
     {

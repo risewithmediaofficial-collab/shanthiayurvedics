@@ -16,7 +16,7 @@ export function Pagination({
 
   return (
     <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-slate-200 sm:px-6 rounded-b-xl">
-      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+      <div className="flex flex-1 flex-wrap gap-3 items-center justify-between">
         <div>
           <p className="text-xs text-slate-600">
             Showing <span className="font-semibold text-slate-900">{start}</span> to{' '}
@@ -35,7 +35,7 @@ export function Pagination({
             Previous
           </Button>
 
-          <div className="text-xs font-medium text-slate-700 px-2">
+          <div aria-live="polite" className="text-xs font-medium text-slate-700 px-2">
             Page {currentPage} of {totalPages}
           </div>
 

@@ -38,6 +38,8 @@ export const errorHandler = (err, req, res, next) => {
   }
 
   // JWT Errors
+  if (err.type === 'entity.parse.failed') error = new AppError('Request contains invalid JSON', 400);
+  if (err.type === 'entity.too.large') error = new AppError('Request is too large. Upload fewer records at a time.', 413);
   if (err.name === 'JsonWebTokenError') {
     error = new AppError('Invalid authentication token', 401);
   }
@@ -54,6 +56,7 @@ export const errorHandler = (err, req, res, next) => {
 
   return res.status(statusCode).json({
     success: false,
+    requestId: req.id,
     status,
     message: responseMessage,
     ...(error.errors && { errors: error.errors }),

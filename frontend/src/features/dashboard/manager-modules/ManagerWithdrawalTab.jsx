@@ -23,66 +23,40 @@ import { Spinner } from '../../../components/common/Spinner.jsx';
 import { DateRangeFilter } from '../../../components/common/DateRangeFilter.jsx';
 
 export function ManagerWithdrawalTab() {
-  const { selectedBranchId } = useBranch();
+  const { selectedBranchId, isOwner } = useBranch();
   const queryClient = useQueryClient();
 
-  const [withdrawAmount, setWithdrawAmount] = useState('10000');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
   const [payoutMode, setPayoutMode] = useState('BANK_TRANSFER');
-  const [bankAccount, setBankAccount] = useState('HDFC Bank - 50100492819283 (IFSC: HDFC0000128)');
-  const [upiId, setUpiId] = useState('shanthiayurveda@icici');
+  const [bankAccount, setBankAccount] = useState('');
+  const [upiId, setUpiId] = useState('');
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
   const [actionErrorMsg, setActionErrorMsg] = useState('');
+  const [settlementRequest, setSettlementRequest] = useState(null);
+  const [settlementStatus, setSettlementStatus] = useState('PROCESSED');
+  const [referenceNo, setReferenceNo] = useState('');
 
   // Fetch Till-Date & Withdrawal Data
-  const { data: withdrawalData, isLoading } = useQuery({
+  const { data: withdrawalData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['manager-till-date-withdrawal', selectedBranchId],
     queryFn: async () => {
-      try {
-        const res = await apiClient.get('/reports/till-date-withdrawal');
-        return res.data?.data;
-      } catch (e) {
-        return null;
-      }
+      const res = await apiClient.get('/reports/till-date-withdrawal');
+      return res.data?.data;
     }
   });
 
-  const fallbackData = {
-    metrics: {
-      totalBranchSales: 148500,
-      deliveredCollections: 98200,
-      commissionAccrued: 39280,
-      availableBalance: 14280,
-      totalWithdrawn: 25000,
-      pendingWithdrawal: 0,
-      minWithdrawalThreshold: 5000
-    },
-    ledger: [
-      {
-        id: 'WDR-108-001',
-        amount: 15000,
-        requestedAt: new Date(Date.now() - 12 * 86400000).toISOString(),
-        status: 'PROCESSED',
-        payoutMode: 'BANK_TRANSFER',
-        bankAccount: 'HDFC Bank - 50100492819283 (IFSC: HDFC0000128)',
-        referenceNo: 'CMS-HDFC-992817263',
-        processedAt: new Date(Date.now() - 10 * 86400000).toISOString()
-      },
-      {
-        id: 'WDR-108-002',
-        amount: 10000,
-        requestedAt: new Date(Date.now() - 4 * 86400000).toISOString(),
-        status: 'PROCESSED',
-        payoutMode: 'UPI',
-        bankAccount: 'UPI ID: shanthiayurveda@icici',
-        referenceNo: 'UPI-ICICI-48192019',
-        processedAt: new Date(Date.now() - 3 * 86400000).toISOString()
-      }
-    ]
+  const data = withdrawalData || { metrics: {}, ledger: [] };
+  const metrics = {
+    totalBranchSales: 0,
+    deliveredCollections: 0,
+    commissionAccrued: 0,
+    availableBalance: 0,
+    totalWithdrawn: 0,
+    pendingWithdrawal: 0,
+    revenueSharePercent: 0,
+    ...data.metrics
   };
-
-  const data = withdrawalData || fallbackData;
-  const metrics = data.metrics || fallbackData.metrics;
-  const ledger = data.ledger || fallbackData.ledger;
+  const ledger = data.ledger || [];
 
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [sortBy, setSortBy] = useState('date-desc');
@@ -110,10 +84,10 @@ export function ManagerWithdrawalTab() {
       const res = await apiClient.post('/reports/withdrawal-request', payload);
       return res.data;
     },
-    onSuccess: (res) => {
+    onSuccess: () => {
       setActionErrorMsg('');
       setActionSuccessMsg('Withdrawal request submitted successfully! HQ approval pending.');
-      queryClient.invalidateQueries(['manager-till-date-withdrawal']);
+      queryClient.invalidateQueries({ queryKey: ['manager-till-date-withdrawal'] });
       setTimeout(() => setActionSuccessMsg(''), 5000);
     },
     onError: (err) => {
@@ -122,8 +96,27 @@ export function ManagerWithdrawalTab() {
     }
   });
 
+  const settlementMutation = useMutation({
+    mutationFn: async ({ id, status, referenceNo: reference }) => {
+      const res = await apiClient.patch(`/reports/withdrawal-request/${id}`, { status, referenceNo: reference });
+      return res.data;
+    },
+    onSuccess: () => {
+      setSettlementRequest(null);
+      setReferenceNo('');
+      setActionErrorMsg('');
+      setActionSuccessMsg('Withdrawal request updated.');
+      queryClient.invalidateQueries({ queryKey: ['manager-till-date-withdrawal'] });
+    },
+    onError: (err) => setActionErrorMsg(err.response?.data?.message || 'Could not update the withdrawal request.')
+  });
+
   const handleSubmitWithdrawal = (e) => {
     e.preventDefault();
+    if (isOwner && (!selectedBranchId || selectedBranchId === 'ALL')) {
+      setActionErrorMsg('Select a branch before requesting a withdrawal.');
+      return;
+    }
     const amount = Number(withdrawAmount);
     if (amount < 5000) {
       setActionErrorMsg('Minimum withdrawal amount is ₹5,000 as per franchise policy.');
@@ -141,6 +134,9 @@ export function ManagerWithdrawalTab() {
       upiId: payoutMode === 'UPI' ? upiId : undefined
     });
   };
+
+  if (isLoading) return <div className="flex justify-center p-10"><Spinner /></div>;
+  if (isError) return <div role="alert" className="bento-card text-sm text-red-700">Could not load branch finance: {error?.response?.data?.message || error?.message || 'Unknown error'} <Button type="button" onClick={() => refetch()}>Retry</Button></div>;
 
   return (
     <div className="space-y-4">
@@ -165,7 +161,7 @@ export function ManagerWithdrawalTab() {
           <div className="text-xl font-semibold font-mono text-slate-900 tracking-tight">
             ₹{metrics.totalBranchSales.toLocaleString()}
           </div>
-          <div className="text-[10px] text-slate-400">Till-date bookings</div>
+          <div className="text-[10px] text-slate-400">Till-date order value</div>
         </div>
 
         <div className="bento-card flex flex-col gap-0.5">
@@ -173,7 +169,7 @@ export function ManagerWithdrawalTab() {
           <div className="text-xl font-semibold font-mono text-blue-600 tracking-tight">
             ₹{metrics.deliveredCollections.toLocaleString()}
           </div>
-          <div className="text-[10px] text-blue-400">Realized revenue</div>
+          <div className="text-[10px] text-blue-400">Delivered order value</div>
         </div>
 
         <div className="bento-card flex flex-col gap-0.5">
@@ -181,7 +177,7 @@ export function ManagerWithdrawalTab() {
           <div className="text-xl font-semibold font-mono text-purple-600 tracking-tight">
             ₹{metrics.commissionAccrued.toLocaleString()}
           </div>
-          <div className="text-[10px] text-purple-400">Franchise margin</div>
+          <div className="text-[10px] text-purple-400">Configured branch share: {metrics.revenueSharePercent}%</div>
         </div>
 
         <div className="bento-card border-emerald-200/80 bg-emerald-50/30 flex flex-col gap-0.5">
@@ -189,7 +185,7 @@ export function ManagerWithdrawalTab() {
           <div className="text-xl font-semibold font-mono text-emerald-700 tracking-tight">
             ₹{metrics.availableBalance.toLocaleString()}
           </div>
-          <div className="text-[10px] text-emerald-500 font-semibold">Ready for payout</div>
+          <div className="text-[10px] text-emerald-500 font-semibold">Available to request</div>
         </div>
 
         <div className="bento-card flex flex-col gap-0.5">
@@ -205,7 +201,7 @@ export function ManagerWithdrawalTab() {
           <div className="text-xl font-semibold font-mono text-amber-600 tracking-tight">
             ₹{metrics.pendingWithdrawal.toLocaleString()}
           </div>
-          <div className="text-[10px] text-amber-500">In bank clearance</div>
+          <div className="text-[10px] text-amber-500">Awaiting review</div>
         </div>
       </div>
 
@@ -298,7 +294,7 @@ export function ManagerWithdrawalTab() {
               variant="primary"
               icon={Send}
               isLoading={withdrawalMutation.isPending}
-              disabled={Number(withdrawAmount) < 5000 || Number(withdrawAmount) > metrics.availableBalance}
+              disabled={(isOwner && (!selectedBranchId || selectedBranchId === 'ALL')) || Number(withdrawAmount) < 5000 || Number(withdrawAmount) > metrics.availableBalance}
               className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2.5 mt-2"
             >
               Submit Withdrawal Request
@@ -312,7 +308,7 @@ export function ManagerWithdrawalTab() {
             <div className="p-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 bg-slate-50/50">
               <div className="flex items-center gap-2">
                 <h4 className="font-bold text-sm text-slate-900">Settlement & Withdrawal Ledger</h4>
-                <span className="text-xs text-slate-500 font-mono">Branch ID: 108</span>
+                <span className="text-xs text-slate-500">Branch finance</span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <DateRangeFilter value={dateRange} onChange={setDateRange} />
@@ -352,12 +348,13 @@ export function ManagerWithdrawalTab() {
                     <th className="py-3 px-4 font-bold">Account / Mode</th>
                     <th className="py-3 px-4 font-bold text-center">Status</th>
                     <th className="py-3 px-4 font-bold">Reference / UTR</th>
+                    {isOwner && <th className="py-3 px-4 font-bold">Review</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredLedger.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-400">
+                      <td colSpan={isOwner ? 7 : 6} className="py-8 text-center text-slate-400">
                         No settlements found matching the selected dates.
                       </td>
                     </tr>
@@ -376,13 +373,16 @@ export function ManagerWithdrawalTab() {
                           <div className="text-[10px] text-slate-400 font-mono truncate max-w-xs">{item.bankAccount}</div>
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <Badge variant={item.status === 'PROCESSED' ? 'emerald' : 'warning'} size="sm">
+                          <Badge variant={item.status === 'PROCESSED' ? 'success' : item.status === 'REJECTED' ? 'danger' : 'warning'} size="sm">
                             {item.status}
                           </Badge>
                         </td>
                         <td className="py-3 px-4 font-mono text-slate-500 text-[11px]">
-                          {item.referenceNo || 'Pending Clearance'}
+                          {item.referenceNo || (item.status === 'REJECTED' ? 'Rejected' : 'Pending review')}
                         </td>
+                        {isOwner && <td className="py-3 px-4">
+                          {item.status === 'PENDING' && <button type="button" className="text-emerald-700 font-semibold hover:underline" onClick={() => { setSettlementRequest(item); setSettlementStatus('PROCESSED'); setReferenceNo(''); }}>Review</button>}
+                        </td>}
                       </tr>
                     ))
                   )}
@@ -392,10 +392,39 @@ export function ManagerWithdrawalTab() {
           </div>
 
           <div className="p-3 bg-slate-50 border-t border-slate-200 text-center text-xs text-slate-500">
-            Bank transfers are processed by HQ Treasury within 24–48 business hours.
+            {data.ledgerTotal > ledger.length ? `Showing the latest ${ledger.length} of ${data.ledgerTotal} requests. ` : ''}Settlement status and transaction references are recorded after review.
           </div>
         </div>
       </div>
+      <Modal
+        isOpen={Boolean(settlementRequest)}
+        onClose={() => { if (!settlementMutation.isPending) setSettlementRequest(null); }}
+        title="Review withdrawal request"
+        subtitle={settlementRequest ? `Request ${settlementRequest.id} · ₹${settlementRequest.amount.toLocaleString()}` : ''}
+        maxWidth="max-w-md"
+        footer={<>
+          <Button type="button" variant="secondary" onClick={() => setSettlementRequest(null)} disabled={settlementMutation.isPending}>Cancel</Button>
+          <Button type="submit" form="settlement-form" isLoading={settlementMutation.isPending}>Save decision</Button>
+        </>}
+      >
+        <form id="settlement-form" className="space-y-4" onSubmit={(event) => {
+          event.preventDefault();
+          if (!settlementRequest) return;
+          settlementMutation.mutate({ id: settlementRequest.id, status: settlementStatus, referenceNo });
+        }}>
+          {settlementMutation.isError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{actionErrorMsg}</p>}
+          <label className="block text-sm font-semibold text-slate-700">Decision
+            <select value={settlementStatus} onChange={(event) => setSettlementStatus(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 p-2">
+              <option value="PROCESSED">Processed</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          </label>
+          {settlementStatus === 'PROCESSED' && <label className="block text-sm font-semibold text-slate-700">Bank or UPI transaction reference
+            <input value={referenceNo} onChange={(event) => setReferenceNo(event.target.value)} maxLength={100} required className="mt-1 w-full rounded-lg border border-slate-300 p-2" />
+          </label>}
+          <p className="text-sm text-slate-600">Confirm the transfer before marking it processed. Rejecting releases the requested balance.</p>
+        </form>
+      </Modal>
     </div>
   );
 }

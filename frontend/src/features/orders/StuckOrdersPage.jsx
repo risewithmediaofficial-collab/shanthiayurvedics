@@ -59,9 +59,9 @@ export function StuckOrdersPage() {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['stuckOrders']);
-      queryClient.invalidateQueries(['orders']);
-      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries({ queryKey: ['stuckOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     }
   });
 

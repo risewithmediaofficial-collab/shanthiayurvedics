@@ -7,6 +7,7 @@ import { ORDER_STATUS } from '../constants/orderStates.js';
 import { SHIPPING_STATUS } from '../constants/shippingStates.js';
 import { NotFoundError, AppError } from '../utils/errors.js';
 import { AuditService } from './auditService.js';
+import { advanceOrderToDelivered } from './deliveryTransition.js';
 
 export class ShippingService {
   /**
@@ -75,6 +76,14 @@ export class ShippingService {
   static async dispatchShipment(shipmentId, user, req) {
     const shipment = await Shipment.findById(shipmentId);
     if (!shipment) throw new NotFoundError('Shipment');
+    if (shipment.trackingStatus === SHIPPING_STATUS.PICKED_UP) return shipment;
+
+    // Validate and move the order before recording a parcel handoff.
+    await OrderService.transitionStatus(shipment.orderId, ORDER_STATUS.DISPATCHED, {
+      changedBy: user,
+      notes: `Dispatched via ${shipment.courierName}. AWB: ${shipment.awbNumber}`,
+      req
+    });
 
     shipment.dispatchedDate = new Date();
     shipment.trackingStatus = SHIPPING_STATUS.PICKED_UP;
@@ -90,13 +99,6 @@ export class ShippingService {
       timestamp: new Date()
     });
 
-    // Update Order Status to DISPATCHED
-    await OrderService.transitionStatus(shipment.orderId, ORDER_STATUS.DISPATCHED, {
-      changedBy: user,
-      notes: `Dispatched via ${shipment.courierName}. AWB: ${shipment.awbNumber}`,
-      req
-    });
-
     return shipment;
   }
 
@@ -105,7 +107,6 @@ export class ShippingService {
    */
   static async getTrackingTimeline(awbNumber) {
     const shipment = await Shipment.findOne({ awbNumber })
-      .populate('orderId', 'orderNumber grandTotal deliveryAddress')
       .populate('branchId', 'name code')
       .lean();
 
@@ -124,9 +125,13 @@ export class ShippingService {
   /**
    * Append Tracking Event / Update Status
    */
-  static async logTrackingEvent(awbNumber, { status, location, activity }) {
+  static async logTrackingEvent(awbNumber, { status, location, activity }, actor, req) {
     const shipment = await Shipment.findOne({ awbNumber });
     if (!shipment) throw new NotFoundError('Shipment');
+
+    if (status === SHIPPING_STATUS.DELIVERED) {
+      await advanceOrderToDelivered(shipment.orderId, actor, req);
+    }
 
     shipment.trackingStatus = status;
     if (status === SHIPPING_STATUS.DELIVERED) {
@@ -143,23 +148,6 @@ export class ShippingService {
       timestamp: new Date()
     });
     await event.save();
-
-    // If delivered, update order status
-    if (status === SHIPPING_STATUS.DELIVERED) {
-      const order = await Order.findById(shipment.orderId);
-      if (order && order.status !== ORDER_STATUS.DELIVERED) {
-        const prevStatus = order.status;
-        order.status = ORDER_STATUS.DELIVERED;
-        order.paymentStatus = 'PAID';
-        order.statusHistory.push({
-          fromStatus: prevStatus,
-          toStatus: ORDER_STATUS.DELIVERED,
-          timestamp: new Date(),
-          notes: 'Delivered to customer'
-        });
-        await order.save();
-      }
-    }
 
     return event;
   }

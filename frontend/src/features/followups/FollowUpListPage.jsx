@@ -1,3 +1,5 @@
+import { useBranch } from '../../context/BranchContext.jsx';
+import { toLocalDateTimeInput } from '../../utils/dateUtils.js';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -22,7 +24,9 @@ import { OrderCreateModal } from '../orders/OrderCreateModal.jsx';
 import { ExportButton } from '../../components/common/ExportButton.jsx';
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils.js';
 
-export function FollowUpListPage() {
+export function FollowUpListPage({ callerId } = {}) {
+  const { selectedBranchId } = useBranch();
+  const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('TODAY'); // TODAY, OVERDUE, UPCOMING, COMPLETED
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
@@ -42,9 +46,9 @@ export function FollowUpListPage() {
   });
 
   const { data: followupsResponse, isLoading } = useQuery({
-    queryKey: ['followups', activeTab],
+    queryKey: ['followups', selectedBranchId, callerId, activeTab, page],
     queryFn: async () => {
-      const res = await apiClient.get('/followups', { params: { filter: activeTab } });
+      const res = await apiClient.get('/followups', { params: { filter: activeTab, page, limit: 20, telecallerId: callerId } });
       return res.data;
     }
   });
@@ -52,10 +56,10 @@ export function FollowUpListPage() {
   const followups = followupsResponse?.data || [];
 
   const completeMutation = useMutation({
-    mutationFn: ({ id, notes }) => apiClient.patch(`/followups/${id}/complete`, { notes }),
+    mutationFn: ({ id, notes }) => apiClient.patch(`/followups/${id}/complete`, { completionNotes: notes }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['followups']);
-      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries({ queryKey: ['followups'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setCompleteModalOpen(false);
       setCompleteNotes('');
       setActionMsg('✓ Follow-up marked as completed');
@@ -66,8 +70,8 @@ export function FollowUpListPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => apiClient.patch(`/followups/${id}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['followups']);
-      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries({ queryKey: ['followups'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setEditModalOpen(false);
       setSelectedFollowUp(null);
       setActionMsg('✓ Follow-up rescheduled/updated successfully');
@@ -82,8 +86,8 @@ export function FollowUpListPage() {
   const deleteMutation = useMutation({
     mutationFn: (id) => apiClient.delete(`/followups/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['followups']);
-      queryClient.invalidateQueries(['dashboard']);
+      queryClient.invalidateQueries({ queryKey: ['followups'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setDeleteModalOpen(false);
       setFollowUpToDelete(null);
       setActionMsg('✓ Follow-up removed successfully');
@@ -234,7 +238,7 @@ export function FollowUpListPage() {
               type="button"
               onClick={() => {
                 setSelectedFollowUp(row);
-                const isoDate = row.scheduledAt ? new Date(row.scheduledAt).toISOString().slice(0, 16) : '';
+                const isoDate = toLocalDateTimeInput(row.scheduledAt);
                 setEditFormData({
                   scheduledAt: isoDate,
                   notes: row.notes || '',
@@ -368,6 +372,8 @@ export function FollowUpListPage() {
       </div>
 
       <Table
+        pagination={followupsResponse?.pagination}
+        onPageChange={setPage}
         columns={columns}
         data={followups}
         isLoading={isLoading}
@@ -431,7 +437,7 @@ export function FollowUpListPage() {
               updateMutation.mutate({
                 id: selectedFollowUp._id,
                 data: {
-                  scheduledAt: editFormData.scheduledAt,
+                  scheduledAt: editFormData.scheduledAt ? new Date(editFormData.scheduledAt).toISOString() : undefined,
                   notes: editFormData.notes
                 }
               });

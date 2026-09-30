@@ -42,6 +42,10 @@ export const authenticate = async (req, res, next) => {
       return next(new ForbiddenError('User account has been deactivated'));
     }
 
+    if (user.passwordChangedAt && decoded.iat < Math.floor(user.passwordChangedAt.getTime() / 1000)) {
+      return next(new UnauthorizedError('Password changed. Please sign in again.'));
+    }
+
     if (user.isAccountLocked()) {
       return next(new ForbiddenError('Account is temporarily locked'));
     }

@@ -187,9 +187,9 @@ export function ScanTrackerPage() {
     },
     onSuccess: (_, variables) => {
       playAudioBeep('success');
-      queryClient.invalidateQueries(['scan-tracker-orders']);
-      queryClient.invalidateQueries(['orders']);
-      queryClient.invalidateQueries(['order-metrics-summary']);
+      queryClient.invalidateQueries({ queryKey: ['scan-tracker-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order-metrics-summary'] });
 
       showToast(`✓ Order #${activeOrder?.orderNumber} scanned with Barcode: ${variables.trackingNumber}`);
       setBarcodeInput('');
@@ -444,8 +444,8 @@ export function ScanTrackerPage() {
     },
     onSuccess: (res) => {
       playAudioBeep('success');
-      queryClient.invalidateQueries(['scan-tracker-orders']);
-      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries({ queryKey: ['scan-tracker-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
       showToast(`🚀 Dispatched ${res.data?.successCount || scannedOrders.length} orders successfully!`);
     },
     onError: (err) => {
@@ -463,8 +463,8 @@ export function ScanTrackerPage() {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['scan-tracker-orders']);
-      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries({ queryKey: ['scan-tracker-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
       setEditBarcodeModal(null);
       showToast('✓ Barcode updated successfully');
     },
@@ -483,8 +483,8 @@ export function ScanTrackerPage() {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['scan-tracker-orders']);
-      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries({ queryKey: ['scan-tracker-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
       showToast('✓ Tracking barcode cleared; order returned to scanning queue');
     }
   });
@@ -545,8 +545,8 @@ export function ScanTrackerPage() {
     },
     onSuccess: () => {
       playAudioBeep('success');
-      queryClient.invalidateQueries(['scan-tracker-orders']);
-      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries({ queryKey: ['scan-tracker-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
       showToast('✓ Order marked as RTO & stock recorded');
       setRtoFoundOrder(null);
       setRtoSearchInput('');
@@ -606,8 +606,8 @@ export function ScanTrackerPage() {
     },
     onSuccess: () => {
       playAudioBeep('success');
-      queryClient.invalidateQueries(['scan-tracker-orders']);
-      queryClient.invalidateQueries(['orders']);
+      queryClient.invalidateQueries({ queryKey: ['scan-tracker-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
       showToast('✓ Order marked as Delivered & Payment confirmed');
       setDeliveredSearchInput('');
     },

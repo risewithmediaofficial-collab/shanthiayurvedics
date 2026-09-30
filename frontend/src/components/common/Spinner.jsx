@@ -12,8 +12,9 @@ export function Spinner({ size = 'md', className, text }) {
   };
 
   return (
-    <div className={twMerge('flex flex-col items-center justify-center gap-3 p-4', className)}>
-      <Loader2 className={clsx('animate-spin text-ayur-700', sizes[size])} />
+    <div role="status" aria-live="polite" className={twMerge('flex flex-col items-center justify-center gap-3 p-4', className)}>
+      <Loader2 aria-hidden="true" className={clsx('animate-spin text-ayur-700', sizes[size])} />
+      {!text && <span className="sr-only">Loading...</span>}
       {text && <p className="text-sm font-medium text-slate-500">{text}</p>}
     </div>
   );

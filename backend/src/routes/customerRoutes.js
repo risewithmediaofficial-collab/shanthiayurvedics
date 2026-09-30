@@ -1,3 +1,5 @@
+import { Customer } from '../models/Customer.js';
+import { scopeRecord } from '../middleware/scopeRecord.js';
 import { Router } from 'express';
 import {
   getCustomers,
@@ -16,6 +18,7 @@ const router = Router();
 
 router.use(authenticate);
 router.use(requireBranchScope);
+router.param('id', scopeRecord(Customer, 'assignedTelecallerId'));
 
 router.get('/', requirePermission(PERMISSIONS.CUSTOMERS_VIEW), getCustomers);
 router.get('/:id', requirePermission(PERMISSIONS.CUSTOMERS_VIEW), getCustomerById);

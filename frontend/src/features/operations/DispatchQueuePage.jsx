@@ -28,9 +28,9 @@ export function DispatchQueuePage() {
     mutationFn: ({ orderId, carrierCode }) =>
       apiClient.post(`/shipping/orders/${orderId}/shipment`, { carrierCode }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['dispatchQueue']);
-      queryClient.invalidateQueries(['orders']);
-      queryClient.invalidateQueries(['operationsSummary']);
+      queryClient.invalidateQueries({ queryKey: ['dispatchQueue'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['operationsSummary'] });
       setAwbModalOpen(false);
     }
   });

@@ -74,9 +74,9 @@ export function ManagerStuckTab() {
     },
     onSuccess: (data) => {
       setActionSuccessMsg(data.message || 'Order status updated successfully!');
-      queryClient.invalidateQueries(['manager-stuck-shipped']);
-      queryClient.invalidateQueries(['orders']);
-      queryClient.invalidateQueries(['sidebar-metrics']);
+      queryClient.invalidateQueries({ queryKey: ['manager-stuck-shipped'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-metrics'] });
       setTimeout(() => setActionSuccessMsg(''), 4000);
     },
     onError: (err) => {
@@ -91,14 +91,10 @@ export function ManagerStuckTab() {
     (o) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED'
   );
 
-  // Compute mock or real elapsed days
-  const ordersWithAging = outstandingOrders.map((ord, idx) => {
-    // Generate realistic days elapsed if newly created
+  // Age every order from its recorded creation time
+  const ordersWithAging = outstandingOrders.map((ord) => {
     const createdDate = new Date(ord.createdAt);
-    const diffDays = Math.max(
-      Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24)),
-      (idx % 4 === 0 ? 42 : idx % 3 === 0 ? 32 : idx % 2 === 0 ? 22 : 17)
-    );
+    const diffDays = Number.isNaN(createdDate.getTime()) ? 0 : Math.max(0, Math.floor((Date.now() - createdDate.getTime()) / 86400000));
     return { ...ord, daysElapsed: diffDays };
   });
 
@@ -153,7 +149,7 @@ export function ManagerStuckTab() {
     });
 
   const totalStuckCount = ordersWithAging.length;
-  const totalStuckGross = ordersWithAging.reduce((sum, o) => sum + (o.grandTotal || 1500), 0);
+  const totalStuckGross = ordersWithAging.reduce((sum, o) => sum + (o.grandTotal ?? 0), 0);
   const lockedMarginReserve = Math.round(totalStuckGross * 0.40); // 40% margin locked
   const criticalCount = ordersWithAging.filter((o) => o.daysElapsed >= 40).length;
 
@@ -329,7 +325,7 @@ export function ManagerStuckTab() {
                 {filteredOrders.map((ord) => {
                   const pat = ord.patientDetails || {};
                   const cleanMobile = (pat.mobile || '').replace(/\D/g, '').slice(-10);
-                  const trackingNo = ord.trackingNumber || `EK${Math.floor(100000000 + Math.random() * 900000000)}IN`;
+                  const trackingNo = ord.trackingNumber || 'Not assigned';
                   const courier = ord.courierName || 'India Post Speed Post';
                   const isCritical = ord.daysElapsed >= 30;
 
@@ -367,7 +363,7 @@ export function ManagerStuckTab() {
                       </td>
 
                       <td className="py-3 px-4 text-right font-mono font-black text-slate-900 text-sm">
-                        ₹{(ord.grandTotal || 1500).toLocaleString()}
+                        ₹{(ord.grandTotal ?? 0).toLocaleString()}
                         <div className="text-[10px] text-rose-700 font-semibold">
                           Locked: ₹{Math.round((ord.grandTotal || 1500) * 0.4).toLocaleString()}
                         </div>

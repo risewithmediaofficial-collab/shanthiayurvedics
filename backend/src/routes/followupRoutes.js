@@ -1,3 +1,5 @@
+import { FollowUp } from '../models/FollowUp.js';
+import { scopeRecord } from '../middleware/scopeRecord.js';
 import { Router } from 'express';
 import {
   getFollowups,
@@ -14,6 +16,7 @@ const router = Router();
 
 router.use(authenticate);
 router.use(requireBranchScope);
+router.param('id', scopeRecord(FollowUp, 'telecallerId'));
 
 router.get('/', requirePermission(PERMISSIONS.FOLLOWUPS_VIEW), getFollowups);
 router.patch('/:id', requirePermission(PERMISSIONS.FOLLOWUPS_EDIT), updateFollowup);

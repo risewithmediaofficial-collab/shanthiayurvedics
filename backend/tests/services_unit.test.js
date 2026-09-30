@@ -183,16 +183,13 @@ describe('AuditService', () => {
       expect(entry.oldValue.normalField).toBe('keep');
     });
 
-    it('should handle missing optional fields gracefully (returns null or entry)', async () => {
-      // resourceType is required by the AuditLog schema — AuditService.log
-      // catches the error and returns null to avoid crashing callers.
+    it('should retain an audit entry when resourceType is omitted', async () => {
       const entry = await AuditService.log({
         action: 'MINIMAL_ACTION',
         module: 'test'
-        // resourceType intentionally omitted to test error-handling path
       });
-      // The service silently catches validation errors and returns null
-      expect(entry).toBeNull();
+      expect(entry).not.toBeNull();
+      expect(entry.resourceType).toBe('test');
     });
   });
 

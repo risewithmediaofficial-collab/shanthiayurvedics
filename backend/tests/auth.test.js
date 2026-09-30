@@ -151,4 +151,18 @@ describe('Authentication & RBAC Integration Tests', () => {
     expect(refreshRes.status).toBe(200);
     expect(refreshRes.body.data.accessToken).toBeDefined();
   });
+
+  it('restores telecaller permissions on the session endpoint', async () => {
+    const loginRes = await request(app).post('/api/auth/login').send({
+      email: 'priya.test@shanthiayurvedas.com', password: telecallerPassword
+    });
+    expect(loginRes.status).toBe(200);
+    const sessionRes = await request(app)
+      .get('/api/auth/session')
+      .set('Authorization', `Bearer ${loginRes.body.data.accessToken}`);
+    expect(sessionRes.status).toBe(200);
+    expect(sessionRes.body.data.user.permissions).toContain('leads.view');
+    expect(sessionRes.body.data.user.permissions).toContain('followups.view');
+    expect(sessionRes.body.data.user.permissions).not.toContain('branches.manage');
+  });
 });

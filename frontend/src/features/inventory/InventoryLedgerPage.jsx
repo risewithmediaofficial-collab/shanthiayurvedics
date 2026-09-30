@@ -96,7 +96,7 @@ export function InventoryLedgerPage() {
 
   const inventory = invResponse?.data || [];
   const movements = movementsResponse?.data || [];
-  const meta = (activeTab === 'CURRENT' ? invResponse?.meta : movementsResponse?.meta) || { page: 1, totalPages: 1, total: 0 };
+  const meta = (activeTab === 'CURRENT' ? invResponse?.pagination || invResponse?.meta : movementsResponse?.pagination || movementsResponse?.meta) || { page: 1, totalPages: 1, total: 0 };
 
   const handleExportInventory = async (format = 'excel') => {
     try {
@@ -163,8 +163,8 @@ export function InventoryLedgerPage() {
   const stockInMutation = useMutation({
     mutationFn: (data) => apiClient.post('/inventory/in', data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['inventory']);
-      queryClient.invalidateQueries(['inventoryMovements']);
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['inventoryMovements'] });
       setStockInModalOpen(false);
       setFormData({ productId: '', batchId: '', quantity: '', reason: 'PURCHASE', notes: '', newAvailable: '' });
     },
@@ -176,8 +176,8 @@ export function InventoryLedgerPage() {
   const stockOutMutation = useMutation({
     mutationFn: (data) => apiClient.post('/inventory/out', data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['inventory']);
-      queryClient.invalidateQueries(['inventoryMovements']);
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['inventoryMovements'] });
       setStockOutModalOpen(false);
       setFormData({ productId: '', batchId: '', quantity: '', reason: 'PURCHASE', notes: '', newAvailable: '' });
     },
@@ -189,8 +189,8 @@ export function InventoryLedgerPage() {
   const adjustMutation = useMutation({
     mutationFn: (data) => apiClient.post('/inventory/adjust', data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['inventory']);
-      queryClient.invalidateQueries(['inventoryMovements']);
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['inventoryMovements'] });
       setAdjustModalOpen(false);
       setFormData({ productId: '', batchId: '', quantity: '', reason: 'PURCHASE', notes: '', newAvailable: '' });
     },

@@ -385,7 +385,7 @@ export function DeliveryTrackingPage() {
 
   const shipments = shipmentsResponse?.data || [];
   // API returns 'pagination' (from ApiResponse.paginated), not 'meta'
-  const meta = shipmentsResponse?.pagination || shipmentsResponse?.meta || { page: 1, totalPages: 1, total: 0 };
+  const meta = shipmentsResponse?.pagination || shipmentsResponse?.pagination || shipmentsResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
   const columns = [
     {

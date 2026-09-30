@@ -1,3 +1,4 @@
+import { useBranch } from '../../context/BranchContext.jsx';
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import DashboardRounded from '@mui/icons-material/DashboardRounded';
@@ -29,6 +30,7 @@ export function Sidebar({ isOpen, onClose }) {
 
   const { hasPermission, isOwner, isDistributor, isManager, isTelecaller, role, user } = usePermissions();
   const location = useLocation();
+  const { selectedBranchId } = useBranch();
 
   const [openGroups, setOpenGroups] = useState({
     leads: true,
@@ -45,7 +47,7 @@ export function Sidebar({ isOpen, onClose }) {
 
   // Fetch live badge counters
   const { data: metricsData } = useQuery({
-    queryKey: ['sidebar-metrics'],
+    queryKey: ['sidebar-metrics', selectedBranchId, user?.id],
     queryFn: async () => {
       try {
         const res = await apiClient.get('/orders/metrics-summary');
@@ -55,12 +57,13 @@ export function Sidebar({ isOpen, onClose }) {
       }
     },
     enabled: Boolean(user),
-    refetchInterval: 30000
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false
   });
 
   // Fetch team members
   const { data: teamUsers = [] } = useQuery({
-    queryKey: ['sidebar-telecallers'],
+    queryKey: ['sidebar-telecallers', selectedBranchId],
     queryFn: async () => {
       try {
         const res = await apiClient.get('/users', { params: { role: 'TELECALLER' } });
@@ -69,7 +72,7 @@ export function Sidebar({ isOpen, onClose }) {
         return [];
       }
     },
-    enabled: Boolean(user)
+    enabled: Boolean(user) && hasPermission('users.view')
   });
 
   const ordersCount = metricsData?.totalOrders ?? 0;

@@ -6,6 +6,8 @@ import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
 import compression from 'compression';
 import pinoHttp from 'pino-http';
+import { randomUUID } from 'node:crypto';
+import mongoose from 'mongoose';
 import './models/index.js'; // Ensure all Mongoose models are registered
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
@@ -36,7 +38,14 @@ import integrationRoutes from './routes/integrationRoutes.js';
 
 const app = express();
 
-app.set('trust proxy', 1);
+app.set('trust proxy', env.TRUST_PROXY_HOPS);
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  req.id = randomUUID();
+  res.setHeader('X-Request-ID', req.id);
+  if (req.path.startsWith('/api')) res.setHeader('Cache-Control', 'no-store');
+  next();
+});
 
 // Security Headers
 app.use(helmet({
@@ -69,13 +78,13 @@ app.use(cors({
   origin: (origin, callback) => {
     if (
       !origin ||
-      allowedOrigins.includes(origin) ||
-      env.NODE_ENV !== 'production' ||
-      /:\b(80|88|89|5173|5174|5175|8085|8087)\b/.test(origin)
+      (env.NODE_ENV === 'production'
+        ? env.FRONTEND_URL.split(',').map((value) => value.trim()).includes(origin)
+        : allowedOrigins.includes(origin))
     ) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(null, false);
     }
   },
   credentials: true,
@@ -106,6 +115,14 @@ if (env.NODE_ENV !== 'test') {
 // Health Check Routes
 app.use('/health', healthRoutes);
 app.use('/api/health', healthRoutes);
+
+app.use('/api', (req, res, next) => {
+  if (env.NODE_ENV !== 'test' && (mongoose.connection.readyState !== 1 || app.locals.isReady === false)) {
+    res.setHeader('Retry-After', '5');
+    return res.status(503).json({ success: false, message: 'Service is temporarily unavailable. Please try again shortly.', requestId: req.id });
+  }
+  next();
+});
 
 // Phase 2 Routes (Auth & Administration)
 app.use('/api/auth', authRoutes);

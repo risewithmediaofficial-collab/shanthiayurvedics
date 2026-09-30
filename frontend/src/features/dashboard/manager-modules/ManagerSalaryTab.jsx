@@ -72,96 +72,14 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
   const { data: salaryResponse, isLoading } = useQuery({
     queryKey: ['manager-tc-salary', selectedBranchId, selectedMonth, selectedYear],
     queryFn: async () => {
-      try {
-        const res = await apiClient.get('/reports/tc-salary', {
+      const res = await apiClient.get('/reports/tc-salary', {
           params: { month: selectedMonth, year: selectedYear }
         });
-        return res.data?.data;
-      } catch (e) {
-        return null;
-      }
+      return res.data?.data;
     }
   });
 
-  const fallbackData = {
-    rule: '10% Commission on Catalog MRP for all DELIVERED Orders',
-    summary: {
-      totalTelecallers: 4,
-      totalOrders: 94,
-      totalDeliveredOrders: 48,
-      totalGrossDeliveredRevenue: 138600,
-      totalCommissionEarned: 13860,
-      netPayableSalary: 13860
-    },
-    telecallers: [
-      {
-        telecallerId: 'tc-1',
-        name: 'KANAGAVALLI',
-        phone: '9487572369',
-        totalOrders: 32,
-        newOrders: 3,
-        inTransitOrders: 5,
-        deliveredOrdersCount: 22,
-        cancelledOrders: 1,
-        rtoOrders: 1,
-        deliveredRevenue: 64200,
-        commissionRate: 10,
-        commissionEarned: 6420,
-        deductions: 0,
-        netPayable: 6420
-      },
-      {
-        telecallerId: 'tc-2',
-        name: 'AMRUTHA',
-        phone: '8147940269',
-        totalOrders: 26,
-        newOrders: 4,
-        inTransitOrders: 4,
-        deliveredOrdersCount: 15,
-        cancelledOrders: 2,
-        rtoOrders: 1,
-        deliveredRevenue: 42800,
-        commissionRate: 10,
-        commissionEarned: 4280,
-        deductions: 0,
-        netPayable: 4280
-      },
-      {
-        telecallerId: 'tc-3',
-        name: 'PATTUSELVI',
-        phone: '8056519369',
-        totalOrders: 19,
-        newOrders: 2,
-        inTransitOrders: 4,
-        deliveredOrdersCount: 11,
-        cancelledOrders: 1,
-        rtoOrders: 1,
-        deliveredRevenue: 31600,
-        commissionRate: 10,
-        commissionEarned: 3160,
-        deductions: 0,
-        netPayable: 3160
-      },
-      {
-        telecallerId: 'tc-4',
-        name: 'MONIKA',
-        phone: '9148554369',
-        totalOrders: 17,
-        newOrders: 2,
-        inTransitOrders: 3,
-        deliveredOrdersCount: 10,
-        cancelledOrders: 1,
-        rtoOrders: 1,
-        deliveredRevenue: 28900,
-        commissionRate: 10,
-        commissionEarned: 2890,
-        deductions: 0,
-        netPayable: 2890
-      }
-    ]
-  };
-
-  const data = salaryResponse || fallbackData;
+  const data = salaryResponse || { summary: {}, telecallers: [] };
   const summary = data.summary || {};
   const telecallers = data.telecallers || [];
 

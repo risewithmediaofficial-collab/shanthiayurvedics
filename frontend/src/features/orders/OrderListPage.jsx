@@ -1,3 +1,4 @@
+import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -62,7 +63,7 @@ const STATUS_META = {
   CANCELLED:          { label: 'Cancelled',         badge: 'neutral',  bg: 'bg-slate-100 text-slate-600 border-slate-200' },
 };
 
-export function OrderListPage({ hideHeader = false }) {
+export function OrderListPage({ hideHeader = false, callerId } = {}) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -79,6 +80,8 @@ export function OrderListPage({ hideHeader = false }) {
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [viewMode, setViewMode] = useState('card'); // 'card' | 'full'
+
+  const debouncedSearch = useDebouncedValue(search);
 
   const handleHeaderSort = (field) => {
     if (sortBy === field) {
@@ -99,7 +102,7 @@ export function OrderListPage({ hideHeader = false }) {
         exportOrdersList = orders.filter((o) => selectedOrderIds.includes(o._id));
       } else {
         const params = {
-          export: true,
+          export: true, telecallerId: callerId,
           sortBy,
           sortOrder
         };
@@ -213,9 +216,9 @@ export function OrderListPage({ hideHeader = false }) {
 
   // Fetch Live Metrics Summary for Top Ribbon
   const { data: metricsResponse, refetch: refetchMetrics } = useQuery({
-    queryKey: ['order-metrics-summary', selectedBranchId],
+    queryKey: ['order-metrics-summary', selectedBranchId, callerId],
     queryFn: async () => {
-      const res = await apiClient.get('/orders/metrics-summary');
+      const res = await apiClient.get('/orders/metrics-summary', { params: { telecallerId: callerId } });
       return res.data?.data || {};
     },
     enabled: Boolean(user),
@@ -224,7 +227,7 @@ export function OrderListPage({ hideHeader = false }) {
 
   // Fetch Distinct Districts for Filter
   const { data: districtsResponse } = useQuery({
-    queryKey: ['order-districts'],
+    queryKey: ['order-districts', selectedBranchId],
     queryFn: async () => {
       const res = await apiClient.get('/orders/districts');
       return res.data?.data || [];
@@ -248,10 +251,10 @@ export function OrderListPage({ hideHeader = false }) {
 
   // Fetch Paginated Orders
   const { data: ordersResponse, isLoading, refetch: refetchOrders } = useQuery({
-    queryKey: ['orders', page, search, statusFilter, districtFilter, startDate, endDate, sortBy, sortOrder, selectedBranchId],
+    queryKey: ['orders', callerId, page, debouncedSearch, statusFilter, districtFilter, startDate, endDate, sortBy, sortOrder, selectedBranchId],
     queryFn: async () => {
-      const params = { page, limit: 15, sortBy, sortOrder };
-      if (search?.trim()) params.search = search.trim();
+      const params = { page, limit: 15, sortBy, sortOrder, telecallerId: callerId };
+      if (debouncedSearch?.trim()) params.search = debouncedSearch.trim();
       if (statusFilter && statusFilter !== 'ALL') params.status = statusFilter;
       if (districtFilter && districtFilter !== 'ALL') params.district = districtFilter;
       if (startDate) params.startDate = startDate;

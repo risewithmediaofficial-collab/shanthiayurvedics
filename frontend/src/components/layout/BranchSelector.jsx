@@ -4,10 +4,11 @@ import { useBranch } from '../../context/BranchContext.jsx';
 
 export function BranchSelector() {
   const { selectedBranchId, selectBranch, availableBranches = [], isOwner } = useBranch();
+  const safeBranches = Array.isArray(availableBranches) ? availableBranches : [];
 
   // Non-owners (Managers, Distributors, Staff) are strictly locked to their assigned branch
   if (!isOwner) {
-    const singleBranch = availableBranches[0];
+    const singleBranch = safeBranches[0];
     return (
       <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50/90 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-800 shadow-2xs select-none">
         <Building2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
@@ -34,7 +35,7 @@ export function BranchSelector() {
             🏢 All Branches (Global)
           </option>
         )}
-        {availableBranches.map((branch, index) => {
+        {safeBranches.map((branch, index) => {
           const branchId = branch?._id || branch?.id || (typeof branch === 'string' ? branch : `branch-${index}`);
           const branchName = branch?.name || (branch?.code ? `Branch ${branch.code}` : `Branch ${index + 1}`);
           const branchCode = branch?.code ? ` (${branch.code})` : '';

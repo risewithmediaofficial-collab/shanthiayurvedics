@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import PersonRounded from '@mui/icons-material/PersonRounded';
 import LogoutRounded from '@mui/icons-material/LogoutRounded';
 import SecurityRounded from '@mui/icons-material/SecurityRounded';

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Store,
@@ -692,7 +692,7 @@ export function ManagerOfficeSaleTab() {
 
               <div className="pt-2 border-t border-slate-200 space-y-1.5">
                 <div className="text-[10px] uppercase font-bold text-slate-400 pb-1">Prescribed Medicines:</div>
-                {printedBill.items.map((it, i) => (
+                {(Array.isArray(printedBill.items) ? printedBill.items : []).map((it, i) => (
                   <div key={i} className="flex justify-between text-[11px]">
                     <span>{it.quantity}x {it.productName}</span>
                     <span className="font-bold">₹{it.total.toLocaleString()}</span>

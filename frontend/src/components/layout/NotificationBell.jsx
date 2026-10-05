@@ -7,6 +7,7 @@ import { Drawer } from '../common/Drawer.jsx';
 
 export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -44,7 +45,7 @@ export function NotificationBell() {
         }
       >
         <div className="space-y-3">
-          {notifications.length === 0 ? (
+          {safeNotifications.length === 0 ? (
             <div className="text-center py-16 text-slate-400 text-sm flex flex-col items-center justify-center gap-2.5">
               <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 shadow-xs">
                 <NotificationsRounded sx={{ fontSize: 26 }} />
@@ -55,7 +56,7 @@ export function NotificationBell() {
               </p>
             </div>
           ) : (
-            notifications.map((n) => (
+            safeNotifications.map((n) => (
               <div
                 key={n._id || n.id}
                 onClick={() => !n.isRead && markAsRead(n._id || n.id)}

@@ -415,7 +415,7 @@ export function OrderDetailsModal({
             <div className="bg-slate-50/90 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
               <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <Package className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Prescribed Ayurvedic Products & Treatments ({d.items.length} items)</span>
+                <span>Prescribed Ayurvedic Products & Treatments ({d.items?.length || 0} items)</span>
               </h4>
               <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-full">
                 100% Herbal Authentic

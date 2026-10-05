@@ -29,7 +29,16 @@ vi.mock('../api/apiClient.js', () => ({
 }));
 
 vi.mock('@tanstack/react-query', () => ({
-  useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() }))
+  useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn(), clear: vi.fn() })),
+  useQuery: vi.fn(() => ({
+    data: {
+      data: [
+        { _id: 'branch1', name: 'Hosur', code: 'HSR' },
+        { _id: 'branch2', name: 'Salem', code: 'SLM' }
+      ]
+    },
+    isLoading: false
+  }))
 }));
 
 import { useAuth } from '../context/AuthContext.jsx';

@@ -21,12 +21,14 @@ export function ExcelExportModal({
   filterStatus = '',
   filterDistrict = ''
 }) {
-  const [exportScope, setExportScope] = useState(selectedOrders.length > 0 ? 'selected' : 'filtered'); // 'selected' | 'filtered'
+  const safeSelectedOrders = Array.isArray(selectedOrders) ? selectedOrders : [];
+  const safeOrders = Array.isArray(orders) ? orders : [];
+  const [exportScope, setExportScope] = useState(safeSelectedOrders.length > 0 ? 'selected' : 'filtered'); // 'selected' | 'filtered'
   const [exportFormat, setExportFormat] = useState('excel'); // 'excel' | 'csv' | 'indiapost'
 
   if (!isOpen) return null;
 
-  const targetOrders = exportScope === 'selected' && selectedOrders.length > 0 ? selectedOrders : orders;
+  const targetOrders = exportScope === 'selected' && safeSelectedOrders.length > 0 ? safeSelectedOrders : safeOrders;
 
   const handleExecuteExport = () => {
     if (!targetOrders || targetOrders.length === 0) return;

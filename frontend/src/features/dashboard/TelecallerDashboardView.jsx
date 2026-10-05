@@ -1,4 +1,4 @@
-﻿import React, { lazy, Suspense, useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PhoneCall, Users, CalendarClock, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';

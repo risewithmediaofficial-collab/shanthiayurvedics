@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Minus, SlidersHorizontal, ArrowLeftRight, History, Package, AlertTriangle, Pencil, Trash2, Search, X } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';

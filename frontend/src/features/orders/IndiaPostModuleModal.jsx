@@ -19,13 +19,15 @@ export function IndiaPostModuleModal({ isOpen, onClose, orders = [] }) {
 
   if (!isOpen) return null;
 
+  const safeOrders = Array.isArray(orders) ? orders : [];
+
   // Filter orders that are ready for dispatch (or packed)
-  const dispatchableOrders = orders.filter(
-    (o) => o.status === 'READY_FOR_DISPATCH' || o.status === 'PACKED' || o.status === 'DISPATCHED'
+  const dispatchableOrders = safeOrders.filter(
+    (o) => o?.status === 'READY_FOR_DISPATCH' || o?.status === 'PACKED' || o?.status === 'DISPATCHED'
   );
 
-  const targetOrders = dispatchableOrders.length > 0 ? dispatchableOrders : orders;
-  const missingTrackingCount = targetOrders.filter((o) => !o.trackingNumber).length;
+  const targetOrders = dispatchableOrders.length > 0 ? dispatchableOrders : safeOrders;
+  const missingTrackingCount = targetOrders.filter((o) => !o?.trackingNumber).length;
 
   // Export India Post Manifest
   const handleExportManifest = () => {

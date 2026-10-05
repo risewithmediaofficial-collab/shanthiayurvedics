@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Truck, Barcode, Send, CheckCircle2, Building, ShieldCheck } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';

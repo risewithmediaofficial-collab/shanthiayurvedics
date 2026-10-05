@@ -1,4 +1,4 @@
-﻿import { useBranch } from '../../context/BranchContext.jsx';
+import { useBranch } from '../../context/BranchContext.jsx';
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import DashboardRounded from '@mui/icons-material/DashboardRounded';
@@ -79,7 +79,8 @@ export function Sidebar({ isOpen, onClose }) {
   const lowStockCount = metricsData?.lowStockCount ?? 0;
   const leadsCount = metricsData?.totalLeads ?? 0;
 
-  const displayCallers = teamUsers.length > 0 ? teamUsers.slice(0, 5) : [];
+  const safeTeamUsers = Array.isArray(teamUsers) ? teamUsers : [];
+  const displayCallers = safeTeamUsers.length > 0 ? safeTeamUsers.slice(0, 5) : [];
 
   let navSections = [];
 
@@ -228,7 +229,7 @@ export function Sidebar({ isOpen, onClose }) {
             label: 'TEAM',
             icon: PeopleAltRounded,
             path: '/admin/users',
-            badge: teamUsers.length,
+            badge: safeTeamUsers.length,
             badgeVariant: 'neutral',
             show: isOwner || hasPermission('users.view')
           }
@@ -388,7 +389,7 @@ export function Sidebar({ isOpen, onClose }) {
         {/* Navigation */}
         <div className="flex-1 overflow-y-auto px-2.5 py-3 space-y-3">
           {navSections.map((section, sIdx) => {
-            const visibleItems = section.items.filter((i) => i.show);
+            const visibleItems = (section.items || []).filter((i) => i?.show);
             if (visibleItems.length === 0) return null;
 
             const isGroup = !!section.groupKey;

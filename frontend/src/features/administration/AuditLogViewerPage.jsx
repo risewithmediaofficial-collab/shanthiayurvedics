@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ShieldCheck, History, User, Building, Clock } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';

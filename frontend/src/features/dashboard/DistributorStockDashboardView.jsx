@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Package,
@@ -166,7 +166,7 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
   }
 
   const kpis = dashboardData?.kpis || {};
-  const stockItems = dashboardData?.stockItems || [];
+  const stockItems = Array.isArray(dashboardData?.stockItems) ? dashboardData.stockItems : [];
   const transfers = Array.isArray(dashboardData?.transfers) ? dashboardData?.transfers : [];
   const branch = dashboardData?.branch || {};
 
@@ -806,11 +806,11 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
             onChange={(e) => setTransferForm({ ...transferForm, fromBranchId: e.target.value })}
             options={[
               { value: '', label: '— Select Source Hub —' },
-              ...allBranches
-                .filter((b) => (b._id || b.id) !== (branch._id || selectedBranchId))
+              ...(Array.isArray(allBranches) ? allBranches : [])
+                .filter((b) => (b?._id || b?.id) !== (branch?._id || selectedBranchId))
                 .map((b) => ({
                   value: b._id || b.id,
-                  label: `${b.name} (${b.code})`
+                  label: `${b.name || 'Branch'} (${b.code || 'BR'})`
                 }))
             ]}
           />
@@ -822,9 +822,9 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
             onChange={(e) => setTransferForm({ ...transferForm, productId: e.target.value })}
             options={[
               { value: '', label: '— Select Product —' },
-              ...products.map((p) => ({
+              ...(Array.isArray(products) ? products : []).map((p) => ({
                 value: p._id || p.id,
-                label: `${p.name} (${p.sku})`
+                label: `${p.name || 'Product'} (${p.sku || 'SKU'})`
               }))
             ]}
           />

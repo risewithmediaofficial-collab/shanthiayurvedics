@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import DashboardRounded from '@mui/icons-material/DashboardRounded';
@@ -70,7 +70,8 @@ export function ManagerDashboardView({ onSwitchToBossView, onSwitchToTelecaller 
   const ordersCount   = metricsData?.totalOrders   || null;
   const lowStockCount = metricsData?.lowStockCount  || null;
   const leadsCount    = metricsData?.totalLeads     || null;
-  const teamCount     = teamUsers.length            || null;
+  const safeTeamUsers = Array.isArray(teamUsers) ? teamUsers : [];
+  const teamCount     = safeTeamUsers.length        || null;
 
   const managerTabs = [
     { id: 'overview',      label: 'OVERVIEW',                    title: 'Manager Operations Overview',              icon: DashboardRounded                                                 },

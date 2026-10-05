@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Package,
@@ -933,16 +933,17 @@ export function ManagerStockTab() {
               </div>
             ) : (
               <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
-                {duplicateClusters.map((cluster, idx) => {
-                  const primary = cluster.products[0];
-                  const duplicates = cluster.products.slice(1);
+                {(Array.isArray(duplicateClusters) ? duplicateClusters : []).map((cluster, idx) => {
+                  const prods = Array.isArray(cluster?.products) ? cluster.products : [];
+                  const primary = prods[0] || {};
+                  const duplicates = prods.slice(1);
 
                   return (
                     <div key={cluster.key || idx} className="p-4 bg-white border border-slate-200 rounded-xl shadow-xs space-y-3">
                       <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                         <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-amber-500" />
-                          Duplicate Cluster #{idx + 1} ({cluster.products.length} matching SKUs)
+                          Duplicate Cluster #{idx + 1} ({prods.length} matching SKUs)
                         </span>
                         <span className="font-mono text-[11px] text-slate-400">Match Key: {cluster.key}</span>
                       </div>
@@ -951,9 +952,9 @@ export function ManagerStockTab() {
                       <div className="p-2.5 bg-emerald-50/60 border border-emerald-200 rounded-lg flex items-center justify-between">
                         <div>
                           <span className="px-1.5 py-0.5 bg-emerald-700 text-white rounded text-[9px] font-bold uppercase mr-1.5">Primary</span>
-                          <strong className="text-slate-900 font-semibold">{primary.name}</strong>
+                          <strong className="text-slate-900 font-semibold">{primary.name || 'Product'}</strong>
                           <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-                            SKU: {primary.sku} · MRP: ₹{primary.mrp || primary.price} · Available: {primary.availableStock || 0} units
+                            SKU: {primary.sku || '—'} · MRP: ₹{primary.mrp || primary.price || 0} · Available: {primary.availableStock || 0} units
                           </div>
                         </div>
                       </div>

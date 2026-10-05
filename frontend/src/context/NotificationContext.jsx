@@ -17,11 +17,15 @@ export function NotificationProvider({ children }) {
       setIsLoading(true);
       const res = await apiClient.get('/notifications?limit=20');
       if (res.data?.success) {
-        setNotifications(res.data.data);
-        setUnreadCount(res.data.unreadCount || res.data.data.filter((n) => !n.isRead).length);
+        const notifList = Array.isArray(res.data.data) ? res.data.data : [];
+        setNotifications(notifList);
+        const unread = res.data.meta?.unreadCount ?? res.data.unreadCount ?? notifList.filter((n) => !n?.isRead).length;
+        setUnreadCount(unread);
       }
     } catch (e) {
       console.warn('Failed to fetch notifications:', e);
+      setNotifications([]);
+      setUnreadCount(0);
     } finally {
       setIsLoading(false);
     }

@@ -16,7 +16,9 @@ export function Table({
   onRowClick,
   maxRows = 10
 }) {
-  const shouldInlineScroll = data.length > maxRows;
+  const safeData = Array.isArray(data) ? data : [];
+  const safeColumns = Array.isArray(columns) ? columns : [];
+  const shouldInlineScroll = safeData.length > maxRows;
 
   return (
     <div className={twMerge('w-full overflow-hidden bg-white rounded-xl border border-slate-200 shadow-card flex flex-col', className)}>
@@ -24,7 +26,7 @@ export function Table({
         <table aria-busy={isLoading} className="crm-table w-full">
           <thead className={shouldInlineScroll ? 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-xs border-b border-slate-200' : ''}>
             <tr>
-              {columns.map((col, idx) => (
+              {safeColumns.map((col, idx) => (
                 <th scope="col" key={col.key || idx} className={twMerge(col.className, col.align === 'right' && 'text-right', col.align === 'center' && 'text-center')}>
                   {col.header}
                 </th>
@@ -34,18 +36,18 @@ export function Table({
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td colSpan={columns.length} className="py-12 text-center">
+                <td colSpan={safeColumns.length} className="py-12 text-center">
                   <Spinner size="md" text="Loading data..." />
                 </td>
               </tr>
-            ) : data.length === 0 ? (
+            ) : safeData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="p-0 border-none">
+                <td colSpan={safeColumns.length} className="p-0 border-none">
                   <EmptyState title={emptyTitle} description={emptyDescription} className="rounded-none border-none my-6" />
                 </td>
               </tr>
             ) : (
-              data.map((row, rowIdx) => (
+              safeData.map((row, rowIdx) => (
                 <tr
                   key={row._id || row.id || rowIdx}
                   onClick={() => onRowClick && onRowClick(row)}

@@ -30,6 +30,20 @@ apiClient.interceptors.request.use(
         config.headers = config.headers || {};
         config.headers['x-branch-id'] = activeBranch;
       }
+
+      // 3. Attach refresh token for /auth/session recovery
+      const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('auth_refresh_token') : null;
+      if (refreshToken && config.url?.includes('/auth/session')) {
+        config.headers = config.headers || {};
+        config.headers['x-refresh-token'] = refreshToken;
+      }
+
+      // 4. Attach switched-from flag if role was switched from OWNER
+      const isSwitched = typeof window !== 'undefined' ? localStorage.getItem('switched_from_owner') : null;
+      if (isSwitched) {
+        config.headers = config.headers || {};
+        config.headers['x-switched-from'] = 'true';
+      }
     } catch {
       // Ignore storage access errors in non-browser environments
     }
@@ -91,6 +105,9 @@ apiClient.interceptors.response.use(
 
       try {
         const rawRefreshToken = typeof window !== 'undefined' ? localStorage.getItem('auth_refresh_token') : null;
+        if (!rawRefreshToken) {
+          throw new Error('No refresh token available');
+        }
         const res = await axios.post(
           `${baseURL}/auth/refresh`,
           { refreshToken: rawRefreshToken },

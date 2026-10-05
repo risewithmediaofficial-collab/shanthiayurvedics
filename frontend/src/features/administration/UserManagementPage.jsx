@@ -28,12 +28,13 @@ const emptyForm = { name: '', email: '', phone: '', password: '', role: 'TELECAL
 
 export function UserManagementPage() {
   const queryClient = useQueryClient();
-  const [createOpen, setCreateOpen]       = useState(false);
-  const [editOpen, setEditOpen]           = useState(false);
-  const [resetOpen, setResetOpen]         = useState(false);
-  const [deleteOpen, setDeleteOpen]       = useState(false);
-  const [selectedUser, setSelectedUser]   = useState(null);
-  const [toast, setToast]                 = useState('');
+  const [createOpen, setCreateOpen]             = useState(false);
+  const [editOpen, setEditOpen]                 = useState(false);
+  const [resetOpen, setResetOpen]               = useState(false);
+  const [statusToggleOpen, setStatusToggleOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [selectedUser, setSelectedUser]         = useState(null);
+  const [toast, setToast]                       = useState('');
   const [formData, setFormData]           = useState(emptyForm);
   const [editData, setEditData]           = useState({});
   const [newPassword, setNewPassword]     = useState('');
@@ -56,7 +57,11 @@ export function UserManagementPage() {
 
   // Create user
   const createMutation = useMutation({
-    mutationFn: data => apiClient.post('/users', { ...data, branches: data.branchId ? [data.branchId] : [] }),
+    mutationFn: data => apiClient.post('/users', {
+      ...data,
+      branchId: data.branchId || null,
+      branches: data.branchId ? [data.branchId] : (data.role === 'MANAGER' ? branches.map(b => b._id) : [])
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setCreateOpen(false);
@@ -83,15 +88,33 @@ export function UserManagementPage() {
     onError: err => showToast('Error: ' + (err.response?.data?.message || 'Update failed'))
   });
 
-  // Toggle user status
+  // Toggle user status (Disable / Enable)
   const toggleMutation = useMutation({
     mutationFn: id => apiClient.patch(`/users/${id}/toggle-status`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      setDeleteOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['sidebar-telecallers'] });
+      queryClient.invalidateQueries({ queryKey: ['telecaller-users-list'] });
+      setStatusToggleOpen(false);
+      setSelectedUser(null);
       showToast('Account status updated');
     },
     onError: err => showToast('Error: ' + (err.response?.data?.message || 'Status toggle failed'))
+  });
+
+  // Permanently delete user
+  const deleteMutation = useMutation({
+    mutationFn: id => apiClient.delete(`/users/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-telecallers'] });
+      queryClient.invalidateQueries({ queryKey: ['telecaller-users-list'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setDeleteConfirmOpen(false);
+      setSelectedUser(null);
+      showToast('Staff account permanently deleted');
+    },
+    onError: err => showToast('Error: ' + (err.response?.data?.message || 'Failed to delete staff account'))
   });
 
   // Reset password
@@ -175,11 +198,11 @@ export function UserManagementPage() {
       cell: row => {
         const isAdmin = row.role === 'OWNER';
         return (
-          <div className="flex items-center gap-1 justify-end">
+          <div className="flex items-center gap-1.5 justify-end">
             {/* Edit — available for all users */}
             <button
               onClick={() => openEdit(row)}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-50 hover:bg-amber-50 text-slate-500 hover:text-amber-700 border border-slate-200 hover:border-amber-200 transition-colors text-[11px] font-semibold"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-amber-50 text-slate-600 hover:text-amber-700 border border-slate-200 hover:border-amber-200 transition-colors text-[11px] font-semibold cursor-pointer"
               title="Edit user"
             >
               <Pencil className="w-3 h-3" />
@@ -189,7 +212,7 @@ export function UserManagementPage() {
             {/* Reset Password — available for all users */}
             <button
               onClick={() => openReset(row)}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-500 hover:text-blue-700 border border-slate-200 hover:border-blue-200 transition-colors text-[11px] font-semibold"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-700 border border-slate-200 hover:border-blue-200 transition-colors text-[11px] font-semibold cursor-pointer"
               title="Reset password"
             >
               <RefreshCw className="w-3 h-3" />
@@ -199,16 +222,34 @@ export function UserManagementPage() {
             {/* Disable/Enable — hidden for OWNER to prevent lockout */}
             {!isAdmin && (
               <button
-                onClick={() => openDelete(row)}
-                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border transition-colors text-[11px] font-semibold ${
+                onClick={() => {
+                  setSelectedUser(row);
+                  setStatusToggleOpen(true);
+                }}
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border transition-colors text-[11px] font-semibold cursor-pointer ${
                   row.isActive
-                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-600 border-rose-200'
+                    ? 'bg-amber-50/70 hover:bg-amber-100 text-amber-700 border-amber-200'
                     : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
                 }`}
                 title={row.isActive ? 'Disable account' : 'Enable account'}
               >
                 <Power className="w-3 h-3" />
                 <span>{row.isActive ? 'Disable' : 'Enable'}</span>
+              </button>
+            )}
+
+            {/* Delete Account — permanent deletion for non-owner staff */}
+            {!isAdmin && (
+              <button
+                onClick={() => {
+                  setSelectedUser(row);
+                  setDeleteConfirmOpen(true);
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 border border-rose-200 hover:border-rose-300 transition-colors text-[11px] font-semibold cursor-pointer shadow-2xs"
+                title="Delete staff account permanently"
+              >
+                <Trash2 className="w-3 h-3 text-rose-600" />
+                <span>Delete</span>
               </button>
             )}
 
@@ -313,10 +354,10 @@ export function UserManagementPage() {
               value={formData.branchId}
               onChange={e => setFormData({ ...formData, branchId: e.target.value })}
               options={[
-                { value: '', label: 'Select branch...' },
+                { value: '', label: formData.role === 'MANAGER' ? '🏢 All Hubs (Multi-Branch)' : 'Select branch...' },
                 ...branches.map(b => ({ value: b._id, label: `${b.name} (${b.code})` }))
               ]}
-              required={formData.role !== 'OWNER'}
+              required={formData.role !== 'OWNER' && formData.role !== 'MANAGER'}
             />
           </div>
 
@@ -363,7 +404,7 @@ export function UserManagementPage() {
                 phone: editData.phone,
                 role: editData.role,
                 branchId: editData.branchId || null,
-                branches: editData.branchId ? [editData.branchId] : []
+                branches: editData.branchId ? [editData.branchId] : (editData.role === 'MANAGER' ? branches.map(b => b._id) : [])
               }
             });
           }}
@@ -392,7 +433,7 @@ export function UserManagementPage() {
               value={editData.branchId || ''}
               onChange={e => setEditData({ ...editData, branchId: e.target.value })}
               options={[
-                { value: '', label: 'No branch' },
+                { value: '', label: editData.role === 'MANAGER' ? '🏢 All Hubs (Multi-Branch)' : 'No branch' },
                 ...branches.map(b => ({ value: b._id, label: `${b.name} (${b.code})` }))
               ]}
             />
@@ -436,10 +477,10 @@ export function UserManagementPage() {
           </div>
         </form>
       </Modal>
-      {/* ── Delete / Disable Confirm Modal ── */}
+      {/* ── Disable / Enable Confirm Modal ── */}
       <Modal
-        isOpen={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
+        isOpen={statusToggleOpen}
+        onClose={() => setStatusToggleOpen(false)}
         title={selectedUser?.isActive ? 'Disable Account' : 'Enable Account'}
         maxWidth="max-w-sm"
         icon={selectedUser?.isActive ? '⚠️' : '✅'}
@@ -447,7 +488,7 @@ export function UserManagementPage() {
         <div className="space-y-4">
           <div className={`flex items-start gap-3 p-4 rounded-xl border text-sm ${
             selectedUser?.isActive
-              ? 'bg-rose-50 border-rose-200 text-rose-800'
+              ? 'bg-amber-50 border-amber-200 text-amber-800'
               : 'bg-emerald-50 border-emerald-200 text-emerald-800'
           }`}>
             <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -465,7 +506,7 @@ export function UserManagementPage() {
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" type="button" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+            <Button variant="secondary" type="button" onClick={() => setStatusToggleOpen(false)}>Cancel</Button>
             <Button
               variant={selectedUser?.isActive ? 'danger' : 'success'}
               icon={Power}
@@ -473,6 +514,48 @@ export function UserManagementPage() {
               onClick={() => toggleMutation.mutate(selectedUser._id)}
             >
               {selectedUser?.isActive ? 'Yes, Disable Account' : 'Yes, Enable Account'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Permanent Delete Confirm Modal ── */}
+      <Modal
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        title={`Delete Account: ${selectedUser?.name || ''}`}
+        maxWidth="max-w-md"
+        icon="🗑️"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-900 text-sm">
+            <AlertTriangle className="w-5 h-5 shrink-0 text-rose-600 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-bold">Are you sure you want to permanently delete this account?</p>
+              <p className="text-xs text-rose-800">
+                Staff member: <span className="font-semibold">{selectedUser?.name}</span> ({selectedUser?.email})
+              </p>
+              <p className="text-xs text-rose-700">
+                Role: <span className="font-semibold">{selectedUser?.role}</span> • Branch: <span className="font-semibold">{selectedUser?.branchId?.name || 'Unassigned'}</span>
+              </p>
+              <p className="text-xs text-rose-600 pt-1">
+                ⚠️ This action is irreversible. All active login sessions will be immediately terminated, and this staff record will be permanently removed from the system.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button variant="secondary" type="button" onClick={() => setDeleteConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              icon={Trash2}
+              isLoading={deleteMutation.isPending}
+              onClick={() => deleteMutation.mutate(selectedUser._id)}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
+            >
+              Yes, Delete Account
             </Button>
           </div>
         </div>

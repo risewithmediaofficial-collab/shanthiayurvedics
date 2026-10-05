@@ -318,16 +318,25 @@ export function OrderDetailPage() {
           <Card title="Ordered Herbal Products" subtitle="Prescribed units with reserved batch allocations">
             <div className="divide-y divide-slate-100">
               {order.items?.map((item, idx) => (
-                <div key={idx} className="py-3 flex items-center justify-between text-xs">
+                <div key={idx} className="py-3 flex items-center justify-between text-xs border-b border-slate-100 last:border-none">
                   <div>
                     <div className="font-bold text-slate-900">{item.productName}</div>
-                    <div className="text-slate-500 font-mono text-[11px] mt-0.5">
-                      SKU: {item.sku}
+                    <div className="text-slate-500 font-mono text-[11px] mt-0.5 flex items-center gap-1.5">
+                      <span>SKU: {item.sku}</span>
+                      {item.weight > 0 && (
+                        <>
+                          <span>•</span>
+                          <span>⚖️ {item.weight}g</span>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="text-right font-mono">
                     <div>{item.quantity} x ₹{item.unitPrice}</div>
                     <div className="font-bold text-slate-900 text-sm mt-0.5">₹{item.total?.toLocaleString()}</div>
+                    {item.weight > 0 && (
+                      <div className="text-[10px] text-slate-400">Total WT: {item.weight * item.quantity}g</div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -336,11 +345,23 @@ export function OrderDetailPage() {
                 <span>Subtotal</span>
                 <span>₹{order.subtotal?.toLocaleString()}</span>
               </div>
-              <div className="py-1.5 flex justify-between text-xs font-semibold text-slate-600">
+              <div className="py-1 flex justify-between text-xs font-semibold text-slate-600">
+                <span>Total Parcel Weight</span>
+                <span className="font-mono text-slate-800">
+                  {order.weight >= 1000 ? `${(order.weight / 1000).toFixed(2)} kg (${order.weight} g)` : `${order.weight || 0} g`}
+                </span>
+              </div>
+              <div className="py-1 flex justify-between text-xs font-semibold text-slate-600">
                 <span>Shipping & Handling</span>
                 <span>₹{order.shippingCharge || 0}</span>
               </div>
-              <div className="py-2 flex justify-between text-sm font-black text-slate-900 border-t border-slate-200">
+              {order.paymentMethod === 'COD' && (
+                <div className="py-1 flex justify-between text-xs font-bold text-amber-900 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">
+                  <span>COD Collect Amount</span>
+                  <span className="font-mono">₹{(order.codAmount || order.grandTotal)?.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="py-2 flex justify-between text-sm font-black text-slate-900 border-t border-slate-200 mt-1">
                 <span>Grand Total ({order.paymentMethod})</span>
                 <span className="text-emerald-800">₹{order.grandTotal?.toLocaleString()}</span>
               </div>

@@ -130,8 +130,8 @@ export function UserMenu() {
                 </div>
               </div>
 
-              {/* Account Switcher (OWNER only) */}
-              {user?.role === 'OWNER' && <AccountSwitcherMenu />}
+              {/* Account Switcher (OWNER or switched from OWNER) */}
+              {(user?.role === 'OWNER' || (typeof window !== 'undefined' && localStorage.getItem('switched_from_owner') === 'true')) && <AccountSwitcherMenu />}
 
               {/* Actions */}
               <div className="py-1.5">

@@ -33,6 +33,7 @@ import { useBranch } from '../../context/BranchContext.jsx';
 import { Button } from '../../components/common/Button.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { Pagination } from '../../components/common/Pagination.jsx';
+import { CustomSelect } from '../../components/common/CustomSelect.jsx';
 import { OrderCreateModal } from './OrderCreateModal.jsx';
 import { PrintableInvoiceModal } from './PrintableInvoiceModal.jsx';
 import { PrintableShippingLabelModal } from './PrintableShippingLabelModal.jsx';
@@ -45,6 +46,7 @@ import { SimplePipelineTrack } from '../../components/common/SimpleProgressBar.j
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils.js';
 import { DateRangeFilter } from '../../components/common/DateRangeFilter.jsx';
 import { ExportButton } from '../../components/common/ExportButton.jsx';
+import { OrdersFullTableView } from './OrdersFullTableView.jsx';
 
 // Status styling configuration
 const STATUS_META = {
@@ -63,6 +65,38 @@ const STATUS_META = {
   CANCELLED:          { label: 'Cancelled',         badge: 'neutral',  bg: 'bg-slate-100 text-slate-600 border-slate-200' },
 };
 
+const ALL_STATUS_OPTIONS = [
+  { value: 'NEW', label: 'New' },
+  { value: 'CONFIRMED', label: 'Confirmed' },
+  { value: 'PROCESSING', label: 'Processing' },
+  { value: 'READY_FOR_PACKING', label: 'Ready for Packing' },
+  { value: 'PACKED', label: 'Packed' },
+  { value: 'READY_FOR_DISPATCH', label: 'Ready to Dispatch' },
+  { value: 'DISPATCHED', label: 'Shipped / Dispatched' },
+  { value: 'IN_TRANSIT', label: 'In Transit' },
+  { value: 'OUT_FOR_DELIVERY', label: 'Out for Delivery' },
+  { value: 'DELIVERED', label: 'Delivered' },
+  { value: 'DELIVERY_FAILED', label: 'Delivery Failed' },
+  { value: 'RTO', label: 'RTO Return' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+];
+
+const STATUS_FILTER_OPTIONS = [
+  { value: '', label: 'All Statuses (Filter)' },
+  ...ALL_STATUS_OPTIONS,
+];
+
+const SORT_OPTIONS = [
+  { value: 'createdAt-desc', label: '📅 Date: Newest First' },
+  { value: 'createdAt-asc', label: '📅 Date: Oldest First' },
+  { value: 'grandTotal-desc', label: '💰 Amount: High to Low' },
+  { value: 'grandTotal-asc', label: '💰 Amount: Low to High' },
+  { value: 'customer-asc', label: '👤 Customer: A to Z' },
+  { value: 'customer-desc', label: '👤 Customer: Z to A' },
+  { value: 'status-asc', label: '🏷️ Status (A-Z)' },
+  { value: 'orderNumber-asc', label: '🔢 Order Number (A-Z)' },
+];
+
 export function OrderListPage({ hideHeader = false, callerId } = {}) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -79,7 +113,22 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
   const [endDate, setEndDate] = useState('');
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
-  const [viewMode, setViewMode] = useState('card'); // 'card' | 'full'
+  const [viewMode, setViewModeState] = useState(() => {
+    return searchParams.get('view') === 'full' ? 'full' : 'card';
+  });
+
+  const setViewMode = (mode) => {
+    setViewModeState(mode);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (mode === 'full') {
+        next.set('view', 'full');
+      } else {
+        next.delete('view');
+      }
+      return next;
+    });
+  };
 
   const debouncedSearch = useDebouncedValue(search);
 
@@ -249,6 +298,20 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
     enabled: Boolean(user)
   });
 
+  // Fetch Products for Filter
+  const { data: productsResponse } = useQuery({
+    queryKey: ['active-products-catalog'],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get('/products', { params: { limit: 100 } });
+        const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : [];
+      } catch (e) {
+        return [];
+      }
+    },
+    enabled: Boolean(user)
+  });
+
   // Fetch Paginated Orders
   const { data: ordersResponse, isLoading, refetch: refetchOrders } = useQuery({
     queryKey: ['orders', callerId, page, debouncedSearch, statusFilter, districtFilter, startDate, endDate, sortBy, sortOrder, selectedBranchId],
@@ -270,6 +333,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
   const meta = ordersResponse?.pagination || { page: 1, totalPages: 1, total: 0, totalRevenue: 0 };
   const districts = districtsResponse || [];
   const telecallers = telecallersResponse || [];
+  const products = productsResponse || [];
   const metrics = metricsResponse || {};
 
   // Bulk Status Update Mutation
@@ -467,8 +531,48 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
 
   return (
     <div className="space-y-4 pb-12 font-sans">
-      {/* 1. Header Profile & Title Bar (hidden when embedded in Manager View) */}
-      {!hideHeader && (
+      {viewMode === 'full' ? (
+        <OrdersFullTableView
+          orders={orders}
+          metrics={metrics}
+          meta={meta}
+          telecallers={telecallers}
+          districts={districts}
+          products={products}
+          user={user}
+          onSwitchView={() => setViewMode('card')}
+          onOpenCreateOrder={() => setCreateModalOpen(true)}
+          onOpenExcelImport={() => setExcelImportOpen(true)}
+          onOpenIndiaPostModal={() => setIndiaPostModalOpen(true)}
+          onOpenBulkLabels={() => setBulkLabelsModalOpen(true)}
+          onSelectInvoice={(order) => setSelectedOrderForInvoice(order)}
+          onSelectLabel={(order) => setSelectedOrderForLabel(order)}
+          onSelectEdit={(order) => handleOpenEditOrder(order)}
+          onSelectDelete={(order) => setSelectedOrderForDelete(order)}
+          selectedOrderIds={selectedOrderIds}
+          onToggleSelectOrder={handleToggleSelectOrder}
+          onSelectAll={handleSelectAll}
+          isAllSelected={isAllSelected}
+          bulkStatusMutation={bulkStatusMutation}
+          singleTransitionMutation={singleTransitionMutation}
+          autoDispatchMutation={autoDispatchMutation}
+          exportOrders={handleExportOrders}
+          search={search}
+          setSearch={setSearch}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          districtFilter={districtFilter}
+          setDistrictFilter={setDistrictFilter}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          endDate={endDate}
+          setEndDate={setEndDate}
+          refetchOrders={refetchOrders}
+        />
+      ) : (
+        <>
+          {/* 1. Header Profile & Title Bar (hidden when embedded in Manager View) */}
+          {!hideHeader && (
         <div className="bg-white text-slate-900 p-4 sm:p-5 rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-slate-200/90">
           <div>
             <h2 className="text-lg font-bold tracking-tight text-slate-900 flex items-center gap-2">
@@ -576,55 +680,64 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
         </div>
       )}
 
-      {/* 4. Action Buttons Ribbon */}
+      {/* 4. Action Buttons Ribbon (matching Image 1) */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          size="sm"
-          variant="secondary"
-          className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold text-xs shadow-xs"
-          onClick={() => setViewMode(viewMode === 'card' ? 'full' : 'card')}
+        <button
+          type="button"
+          onClick={() => setViewMode('full')}
+          className="px-3.5 py-1.5 rounded-lg bg-[#1b4332] hover:bg-[#143225] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
         >
-          {viewMode === 'card' ? '📋 Full View' : '🗂️ Card View'}
-        </Button>
+          <span>📋 Full View</span>
+        </button>
 
-        <Button
-          size="sm"
-          variant="primary"
-          className="bg-indigo-950 hover:bg-indigo-900 text-white font-bold text-xs shadow-xs"
-          icon={Scan}
+        <button
+          type="button"
           onClick={() => navigate('/scan-tracker')}
+          className="px-3.5 py-1.5 rounded-lg bg-[#1e88e5] hover:bg-[#1565c0] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
         >
-          📦 Scan Tracker
-        </Button>
+          <Scan className="w-3.5 h-3.5" />
+          <span>Scan</span>
+        </button>
 
-        <Button
-          size="sm"
-          variant="secondary"
-          className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold text-xs shadow-xs"
-          onClick={() => navigate('/scan-tracker?subtab=export')}
+        <button
+          type="button"
+          onClick={() => setIndiaPostModalOpen(true)}
+          className="px-3.5 py-1.5 rounded-lg bg-[#b78103] hover:bg-[#966a02] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
         >
-          📮 India Post Export
-        </Button>
+          <span>📮 ! India Post</span>
+        </button>
 
-        <Button
-          size="sm"
-          variant="secondary"
-          className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold text-xs shadow-xs"
-          icon={FileSpreadsheet}
+        <button
+          type="button"
           onClick={() => setExcelImportOpen(true)}
+          className="px-3.5 py-1.5 rounded-lg bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
         >
-          Import Excel
-        </Button>
+          <FileSpreadsheet className="w-3.5 h-3.5" />
+          <span>Import Excel</span>
+        </button>
 
-        <Button
-          size="sm"
-          variant="primary"
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs"
-          icon={Plus}
+        <button
+          type="button"
           onClick={() => setCreateModalOpen(true)}
+          className="px-3.5 py-1.5 rounded-lg bg-[#00897b] hover:bg-[#00695c] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
         >
-          New Order
-        </Button>
+          <Plus className="w-3.5 h-3.5" />
+          <span>New Order</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setStatusFilter('');
+            setDistrictFilter('');
+            setSearch('');
+            setPage(1);
+            showToast('Showing all online & counter orders');
+          }}
+          className="px-3.5 py-1.5 rounded-lg bg-[#7b1fa2] hover:bg-[#6a1b9a] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+        >
+          <span>🌐 Online Orders</span>
+        </button>
 
         <Button
           size="sm"
@@ -667,35 +780,24 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
             }`}>
               📦 Batch Action (Update Checked Orders):
             </span>
-            <select
+            <CustomSelect
               disabled={selectedOrderIds.length === 0}
               value={bulkStatusToApply}
               onChange={(e) => setBulkStatusToApply(e.target.value)}
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-medium outline-none transition-all ${
+              options={ALL_STATUS_OPTIONS}
+              placeholder={
                 selectedOrderIds.length === 0
-                  ? 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
-                  : 'bg-white border border-amber-400 text-slate-800 focus:border-ayur-600 cursor-pointer shadow-xs'
+                  ? '← Check orders to batch update'
+                  : 'Choose new status to apply...'
+              }
+              size="sm"
+              minWidth="min-w-[210px]"
+              className={`font-semibold ${
+                selectedOrderIds.length === 0
+                  ? 'bg-slate-100 border-slate-200 text-slate-400'
+                  : 'bg-white border-amber-400 text-slate-800'
               }`}
-            >
-              <option value="">
-                {selectedOrderIds.length === 0
-                  ? '← Check order boxes below to batch update status'
-                  : 'Choose new status to apply...'}
-              </option>
-              <option value="NEW">New</option>
-              <option value="CONFIRMED">Confirmed</option>
-              <option value="PROCESSING">Processing</option>
-              <option value="READY_FOR_PACKING">Ready for Packing</option>
-              <option value="PACKED">Packed</option>
-              <option value="READY_FOR_DISPATCH">Ready to Dispatch</option>
-              <option value="DISPATCHED">Shipped / Dispatched</option>
-              <option value="IN_TRANSIT">In Transit</option>
-              <option value="OUT_FOR_DELIVERY">Out for Delivery</option>
-              <option value="DELIVERED">Delivered</option>
-              <option value="DELIVERY_FAILED">Delivery Failed</option>
-              <option value="RTO">RTO Return</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
+            />
 
             {/* Force Override Toggle */}
             <label className={`flex items-center gap-1 text-[11px] select-none bg-white px-2 py-1 rounded border border-slate-200 ${
@@ -735,18 +837,14 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
 
           {/* Assign Verify Telecaller */}
           <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
-            <select
+            <CustomSelect
               value={assignVerifierId}
               onChange={(e) => setAssignVerifierId(e.target.value)}
-              className="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium outline-none focus:border-ayur-600"
-            >
-              <option value="">Assign verify...</option>
-              {telecallers.map((tc) => (
-                <option key={tc._id} value={tc._id}>
-                  {tc.name}
-                </option>
-              ))}
-            </select>
+              options={telecallers.map((tc) => ({ value: tc._id, label: tc.name }))}
+              placeholder="Assign verify..."
+              size="sm"
+              minWidth="min-w-[170px]"
+            />
 
             <Button
               size="sm"
@@ -877,76 +975,56 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
         />
 
         {/* Status Filter Dropdown */}
-        <div className="w-48">
-          <select
+        <div className="w-52">
+          <CustomSelect
             id="orders-status-filter"
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="w-full px-2.5 py-2 bg-emerald-50/60 border border-emerald-300 rounded-lg text-xs outline-none focus:bg-white focus:border-emerald-600 text-emerald-950 font-bold cursor-pointer"
-          >
-            <option value="">All Statuses (Filter)</option>
-            <option value="NEW">New</option>
-            <option value="CONFIRMED">Confirmed</option>
-            <option value="PROCESSING">Processing</option>
-            <option value="READY_FOR_PACKING">Ready for Packing</option>
-            <option value="PACKED">Packed</option>
-            <option value="READY_FOR_DISPATCH">Ready to Dispatch</option>
-            <option value="IN_TRANSIT">In Transit (Shipped)</option>
-            <option value="OUT_FOR_DELIVERY">Out for Delivery</option>
-            <option value="DELIVERED">Delivered</option>
-            <option value="DELIVERY_FAILED">Delivery Failed</option>
-            <option value="RTO">RTO Return</option>
-            <option value="CANCELLED">Cancelled</option>
-          </select>
+            placeholder="All Statuses (Filter)"
+            options={STATUS_FILTER_OPTIONS}
+            className="w-full bg-emerald-50/70 border-emerald-300 text-emerald-950 font-bold hover:border-emerald-500 shadow-2xs"
+            minWidth="min-w-[210px]"
+          />
         </div>
 
         {/* Districts Filter Dropdown */}
-        <div className="w-36">
-          <select
+        <div className="w-40">
+          <CustomSelect
             value={districtFilter}
             onChange={(e) => {
               setDistrictFilter(e.target.value);
               setPage(1);
             }}
-            className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-ayur-600 text-slate-700 font-medium cursor-pointer"
-          >
-            <option value="">All Districts</option>
-            {districts.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
+            placeholder="All Districts"
+            searchable={districts.length > 5}
+            options={[
+              { value: '', label: 'All Districts' },
+              ...districts.map((d) => ({ value: d, label: d })),
+            ]}
+            className="w-full bg-slate-50 border-slate-200 text-slate-700 font-medium"
+            minWidth="min-w-[180px]"
+          />
         </div>
 
         {/* Sort By Dropdown */}
-        <div className="w-52">
-          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 focus-within:border-ayur-600 focus-within:bg-white transition-colors">
-            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <select
-              id="orders-sort-select"
-              value={`${sortBy}-${sortOrder}`}
-              onChange={(e) => {
-                const [field, dir] = e.target.value.split('-');
-                setSortBy(field);
-                setSortOrder(dir);
-                setPage(1);
-              }}
-              className="w-full bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer py-1"
-            >
-              <option value="createdAt-desc">📅 Date: Newest First</option>
-              <option value="createdAt-asc">📅 Date: Oldest First</option>
-              <option value="grandTotal-desc">💰 Amount: High to Low</option>
-              <option value="grandTotal-asc">💰 Amount: Low to High</option>
-              <option value="customer-asc">👤 Customer: A to Z</option>
-              <option value="customer-desc">👤 Customer: Z to A</option>
-              <option value="status-asc">🏷️ Status (A-Z)</option>
-              <option value="orderNumber-asc">🔢 Order Number (A-Z)</option>
-            </select>
-          </div>
+        <div className="w-56">
+          <CustomSelect
+            id="orders-sort-select"
+            value={`${sortBy}-${sortOrder}`}
+            icon={ArrowUpDown}
+            onChange={(e) => {
+              const [field, dir] = e.target.value.split('-');
+              setSortBy(field);
+              setSortOrder(dir);
+              setPage(1);
+            }}
+            options={SORT_OPTIONS}
+            className="w-full bg-slate-50 border-slate-200 text-slate-700 font-medium"
+            minWidth="min-w-[220px]"
+          />
         </div>
 
         {/* Direct Export Button */}
@@ -1041,7 +1119,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
           <p className="font-bold text-slate-700 text-sm">No orders found</p>
           <p className="text-xs">Adjust your search or filter parameters to find matching orders.</p>
         </div>
-      ) : viewMode === 'card' ? (
+      ) : (
         /* CARD VIEW: EXACT SHANTHI AYURVEDAS ORDER CARDS */
         <div className="space-y-3">
           {orders.map((order) => {
@@ -1149,7 +1227,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
 
                   <div className="flex items-center gap-1.5">
                     {/* Inline Status Dropdown */}
-                    <select
+                    <CustomSelect
                       value={order.status}
                       disabled={singleTransitionMutation.isPending}
                       onChange={(e) => {
@@ -1159,22 +1237,12 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                           forceRevert: isOwner || isManager || isDistributor
                         });
                       }}
-                      className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700 outline-none focus:border-ayur-600 cursor-pointer"
-                    >
-                      <option value="NEW">New</option>
-                      <option value="CONFIRMED">Confirmed</option>
-                      <option value="PROCESSING">Processing</option>
-                      <option value="READY_FOR_PACKING">Ready for Packing</option>
-                      <option value="PACKED">Packed</option>
-                      <option value="READY_FOR_DISPATCH">Ready to Dispatch</option>
-                      <option value="DISPATCHED">Shipped</option>
-                      <option value="IN_TRANSIT">In Transit</option>
-                      <option value="OUT_FOR_DELIVERY">Out for Delivery</option>
-                      <option value="DELIVERED">Delivered</option>
-                      <option value="DELIVERY_FAILED">Delivery Failed</option>
-                      <option value="RTO">RTO</option>
-                      <option value="CANCELLED">Cancelled</option>
-                    </select>
+                      size="xs"
+                      align="right"
+                      minWidth="min-w-[170px]"
+                      className="border-slate-200 hover:border-emerald-400 bg-white font-semibold text-[11px] shadow-2xs"
+                      options={ALL_STATUS_OPTIONS}
+                    />
 
                     {/* Bill / Invoice */}
                     <button
@@ -1231,171 +1299,6 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
             );
           })}
         </div>
-      ) : (
-        /* FULL VIEW: COMPLETE TABLE VIEW */
-        <div className={`bg-white rounded-2xl border border-slate-200 overflow-x-auto overflow-y-auto relative scrollbar-thin shadow-sm ${orders.length > 10 ? 'max-h-[580px]' : ''}`}>
-          <table className="w-full text-xs text-left">
-            <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur-xs text-slate-700 uppercase tracking-wider font-semibold border-b shadow-2xs select-none">
-              <tr>
-                <th className="p-3 w-10">
-                  <input
-                    type="checkbox"
-                    checked={isAllSelected}
-                    onChange={handleSelectAll}
-                    className="w-4 h-4 rounded text-ayur-600 focus:ring-ayur-500"
-                  />
-                </th>
-                <th
-                  onClick={() => handleHeaderSort('orderNumber')}
-                  className="p-3 cursor-pointer hover:bg-slate-200 transition-colors"
-                  title="Click to sort by Order Number"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Order Number</span>
-                    {sortBy === 'orderNumber' ? (
-                      <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
-                    ) : (
-                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleHeaderSort('customer')}
-                  className="p-3 cursor-pointer hover:bg-slate-200 transition-colors"
-                  title="Click to sort by Customer Name"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Customer</span>
-                    {sortBy === 'customer' ? (
-                      <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
-                    ) : (
-                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
-                    )}
-                  </div>
-                </th>
-                <th className="p-3">Items & Kit</th>
-                <th
-                  onClick={() => handleHeaderSort('grandTotal')}
-                  className="p-3 cursor-pointer hover:bg-slate-200 transition-colors"
-                  title="Click to sort by Amount"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Total Amount</span>
-                    {sortBy === 'grandTotal' ? (
-                      <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
-                    ) : (
-                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleHeaderSort('status')}
-                  className="p-3 cursor-pointer hover:bg-slate-200 transition-colors"
-                  title="Click to sort by Status"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Status</span>
-                    {sortBy === 'status' ? (
-                      <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
-                    ) : (
-                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
-                    )}
-                  </div>
-                </th>
-                <th className="p-3">City / District</th>
-                <th
-                  onClick={() => handleHeaderSort('createdAt')}
-                  className="p-3 cursor-pointer hover:bg-slate-200 transition-colors"
-                  title="Click to sort by Date"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Date</span>
-                    {sortBy === 'createdAt' ? (
-                      <span className="text-emerald-700 font-bold">{sortOrder === 'asc' ? '▲' : '▼'}</span>
-                    ) : (
-                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
-                    )}
-                  </div>
-                </th>
-                <th className="p-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {orders.map((row) => {
-                const customerName = row.patientDetails?.patientName || row.customerId?.name || 'Customer';
-                const mobile = row.patientDetails?.mobile || row.customerId?.mobile || '—';
-                const statusMeta = STATUS_META[row.status] || { label: row.status, badge: 'neutral' };
-                const isSelected = selectedOrderIds.includes(row._id);
-
-                return (
-                  <tr key={row._id} className={`hover:bg-slate-50 ${isSelected ? 'bg-emerald-50/20' : ''}`}>
-                    <td className="p-3">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleToggleSelectOrder(row._id)}
-                        className="w-4 h-4 rounded text-ayur-600 focus:ring-ayur-500"
-                      />
-                    </td>
-                    <td className="p-3">
-                      <span className="font-bold font-mono text-slate-900 block">{row.orderNumber}</span>
-                      <span className="text-[10px] text-slate-400">
-                        {new Date(row.createdAt).toLocaleDateString('en-GB')}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      <span className="font-bold text-slate-900 block">{customerName}</span>
-                      <span className="text-[10px] font-mono text-slate-500">{mobile}</span>
-                    </td>
-                    <td className="p-3 text-slate-700 max-w-[200px] truncate">
-                      {row.items?.map((i) => `${i.productName} (x${i.quantity})`).join(', ') || 'Ayurvedic Kit'}
-                    </td>
-                    <td className="p-3">
-                      <span className="font-bold text-slate-900 block">₹{row.grandTotal?.toLocaleString()}</span>
-                      <span className="text-[10px] text-slate-400 uppercase">{row.paymentMethod}</span>
-                    </td>
-                    <td className="p-3">
-                      <Badge variant={statusMeta.badge} size="sm">
-                        {statusMeta.label}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-slate-600">
-                      {row.deliveryAddress?.city || row.deliveryAddress?.district || 'Hosur'}
-                    </td>
-                    <td className="p-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedOrderForInvoice(row)}
-                          className="p-1 text-slate-500 hover:text-slate-800"
-                          title="Invoice"
-                        >
-                          🧾
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedOrderForLabel(row)}
-                          className="p-1 text-slate-500 hover:text-slate-800"
-                          title="Label"
-                        >
-                          🏷️
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/orders/${row._id}`)}
-                          className="p-1 text-slate-500 hover:text-slate-800"
-                          title="Details"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
       )}
 
       {/* 10. Pagination */}
@@ -1406,6 +1309,8 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
         itemsPerPage={15}
         onPageChange={setPage}
       />
+    </>
+  )}
 
       {/* MODALS */}
       {/* 1. Create Order Modal */}
@@ -1413,6 +1318,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
         <OrderCreateModal
           isOpen={createModalOpen}
           onClose={() => setCreateModalOpen(false)}
+          telecallerId={callerId}
         />
       )}
 

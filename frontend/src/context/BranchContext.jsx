@@ -36,7 +36,21 @@ export function BranchProvider({ children }) {
       return allBranches;
     }
 
-    // Strictly scope non-owners (Manager, Distributor, Telecaller) to their single assigned branch
+    if (user.role === 'MANAGER') {
+      const userBranchesList = Array.isArray(user.branches) && user.branches.length > 0
+        ? user.branches
+        : (user.branchId ? [user.branchId] : []);
+
+      if (userBranchesList.length === 0) {
+        return allBranches;
+      }
+
+      const assignedBranchIds = userBranchesList.map(b => (b._id || b.id || b).toString());
+      const matched = allBranches.filter((b) => assignedBranchIds.includes((b._id || b.id)?.toString()));
+      return matched.length > 0 ? matched : allBranches;
+    }
+
+    // Strictly scope non-owners and non-managers (Distributor, Telecaller) to their single assigned branch
     const userBranchId =
       (typeof user.branchId === 'object' ? user.branchId?._id || user.branchId?.id : user.branchId) ||
       (typeof user.branch === 'object' ? user.branch?._id || user.branch?.id : user.branch) ||
@@ -62,17 +76,19 @@ export function BranchProvider({ children }) {
       return;
     }
 
-    if (user.role === 'OWNER') {
+    if (user.role === 'OWNER' || user.role === 'MANAGER') {
       const savedBranch = sessionStorage.getItem('active_branch_id');
-      // If the currently saved branch was deleted (is no longer in availableBranches) and isn't 'ALL', reset to 'ALL'!
+      // If the currently saved branch was deleted (is no longer in availableBranches) and isn't 'ALL', reset!
       if (savedBranch && savedBranch !== 'ALL' && !availableBranches.some((b) => String(b._id || b.id) === savedBranch)) {
-        setSelectedBranchId('ALL');
-        try { sessionStorage.setItem('active_branch_id', 'ALL'); } catch {}
+        const defaultBranch = user.role === 'OWNER' ? 'ALL' : (availableBranches[0] ? String(availableBranches[0]._id || availableBranches[0].id) : 'ALL');
+        setSelectedBranchId(defaultBranch);
+        try { sessionStorage.setItem('active_branch_id', defaultBranch); } catch {}
       } else if (savedBranch) {
         setSelectedBranchId(savedBranch);
       } else {
-        setSelectedBranchId('ALL');
-        try { sessionStorage.setItem('active_branch_id', 'ALL'); } catch {}
+        const defaultBranch = user.role === 'OWNER' ? 'ALL' : (availableBranches[0] ? String(availableBranches[0]._id || availableBranches[0].id) : 'ALL');
+        setSelectedBranchId(defaultBranch);
+        try { sessionStorage.setItem('active_branch_id', defaultBranch); } catch {}
       }
     } else {
       const singleBranch = availableBranches[0];
@@ -83,8 +99,8 @@ export function BranchProvider({ children }) {
   }, [user, availableBranches]);
 
   const selectBranch = (branchId) => {
-    // Only OWNER can switch branches; Managers, Distributors & Staff are locked to their own branch
-    if (user?.role !== 'OWNER') {
+    // Only OWNER and MANAGER can switch branches; other staff are locked to their own branch
+    if (user?.role !== 'OWNER' && user?.role !== 'MANAGER') {
       return;
     }
 
@@ -109,7 +125,9 @@ export function BranchProvider({ children }) {
         branches: availableBranches,
         selectBranch,
         setSelectedBranchId: selectBranch,
-        isOwner: user?.role === 'OWNER'
+        isOwner: user?.role === 'OWNER',
+        isManager: user?.role === 'MANAGER',
+        canSwitchBranch: user?.role === 'OWNER' || user?.role === 'MANAGER'
       }}
     >
       <React.Fragment key={`${user?.id || user?._id || 'guest'}:${selectedBranchId}`}>{children}</React.Fragment>

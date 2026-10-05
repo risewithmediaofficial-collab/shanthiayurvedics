@@ -46,6 +46,11 @@ const productSchema = new mongoose.Schema(
       type: String,
       default: 'Bottle'
     },
+    weight: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
     taxPercent: {
       type: Number,
       default: 12

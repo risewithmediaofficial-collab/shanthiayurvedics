@@ -318,7 +318,10 @@ export class DashboardService {
       rtoOrders,
       lowStockCount,
       telecallersList,
-      branchInfo
+      branchInfo,
+      lowStockItems,
+      ordersByStatus,
+      allBranchesList
     ] = await Promise.all([
       Lead.countDocuments(branchFilter),
       Lead.countDocuments({ ...branchFilter, createdAt: { $gte: startOfToday } }),
@@ -342,7 +345,20 @@ export class DashboardService {
       })
         .select('name email phone isActive')
         .lean(),
-      branchFilter.branchId ? Branch.findById(branchFilter.branchId).lean() : null
+      branchFilter.branchId ? Branch.findById(branchFilter.branchId).lean() : null,
+      Inventory.find({
+        ...(branchFilter.branchId ? { branchId: branchFilter.branchId } : {}),
+        availableQuantity: { $lte: 20 }
+      })
+        .populate('productId', 'name sku price lowStockThreshold')
+        .populate('branchId', 'name code')
+        .limit(10)
+        .lean(),
+      Order.aggregate([
+        { $match: branchFilter },
+        { $group: { _id: '$status', count: { $sum: 1 } } }
+      ]),
+      Branch.find(branchFilter.branchId ? { _id: branchFilter.branchId } : {}).lean()
     ]);
 
     const todayRev = todayOrdersAgg[0]?.total || 0;
@@ -371,6 +387,29 @@ export class DashboardService {
       })
     );
 
+    // Operating Hubs with metrics
+    const franchiseBranches = await Promise.all(
+      allBranchesList.map(async (br) => {
+        const [ordersCount, revenueAgg, telecallerCount] = await Promise.all([
+          Order.countDocuments({ branchId: br._id }),
+          Order.aggregate([
+            { $match: { branchId: br._id, status: { $ne: ORDER_STATUS.CANCELLED } } },
+            { $group: { _id: null, total: { $sum: '$grandTotal' } } }
+          ]),
+          User.countDocuments({ branchId: br._id, role: ROLES.TELECALLER })
+        ]);
+
+        return {
+          ...br,
+          ordersCount,
+          totalRevenue: revenueAgg[0]?.total || 0,
+          telecallerCount,
+          managerName: br.managerName || '',
+          managerPhone: br.managerPhone || ''
+        };
+      })
+    );
+
     return {
       kpis: {
         totalLeads,
@@ -383,7 +422,10 @@ export class DashboardService {
         shippedOrders,
         deliveredOrders,
         toVerifyOrders: newOrders,
-        lowStockCount
+        lowStockCount,
+        allTimeRevenue: todayRev,
+        conversionRate: totalLeads > 0 ? ((totalOrders / totalLeads) * 100).toFixed(1) : 0,
+        aov: todayOrdersCount > 0 ? Math.round(todayRev / todayOrdersCount) : 0
       },
       queues: {
         newOrders,
@@ -396,7 +438,10 @@ export class DashboardService {
         lowStockCount
       },
       telecallers: telecallerStats,
-      branch: branchInfo || { name: 'Shanthi Ayurvedas Main Branch', code: 'MAIN' }
+      branches: franchiseBranches,
+      ordersByStatus,
+      lowStockItems,
+      branch: branchInfo || (franchiseBranches[0] ? franchiseBranches[0] : { name: 'Shanthi Ayurvedas Main Hub', code: 'HSR' })
     };
   }
 

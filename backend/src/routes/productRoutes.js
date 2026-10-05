@@ -8,9 +8,10 @@ import {
   addBatch
 } from '../controllers/productController.js';
 import { authenticate } from '../middleware/auth.js';
-import { requirePermission } from '../middleware/rbac.js';
+import { requirePermission, requireRole } from '../middleware/rbac.js';
 import { requireBranchScope } from '../middleware/branchScope.js';
 import { PERMISSIONS } from '../constants/permissions.js';
+import { ROLES } from '../constants/roles.js';
 
 const router = Router();
 
@@ -19,10 +20,10 @@ router.use(requireBranchScope);
 
 router.get('/', requirePermission(PERMISSIONS.PRODUCTS_VIEW), getProducts);
 router.get('/:id', requirePermission(PERMISSIONS.PRODUCTS_VIEW), getProductById);
-router.post('/', requirePermission(PERMISSIONS.PRODUCTS_CREATE), createProduct);
-router.patch('/:id', requirePermission(PERMISSIONS.PRODUCTS_EDIT), updateProduct);
-router.put('/:id', requirePermission(PERMISSIONS.PRODUCTS_EDIT), updateProduct);
-router.delete('/:id', requirePermission(PERMISSIONS.PRODUCTS_EDIT), deleteProduct);
-router.post('/:productId/batches', requirePermission(PERMISSIONS.PRODUCTS_EDIT), addBatch);
+router.post('/', requireRole(ROLES.OWNER), createProduct);
+router.post('/:id/batches', requireRole(ROLES.OWNER), addBatch);
+router.patch('/:id', requireRole(ROLES.OWNER), updateProduct);
+router.put('/:id', requireRole(ROLES.OWNER), updateProduct);
+router.delete('/:id', requireRole(ROLES.OWNER), deleteProduct);
 
 export default router;

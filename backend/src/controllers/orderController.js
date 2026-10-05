@@ -100,7 +100,7 @@ export const getOrders = asyncHandler(async (req, res) => {
     Order.countDocuments(query),
     Order.find(query)
       .populate('customerId', 'name mobile email')
-      .populate('telecallerId', 'name email')
+      .populate('telecallerId', 'name email phone role')
       .populate('branchId', 'name code')
       .sort(sortObj)
       .skip(skip)
@@ -129,7 +129,7 @@ export const getOrders = asyncHandler(async (req, res) => {
 export const getOrderById = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id)
     .populate('customerId', 'name mobile email addresses')
-    .populate('telecallerId', 'name email role')
+    .populate('telecallerId', 'name email phone role')
     .populate('branchId', 'name code address phone')
     .lean();
 
@@ -248,7 +248,7 @@ export const exportOrders = asyncHandler(async (req, res) => {
 
   const orders = await Order.find(query)
     .populate('customerId', 'name mobile email')
-    .populate('telecallerId', 'name')
+    .populate('telecallerId', 'name phone')
     .populate('branchId', 'name code')
     .sort({ createdAt: -1 })
     .limit(5000)

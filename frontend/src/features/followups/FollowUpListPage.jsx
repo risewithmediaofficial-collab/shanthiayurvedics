@@ -512,6 +512,7 @@ export function FollowUpListPage({ callerId } = {}) {
         <OrderCreateModal
           isOpen={Boolean(followUpForOrder)}
           onClose={() => setFollowUpForOrder(null)}
+          telecallerId={callerId || followUpForOrder.telecallerId?._id || followUpForOrder.telecallerId}
           initialPatientData={{
             name: followUpForOrder.leadId?.name || followUpForOrder.customerId?.name,
             mobile: followUpForOrder.leadId?.mobile || followUpForOrder.customerId?.mobile,

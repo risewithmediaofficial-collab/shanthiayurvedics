@@ -35,7 +35,10 @@ export function DashboardHub() {
   const activeView = allowedViews.includes(urlView) ? urlView : getRoleDefaultView();
 
   // Effective caller: either local state or URL param
-  const effectiveCaller = isTelecaller ? null : previewCaller || (callerParam ? { name: callerParam, _id: searchParams.get('callerId') } : null);
+  const callerIdParam = searchParams.get('callerId');
+  const effectiveCaller = isTelecaller
+    ? null
+    : previewCaller || (callerParam || callerIdParam ? { name: callerParam || '', _id: callerIdParam || null, id: callerIdParam || null } : null);
 
   const setView = (newView, caller = null, returnTo = null) => {
     setPreviewCaller(caller);

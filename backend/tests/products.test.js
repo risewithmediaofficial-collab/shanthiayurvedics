@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import request from "supertest";
 import app from "../src/app.js";
 import { User } from "../src/models/User.js";
@@ -9,10 +9,14 @@ import { ROLES } from "../src/constants/roles.js";
 import "./setup.js";
 
 describe("Products Module Integration Tests", () => {
-  let branch, managerToken, telecallerToken, createdProductId;
+  let branch, ownerToken, managerToken, telecallerToken, createdProductId;
 
   beforeAll(async () => {
     branch = await Branch.findOne({ code: "HSR" });
+
+    const owner = await User.create({ name: "Owner Products", email: "owner.products@shanthiayurvedas.com", passwordHash: await User.hashPassword("Password@12345"), role: ROLES.OWNER, branchId: branch._id, branches: [branch._id], isActive: true });
+    const ownerLogin = await request(app).post("/api/auth/login").send({ email: owner.email, password: "Password@12345" });
+    ownerToken = ownerLogin.body.data.accessToken;
 
     const manager = await User.create({ name: "Manager Products", email: "manager.products@shanthiayurvedas.com", passwordHash: await User.hashPassword("Password@12345"), role: ROLES.MANAGER, branchId: branch._id, branches: [branch._id], isActive: true });
     const managerLogin = await request(app).post("/api/auth/login").send({ email: manager.email, password: "Password@12345" });
@@ -24,7 +28,7 @@ describe("Products Module Integration Tests", () => {
   });
 
   it("should create a product with initial batch", async () => {
-    const res = await request(app).post("/api/products").set("Authorization", `Bearer ${managerToken}`).send({
+    const res = await request(app).post("/api/products").set("Authorization", `Bearer ${ownerToken}`).send({
       name: "Ashwagandha Capsules 60ct",
       sku: "AWG-CAP-60",
       category: "CAPSULES",
@@ -68,8 +72,14 @@ describe("Products Module Integration Tests", () => {
   });
 
   it("should reject duplicate SKU on create", async () => {
-    const res = await request(app).post("/api/products").set("Authorization", `Bearer ${managerToken}`).send({ name: "Dupe Product", sku: "AWG-CAP-60", category: "CAPSULES", price: 500, mrp: 600, costPrice: 200 });
+    const res = await request(app).post("/api/products").set("Authorization", `Bearer ${ownerToken}`).send({ name: "Dupe Product", sku: "AWG-CAP-60", category: "CAPSULES", price: 500, mrp: 600, costPrice: 200 });
     expect([400, 409]).toContain(res.status);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("should reject product create by manager (RBAC)", async () => {
+    const res = await request(app).post("/api/products").set("Authorization", `Bearer ${managerToken}`).send({ name: "Manager Product", sku: "MGR-PROD-1", category: "OILS", price: 200, mrp: 250, costPrice: 80 });
+    expect(res.status).toBe(403);
     expect(res.body.success).toBe(false);
   });
 
@@ -80,7 +90,7 @@ describe("Products Module Integration Tests", () => {
   });
 
   it("should add a new batch to existing product", async () => {
-    const res = await request(app).post(`/api/products/${createdProductId}/batches`).set("Authorization", `Bearer ${managerToken}`).send({
+    const res = await request(app).post(`/api/products/${createdProductId}/batches`).set("Authorization", `Bearer ${ownerToken}`).send({
       batchNumber: "AWG-B02",
       manufacturingDate: new Date().toISOString(),
       expiryDate: new Date(Date.now() + 18 * 30 * 24 * 60 * 60 * 1000).toISOString(),

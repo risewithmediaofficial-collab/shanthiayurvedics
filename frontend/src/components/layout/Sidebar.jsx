@@ -21,6 +21,7 @@ import KeyboardArrowDownRounded from '@mui/icons-material/KeyboardArrowDownRound
 import KeyboardArrowRightRounded from '@mui/icons-material/KeyboardArrowRightRounded';
 import PhoneInTalkRounded from '@mui/icons-material/PhoneInTalkRounded';
 import CloseRounded from '@mui/icons-material/CloseRounded';
+import LocalPharmacyRounded from '@mui/icons-material/LocalPharmacyRounded';
 import { useQuery } from '@tanstack/react-query';
 
 import apiClient from '../../api/apiClient.js';
@@ -224,6 +225,12 @@ export function Sidebar({ isOpen, onClose }) {
             badge: lowStockCount,
             badgeVariant: 'danger',
             show: hasPermission('inventory.view')
+          },
+          {
+            label: 'PRODUCTS',
+            icon: LocalPharmacyRounded,
+            path: '/products',
+            show: isOwner || hasPermission('products.view')
           },
           {
             label: 'TEAM',
@@ -513,7 +520,7 @@ export function Sidebar({ isOpen, onClose }) {
                 className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-slate-600 hover:bg-slate-50 transition-colors"
               >
                 <NavLink
-                  to={`/dashboard?view=telecaller&caller=${encodeURIComponent(tc.name)}&from=manager`}
+                  to={`/dashboard?view=telecaller&caller=${encodeURIComponent(tc.name)}&callerId=${tc._id || tc.id || ''}&from=${isOwner ? 'owner' : 'manager'}`}
                   onClick={() => onClose && onClose()}
                   className="flex items-center gap-2 truncate cursor-pointer hover:text-emerald-700 flex-1 min-w-0 group/caller"
                   title={`Open ${tc.name}'s Telecaller Console`}

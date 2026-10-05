@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Minus, SlidersHorizontal, ArrowLeftRight, History, Package, AlertTriangle, Pencil, Trash2, Search, X } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
@@ -30,6 +31,7 @@ const MOVEMENT_SORT_OPTIONS = [
 ];
 
 export function InventoryLedgerPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
   const { selectedBranchId } = useBranch();
@@ -50,7 +52,6 @@ export function InventoryLedgerPage() {
 
   const [formData, setFormData] = useState({
     productId: '',
-    batchId: '',
     branchId: '',
     quantity: '',
     reason: 'PURCHASE',
@@ -115,8 +116,6 @@ export function InventoryLedgerPage() {
           'Product Name': item.productId?.name || '—',
           'SKU': item.productId?.sku || '—',
           'Category': item.productId?.category || '—',
-          'Batch Number': item.batchId?.batchNumber || '—',
-          'Expiry Date': item.batchId?.expiryDate ? new Date(item.batchId.expiryDate).toLocaleDateString('en-GB') : '—',
           'Unit Price (₹)': item.productId?.price || 0,
           'Available Units': item.availableQuantity || 0,
           'Reserved Units': item.reservedQuantity || 0,
@@ -141,7 +140,6 @@ export function InventoryLedgerPage() {
           'Product': m.productId?.name || '—',
           'Type': m.type || '—',
           'Quantity': m.quantity || 0,
-          'Batch': m.batchId?.batchNumber || '—',
           'Reason / Reference': m.reason || m.notes || '—',
           'Performed By': m.performedBy?.name || 'Admin',
           'Branch': m.branchId?.name || 'Hosur'
@@ -166,7 +164,7 @@ export function InventoryLedgerPage() {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['inventoryMovements'] });
       setStockInModalOpen(false);
-      setFormData({ productId: '', batchId: '', quantity: '', reason: 'PURCHASE', notes: '', newAvailable: '' });
+      setFormData({ productId: '', quantity: '', reason: 'PURCHASE', notes: '', newAvailable: '' });
     },
     onError: (err) => {
       setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to record stock in'}`);
@@ -179,7 +177,7 @@ export function InventoryLedgerPage() {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['inventoryMovements'] });
       setStockOutModalOpen(false);
-      setFormData({ productId: '', batchId: '', quantity: '', reason: 'PURCHASE', notes: '', newAvailable: '' });
+      setFormData({ productId: '', quantity: '', reason: 'DAMAGED', notes: '', newAvailable: '' });
     },
     onError: (err) => {
       setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to record stock out'}`);
@@ -192,7 +190,7 @@ export function InventoryLedgerPage() {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['inventoryMovements'] });
       setAdjustModalOpen(false);
-      setFormData({ productId: '', batchId: '', quantity: '', reason: 'PURCHASE', notes: '', newAvailable: '' });
+      setFormData({ productId: '', quantity: '', reason: 'PURCHASE', notes: '', newAvailable: '' });
     },
     onError: (err) => {
       setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to adjust stock'}`);
@@ -209,15 +207,6 @@ export function InventoryLedgerPage() {
         <div>
           <div className="font-bold text-slate-900">{row.productId?.name}</div>
           <div className="text-xs text-slate-500 font-mono">{row.productId?.sku}</div>
-        </div>
-      )
-    },
-    {
-      header: 'Batch Number',
-      cell: (row) => (
-        <div>
-          <span className="font-mono text-xs font-semibold text-slate-800">{row.batchId?.batchNumber}</span>
-          <div className="text-[10px] text-slate-400">Exp: {new Date(row.batchId?.expiryDate).toLocaleDateString()}</div>
         </div>
       )
     },
@@ -251,7 +240,6 @@ export function InventoryLedgerPage() {
             onClick={() => {
               setFormData({
                 productId: row.productId?._id || '',
-                batchId: row.batchId?._id || '',
                 branchId: row.branchId?._id || row.branchId || '',
                 quantity: '',
                 reason: 'PHYSICAL_AUDIT',
@@ -270,7 +258,6 @@ export function InventoryLedgerPage() {
             onClick={() => {
               setFormData({
                 productId: row.productId?._id || '',
-                batchId: row.batchId?._id || '',
                 branchId: row.branchId?._id || row.branchId || '',
                 quantity: '',
                 reason: 'DAMAGED',
@@ -309,11 +296,11 @@ export function InventoryLedgerPage() {
       }
     },
     {
-      header: 'Product & Batch',
+      header: 'Product & SKU',
       cell: (row) => (
         <div className="text-xs">
           <span className="font-semibold text-slate-900">{row.productId?.name}</span>
-          <span className="text-slate-500 font-mono ml-1">({row.batchId?.batchNumber})</span>
+          {row.productId?.sku && <span className="text-slate-500 font-mono ml-1">({row.productId.sku})</span>}
         </div>
       )
     },
@@ -350,7 +337,15 @@ export function InventoryLedgerPage() {
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Multi-Branch Inventory & Stock Ledger</h2>
           <p className="text-xs text-slate-500">Atomic ledger movements, purchase stock-in, and audit logging</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="secondary"
+            icon={Package}
+            onClick={() => navigate('/products')}
+            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold shadow-2xs cursor-pointer"
+          >
+            📦 Master Products Catalog →
+          </Button>
           <Button variant="outline" icon={Minus} onClick={() => setStockOutModalOpen(true)}>
             Stock Out
           </Button>
@@ -495,7 +490,6 @@ export function InventoryLedgerPage() {
             }
             stockInMutation.mutate({
               productId: formData.productId,
-              batchId: formData.batchId,
               branchId: writeBranchId,
               quantity: Number(formData.quantity),
               reason: formData.reason,
@@ -508,24 +502,10 @@ export function InventoryLedgerPage() {
             label="Select Product *"
             required
             value={formData.productId}
-            onChange={(e) => setFormData({ ...formData, productId: e.target.value, batchId: '' })}
+            onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
             options={[
               { value: '', label: 'Select a product...' },
               ...(productsData || []).map((p) => ({ value: p._id, label: `${p.name} (${p.sku})` }))
-            ]}
-          />
-
-          <Select
-            label="Select Batch *"
-            required
-            value={formData.batchId}
-            onChange={(e) => setFormData({ ...formData, batchId: e.target.value })}
-            options={[
-              { value: '', label: 'Select batch...' },
-              ...(selectedProductObj?.batches || []).map((b) => ({
-                value: b._id,
-                label: `${b.batchNumber} (Exp: ${new Date(b.expiryDate).toLocaleDateString()})`
-              }))
             ]}
           />
 
@@ -568,6 +548,83 @@ export function InventoryLedgerPage() {
         </form>
       </Modal>
 
+      {/* Stock Out Modal */}
+      <Modal
+        isOpen={stockOutModalOpen}
+        onClose={() => setStockOutModalOpen(false)}
+        title="Stock Out (Controlled Reduction)"
+        subtitle="Record damaged, sample, or manual stock deductions"
+        maxWidth="max-w-md"
+        icon="📤"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!writeBranchId) {
+              setActionMsg('⚠ Select a specific branch before recording stock out.');
+              return;
+            }
+            stockOutMutation.mutate({
+              productId: formData.productId,
+              branchId: writeBranchId,
+              quantity: Number(formData.quantity),
+              reason: formData.reason,
+              notes: formData.notes
+            });
+          }}
+          className="space-y-3.5"
+        >
+          <Select
+            label="Select Product *"
+            required
+            value={formData.productId}
+            onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
+            options={[
+              { value: '', label: 'Select a product...' },
+              ...(productsData || []).map((p) => ({ value: p._id, label: `${p.name} (${p.sku})` }))
+            ]}
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Quantity to Remove *"
+              type="number"
+              min="1"
+              required
+              value={formData.quantity}
+              onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+            />
+            <Select
+              label="Reason *"
+              value={formData.reason}
+              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+              options={[
+                { value: 'DAMAGED', label: 'Damaged Stock' },
+                { value: 'SAMPLE', label: 'Doctor Sample' },
+                { value: 'INTERNAL_USE', label: 'Internal Clinic Use' },
+                { value: 'MANUAL_ADJUSTMENT', label: 'Manual Correction' }
+              ]}
+            />
+          </div>
+
+          <Input
+            label="Reason & Notes"
+            placeholder="e.g. Broken packaging or leakage..."
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          />
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button variant="secondary" type="button" onClick={() => setStockOutModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" type="submit" isLoading={stockOutMutation.isPending} className="bg-red-600 hover:bg-red-700 text-white">
+              Record Stock Out
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
       {/* Adjust Modal */}
       <Modal
         isOpen={adjustModalOpen}
@@ -586,7 +643,6 @@ export function InventoryLedgerPage() {
             }
             adjustMutation.mutate({
               productId: formData.productId,
-              batchId: formData.batchId,
               branchId: writeBranchId,
               newAvailable: Number(formData.newAvailable),
               reason: 'PHYSICAL_VERIFICATION',
@@ -599,24 +655,10 @@ export function InventoryLedgerPage() {
             label="Select Product *"
             required
             value={formData.productId}
-            onChange={(e) => setFormData({ ...formData, productId: e.target.value, batchId: '' })}
+            onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
             options={[
               { value: '', label: 'Select a product...' },
               ...(productsData || []).map((p) => ({ value: p._id, label: `${p.name} (${p.sku})` }))
-            ]}
-          />
-
-          <Select
-            label="Select Batch *"
-            required
-            value={formData.batchId}
-            onChange={(e) => setFormData({ ...formData, batchId: e.target.value })}
-            options={[
-              { value: '', label: 'Select batch...' },
-              ...(selectedProductObj?.batches || []).map((b) => ({
-                value: b._id,
-                label: `${b.batchNumber} (Exp: ${new Date(b.expiryDate).toLocaleDateString()})`
-              }))
             ]}
           />
 

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Layers, Calendar, Tag, Package, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { useBranch } from '../../context/BranchContext.jsx';
 import { Table } from '../../components/common/Table.jsx';
 import { Button } from '../../components/common/Button.jsx';
@@ -28,7 +29,9 @@ const PRODUCT_SORT_OPTIONS = [
 export function ProductCatalogPage() {
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
+  const { user } = useAuth();
   const { selectedBranchId } = useBranch();
+  const isOwner = user?.role === 'OWNER';
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -40,7 +43,6 @@ export function ProductCatalogPage() {
   const [isExporting, setIsExporting] = useState(false);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -55,8 +57,8 @@ export function ProductCatalogPage() {
     mrp: '',
     costPrice: '',
     unit: 'BOTTLE',
-    lowStockThreshold: 15,
-    initialBatchNumber: ''
+    weight: '',
+    lowStockThreshold: 15
   });
 
   const [editData, setEditData] = useState({
@@ -66,16 +68,9 @@ export function ProductCatalogPage() {
     mrp: '',
     costPrice: '',
     unit: 'BOTTLE',
+    weight: '',
     lowStockThreshold: 15,
     description: ''
-  });
-
-  const [batchData, setBatchData] = useState({
-    batchNumber: '',
-    manufacturingDate: '',
-    expiryDate: '',
-    mrp: '',
-    purchasePrice: ''
   });
 
   const { data: productResponse, isLoading } = useQuery({
@@ -115,8 +110,7 @@ export function ProductCatalogPage() {
         mrp: '',
         costPrice: '',
         unit: 'BOTTLE',
-        lowStockThreshold: 15,
-        initialBatchNumber: ''
+        lowStockThreshold: 15
       });
     },
     onError: (err) => {
@@ -144,17 +138,6 @@ export function ProductCatalogPage() {
       setProductToDelete(null);
       setActionMsg('✓ Product removed successfully');
       setTimeout(() => setActionMsg(''), 3000);
-    }
-  });
-
-  const addBatchMutation = useMutation({
-    mutationFn: ({ productId, data }) => apiClient.post(`/products/${productId}/batches`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      setBatchModalOpen(false);
-      setActionMsg('✓ Batch added successfully');
-      setTimeout(() => setActionMsg(''), 3000);
-      setBatchData({ batchNumber: '', manufacturingDate: '', expiryDate: '', mrp: '', purchasePrice: '' });
     }
   });
 
@@ -190,7 +173,6 @@ export function ProductCatalogPage() {
         'Available Stock': p.availableQuantity ?? p.stock ?? 0,
         'Reserved Stock': p.reservedQuantity || 0,
         'Low Stock Threshold': p.lowStockThreshold || 15,
-        'Active Batches Count': p.batches?.length || 0,
         'Date Added': p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN') : ''
       }));
 
@@ -235,19 +217,11 @@ export function ProductCatalogPage() {
       )
     },
     {
-      header: 'Active Batches',
+      header: 'Weight',
       cell: (row) => (
-        <div className="flex flex-wrap gap-1">
-          {row.batches?.length === 0 ? (
-            <span className="text-xs text-slate-400 italic">No batches</span>
-          ) : (
-            row.batches?.map((b) => (
-              <Badge key={b._id} variant="neutral" size="sm">
-                {b.batchNumber} (Exp: {new Date(b.expiryDate).toLocaleDateString()})
-              </Badge>
-            ))
-          )}
-        </div>
+        <span className="text-xs font-semibold text-slate-700 font-mono">
+          {row.weight ? `${row.weight} g` : '—'}
+        </span>
       )
     },
     {
@@ -268,67 +242,66 @@ export function ProductCatalogPage() {
       cell: (row) => (
         <div className="flex items-center justify-end gap-1.5">
           {/* Stock Active/Inactive Toggle Button */}
-          <button
-            type="button"
-            onClick={() => editProductMutation.mutate({ id: row._id, data: { isActive: row.isActive === false } })}
-            title={row.isActive !== false ? 'Click to mark as Inactive' : 'Click to mark as Active'}
-            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer select-none shadow-2xs ${
-              row.isActive !== false
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
-                : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
-            }`}
-          >
-            <span className={`w-2 h-2 rounded-full shrink-0 ${row.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-            <span>{row.isActive !== false ? 'Active' : 'Inactive'}</span>
-          </button>
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => editProductMutation.mutate({ id: row._id, data: { isActive: row.isActive === false } })}
+              title={row.isActive !== false ? 'Click to mark as Inactive' : 'Click to mark as Active'}
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer select-none shadow-2xs ${
+                row.isActive !== false
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
+                  : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full shrink-0 ${row.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              <span>{row.isActive !== false ? 'Active' : 'Inactive'}</span>
+            </button>
+          )}
 
-          <Button
-            size="sm"
-            variant="outline"
-            icon={Plus}
-            onClick={() => {
-              setSelectedProduct(row);
-              setBatchModalOpen(true);
-            }}
-          >
-            Add Batch
-          </Button>
+          {/* Edit Product (Owner Only) */}
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedProduct(row);
+                setEditData({
+                  name: row.name || '',
+                  category: row.category || 'OILS',
+                  price: row.price || '',
+                  mrp: row.mrp || '',
+                  costPrice: row.costPrice || '',
+                  unit: row.unit || 'BOTTLE',
+                  weight: row.weight || '',
+                  lowStockThreshold: row.lowStockThreshold || 15,
+                  description: row.description || ''
+                });
+                setEditModalOpen(true);
+              }}
+              title="Edit Product"
+              className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center cursor-pointer"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
 
-          {/* Edit Product */}
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedProduct(row);
-              setEditData({
-                name: row.name || '',
-                category: row.category || 'OILS',
-                price: row.price || '',
-                mrp: row.mrp || '',
-                costPrice: row.costPrice || '',
-                unit: row.unit || 'BOTTLE',
-                lowStockThreshold: row.lowStockThreshold || 15,
-                description: row.description || ''
-              });
-              setEditModalOpen(true);
-            }}
-            title="Edit Product"
-            className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center cursor-pointer"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
+          {/* Delete Product (Owner Only) */}
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => {
+                setProductToDelete(row);
+                setDeleteModalOpen(true);
+              }}
+              title="Delete Product"
+              className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors flex items-center cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
 
-          {/* Delete Product */}
-          <button
-            type="button"
-            onClick={() => {
-              setProductToDelete(row);
-              setDeleteModalOpen(true);
-            }}
-            title="Delete Product"
-            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors flex items-center cursor-pointer"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          {!isOwner && (
+            <span className="text-[11px] text-slate-400 italic">View Only</span>
+          )}
         </div>
       )
     }
@@ -338,8 +311,8 @@ export function ProductCatalogPage() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Product Catalog & Batches</h2>
-          <p className="text-xs text-slate-500">Master Ayurvedic catalog, SKU numbers, MRPs, and batch lifecycles</p>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Product Catalog & Formulations</h2>
+          <p className="text-xs text-slate-500">Master Ayurvedic catalog, SKU numbers, MRPs, and active pricing</p>
         </div>
         <div className="flex items-center gap-2">
           <ExportButton
@@ -347,9 +320,11 @@ export function ProductCatalogPage() {
             isLoading={isExporting}
             disabled={products.length === 0}
           />
-          <Button variant="primary" icon={Plus} onClick={() => setCreateModalOpen(true)}>
-            New Product
-          </Button>
+          {isOwner && (
+            <Button variant="primary" icon={Plus} onClick={() => setCreateModalOpen(true)}>
+              New Product
+            </Button>
+          )}
         </div>
       </div>
 
@@ -376,9 +351,9 @@ export function ProductCatalogPage() {
           <div className="text-[11px] text-emerald-600 font-medium">Oils, Churnas, Tonics, Kits</div>
         </div>
         <div className="bento-card flex flex-col gap-1">
-          <div className="bento-metric-title">Batch Lifecycle Tracking</div>
-          <div className="bento-metric-value text-indigo-600">Active</div>
-          <div className="text-[11px] text-indigo-600 font-medium">Manufacturing & Expiry tracked</div>
+          <div className="bento-metric-title">Stock Architecture</div>
+          <div className="bento-metric-value text-indigo-600">Branch Direct</div>
+          <div className="text-[11px] text-indigo-600 font-medium">Simplified stock ledger</div>
         </div>
       </div>
 
@@ -456,155 +431,111 @@ export function ProductCatalogPage() {
         onPageChange={setPage}
       />
 
-      {/* Create Product Modal */}
-      <Modal
-        isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        title="Add New Ayurvedic Product"
-        subtitle="Catalog definition and initial batch registration"
-        maxWidth="max-w-lg"
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            createProductMutation.mutate({
-              ...formData,
-              price: Number(formData.price),
-              mrp: Number(formData.mrp),
-              costPrice: Number(formData.costPrice || 0),
-              initialBatch: formData.initialBatchNumber
-                ? { batchNumber: formData.initialBatchNumber }
-                : undefined
-            });
-          }}
-          className="space-y-3.5"
-        >
-          <Input
-            label="Product Name *"
-            required
-            placeholder="e.g. Maha Sandhi Oil 200ml"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          />
-
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="SKU Code *"
-              required
-              placeholder="e.g. MSO-200"
-              value={formData.sku}
-              onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
-            />
-            <Select
-              label="Category *"
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              options={[
-                { value: 'OILS', label: 'Ayurvedic Oils' },
-                { value: 'CHURNAS', label: 'Choornams / Powders' },
-                { value: 'CAPSULES', label: 'Capsules' },
-                { value: 'TONICS', label: 'Tonics / Syrups' },
-                { value: 'TABLETS', label: 'Tablets' },
-                { value: 'KITS', label: 'Treatment Kits' },
-                { value: 'OTHER', label: 'Other' }
-              ]}
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <Input
-              label="Selling Price (₹) *"
-              type="number"
-              required
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-            />
-            <Input
-              label="MRP (₹) *"
-              type="number"
-              required
-              value={formData.mrp}
-              onChange={(e) => setFormData({ ...formData, mrp: e.target.value })}
-            />
-            <Input
-              label="Cost Price (₹)"
-              type="number"
-              value={formData.costPrice}
-              onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
-            />
-          </div>
-
-          <Input
-            label="Initial Batch Number (Optional)"
-            placeholder="e.g. BAT-2026-01"
-            value={formData.initialBatchNumber}
-            onChange={(e) => setFormData({ ...formData, initialBatchNumber: e.target.value })}
-          />
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" type="button" onClick={() => setCreateModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" type="submit" isLoading={createProductMutation.isPending}>
-              Create Product
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Add Batch Modal */}
-      {selectedProduct && (
+      {/* Create Product Modal (Owner Only) */}
+      {isOwner && (
         <Modal
-          isOpen={batchModalOpen}
-          onClose={() => setBatchModalOpen(false)}
-          title={`Add Batch for ${selectedProduct.name}`}
-          subtitle={`SKU: ${selectedProduct.sku}`}
-          maxWidth="max-w-md"
+          isOpen={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          title="Add New Ayurvedic Product"
+          subtitle="Define product name, SKU, category, and pricing"
+          maxWidth="max-w-lg"
         >
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              addBatchMutation.mutate({
-                productId: selectedProduct._id,
-                data: {
-                  ...batchData,
-                  mrp: batchData.mrp ? Number(batchData.mrp) : selectedProduct.mrp,
-                  purchasePrice: batchData.purchasePrice ? Number(batchData.purchasePrice) : selectedProduct.costPrice
-                }
+              createProductMutation.mutate({
+                ...formData,
+                price: Number(formData.price),
+                mrp: Number(formData.mrp),
+                costPrice: Number(formData.costPrice || 0),
+                weight: Number(formData.weight || 0)
               });
             }}
             className="space-y-3.5"
           >
             <Input
-              label="Batch Number *"
+              label="Product Name *"
               required
-              placeholder="e.g. BAT-2026-02"
-              value={batchData.batchNumber}
-              onChange={(e) => setBatchData({ ...batchData, batchNumber: e.target.value.toUpperCase() })}
+              placeholder="e.g. Maha Sandhi Oil 200ml"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
 
             <div className="grid grid-cols-2 gap-3">
               <Input
-                label="Manufacturing Date"
-                type="date"
-                value={batchData.manufacturingDate}
-                onChange={(e) => setBatchData({ ...batchData, manufacturingDate: e.target.value })}
-              />
-              <Input
-                label="Expiry Date *"
-                type="date"
+                label="SKU Code *"
                 required
-                value={batchData.expiryDate}
-                onChange={(e) => setBatchData({ ...batchData, expiryDate: e.target.value })}
+                placeholder="e.g. MSO-200"
+                value={formData.sku}
+                onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
+              />
+              <Select
+                label="Category *"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                options={[
+                  { value: 'OILS', label: 'Ayurvedic Oils' },
+                  { value: 'CHURNAS', label: 'Choornams / Powders' },
+                  { value: 'CAPSULES', label: 'Capsules' },
+                  { value: 'TONICS', label: 'Tonics / Syrups' },
+                  { value: 'TABLETS', label: 'Tablets' },
+                  { value: 'KITS', label: 'Treatment Kits' },
+                  { value: 'OTHER', label: 'Other' }
+                ]}
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-              <Button variant="secondary" type="button" onClick={() => setBatchModalOpen(false)}>
+            <div className="grid grid-cols-2 gap-3">
+              <Select
+                label="Unit *"
+                value={formData.unit}
+                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                options={[
+                  { value: 'BOTTLE', label: 'Bottle' },
+                  { value: 'JAR', label: 'Jar' },
+                  { value: 'BOX', label: 'Box' },
+                  { value: 'PACKET', label: 'Packet' },
+                  { value: 'STRIP', label: 'Strip' }
+                ]}
+              />
+              <Input
+                label="Weight (grams) *"
+                type="number"
+                placeholder="e.g. 250"
+                value={formData.weight}
+                onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <Input
+                label="Selling Price (₹) *"
+                type="number"
+                required
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              />
+              <Input
+                label="MRP (₹) *"
+                type="number"
+                required
+                value={formData.mrp}
+                onChange={(e) => setFormData({ ...formData, mrp: e.target.value })}
+              />
+              <Input
+                label="Cost Price (₹)"
+                type="number"
+                value={formData.costPrice}
+                onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" type="button" onClick={() => setCreateModalOpen(false)}>
                 Cancel
               </Button>
-              <Button variant="primary" type="submit" isLoading={addBatchMutation.isPending}>
-                Save Batch
+              <Button variant="primary" type="submit" isLoading={createProductMutation.isPending}>
+                Create Product
               </Button>
             </div>
           </form>
@@ -635,6 +566,7 @@ export function ProductCatalogPage() {
                   mrp: Number(editData.mrp),
                   costPrice: editData.costPrice ? Number(editData.costPrice) : undefined,
                   unit: editData.unit,
+                  weight: Number(editData.weight || 0),
                   lowStockThreshold: Number(editData.lowStockThreshold || 15),
                   description: editData.description?.trim()
                 }
@@ -703,12 +635,21 @@ export function ProductCatalogPage() {
               />
             </div>
 
-            <Input
-              label="Low Stock Alert Threshold"
-              type="number"
-              value={editData.lowStockThreshold}
-              onChange={(e) => setEditData({ ...editData, lowStockThreshold: e.target.value })}
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Weight (grams)"
+                type="number"
+                placeholder="e.g. 250"
+                value={editData.weight}
+                onChange={(e) => setEditData({ ...editData, weight: e.target.value })}
+              />
+              <Input
+                label="Low Stock Alert Threshold"
+                type="number"
+                value={editData.lowStockThreshold}
+                onChange={(e) => setEditData({ ...editData, lowStockThreshold: e.target.value })}
+              />
+            </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Product Description</label>

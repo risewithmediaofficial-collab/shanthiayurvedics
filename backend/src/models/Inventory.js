@@ -11,7 +11,8 @@ const inventorySchema = new mongoose.Schema(
     batchId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ProductBatch',
-      required: true,
+      required: false,
+      default: null,
       index: true
     },
     branchId: {
@@ -65,7 +66,7 @@ const inventorySchema = new mongoose.Schema(
   }
 );
 
-inventorySchema.index({ productId: 1, batchId: 1, branchId: 1 }, { unique: true });
+inventorySchema.index({ productId: 1, branchId: 1 }, { unique: true });
 inventorySchema.index({ branchId: 1, availableQuantity: 1 });
 
 export const Inventory = mongoose.model('Inventory', inventorySchema);

@@ -24,9 +24,11 @@ import { Button } from '../../components/common/Button.jsx';
 import { Input } from '../../components/common/Input.jsx';
 import { Select } from '../../components/common/Select.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 
-export function OrderCreateModal({ isOpen, onClose, initialPatientData = null }) {
+export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, telecallerId = null }) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // 1. Customer / Patient Details
   const [patientName, setPatientName] = useState('');
@@ -48,14 +50,15 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
 
   // 3. Products (up to 5 items)
   const [products, setProducts] = useState([
-    { productId: '', batchId: '', quantity: 1, unitPrice: 0 }
+    { productId: '', quantity: 1, unitPrice: 0, weight: 0 }
   ]);
   const [offerPrice, setOfferPrice] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
 
-  // 4. Payment
+  // 4. Payment & Charges (Manual Entry Supported)
   const [paymentMethod, setPaymentMethod] = useState('COD'); // 'COD' | 'ONLINE'
-  const [isFreeShippingWaived, setIsFreeShippingWaived] = useState(false);
+  const [shippingCharge, setShippingCharge] = useState('69');
+  const [codAmount, setCodAmount] = useState('');
 
   // 5. Patient App Registration
   const [registerPatientApp, setRegisterPatientApp] = useState(true);
@@ -122,7 +125,8 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
       ...updated[index],
       productId: prodId,
       batchId: prod?.batches?.[0]?._id || '',
-      unitPrice: prod?.price || 0
+      unitPrice: prod?.price || 0,
+      weight: Number(prod?.weight) || 0
     };
     setProducts(updated);
   };
@@ -141,7 +145,7 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
 
   const addProductRow = () => {
     if (products.length < 5) {
-      setProducts([...products, { productId: '', batchId: '', quantity: 1, unitPrice: 0 }]);
+      setProducts([...products, { productId: '', quantity: 1, unitPrice: 0, weight: 0 }]);
     }
   };
 
@@ -151,15 +155,28 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
     }
   };
 
-  // Price Calculations
+  // Calculations: Subtotal, Total Weight, Shipping, and COD
   const productsSubtotal = products.reduce((acc, item) => {
     return acc + (Number(item.unitPrice) || 0) * (Number(item.quantity) || 1);
   }, 0);
 
+  const totalWeightGrams = products.reduce((acc, item) => {
+    const prod = productsData?.find((p) => p._id === item.productId);
+    const w = Number(item.weight ?? prod?.weight ?? 0);
+    return acc + (w * (Number(item.quantity) || 1));
+  }, 0);
+
+  const formattedTotalWeight = totalWeightGrams >= 1000
+    ? `${(totalWeightGrams / 1000).toFixed(2)} kg (${totalWeightGrams} g)`
+    : `${totalWeightGrams} g`;
+
   const discountAmount = discountPercent > 0 ? Math.round((productsSubtotal * discountPercent) / 100) : 0;
-  const shippingCharge = paymentMethod === 'COD' && !isFreeShippingWaived ? 69 : 0;
-  const autoCalculatedTotal = Math.max(0, productsSubtotal + shippingCharge - discountAmount);
+  const parsedShippingCharge = Number(shippingCharge) || 0;
+  const autoCalculatedTotal = Math.max(0, productsSubtotal + parsedShippingCharge - discountAmount);
   const finalPayableTotal = offerPrice.trim() !== '' ? Number(offerPrice) : autoCalculatedTotal;
+  const effectiveCodAmount = paymentMethod === 'COD'
+    ? (codAmount.trim() !== '' ? Number(codAmount) : finalPayableTotal)
+    : 0;
 
   // Order Submission Mutation
   const createOrderMutation = useMutation({
@@ -204,9 +221,9 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
     e.preventDefault();
     setFormError('');
 
-    const validItems = products.filter((p) => p.productId && p.batchId);
+    const validItems = products.filter((p) => p.productId);
     if (validItems.length === 0) {
-      setFormError('Please select at least one valid product and batch.');
+      setFormError('Please select at least one valid product.');
       return;
     }
 
@@ -215,14 +232,23 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
       fatherName,
       mobile,
       altMobile,
-      items: validItems.map((p) => ({
-        productId: p.productId,
-        batchId: p.batchId,
-        quantity: Number(p.quantity),
-        unitPrice: Number(p.unitPrice),
-        discount: 0
-      })),
-      shippingCharge,
+      telecallerId: telecallerId || (user?.role === 'TELECALLER' ? (user._id || user.id) : undefined),
+      telecallerName: user?.role === 'TELECALLER' ? user?.name : undefined,
+      telecallerPhone: user?.role === 'TELECALLER' ? (user?.phone || user?.mobile) : undefined,
+      items: validItems.map((p) => {
+        const prod = productsData?.find((pr) => pr._id === p.productId);
+        return {
+          productId: p.productId,
+          batchId: p.batchId || undefined,
+          quantity: Number(p.quantity),
+          unitPrice: Number(p.unitPrice),
+          weight: Number(p.weight ?? prod?.weight ?? 0),
+          discount: 0
+        };
+      }),
+      weight: totalWeightGrams,
+      shippingCharge: parsedShippingCharge,
+      codAmount: effectiveCodAmount,
       discountTotal: discountAmount,
       offerPrice: offerPrice.trim() !== '' ? Number(offerPrice) : undefined,
       paymentMethod,
@@ -475,12 +501,17 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
           </div>
         </div>
 
-        {/* SECTION 3: 📦 Products */}
+        {/* SECTION 3: 📦 Products & Weight */}
         <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-900">
               <Package className="w-4 h-4 text-ayur-600" />
               <span>Products</span>
+              {totalWeightGrams > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-bold font-mono">
+                  ⚖️ Total Weight: {formattedTotalWeight}
+                </span>
+              )}
             </div>
             {products.length < 5 && (
               <button
@@ -497,12 +528,14 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
           <div className="space-y-2.5">
             {products.map((item, idx) => {
               const currentProd = productsData?.find((p) => p._id === item.productId);
+              const itemWeight = Number(item.weight ?? currentProd?.weight ?? 0);
+              const lineWeight = itemWeight * (Number(item.quantity) || 1);
               return (
                 <div
                   key={idx}
-                  className="grid grid-cols-12 gap-2 p-2.5 bg-white rounded-xl border border-slate-200 items-center text-xs shadow-xs"
+                  className="grid grid-cols-12 gap-3 p-2.5 bg-white rounded-xl border border-slate-200 items-center text-xs shadow-xs"
                 >
-                  <div className="col-span-5">
+                  <div className="col-span-6">
                     <Select
                       label={`Product ${idx + 1} ${idx === 0 ? '*' : '(optional)'}`}
                       value={item.productId}
@@ -511,27 +544,18 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
                         { value: '', label: `Select Product ${idx + 1}...` },
                         ...(productsData || []).map((p) => ({
                           value: p._id,
-                          label: `${p.name} (₹${p.price})`
+                          label: `${p.name} (₹${p.price}${p.weight ? ` • ${p.weight}g` : ''})`
                         }))
                       ]}
                       required={idx === 0}
                     />
-                  </div>
-
-                  <div className="col-span-3">
-                    <Select
-                      label="Batch"
-                      value={item.batchId}
-                      onChange={(e) => handleBatchChange(idx, e.target.value)}
-                      options={[
-                        { value: '', label: 'Select batch...' },
-                        ...(currentProd?.batches || []).map((b) => ({
-                          value: b._id,
-                          label: `${b.batchNumber}`
-                        }))
-                      ]}
-                      required={Boolean(item.productId)}
-                    />
+                    {currentProd && (
+                      <div className="text-[10px] text-slate-500 font-medium mt-0.5 flex items-center gap-1.5 pl-0.5">
+                        <span className="font-mono">⚖️ {itemWeight}g each</span>
+                        <span>•</span>
+                        <span className="font-semibold text-slate-700 font-mono">Row: {lineWeight}g</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="col-span-2">
@@ -544,15 +568,21 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
                     />
                   </div>
 
-                  <div className="col-span-2 flex items-center justify-between pt-4">
-                    <div className="font-bold text-slate-900 text-right w-full">
-                      ₹{((item.unitPrice || 0) * (item.quantity || 1)).toLocaleString()}
+                  <div className="col-span-4 flex items-center justify-between pt-4">
+                    <div className="text-right w-full">
+                      <div className="font-bold text-slate-900 text-xs">
+                        ₹{((item.unitPrice || 0) * (item.quantity || 1)).toLocaleString()}
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-mono">
+                        {lineWeight > 0 ? `${lineWeight} g` : ''}
+                      </div>
                     </div>
                     {products.length > 1 && (
                       <button
                         type="button"
                         onClick={() => removeProductRow(idx)}
-                        className="p-1 text-slate-400 hover:text-rose-600 transition-colors ml-1"
+                        className="p-1 text-slate-400 hover:text-rose-600 transition-colors ml-1 cursor-pointer"
+                        title="Remove product"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -620,15 +650,18 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
           </div>
         </div>
 
-        {/* SECTION 4: 💰 Payment */}
-        <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3">
-          <div className="text-xs font-bold uppercase tracking-wider text-slate-900">Payment Mode</div>
+        {/* SECTION 4: 💰 Payment, Shipping Charge & COD Manual Entry */}
+        <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3.5">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-900">Payment & Charges</div>
 
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => setPaymentMethod('COD')}
-              className={`p-4 rounded-xl border-2 text-left transition-all cursor-pointer ${
+              onClick={() => {
+                setPaymentMethod('COD');
+                if (shippingCharge === '0') setShippingCharge('69');
+              }}
+              className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer ${
                 paymentMethod === 'COD'
                   ? 'border-ayur-700 bg-ayur-50/60 shadow-sm'
                   : 'border-slate-200 bg-white hover:border-slate-300'
@@ -637,14 +670,17 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
               <div className="text-2xl mb-1">💵</div>
               <div className="font-bold text-slate-900 text-sm">Cash on Delivery (COD)</div>
               <div className="text-xs text-slate-500 mt-0.5">
-                {isFreeShippingWaived ? 'Free delivery (Waived)' : '+₹69 shipping'}
+                Collect payment at doorstep
               </div>
             </button>
 
             <button
               type="button"
-              onClick={() => setPaymentMethod('ONLINE')}
-              className={`p-4 rounded-xl border-2 text-left transition-all cursor-pointer ${
+              onClick={() => {
+                setPaymentMethod('ONLINE');
+                setShippingCharge('0');
+              }}
+              className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer ${
                 paymentMethod === 'ONLINE'
                   ? 'border-emerald-700 bg-emerald-50/60 shadow-sm'
                   : 'border-slate-200 bg-white hover:border-slate-300'
@@ -652,34 +688,112 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null })
             >
               <div className="text-2xl mb-1">💳</div>
               <div className="font-bold text-slate-900 text-sm">Online Prepaid (UPI / Card)</div>
-              <div className="text-xs text-emerald-700 font-semibold mt-0.5">Free delivery</div>
+              <div className="text-xs text-emerald-700 font-semibold mt-0.5">Payment collected online</div>
             </button>
           </div>
 
-          <div className="flex items-center gap-2 pt-1">
-            <input
-              type="checkbox"
-              id="waiveShipping"
-              checked={isFreeShippingWaived}
-              onChange={(e) => setIsFreeShippingWaived(e.target.checked)}
-              className="w-4 h-4 text-ayur-700 rounded border-slate-300 focus:ring-ayur-500 cursor-pointer"
-            />
-            <label htmlFor="waiveShipping" className="text-xs text-slate-700 font-medium cursor-pointer">
-              🚚 Free Shipping (waive the ₹69 charge for this order)
-            </label>
+          {/* Manual Shipping Charge & Manual COD Amount Grid */}
+          <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Manual Shipping Charge Input */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>🚚 Shipping Charge (₹) *</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Enter manually</span>
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={shippingCharge}
+                    onChange={(e) => setShippingCharge(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  {['0', '50', '69', '100'].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setShippingCharge(preset)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
+                        shippingCharge === preset
+                          ? 'bg-ayur-800 text-white border-ayur-800'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {preset === '0' ? '₹0 Free' : `₹${preset}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Manual COD Collect Amount (Only for COD) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>💵 COD Collect Amount (₹)</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Enter manually</span>
+                </label>
+                {paymentMethod === 'COD' ? (
+                  <>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder={`₹${finalPayableTotal} (default)`}
+                      value={codAmount}
+                      onChange={(e) => setCodAmount(e.target.value)}
+                    />
+                    <div className="flex items-center justify-between mt-1.5 text-[10px]">
+                      <span className="text-slate-500">
+                        Collecting: <strong className="text-slate-900 font-mono">₹{effectiveCodAmount}</strong>
+                      </span>
+                      {codAmount.trim() !== '' && codAmount !== String(finalPayableTotal) && (
+                        <button
+                          type="button"
+                          onClick={() => setCodAmount(String(finalPayableTotal))}
+                          className="text-ayur-700 hover:underline font-bold cursor-pointer"
+                        >
+                          Sync Total (₹{finalPayableTotal})
+                        </button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 font-medium">
+                    ₹0 (Prepaid Order — No Cash Collection)
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Grand Total Bar */}
-          <div className="p-3 bg-slate-900 text-white rounded-xl flex items-center justify-between shadow-sm">
+          <div className="p-3.5 bg-slate-900 text-white rounded-xl flex items-center justify-between shadow-sm">
             <div>
-              <div className="text-[11px] text-slate-400 font-medium">Total Amount (Patient Pays)</div>
-              <div className="text-[10px] text-slate-400">
-                Products: ₹{productsSubtotal} + Shipping: ₹{shippingCharge}
-                {discountAmount > 0 ? ` - Discount: ₹${discountAmount}` : ''}
+              <div className="text-[11px] text-slate-400 font-medium">Order Summary & Total</div>
+              <div className="text-[10px] text-slate-400 flex items-center gap-2 mt-0.5 flex-wrap">
+                <span>Products: ₹{productsSubtotal}</span>
+                <span>•</span>
+                <span>Shipping: ₹{parsedShippingCharge}</span>
+                {discountAmount > 0 && (
+                  <>
+                    <span>•</span>
+                    <span className="text-amber-300">Discount: -₹{discountAmount}</span>
+                  </>
+                )}
+                <span>•</span>
+                <span className="text-emerald-300 font-mono">Weight: {formattedTotalWeight}</span>
               </div>
             </div>
-            <div className="text-2xl font-black text-emerald-400 font-mono">
-              ₹{finalPayableTotal.toLocaleString()}
+            <div className="text-right">
+              <div className="text-2xl font-black text-emerald-400 font-mono">
+                ₹{finalPayableTotal.toLocaleString()}
+              </div>
+              {paymentMethod === 'COD' && (
+                <div className="text-[10px] text-amber-300 font-bold font-mono">
+                  COD: ₹{effectiveCodAmount.toLocaleString()}
+                </div>
+              )}
             </div>
           </div>
         </div>

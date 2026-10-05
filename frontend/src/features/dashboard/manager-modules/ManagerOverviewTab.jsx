@@ -35,7 +35,8 @@ import { Spinner } from '../../../components/common/Spinner.jsx';
 export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { selectedBranchId, selectBranch, availableBranches = [], isOwner } = useBranch();
+  const { selectedBranchId, selectBranch, availableBranches = [], isOwner, isManager } = useBranch();
+  const canSwitchBranch = isOwner || isManager || user?.role === 'OWNER' || user?.role === 'MANAGER';
   const [chartView, setChartView] = useState('BRANCH'); // 'BRANCH' | 'STATUS'
 
   // 1. Fetch Comprehensive Dashboard Data
@@ -69,12 +70,13 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
   });
 
   // 3. Fetch Recent Live Orders
-  const { data: recentOrdersData, isLoading: isOrdersLoading, refetch: refetchOrders } = useQuery({
+  const { data: recentOrdersData = [], isLoading: isOrdersLoading, refetch: refetchOrders } = useQuery({
     queryKey: ['manager-overview-recent-orders', selectedBranchId],
     queryFn: async () => {
       try {
         const res = await apiClient.get('/orders', { params: { limit: 20, page: 1 } });
-        return res.data?.data?.orders || res.data?.data || [];
+        const orders = res.data?.data?.orders || (Array.isArray(res.data?.data) ? res.data?.data : []);
+        return Array.isArray(orders) ? orders : [];
       } catch (e) {
         return [];
       }
@@ -82,6 +84,10 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
     enabled: Boolean(user),
     refetchInterval: 20000
   });
+
+  const recentOrders = Array.isArray(recentOrdersData)
+    ? recentOrdersData
+    : (Array.isArray(recentOrdersData?.orders) ? recentOrdersData.orders : []);
 
   const isRefreshing = isDashboardLoading || isMetricsLoading;
 
@@ -92,10 +98,12 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
   };
 
   const kpis = dashboardData?.kpis || {};
-  const branchesList = dashboardData?.branches || availableBranches || [];
-  const ordersByStatus = dashboardData?.ordersByStatus || [];
-  const lowStockItems = dashboardData?.lowStockItems || [];
-  const telecallers = Array.isArray(dashboardData?.telecallers) ? dashboardData?.telecallers : [];
+  const branchesList = Array.isArray(dashboardData?.branches) && dashboardData.branches.length > 0
+    ? dashboardData.branches
+    : (Array.isArray(availableBranches) ? availableBranches : []);
+  const ordersByStatus = Array.isArray(dashboardData?.ordersByStatus) ? dashboardData.ordersByStatus : [];
+  const lowStockItems = Array.isArray(dashboardData?.lowStockItems) ? dashboardData.lowStockItems : [];
+  const telecallers = Array.isArray(dashboardData?.telecallers) ? dashboardData.telecallers : [];
 
   const totalOrders = metricsData?.totalOrders ?? kpis.totalOrders ?? 0;
   const todayRev = metricsData?.todayRev ?? kpis.salesToday ?? 0;
@@ -175,7 +183,7 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
               <span>{isRefreshing ? 'Syncing...' : 'Sync'}</span>
             </button>
 
-            {isOwner && availableBranches.length > 0 && (
+            {canSwitchBranch && availableBranches.length > 0 && (
               <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/10">
                 <button
                   type="button"
@@ -563,7 +571,7 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
                     <div className="text-xs font-semibold text-emerald-700 font-mono">
                       ₹{rev >= 100000 ? `${(rev / 100000).toFixed(1)}L` : Number(rev).toLocaleString()}
                     </div>
-                    {isOwner && (
+                    {canSwitchBranch && (
                       <button
                         type="button"
                         onClick={() => selectBranch(isSelected ? 'ALL' : brId)}
@@ -583,7 +591,7 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
         <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 hover:shadow-md transition-all p-5 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              Recent Transactions ({recentOrdersData.length})
+              Recent Transactions ({recentOrders.length})
             </span>
             <button
               type="button"
@@ -599,14 +607,14 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
             <div className="py-8 flex justify-center">
               <Spinner size="md" text="Loading orders..." />
             </div>
-          ) : recentOrdersData.length === 0 ? (
+          ) : recentOrders.length === 0 ? (
             <div className="text-center py-6 text-xs text-slate-400 bg-slate-50/50 rounded-xl">
               No recent orders found.
             </div>
           ) : (
-            <div className={`overflow-x-auto ${recentOrdersData.length > 10 ? 'max-h-[380px] overflow-y-auto scrollbar-thin relative' : ''}`}>
+            <div className={`overflow-x-auto ${recentOrders.length > 10 ? 'max-h-[380px] overflow-y-auto scrollbar-thin relative' : ''}`}>
               <table className="w-full text-left text-xs">
-                <thead className={recentOrdersData.length > 10 ? 'sticky top-0 z-10 bg-white/95 backdrop-blur-xs border-b border-slate-200 shadow-2xs' : ''}>
+                <thead className={recentOrders.length > 10 ? 'sticky top-0 z-10 bg-white/95 backdrop-blur-xs border-b border-slate-200 shadow-2xs' : ''}>
                   <tr className="border-b border-slate-100 text-slate-400 font-medium uppercase tracking-wider text-[10px]">
                     <th className="pb-2 pt-1">Order</th>
                     <th className="pb-2 pt-1">Customer</th>
@@ -616,7 +624,7 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {recentOrdersData.map((order) => {
+                  {recentOrders.map((order) => {
                     const orderNum = order.orderNumber || order._id?.slice(-6)?.toUpperCase();
                     const custName = order.customerName || order.customerId?.name || 'Customer';
                     const total = order.grandTotal || order.totalAmount || 0;

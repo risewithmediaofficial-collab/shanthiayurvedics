@@ -5,7 +5,8 @@ import {
   createUser,
   updateUser,
   toggleUserStatus,
-  adminResetPassword
+  adminResetPassword,
+  deleteUser
 } from '../controllers/userController.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
@@ -29,5 +30,6 @@ router.get('/:id', requirePermission(PERMISSIONS.USERS_VIEW), getUserById);
 router.patch('/:id', requirePermission(PERMISSIONS.USERS_EDIT), validate(updateUserSchema), updateUser);
 router.patch('/:id/toggle-status', requirePermission(PERMISSIONS.USERS_DISABLE), toggleUserStatus);
 router.post('/:id/reset-password', requirePermission(PERMISSIONS.USERS_EDIT), validate(adminResetPasswordSchema), adminResetPassword);
+router.delete('/:id', requirePermission(PERMISSIONS.USERS_EDIT), deleteUser);
 
 export default router;

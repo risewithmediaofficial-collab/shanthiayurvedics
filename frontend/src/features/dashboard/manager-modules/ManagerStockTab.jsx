@@ -16,6 +16,7 @@ import {
   Minus
 } from 'lucide-react';
 import apiClient from '../../../api/apiClient.js';
+import { useAuth } from '../../../context/AuthContext.jsx';
 import { useBranch } from '../../../context/BranchContext.jsx';
 import { Button } from '../../../components/common/Button.jsx';
 import { Badge } from '../../../components/common/Badge.jsx';
@@ -24,6 +25,8 @@ import { Spinner } from '../../../components/common/Spinner.jsx';
 import { DateRangeFilter } from '../../../components/common/DateRangeFilter.jsx';
 
 export function ManagerStockTab() {
+  const { user } = useAuth();
+  const isOwner = user?.role === 'OWNER';
   const { selectedBranchId, branches = [] } = useBranch();
   const queryClient = useQueryClient();
 
@@ -51,6 +54,7 @@ export function ManagerStockTab() {
     category: 'Oils & Thailams',
     costPrice: '',
     price: '',
+    weight: '',
     initialStock: 50,
     lowStockThreshold: 20,
     description: ''
@@ -71,13 +75,12 @@ export function ManagerStockTab() {
 
   // Inline Stock Adjust Mutation
   const adjustStockMutation = useMutation({
-    mutationFn: async ({ productId, batchId, branchId, changeQty, reason }) => {
+    mutationFn: async ({ productId, branchId, changeQty, reason }) => {
       const targetBranch = branchId || (selectedBranchId && selectedBranchId !== 'ALL' ? selectedBranchId : branches[0]?._id);
       // Either call inventory adjust or product update
       if (changeQty > 0) {
         const res = await apiClient.post('/inventory/in', {
           productId,
-          batchId,
           branchId: targetBranch,
           quantity: changeQty,
           notes: reason || 'Manager Quick In-Stock Adjustment'
@@ -86,7 +89,6 @@ export function ManagerStockTab() {
       } else {
         const res = await apiClient.post('/inventory/out', {
           productId,
-          batchId,
           branchId: targetBranch,
           quantity: Math.abs(changeQty),
           reason: reason || 'Manager Quick Stock Reduction'
@@ -165,7 +167,6 @@ export function ManagerStockTab() {
     const finalBranchId = selectedBranchId && selectedBranchId !== 'ALL' ? selectedBranchId : branches[0]?._id;
     adjustStockMutation.mutate({
       productId: product._id,
-      batchId: product.batches?.[0]?._id,
       branchId: finalBranchId,
       changeQty: delta,
       reason: delta > 0 ? 'Quick Restock +1' : 'Quick Stock Deduct -1'
@@ -243,7 +244,6 @@ export function ManagerStockTab() {
     const finalBranchId = targetBranchId || (selectedBranchId && selectedBranchId !== 'ALL' ? selectedBranchId : branches[0]?._id);
     adjustStockMutation.mutate({
       productId: selectedProductForAdjust._id,
-      batchId: selectedProductForAdjust.batches?.[0]?._id,
       branchId: finalBranchId,
       changeQty: adjustReason === 'DEDUCTION' ? -Math.abs(Number(adjustQuantity)) : Math.abs(Number(adjustQuantity)),
       reason: `Manager Adjustment: ${adjustReason}`
@@ -497,15 +497,17 @@ export function ManagerStockTab() {
               🔍 Find Duplicate Products
             </Button>
 
-            <Button
-              size="sm"
-              variant="primary"
-              icon={Plus}
-              onClick={() => setIsAddModalOpen(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs"
-            >
-              Add Product
-            </Button>
+            {isOwner && (
+              <Button
+                size="sm"
+                variant="primary"
+                icon={Plus}
+                onClick={() => setIsAddModalOpen(true)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs"
+              >
+                Add Product
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -722,8 +724,8 @@ export function ManagerStockTab() {
         </div>
       )}
 
-      {/* Add Product Modal */}
-      {isAddModalOpen && (
+      {/* Add Product Modal (Owner Only) */}
+      {isOwner && isAddModalOpen && (
         <Modal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
@@ -733,7 +735,10 @@ export function ManagerStockTab() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              addProductMutation.mutate(newProductData);
+              addProductMutation.mutate({
+                ...newProductData,
+                weight: Number(newProductData.weight) || 0
+              });
             }}
             className="space-y-3 text-xs"
           >
@@ -804,9 +809,20 @@ export function ManagerStockTab() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Initial Stock Units</label>
+                <label className="block font-semibold text-slate-700 mb-1">Weight (g)</label>
+                <input
+                  type="number"
+                  placeholder="250"
+                  value={newProductData.weight}
+                  onChange={(e) => setNewProductData({ ...newProductData, weight: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Initial Stock</label>
                 <input
                   type="number"
                   value={newProductData.initialStock}
@@ -816,7 +832,7 @@ export function ManagerStockTab() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Low Stock Alert Threshold</label>
+                <label className="block font-semibold text-slate-700 mb-1">Low Stock Alert</label>
                 <input
                   type="number"
                   value={newProductData.lowStockThreshold}

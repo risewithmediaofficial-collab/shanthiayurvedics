@@ -161,6 +161,57 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
   const [walletBalance, setWalletBalance] = useState(0);
   const [copiedLink, setCopiedLink] = useState(false);
   const [gstDetailsExpanded, setGstDetailsExpanded] = useState(false);
+
+  // Owner Add Product State & Mutation
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+  const [productFeedbackMsg, setProductFeedbackMsg] = useState('');
+  const [newProductForm, setNewProductForm] = useState({
+    name: '',
+    sku: '',
+    category: 'OILS',
+    price: '',
+    mrp: '',
+    costPrice: '',
+    unit: 'BOTTLE',
+    weight: '',
+    lowStockThreshold: 15,
+    description: ''
+  });
+
+  const createProductMutation = useMutation({
+    mutationFn: async (payload) => {
+      const res = await apiClient.post('/products', {
+        ...payload,
+        price: Number(payload.price),
+        mrp: Number(payload.mrp),
+        costPrice: Number(payload.costPrice || 0),
+        lowStockThreshold: Number(payload.lowStockThreshold || 15)
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-stock-matrix'] });
+      setIsAddProductModalOpen(false);
+      setNewProductForm({
+        name: '',
+        sku: '',
+        category: 'OILS',
+        price: '',
+        mrp: '',
+        costPrice: '',
+        unit: 'BOTTLE',
+        lowStockThreshold: 15,
+        description: ''
+      });
+      setProductFeedbackMsg('✓ Product created successfully and added to master catalog!');
+      setTimeout(() => setProductFeedbackMsg(''), 4000);
+    },
+    onError: (err) => {
+      alert(err.response?.data?.message || 'Failed to add product. Make sure SKU is unique.');
+    }
+  });
+
   // Settlement & Revenue stream filter
   const [revenueStreamFilter, setRevenueStreamFilter] = useState('ALL');
   const [settlementDateRange, setSettlementDateRange] = useState({
@@ -286,6 +337,8 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
   // Telecaller Performance Leaderboard Data (Real-time live stats)
   const liveTelecallers = Array.isArray(dashboardData?.telecallers) ? dashboardData?.telecallers : [];
   const telecallersLeaderboard = liveTelecallers.map((tc, idx) => ({
+    _id: tc._id || tc.id,
+    id: tc._id || tc.id,
     rank: idx + 1,
     name: tc.name || tc.username || 'Telecaller',
     phone: tc.phone || '—',
@@ -391,6 +444,17 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
+            {user?.role === 'OWNER' && (
+              <button
+                id="btn-owner-add-product"
+                type="button"
+                onClick={() => setIsAddProductModalOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow transition-all cursor-pointer"
+              >
+                <Plus sx={{ fontSize: 16 }} />
+                <span>+ Add Product</span>
+              </button>
+            )}
             {onSwitchToManagerView && (
               <button
                 id="btn-switch-manager-view"
@@ -475,6 +539,39 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
              ========================================================================= */}
           {activeTab === 'HOME' && (
             <div className="space-y-6">
+              {/* Product Creation Toast */}
+              {productFeedbackMsg && (
+                <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 sx={{ fontSize: 18 }} className="text-emerald-600" />
+                  <span>{productFeedbackMsg}</span>
+                </div>
+              )}
+
+              {/* Owner Quick Product Creation Action */}
+              {user?.role === 'OWNER' && (
+                <div className="flex items-center justify-between p-4 bg-emerald-50/90 border border-emerald-200/90 rounded-2xl">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-lg flex-shrink-0 shadow-sm">
+                      📦
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm text-slate-900">Add New Ayurvedic Medicine / Product</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Owner master catalog definition: register SKU, MRP, and pricing directly
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddProductModalOpen(true)}
+                    className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus sx={{ fontSize: 16 }} />
+                    <span>Add Product</span>
+                  </button>
+                </div>
+              )}
+
               {/* Staff Payout Report Banner */}
               <div className="flex items-center justify-between p-4 bg-amber-50/90 border border-amber-200 rounded-2xl">
                 <div className="flex items-center gap-3.5">
@@ -1956,6 +2053,131 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
               <Button variant="secondary" onClick={() => setIsAdsModalOpen(false)}>Close</Button>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {/* Add Product Modal (Owner Only) */}
+      {user?.role === 'OWNER' && isAddProductModalOpen && (
+        <Modal
+          isOpen={isAddProductModalOpen}
+          onClose={() => setIsAddProductModalOpen(false)}
+          title="Add New Ayurvedic Product"
+          subtitle="Owner master catalog definition and pricing"
+          maxWidth="max-w-lg"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              createProductMutation.mutate({
+                ...newProductForm,
+                weight: Number(newProductForm.weight) || 0
+              });
+            }}
+            className="space-y-3.5 text-xs"
+          >
+            <Input
+              label="Product Name *"
+              required
+              placeholder="e.g. Maha Sandhi Oil 200ml"
+              value={newProductForm.name}
+              onChange={(e) => setNewProductForm({ ...newProductForm, name: e.target.value })}
+            />
+
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="SKU Code *"
+                required
+                placeholder="e.g. MSO-200"
+                value={newProductForm.sku}
+                onChange={(e) => setNewProductForm({ ...newProductForm, sku: e.target.value.toUpperCase() })}
+              />
+              <Select
+                label="Category *"
+                value={newProductForm.category}
+                onChange={(e) => setNewProductForm({ ...newProductForm, category: e.target.value })}
+                options={[
+                  { value: 'OILS', label: 'Ayurvedic Oils' },
+                  { value: 'CHURNAS', label: 'Choornams / Powders' },
+                  { value: 'CAPSULES', label: 'Capsules' },
+                  { value: 'TONICS', label: 'Tonics / Syrups' },
+                  { value: 'TABLETS', label: 'Tablets' },
+                  { value: 'KITS', label: 'Treatment Kits' },
+                  { value: 'OTHER', label: 'Other' }
+                ]}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <Input
+                label="Selling Price (₹) *"
+                type="number"
+                required
+                value={newProductForm.price}
+                onChange={(e) => setNewProductForm({ ...newProductForm, price: e.target.value })}
+              />
+              <Input
+                label="MRP (₹) *"
+                type="number"
+                required
+                value={newProductForm.mrp}
+                onChange={(e) => setNewProductForm({ ...newProductForm, mrp: e.target.value })}
+              />
+              <Input
+                label="Cost Price (₹)"
+                type="number"
+                value={newProductForm.costPrice}
+                onChange={(e) => setNewProductForm({ ...newProductForm, costPrice: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <Select
+                label="Unit *"
+                value={newProductForm.unit}
+                onChange={(e) => setNewProductForm({ ...newProductForm, unit: e.target.value })}
+                options={[
+                  { value: 'BOTTLE', label: 'Bottle' },
+                  { value: 'JAR', label: 'Jar' },
+                  { value: 'BOX', label: 'Box' },
+                  { value: 'PACKET', label: 'Packet' },
+                  { value: 'STRIP', label: 'Strip' }
+                ]}
+              />
+              <Input
+                label="Weight (grams) *"
+                type="number"
+                placeholder="e.g. 200"
+                value={newProductForm.weight}
+                onChange={(e) => setNewProductForm({ ...newProductForm, weight: e.target.value })}
+              />
+              <Input
+                label="Low Stock Threshold"
+                type="number"
+                value={newProductForm.lowStockThreshold}
+                onChange={(e) => setNewProductForm({ ...newProductForm, lowStockThreshold: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Description (Optional)</label>
+              <textarea
+                rows={2}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none"
+                placeholder="Product ingredients, usage, or notes..."
+                value={newProductForm.description}
+                onChange={(e) => setNewProductForm({ ...newProductForm, description: e.target.value })}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button variant="secondary" type="button" onClick={() => setIsAddProductModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" isLoading={createProductMutation.isPending} className="bg-emerald-700 hover:bg-emerald-800 text-white">
+                Create Product
+              </Button>
+            </div>
+          </form>
         </Modal>
       )}
     </div>

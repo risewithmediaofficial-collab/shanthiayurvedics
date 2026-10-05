@@ -229,8 +229,6 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
       'Product Name': item.productName || '—',
       'SKU': item.sku || '—',
       'Category': item.category || '—',
-      'Batch Number': item.batchNumber || '—',
-      'Expiry Date': item.expiryDate ? new Date(item.expiryDate).toLocaleDateString('en-GB') : 'Dec 2027',
       'Unit Price (₹)': item.price || 0,
       'Available Stock': item.availableQuantity || 0,
       'Reorder Threshold': item.lowStockThreshold || 10,
@@ -282,7 +280,7 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
               <span>{branch.name ? `${branch.name} — Stock Control Desk` : 'Branch Stock & Inventory Portal'}</span>
             </h1>
             <p className="text-xs text-slate-500 mt-1">
-              Live warehouse ledger, stock allocations, batch numbers, and stock replenishment transfers.
+              Live warehouse ledger, stock allocations, and stock replenishment transfers.
             </p>
           </div>
 
@@ -488,7 +486,6 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
                 <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 shadow-2xs">
                   <tr>
                     <th className="py-3 px-4">Product & SKU</th>
-                    <th className="py-3 px-3">Batch & Expiry</th>
                     <th className="py-3 px-3">Unit Price</th>
                     <th className="py-3 px-3 text-center">Available Stock</th>
                     <th className="py-3 px-3 text-center">Threshold</th>
@@ -500,7 +497,7 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
                 <tbody className="divide-y divide-slate-100">
                   {sortedStock.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-8 text-center text-slate-400 text-xs">
+                      <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
                         No products found matching filters.
                       </td>
                     </tr>
@@ -517,12 +514,6 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
                             )}
                           </div>
                           <div className="text-[10px] text-slate-400 font-mono mt-0.5">{item.sku}</div>
-                        </td>
-                        <td className="py-3 px-3">
-                          <div className="font-mono text-slate-700 font-semibold">{item.batchNumber}</div>
-                          <div className="text-[10px] text-slate-400">
-                            {item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : 'Dec 2027'}
-                          </div>
                         </td>
                         <td className="py-3 px-3 font-mono font-semibold text-slate-800">
                           ₹{item.price}

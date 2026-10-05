@@ -5,6 +5,7 @@ import { env } from '../config/env.js';
 import { User } from '../models/User.js';
 import { AuditService } from '../services/auditService.js';
 import { RbacService } from '../services/rbacService.js';
+import { ROLES } from '../constants/roles.js';
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -77,8 +78,12 @@ export const logout = asyncHandler(async (req, res) => {
 });
 
 export const getSession = asyncHandler(async (req, res) => {
-  const refreshFromCookie = async () => {
-    const rawRefreshToken = req.cookies?.refreshToken;
+  const getRawRefreshToken = () => {
+    return req.headers['x-refresh-token'] || req.cookies?.refreshToken;
+  };
+
+  const refreshFromToken = async () => {
+    const rawRefreshToken = getRawRefreshToken();
     if (!rawRefreshToken) return null;
 
     try {
@@ -99,7 +104,7 @@ export const getSession = asyncHandler(async (req, res) => {
   }
 
   if (!token) {
-    const refreshed = await refreshFromCookie();
+    const refreshed = await refreshFromToken();
     if (refreshed) {
       return ApiResponse.success(res, {
         user: refreshed.user,
@@ -147,7 +152,7 @@ export const getSession = asyncHandler(async (req, res) => {
       'Active session retrieved'
     );
   } catch {
-    const refreshed = await refreshFromCookie();
+    const refreshed = await refreshFromToken();
     if (refreshed) {
       return ApiResponse.success(res, {
         user: refreshed.user,
@@ -158,6 +163,36 @@ export const getSession = asyncHandler(async (req, res) => {
     }
     return ApiResponse.success(res, { user: null, isAuthenticated: false }, 'Session expired or invalid');
   }
+});
+
+export const switchAccount = asyncHandler(async (req, res) => {
+  const { role, email } = req.body;
+  const currentUserRole = req.user?.role;
+  const isSwitched = Boolean(req.headers['x-switched-from'] || req.cookies?.switchedFromOwner);
+
+  if (currentUserRole !== ROLES.OWNER && !isSwitched) {
+    if (role !== ROLES.OWNER && email !== 'owner@shanthiayurvedas.com') {
+      return ApiResponse.error(res, 'Only an Owner can switch accounts', 403);
+    }
+  }
+
+  const targetUser = await AuthService.ensureQuickAccount({ role, email });
+  if (!targetUser) {
+    return ApiResponse.error(res, 'Target account not found', 404);
+  }
+
+  const result = await AuthService.createSessionForUser(targetUser, req, 'AUTH_SWITCH');
+  setAuthCookies(res, result);
+
+  return ApiResponse.success(
+    res,
+    {
+      user: result.user,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken
+    },
+    `Switched to ${result.user.name}`
+  );
 });
 
 export const getMe = asyncHandler(async (req, res) => {

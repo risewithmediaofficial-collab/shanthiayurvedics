@@ -1,11 +1,13 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { User } from '../models/User.js';
+import { Branch } from '../models/Branch.js';
 import { Session } from '../models/Session.js';
 import { LoginHistory } from '../models/LoginHistory.js';
 import { env } from '../config/env.js';
 import { RbacService } from './rbacService.js';
 import { AuditService } from './auditService.js';
+import { ROLES } from '../constants/roles.js';
 import { UnauthorizedError, AppError } from '../utils/errors.js';
 
 export class AuthService {
@@ -47,7 +49,8 @@ export class AuthService {
       $or: [{ email: normalizedIdentifier }, { username: normalizedIdentifier }]
     })
       .select('+passwordHash')
-      .populate('branchId', 'name code');
+      .populate('branchId', 'name code')
+      .populate('branches', 'name code');
 
     if (!user) {
       // Record failed attempt in LoginHistory
@@ -100,8 +103,20 @@ export class AuthService {
       throw new UnauthorizedError('Invalid email, username, or password');
     }
 
+    return this.createSessionForUser(user, req, 'AUTH_LOGIN');
+  }
+
+  /**
+   * Helper to create tokens and session for a user (used by login & switchAccount)
+   */
+  static async createSessionForUser(user, req, action = 'AUTH_LOGIN') {
+    const ipAddress = req?.ip || req?.connection?.remoteAddress || 'Unknown';
+    const userAgent = req?.headers?.['user-agent'] || 'Unknown';
+
     // Reset failed login attempts and update last login
-    await user.recordSuccessfulLogin();
+    if (typeof user.recordSuccessfulLogin === 'function') {
+      await user.recordSuccessfulLogin();
+    }
 
     // Fetch user permissions
     const permissions = await RbacService.getPermissionsForRole(user.role);
@@ -131,7 +146,7 @@ export class AuthService {
       isValid: true
     });
 
-    // Record successful login history
+    // Record login history
     await LoginHistory.create({
       userId: user._id,
       email: user.email,
@@ -144,7 +159,7 @@ export class AuthService {
     await AuditService.log({
       userId: user._id,
       branchId: user.branchId?._id || user.branchId,
-      action: 'AUTH_LOGIN',
+      action,
       module: 'auth',
       resourceType: 'User',
       resourceId: user._id,
@@ -167,6 +182,121 @@ export class AuthService {
       accessToken,
       refreshToken: rawRefreshToken
     };
+  }
+
+  /**
+   * Ensure quick role demo account exists and return it
+   */
+  static async ensureQuickAccount({ role, email }) {
+    const targetEmail = (email || '').toLowerCase().trim();
+
+    const QUICK_PROFILES = {
+      OWNER: {
+        name: 'CRM Owner',
+        email: 'owner@shanthiayurvedas.com',
+        username: 'owner',
+        role: ROLES.OWNER,
+        phone: '9629985340'
+      },
+      MANAGER: {
+        name: 'Hosur Hub Manager',
+        email: 'manager.hosur@shanthiayurvedas.com',
+        username: 'manager_hosur',
+        role: ROLES.MANAGER,
+        phone: '9629985342'
+      },
+      DISTRIBUTOR: {
+        name: 'Ramesh Distributor',
+        email: 'distributor@shanthiayurvedas.com',
+        username: 'distributor_ramesh',
+        role: ROLES.DISTRIBUTOR,
+        phone: '9629985343'
+      },
+      TELECALLER: {
+        name: 'Sathish Telecaller',
+        email: 'sathish@shanthiayurvedas.com',
+        username: 'telecaller_sathish',
+        role: ROLES.TELECALLER,
+        phone: '9629985344'
+      }
+    };
+
+    let user = null;
+    if (targetEmail) {
+      user = await User.findOne({ email: targetEmail, isActive: true })
+        .populate('branchId', 'name code')
+        .populate('branches', 'name code');
+    } else if (role && QUICK_PROFILES[role]) {
+      user = await User.findOne({ email: QUICK_PROFILES[role].email, isActive: true })
+        .populate('branchId', 'name code')
+        .populate('branches', 'name code');
+      if (!user) {
+        user = await User.findOne({ role, isActive: true })
+          .populate('branchId', 'name code')
+          .populate('branches', 'name code');
+      }
+    }
+
+    if (user) return user;
+
+    // Check Hosur branch
+    let branch = await Branch.findOne({ code: 'HSR' });
+    if (!branch) {
+      branch = await Branch.findOneAndUpdate(
+        { code: 'HSR' },
+        {
+          name: 'Shanthi Ayurvedas Hosur Main Hub',
+          code: 'HSR',
+          branchType: 'COMPANY_OWNED',
+          address: {
+            street: '14/B, Gandhi Road, Near Bus Stand',
+            city: 'Hosur',
+            state: 'Tamil Nadu',
+            pincode: '635109',
+            country: 'India'
+          },
+          phone: '+91 96299 85341',
+          email: 'hosur@shanthiayurvedas.com',
+          billerId: '1000058077',
+          isActive: true
+        },
+        { upsert: true, new: true }
+      );
+    }
+
+    const defaultPassword = 'Password@12345';
+    const passwordHash = await User.hashPassword(defaultPassword);
+
+    let profile = null;
+    if (role && QUICK_PROFILES[role]) {
+      profile = QUICK_PROFILES[role];
+    } else if (targetEmail) {
+      profile = Object.values(QUICK_PROFILES).find((p) => p.email === targetEmail);
+    }
+
+    if (!profile) return null;
+
+    user = await User.findOneAndUpdate(
+      { email: profile.email },
+      {
+        name: profile.name,
+        email: profile.email,
+        username: profile.username,
+        brand: 'Shanthi Ayurvedas',
+        assignedBrands: ['Shanthi Ayurvedas'],
+        passwordHash,
+        role: profile.role,
+        branchId: branch?._id,
+        branches: branch ? [branch._id] : [],
+        phone: profile.phone,
+        isActive: true
+      },
+      { upsert: true, new: true }
+    )
+      .populate('branchId', 'name code')
+      .populate('branches', 'name code');
+
+    return user;
   }
 
   /**

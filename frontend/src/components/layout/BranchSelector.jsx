@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Building2 } from 'lucide-react';
 import { useBranch } from '../../context/BranchContext.jsx';
+import { CustomSelect } from '../common/CustomSelect.jsx';
 
 export function BranchSelector() {
-  const { selectedBranchId, selectBranch, availableBranches = [], isOwner } = useBranch();
+  const { selectedBranchId, selectBranch, availableBranches = [], canSwitchBranch } = useBranch();
   const safeBranches = Array.isArray(availableBranches) ? availableBranches : [];
 
-  // Non-owners (Managers, Distributors, Staff) are strictly locked to their assigned branch
-  if (!isOwner) {
+  // Staff locked to single assigned branch (Distributor, Telecaller)
+  if (!canSwitchBranch) {
     const singleBranch = safeBranches[0];
     return (
       <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50/90 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-800 shadow-2xs select-none">
@@ -22,31 +23,41 @@ export function BranchSelector() {
     );
   }
 
+  const branchOptions = useMemo(() => {
+    const opts = [
+      {
+        value: 'ALL',
+        label: '🏢 All Branches (Global)',
+      },
+    ];
+
+    safeBranches.forEach((branch, index) => {
+      const branchId = branch?._id || branch?.id || (typeof branch === 'string' ? branch : `branch-${index}`);
+      const branchName = branch?.name || (branch?.code ? `Branch ${branch.code}` : `Branch ${index + 1}`);
+      const branchCode = branch?.code ? ` (${branch.code})` : '';
+
+      opts.push({
+        value: branchId,
+        label: `📍 ${branchName}${branchCode}`,
+        badge: branch?.code || undefined,
+      });
+    });
+
+    return opts;
+  }, [safeBranches]);
+
   return (
-    <div className="flex items-center gap-1.5">
-      <Building2 className="w-4 h-4 text-slate-400" />
-      <select
+    <div className="flex items-center">
+      <CustomSelect
         value={selectedBranchId || 'ALL'}
         onChange={(e) => selectBranch(e.target.value)}
-        className="text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ayur-500/20 focus:border-ayur-600 shadow-xs cursor-pointer"
-      >
-        {isOwner && (
-          <option key="branch-option-all" value="ALL">
-            🏢 All Branches (Global)
-          </option>
-        )}
-        {safeBranches.map((branch, index) => {
-          const branchId = branch?._id || branch?.id || (typeof branch === 'string' ? branch : `branch-${index}`);
-          const branchName = branch?.name || (branch?.code ? `Branch ${branch.code}` : `Branch ${index + 1}`);
-          const branchCode = branch?.code ? ` (${branch.code})` : '';
-
-          return (
-            <option key={`branch-opt-${branchId}-${index}`} value={branchId}>
-              📍 {branchName}{branchCode}
-            </option>
-          );
-        })}
-      </select>
+        options={branchOptions}
+        icon={Building2}
+        size="sm"
+        minWidth="min-w-[220px]"
+        searchable={branchOptions.length > 5}
+        className="bg-white/90 font-semibold border-slate-200 text-slate-700 shadow-xs hover:border-emerald-400"
+      />
     </div>
   );
 }

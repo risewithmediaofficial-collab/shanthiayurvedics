@@ -10,7 +10,8 @@ const orderItemSchema = new mongoose.Schema({
   batchId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'ProductBatch',
-    required: true
+    required: false,
+    default: null
   },
   productName: {
     type: String,
@@ -31,6 +32,11 @@ const orderItemSchema = new mongoose.Schema({
     min: 0
   },
   discount: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  weight: {
     type: Number,
     default: 0,
     min: 0
@@ -83,6 +89,14 @@ const orderSchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    telecallerName: {
+      type: String,
+      trim: true
+    },
+    telecallerPhone: {
+      type: String,
+      trim: true
+    },
     items: [orderItemSchema],
     subtotal: {
       type: Number,
@@ -95,6 +109,16 @@ const orderSchema = new mongoose.Schema(
       min: 0
     },
     shippingCharge: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    codAmount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    weight: {
       type: Number,
       default: 0,
       min: 0

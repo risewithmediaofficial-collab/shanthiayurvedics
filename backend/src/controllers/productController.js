@@ -90,7 +90,7 @@ export const getProductById = asyncHandler(async (req, res) => {
 });
 
 export const createProduct = asyncHandler(async (req, res) => {
-  const { name, sku, category, description, price, mrp, costPrice, unit, taxPercent, lowStockThreshold, initialBatch } = req.body;
+  const { name, sku, category, description, price, mrp, costPrice, unit, taxPercent, lowStockThreshold, initialBatch, weight } = req.body;
 
   const existingSku = await Product.findOne({ sku: sku.toUpperCase().trim() });
   if (existingSku) {
@@ -107,7 +107,8 @@ export const createProduct = asyncHandler(async (req, res) => {
     costPrice,
     unit,
     taxPercent,
-    lowStockThreshold
+    lowStockThreshold,
+    weight: Number(weight) || 0
   });
   await product.save();
 
@@ -137,7 +138,7 @@ export const createProduct = asyncHandler(async (req, res) => {
 });
 
 export const addBatch = asyncHandler(async (req, res) => {
-  const { productId } = req.params;
+  const productId = req.params.productId || req.params.id;
   const { batchNumber, manufacturingDate, expiryDate, mrp, purchasePrice } = req.body;
 
   const product = await Product.findById(productId);

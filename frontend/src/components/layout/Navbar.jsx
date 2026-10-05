@@ -10,6 +10,8 @@ import { useAuth } from '../../context/AuthContext.jsx';
 export function Navbar({ onMenuToggle }) {
   const { user } = useAuth();
   const isOwner = user?.role === 'OWNER';
+  const isSwitched = typeof window !== 'undefined' && localStorage.getItem('switched_from_owner') === 'true';
+  const showSwitcher = isOwner || isSwitched;
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between min-h-[5.25rem] sm:min-h-[5.65rem] px-4 sm:px-6 bg-white border-b border-slate-200 shadow-xs">
@@ -42,7 +44,7 @@ export function Navbar({ onMenuToggle }) {
 
       {/* Right: Account Switcher (Boss only) + Branch (mobile) + Notifications + User */}
       <div className="flex items-center gap-2 sm:gap-2.5">
-        {isOwner && (
+        {showSwitcher && (
           <div className="hidden sm:block">
             <AccountSwitcherPill variant="light" />
           </div>

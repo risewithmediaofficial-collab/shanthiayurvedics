@@ -33,7 +33,9 @@ export const authenticate = async (req, res, next) => {
     }
 
     // Verify user exists and is active
-    const user = await User.findById(decoded.userId).populate('branchId', 'name code');
+    const user = await User.findById(decoded.userId)
+      .populate('branchId', 'name code')
+      .populate('branches', 'name code');
     if (!user) {
       return next(new UnauthorizedError('User belonging to this token no longer exists'));
     }

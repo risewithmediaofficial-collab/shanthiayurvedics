@@ -18,7 +18,6 @@ export function StockTransfersPage() {
   const [fromBranchId, setFromBranchId] = useState('');
   const [toBranchId, setToBranchId] = useState('');
   const [productId, setProductId] = useState('');
-  const [batchId, setBatchId] = useState('');
   const [quantity, setQuantity] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -109,7 +108,7 @@ export function StockTransfersPage() {
         <div className="text-xs">
           {row.items?.map((item, idx) => (
             <div key={idx} className="text-slate-700">
-              {item.quantity}x {item.productId?.name} ({item.batchId?.batchNumber})
+              {item.quantity}x {item.productId?.name || 'Ayurvedic Product'}
             </div>
           ))}
         </div>
@@ -193,7 +192,7 @@ export function StockTransfersPage() {
             createMutation.mutate({
               fromBranchId,
               toBranchId,
-              items: [{ productId, batchId, quantity: Number(quantity) }],
+              items: [{ productId, quantity: Number(quantity) }],
               notes
             });
           }}
@@ -222,36 +221,29 @@ export function StockTransfersPage() {
             />
           </div>
 
-          <Select
-            label="Product *"
-            required
-            value={productId}
-            onChange={(e) => { setProductId(e.target.value); setBatchId(''); }}
-            options={[
-              { value: '', label: 'Select product...' },
-              ...(productsData || []).map((p) => ({ value: p._id, label: `${p.name} (${p.sku})` }))
-            ]}
-          />
-
-          <div className="grid grid-cols-2 gap-3">
-            <Select
-              label="Batch Number *"
-              required
-              value={batchId}
-              onChange={(e) => setBatchId(e.target.value)}
-              options={[
-                { value: '', label: 'Select batch...' },
-                ...(selectedProductObj?.batches || []).map((b) => ({ value: b._id, label: b.batchNumber }))
-              ]}
-            />
-            <Input
-              label="Quantity *"
-              type="number"
-              min="1"
-              required
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-            />
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2">
+              <Select
+                label="Product *"
+                required
+                value={productId}
+                onChange={(e) => setProductId(e.target.value)}
+                options={[
+                  { value: '', label: 'Select product...' },
+                  ...(productsData || []).map((p) => ({ value: p._id, label: `${p.name} (${p.sku})` }))
+                ]}
+              />
+            </div>
+            <div>
+              <Input
+                label="Quantity *"
+                type="number"
+                min="1"
+                required
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+              />
+            </div>
           </div>
 
           <Input

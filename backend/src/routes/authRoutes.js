@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { login, refresh, logout, getMe, getSession, changePassword } from '../controllers/authController.js';
+import { login, refresh, logout, getMe, getSession, changePassword, switchAccount } from '../controllers/authController.js';
 import { validate } from '../middleware/validate.js';
 import { loginSchema, changePasswordSchema } from '../validators/authValidators.js';
 import { authRateLimiter } from '../middleware/rateLimiter.js';
@@ -13,6 +13,7 @@ router.post('/logout', logout);
 router.get('/session', getSession);
 
 // Protected Auth Routes
+router.post('/switch-account', authenticate, switchAccount);
 router.get('/me', authenticate, getMe);
 router.post('/change-password', authenticate, validate(changePasswordSchema), changePassword);
 

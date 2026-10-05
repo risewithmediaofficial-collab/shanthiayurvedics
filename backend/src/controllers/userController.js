@@ -201,3 +201,38 @@ export const adminResetPassword = asyncHandler(async (req, res) => {
 
   return ApiResponse.success(res, null, 'User password has been reset successfully');
 });
+
+export const deleteUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    throw new NotFoundError('User');
+  }
+
+  if (user.role === 'OWNER') {
+    throw new ConflictError('Cannot delete Owner account');
+  }
+
+  if (req.user.id === user._id.toString()) {
+    throw new ConflictError('Cannot delete your own active account');
+  }
+
+  // Logout on all devices
+  await AuthService.logoutAllDevices(user._id);
+
+  // Delete user permanently
+  await User.findByIdAndDelete(user._id);
+
+  await AuditService.log({
+    userId: req.user.id,
+    branchId: user.branchId,
+    action: 'USER_DELETED',
+    module: 'users',
+    resourceType: 'User',
+    resourceId: user._id,
+    oldValue: { name: user.name, email: user.email, role: user.role, phone: user.phone },
+    req
+  });
+
+  return ApiResponse.success(res, null, 'Staff account permanently deleted');
+});
+

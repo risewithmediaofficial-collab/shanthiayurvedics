@@ -956,6 +956,7 @@ export function LeadListPage({ callerId } = {}) {
         <OrderCreateModal
           isOpen={Boolean(leadForOrder)}
           onClose={() => setLeadForOrder(null)}
+          telecallerId={callerId || leadForOrder.assignedTo?._id || leadForOrder.assignedTo}
           initialPatientData={{
             name: leadForOrder.name,
             mobile: leadForOrder.mobile,

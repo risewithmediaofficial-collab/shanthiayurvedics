@@ -10,7 +10,8 @@ const stockTransferItemSchema = new mongoose.Schema({
   batchId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'ProductBatch',
-    required: true
+    required: false,
+    default: null
   },
   quantity: {
     type: Number,

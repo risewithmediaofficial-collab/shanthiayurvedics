@@ -97,14 +97,16 @@ export class OrderService {
           throw new NotFoundError(`Product ${item.productId}`);
         }
 
-        let batchQuery = ProductBatch.findById(item.batchId);
-        if (session) batchQuery = batchQuery.session(session);
-        const batch = await batchQuery;
-        if (!batch) {
-          throw new NotFoundError(`ProductBatch ${item.batchId}`);
+        let batch = null;
+        if (item.batchId) {
+          let batchQuery = ProductBatch.findById(item.batchId);
+          if (session) batchQuery = batchQuery.session(session);
+          batch = await batchQuery;
+          if (batch && batch.productId.toString() !== product._id.toString()) {
+            throw new AppError('The selected batch does not belong to this product', 400);
+          }
         }
 
-        if (batch.productId.toString() !== product._id.toString()) throw new AppError('The selected batch does not belong to this product', 400);
         const unitPrice = Number(item.unitPrice ?? product.price);
         if (Number(item.discount || 0) > unitPrice) throw new AppError('Discount cannot exceed the item price', 400);
         const discount = item.discount || 0;
@@ -115,7 +117,7 @@ export class OrderService {
         // Atomically reserve stock in inventory inside transaction
         await InventoryService.reserveStock({
           productId: item.productId,
-          batchId: item.batchId,
+          batchId: batch ? batch._id : (item.batchId || null),
           branchId,
           quantity,
           orderId: orderNumber,
@@ -124,32 +126,69 @@ export class OrderService {
           session
         });
 
+        const itemWeight = Number(item.weight ?? product.weight ?? 0);
         orderItems.push({
           productId: product._id,
-          batchId: batch._id,
+          batchId: batch ? batch._id : null,
           productName: product.name,
           sku: product.sku,
           quantity,
           unitPrice,
           discount,
+          weight: itemWeight,
           total: itemTotal
         });
       }
 
+      const totalWeight = orderItems.reduce((acc, it) => acc + (Number(it.weight || 0) * Number(it.quantity || 1)), 0);
+      const orderWeight = orderData.weight !== undefined && orderData.weight !== null ? Number(orderData.weight) : totalWeight;
       const shippingCharge = Number(orderData.shippingCharge || 0);
       const discountTotal = Number(orderData.discountTotal || 0);
       const calculatedTotal = Math.max(0, subtotal + shippingCharge - discountTotal);
       const grandTotal = orderData.offerPrice ? Number(orderData.offerPrice) : calculatedTotal;
+      const codAmount = orderData.codAmount !== undefined && orderData.codAmount !== null && orderData.codAmount !== ''
+        ? Number(orderData.codAmount)
+        : (paymentMethod === 'COD' ? grandTotal : 0);
+
+      const assignedTelecallerId = orderData.telecallerId || user.id || user._id;
+      let telecallerName = orderData.telecallerName || '';
+      let telecallerPhone = orderData.telecallerPhone || '';
+
+      if (!telecallerPhone || !telecallerName) {
+        if (assignedTelecallerId) {
+          try {
+            let tcQuery = User.findById(assignedTelecallerId).select('name phone');
+            if (session) tcQuery = tcQuery.session(session);
+            const tcUser = await tcQuery;
+            if (tcUser) {
+              telecallerName = telecallerName || tcUser.name;
+              telecallerPhone = telecallerPhone || tcUser.phone || '';
+            }
+          } catch (e) {
+            // fallback gracefully
+          }
+        }
+        if (!telecallerPhone && user?.phone) {
+          telecallerPhone = user.phone;
+        }
+        if (!telecallerName && user?.name) {
+          telecallerName = user.name;
+        }
+      }
 
       const newOrder = new Order({
         orderNumber,
         customerId: customer._id,
         branchId,
-        telecallerId: user.id || user._id,
+        telecallerId: assignedTelecallerId,
+        telecallerName,
+        telecallerPhone,
         items: orderItems,
         subtotal,
         discountTotal,
         shippingCharge,
+        codAmount,
+        weight: orderWeight,
         offerPrice: orderData.offerPrice ? Number(orderData.offerPrice) : undefined,
         grandTotal,
         status: ORDER_STATUS.NEW,
@@ -668,8 +707,8 @@ export class OrderService {
           }
         }
 
-        if (!targetProduct || !targetBatch) {
-          throw new Error(`Row ${i + 1}: No active product and batch available in inventory`);
+        if (!targetProduct) {
+          throw new Error(`Row ${i + 1}: No active product found in catalog`);
         }
 
         const quantity = Math.max(1, parseInt(row.quantity || row.qty || 1, 10));
@@ -691,7 +730,7 @@ export class OrderService {
           items: [
             {
               productId: targetProduct._id,
-              batchId: targetBatch._id,
+              batchId: targetBatch ? targetBatch._id : null,
               quantity,
               unitPrice
             }

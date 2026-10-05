@@ -12,7 +12,8 @@ const stockMovementSchema = new mongoose.Schema(
     batchId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ProductBatch',
-      required: true,
+      required: false,
+      default: null,
       index: true
     },
     branchId: {

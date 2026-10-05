@@ -10,6 +10,8 @@ import './setup.js';
 
 describe('Inventory & Orders Integration Tests (ACID & State Machine)', () => {
   let branch;
+  let ownerUser;
+  let ownerToken;
   let managerUser;
   let managerToken;
   let telecallerUser;
@@ -20,6 +22,20 @@ describe('Inventory & Orders Integration Tests (ACID & State Machine)', () => {
 
   beforeAll(async () => {
     branch = await Branch.findOne({ code: 'HSR' });
+
+    ownerUser = await User.create({
+      name: 'Owner Inv',
+      email: 'owner.inv@shanthiayurvedas.com',
+      passwordHash: await User.hashPassword('Password@12345'),
+      role: ROLES.OWNER,
+      branchId: branch._id,
+      branches: [branch._id],
+      isActive: true
+    });
+    const ownerLogin = await request(app)
+      .post('/api/auth/login')
+      .send({ email: ownerUser.email, password: 'Password@12345' });
+    ownerToken = ownerLogin.body.data.accessToken;
 
     managerUser = await User.create({
       name: 'Manager Anand',
@@ -69,7 +85,7 @@ describe('Inventory & Orders Integration Tests (ACID & State Machine)', () => {
   it('should create a product and initial batch', async () => {
     const prodRes = await request(app)
       .post('/api/products')
-      .set('Authorization', `Bearer ${managerToken}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         name: 'Maha Bhringraj Taila 200ml',
         sku: 'MBT-200',

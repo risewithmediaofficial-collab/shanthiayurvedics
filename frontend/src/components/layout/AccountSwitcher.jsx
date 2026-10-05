@@ -21,42 +21,35 @@ export const QUICK_ACCOUNTS = [
     icon: '👔',
     activeBg: 'bg-blue-600 text-white font-black shadow-xs',
     badge: 'bg-blue-100 text-blue-900 border-blue-300'
-  },
-  {
-    role: 'DISTRIBUTOR',
-    label: 'Distributor',
-    fullTitle: 'Distributor (Ramesh)',
-    email: 'distributor@shanthiayurvedas.com',
-    icon: '💼',
-    activeBg: 'bg-purple-600 text-white font-black shadow-xs',
-    badge: 'bg-purple-100 text-purple-900 border-purple-300'
-  },
-  {
-    role: 'TELECALLER',
-    label: 'Telecaller',
-    fullTitle: 'Telecaller (Sathish)',
-    email: 'sathish@shanthiayurvedas.com',
-    icon: '🎧',
-    activeBg: 'bg-emerald-600 text-white font-black shadow-xs',
-    badge: 'bg-emerald-100 text-emerald-900 border-emerald-300'
   }
 ];
 
 export function AccountSwitcherPill({ variant = 'light' }) {
-  const { user, login } = useAuth();
+  const { user, login, switchAccount } = useAuth();
   const queryClient = useQueryClient();
   const [switchingTo, setSwitchingTo] = useState(null);
 
-  if (user?.role !== 'OWNER') return null;
+  const isSwitched = typeof window !== 'undefined' && localStorage.getItem('switched_from_owner') === 'true';
+  if (user?.role !== 'OWNER' && !isSwitched) return null;
 
   const handleSwitch = async (acc) => {
     if (user?.email?.toLowerCase() === acc.email.toLowerCase() || switchingTo) return;
     try {
       setSwitchingTo(acc.email);
-      await login({
-        email: acc.email,
-        password: 'Password@12345'
-      });
+      if (acc.role === 'OWNER') {
+        localStorage.removeItem('switched_from_owner');
+      } else {
+        localStorage.setItem('switched_from_owner', 'true');
+      }
+
+      if (typeof switchAccount === 'function') {
+        await switchAccount({ email: acc.email, role: acc.role });
+      } else {
+        await login({
+          email: acc.email,
+          password: 'Password@12345'
+        });
+      }
       // Clear query cache to reload freshly with new user scope
       queryClient.clear();
       window.location.reload();
@@ -70,6 +63,11 @@ export function AccountSwitcherPill({ variant = 'light' }) {
 
   const isDark = variant === 'dark';
 
+  // Ensure Boss and the current role are always accessible in the pill
+  const pillAccounts = QUICK_ACCOUNTS.filter(
+    (acc) => acc.role === 'OWNER' || acc.role === user?.role || acc.role === 'MANAGER'
+  ).slice(0, 2);
+
   return (
     <div
       className={`inline-flex items-center gap-1 p-1 rounded-xl border text-xs select-none ${
@@ -78,13 +76,13 @@ export function AccountSwitcherPill({ variant = 'light' }) {
     >
       <span
         className={`text-[10px] font-bold px-1.5 uppercase tracking-wider hidden xl:inline ${
-          isDark ? 'text-slate-300' : 'text-slate-500'
+          isSwitched ? 'text-amber-500 font-extrabold' : isDark ? 'text-slate-300' : 'text-slate-500'
         }`}
       >
-        Switch:
+        {isSwitched ? '⚡ View:' : 'Switch:'}
       </span>
 
-      {QUICK_ACCOUNTS.slice(0, 2).map((acc) => {
+      {pillAccounts.map((acc) => {
         const isCurrent = user?.role === acc.role;
         const isPending = switchingTo === acc.email;
 
@@ -118,20 +116,31 @@ export function AccountSwitcherPill({ variant = 'light' }) {
 }
 
 export function AccountSwitcherMenu() {
-  const { user, login } = useAuth();
+  const { user, login, switchAccount } = useAuth();
   const queryClient = useQueryClient();
   const [switchingTo, setSwitchingTo] = useState(null);
 
-  if (user?.role !== 'OWNER') return null;
+  const isSwitched = typeof window !== 'undefined' && localStorage.getItem('switched_from_owner') === 'true';
+  if (user?.role !== 'OWNER' && !isSwitched) return null;
 
   const handleSwitch = async (acc) => {
     if (user?.email?.toLowerCase() === acc.email.toLowerCase() || switchingTo) return;
     try {
       setSwitchingTo(acc.email);
-      await login({
-        email: acc.email,
-        password: 'Password@12345'
-      });
+      if (acc.role === 'OWNER') {
+        localStorage.removeItem('switched_from_owner');
+      } else {
+        localStorage.setItem('switched_from_owner', 'true');
+      }
+
+      if (typeof switchAccount === 'function') {
+        await switchAccount({ email: acc.email, role: acc.role });
+      } else {
+        await login({
+          email: acc.email,
+          password: 'Password@12345'
+        });
+      }
       queryClient.clear();
       window.location.reload();
     } catch (err) {
@@ -142,49 +151,48 @@ export function AccountSwitcherMenu() {
     }
   };
 
+  const targetAcc = isSwitched
+    ? QUICK_ACCOUNTS.find((a) => a.role === 'OWNER')
+    : QUICK_ACCOUNTS.find((a) => a.role === 'MANAGER');
+
+  if (!targetAcc) return null;
+
+  const isPending = switchingTo === targetAcc.email;
+
   return (
     <div className="py-1.5 px-2 border-b border-slate-100">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-1 flex items-center gap-1">
-        <span>⚡</span>
-        <span>Quick Switch Account</span>
-      </div>
+      <button
+        type="button"
+        onClick={() => handleSwitch(targetAcc)}
+        disabled={isPending}
+        className={`w-full px-2.5 py-2 rounded-xl text-left text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+          isSwitched
+            ? 'bg-amber-50/80 hover:bg-amber-100/80 border border-amber-200 text-amber-950'
+            : 'bg-blue-50/60 hover:bg-blue-100/70 border border-blue-100 text-slate-800'
+        }`}
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="text-base">{targetAcc.icon}</span>
+          <div className="min-w-0">
+            <div className="leading-tight font-bold text-slate-900 truncate">{targetAcc.fullTitle}</div>
+            <div className="text-[10px] text-slate-400 font-mono truncate">{targetAcc.email}</div>
+          </div>
+        </div>
 
-      <div className="space-y-1 mt-1">
-        {QUICK_ACCOUNTS.map((acc) => {
-          const isCurrent = user?.email?.toLowerCase() === acc.email.toLowerCase();
-          const isPending = switchingTo === acc.email;
-
-          return (
-            <button
-              key={acc.role}
-              type="button"
-              onClick={() => handleSwitch(acc)}
-              disabled={isCurrent || Boolean(switchingTo)}
-              className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
-                isCurrent
-                  ? 'bg-slate-100 text-slate-900 cursor-default'
-                  : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm">{acc.icon}</span>
-                <div>
-                  <div className="leading-tight font-bold">{acc.fullTitle}</div>
-                  <div className="text-[10px] text-slate-400 font-mono">{acc.email}</div>
-                </div>
-              </div>
-
-              {isPending ? (
-                <RefreshCw className="w-3.5 h-3.5 text-blue-600 animate-spin" />
-              ) : isCurrent ? (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  Active
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
+        {isPending ? (
+          <RefreshCw className="w-3.5 h-3.5 text-blue-600 animate-spin flex-shrink-0" />
+        ) : (
+          <span
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex-shrink-0 border ${
+              isSwitched
+                ? 'bg-amber-200 text-amber-900 border-amber-300'
+                : 'bg-blue-100 text-blue-800 border-blue-200'
+            }`}
+          >
+            {isSwitched ? 'Return to Owner' : 'Switch'}
+          </span>
+        )}
+      </button>
     </div>
   );
 }

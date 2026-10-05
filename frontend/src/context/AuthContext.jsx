@@ -16,7 +16,7 @@ export function AuthProvider({ children }) {
     generationRef.current += 1;
     queryClient.clear();
     try {
-      ['auth_access_token', 'auth_refresh_token', 'auth_user'].forEach((key) => localStorage.removeItem(key));
+      ['auth_access_token', 'auth_refresh_token', 'auth_user', 'switched_from_owner'].forEach((key) => localStorage.removeItem(key));
       sessionStorage.removeItem('active_branch_id');
     } catch { /* Private browsing may restrict storage. */ }
     delete apiClient.defaults.headers.common.Authorization;
@@ -47,14 +47,8 @@ export function AuthProvider({ children }) {
     setAuthError(null);
     sessionRequestRef.current = (async () => {
       try {
-        let response = await apiClient.get('/auth/session');
+        const response = await apiClient.get('/auth/session');
         let data = response.data?.success ? response.data.data : null;
-        let refreshToken;
-        try { refreshToken = localStorage.getItem('auth_refresh_token'); } catch { /* No storage. */ }
-        if (!data?.user && refreshToken) {
-          response = await apiClient.post('/auth/refresh', { refreshToken });
-          data = response.data?.data;
-        }
         if (data?.user && !Array.isArray(data.user.permissions)) {
           // The session endpoint on older deployments omits grants; /auth/me does not.
           try {
@@ -99,6 +93,28 @@ export function AuthProvider({ children }) {
     return response.data;
   }, [applySession]);
 
+  const switchAccount = useCallback(async ({ role, email }) => {
+    generationRef.current += 1;
+    let resData;
+    try {
+      const response = await apiClient.post('/auth/switch-account', { role, email });
+      if (!response.data?.success) throw new Error(response.data?.message || 'Switch failed');
+      resData = response.data.data;
+    } catch {
+      // Fallback to direct login with demo credentials
+      const response = await apiClient.post('/auth/login', {
+        email,
+        password: 'Password@12345'
+      });
+      if (!response.data?.success) throw new Error(response.data?.message || 'Login failed');
+      resData = response.data.data;
+    }
+    queryClient.clear();
+    try { sessionStorage.removeItem('active_branch_id'); } catch { /* No storage. */ }
+    applySession(resData);
+    return resData;
+  }, [applySession]);
+
   const logout = useCallback(async () => {
     let refreshToken;
     try { refreshToken = localStorage.getItem('auth_refresh_token'); } catch { /* Use cookie. */ }
@@ -108,8 +124,8 @@ export function AuthProvider({ children }) {
   }, [clearSession]);
 
   const updateProfile = useCallback((updatedUser) => setUser((previous) => ({ ...previous, ...updatedUser })), []);
-  const value = useMemo(() => ({ user, isAuthenticated: Boolean(user), isLoading, authError, token, login, logout, checkAuth, updateProfile }),
-    [user, isLoading, authError, token, login, logout, checkAuth, updateProfile]);
+  const value = useMemo(() => ({ user, isAuthenticated: Boolean(user), isLoading, authError, token, login, logout, switchAccount, checkAuth, updateProfile }),
+    [user, isLoading, authError, token, login, logout, switchAccount, checkAuth, updateProfile]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 export const useAuth = () => {

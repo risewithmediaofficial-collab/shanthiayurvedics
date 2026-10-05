@@ -23,7 +23,6 @@ export class InventoryService {
       resolvedBranchId = user?.branchId || (Array.isArray(user?.branches) && user.branches[0]);
     }
     if (!resolvedBranchId || resolvedBranchId === 'ALL') {
-      // Check if there is an existing inventory record for this product with stock
       const existingInv = await Inventory.findOne({ productId, availableQuantity: { $gt: 0 } }).sort({ availableQuantity: -1 });
       if (existingInv && existingInv.branchId) {
         resolvedBranchId = existingInv.branchId;
@@ -34,60 +33,37 @@ export class InventoryService {
       resolvedBranchId = defaultBranch?._id;
     }
 
-    // 2. Resolve batchId
-    let resolvedBatchId = batchId;
-    if (!resolvedBatchId) {
-      // If there's an inventory record for this product and branch with stock, use that batch
-      if (resolvedBranchId) {
-        const invWithBatch = await Inventory.findOne({ productId, branchId: resolvedBranchId, availableQuantity: { $gt: 0 } }).sort({ availableQuantity: -1 });
-        if (invWithBatch && invWithBatch.batchId) {
-          resolvedBatchId = invWithBatch.batchId;
-        }
-      }
-    }
-    if (!resolvedBatchId) {
-      let batch = await ProductBatch.findOne({ productId, isActive: true }).sort({ createdAt: -1 });
-      if (!batch) {
-        batch = await ProductBatch.findOne({ productId }).sort({ createdAt: -1 });
-      }
-      if (!batch) {
-        const product = await Product.findById(productId);
-        const skuPrefix = product?.sku ? product.sku.trim().toUpperCase() : 'BATCH';
-        const batchNumber = `${skuPrefix}-B26`;
-        batch = await ProductBatch.create({
-          productId,
-          batchNumber,
-          manufacturingDate: new Date(),
-          expiryDate: new Date(Date.now() + 730 * 24 * 60 * 60 * 1000),
-          mrp: product?.mrp || product?.price || 100,
-          purchasePrice: product?.costPrice || 50,
-          isActive: true
-        });
-      }
-      resolvedBatchId = batch._id;
-    }
+    // 2. Resolve batchId (optional, null if batches are not tracked)
+    let resolvedBatchId = batchId || null;
 
     return { resolvedBranchId, resolvedBatchId };
   }
 
   /**
-   * Ensure Inventory document exists for product, batch, and branch
+   * Ensure Inventory document exists for product and branch (direct stock without batch dependency)
    */
   static async getOrCreateInventory(productId, batchId, branchId, session = null) {
+    let resolvedBranch = branchId;
+    let actualSession = session;
+    if (!branchId || (typeof branchId === 'object' && branchId?.session)) {
+      actualSession = branchId;
+      resolvedBranch = batchId;
+    }
+
     const { resolvedBranchId, resolvedBatchId } = await this.resolveBatchAndBranch({
       productId,
-      batchId,
-      branchId
+      batchId: typeof batchId === 'string' && batchId.length === 24 ? batchId : null,
+      branchId: resolvedBranch
     });
 
-    let query = Inventory.findOne({ productId, batchId: resolvedBatchId, branchId: resolvedBranchId });
-    if (session) query = query.session(session);
+    let query = Inventory.findOne({ productId, branchId: resolvedBranchId });
+    if (actualSession) query = query.session(actualSession);
     let inv = await query;
 
     if (!inv) {
       inv = new Inventory({
         productId,
-        batchId: resolvedBatchId,
+        batchId: resolvedBatchId || null,
         branchId: resolvedBranchId,
         availableQuantity: 0,
         reservedQuantity: 0,
@@ -96,7 +72,7 @@ export class InventoryService {
         returnedQuantity: 0,
         damagedQuantity: 0
       });
-      await inv.save(session ? { session } : undefined);
+      await inv.save(actualSession ? { session: actualSession } : undefined);
     }
     return inv;
   }

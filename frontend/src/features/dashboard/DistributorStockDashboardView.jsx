@@ -83,10 +83,11 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
     queryKey: ['branches'],
     queryFn: async () => {
       const res = await apiClient.get('/branches');
-      return res.data?.data || [];
+      const result = res.data?.data;
+      return Array.isArray(result) ? result : [];
     }
   });
-  const allBranches = branchesData || [];
+  const allBranches = Array.isArray(branchesData) ? branchesData : [];
 
   // 3. Fetch Products for transfer request
   const { data: productsData } = useQuery({
@@ -96,7 +97,7 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
       return res.data?.data || [];
     }
   });
-  const products = productsData || [];
+  const products = Array.isArray(productsData) ? productsData : [];
 
   // Transfer Request Mutation
   const requestTransferMutation = useMutation({

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import DashboardRounded from '@mui/icons-material/DashboardRounded';
@@ -59,7 +59,7 @@ export function ManagerDashboardView({ onSwitchToBossView, onSwitchToTelecaller 
     queryFn: async () => {
       try {
         const res = await apiClient.get('/users', { params: { role: 'TELECALLER' } });
-        return res.data?.data || [];
+        const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : [];
       } catch {
         return [];
       }

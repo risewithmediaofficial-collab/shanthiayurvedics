@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ShieldCheck, History, User, Building, Clock } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
@@ -17,7 +17,7 @@ export function AuditLogViewerPage() {
     }
   });
 
-  const logs = auditResponse?.data || [];
+  const logs = Array.isArray(auditResponse?.data) ? auditResponse?.data : [];
   const meta = auditResponse?.pagination || auditResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
   const columns = [

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RotateCcw, CheckCircle2, AlertTriangle, ShieldCheck, Box, Package, Search } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
@@ -45,7 +45,7 @@ export function RTOManagementPage() {
     }
   });
 
-  const rtoRecords = rtoResponse?.data || [];
+  const rtoRecords = Array.isArray(rtoResponse?.data) ? rtoResponse?.data : [];
   const meta = rtoResponse?.pagination || rtoResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
   const receiveMutation = useMutation({

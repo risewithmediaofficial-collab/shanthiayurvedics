@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -95,7 +95,7 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
   const branchesList = dashboardData?.branches || availableBranches || [];
   const ordersByStatus = dashboardData?.ordersByStatus || [];
   const lowStockItems = dashboardData?.lowStockItems || [];
-  const telecallers = dashboardData?.telecallers || [];
+  const telecallers = Array.isArray(dashboardData?.telecallers) ? dashboardData?.telecallers : [];
 
   const totalOrders = metricsData?.totalOrders ?? kpis.totalOrders ?? 0;
   const todayRev = metricsData?.todayRev ?? kpis.salesToday ?? 0;

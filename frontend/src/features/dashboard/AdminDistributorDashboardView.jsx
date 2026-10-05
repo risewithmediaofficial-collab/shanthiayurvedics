@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import DomainRounded from '@mui/icons-material/DomainRounded';
 import StoreRounded from '@mui/icons-material/StoreRounded';
@@ -260,7 +260,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
   }
 
   const kpis = dashboardData?.kpis || {};
-  const branches = dashboardData?.branches || [];
+  const branches = Array.isArray(dashboardData?.branches) ? dashboardData?.branches : [];
   const activeBranch = (selectedBranchId && selectedBranchId !== 'ALL'
     ? branches.find((b) => (b._id || b.id)?.toString() === selectedBranchId?.toString())
     : null) || (branches.length === 1 ? branches[0] : null) || {
@@ -284,7 +284,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
   ];
 
   // Telecaller Performance Leaderboard Data (Real-time live stats)
-  const liveTelecallers = dashboardData?.telecallers || [];
+  const liveTelecallers = Array.isArray(dashboardData?.telecallers) ? dashboardData?.telecallers : [];
   const telecallersLeaderboard = liveTelecallers.map((tc, idx) => ({
     rank: idx + 1,
     name: tc.name || tc.username || 'Telecaller',
@@ -295,7 +295,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
   }));
 
   // Pipeline count summary
-  const orderList = ordersResponse?.data || [];
+  const orderList = Array.isArray(ordersResponse?.data) ? ordersResponse?.data : [];
   const pipelineCounts = {
     new: orderList.filter(o => o.status === 'PENDING' || o.status === 'NEW').length,
     packed: orderList.filter(o => o.status === 'PACKED' || o.status === 'PROCESSING' || o.status === 'READY_FOR_PACKING').length,

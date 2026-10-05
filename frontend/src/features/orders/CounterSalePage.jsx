@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Plus,
@@ -34,7 +34,7 @@ export function CounterSalePage() {
     }
   });
 
-  const orders = ordersResponse?.data || [];
+  const orders = Array.isArray(ordersResponse?.data) ? ordersResponse?.data : [];
   const currentBranch = branches?.find((b) => b._id === selectedBranchId) || { name: 'Hosur Main Branch' };
 
   // Calculate totals

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Users,
@@ -90,7 +90,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
     queryKey: ['manager-team-users', selectedBranchId],
     queryFn: async () => {
       const res = await apiClient.get('/users', { params: { role: 'TELECALLER' } });
-      return res.data?.data || [];
+      const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : [];
     }
   });
 

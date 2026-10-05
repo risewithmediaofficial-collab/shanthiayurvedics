@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
@@ -109,7 +109,7 @@ export function CustomerListPage() {
     }
   });
 
-  const customers = customerResponse?.data || [];
+  const customers = Array.isArray(customerResponse?.data) ? customerResponse?.data : [];
   const meta = customerResponse?.pagination || customerResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
   const handleOpenWhatsApp = (customer) => {

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+﻿import React, { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Truck, MapPin, CheckCircle2, Upload, FileSpreadsheet,
@@ -383,7 +383,7 @@ export function DeliveryTrackingPage() {
 
   // ── Table config ───────────────────────────────────────────────────────────
 
-  const shipments = shipmentsResponse?.data || [];
+  const shipments = Array.isArray(shipmentsResponse?.data) ? shipmentsResponse?.data : [];
   // API returns 'pagination' (from ApiResponse.paginated), not 'meta'
   const meta = shipmentsResponse?.pagination || shipmentsResponse?.pagination || shipmentsResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 

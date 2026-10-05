@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -100,7 +100,7 @@ export function ScanTrackerPage() {
           params.branchId = selectedBranchId;
         }
         const res = await apiClient.get('/orders', { params });
-        return res.data?.data || [];
+        const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : [];
       } catch (e) {
         console.error('Failed to load orders for scan tracker:', e);
         return [];

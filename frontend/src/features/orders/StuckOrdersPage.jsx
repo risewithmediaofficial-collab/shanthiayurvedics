@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -65,7 +65,7 @@ export function StuckOrdersPage() {
     }
   });
 
-  const allOrders = ordersResponse?.data || [];
+  const allOrders = Array.isArray(ordersResponse?.data) ? ordersResponse?.data : [];
   
   // Filter for outstanding states (not DELIVERED or CANCELLED)
   const stuckOrders = allOrders.filter(

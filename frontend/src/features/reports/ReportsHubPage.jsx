@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { Download, FileText, TrendingUp, Users, Truck, RotateCcw } from 'lucide-react';
@@ -65,7 +65,7 @@ export function ReportsHubPage() {
     enabled: activeReport === 'DELIVERY'
   });
 
-  const salesOrders = salesReportData?.data || [];
+  const salesOrders = Array.isArray(salesReportData?.data) ? salesReportData?.data : [];
   const salesSummary = salesReportData?.meta?.summary || {};
 
   const handleExportReport = (format) => {

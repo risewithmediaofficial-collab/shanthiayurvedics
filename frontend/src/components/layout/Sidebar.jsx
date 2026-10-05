@@ -1,4 +1,4 @@
-import { useBranch } from '../../context/BranchContext.jsx';
+﻿import { useBranch } from '../../context/BranchContext.jsx';
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import DashboardRounded from '@mui/icons-material/DashboardRounded';
@@ -67,7 +67,7 @@ export function Sidebar({ isOpen, onClose }) {
     queryFn: async () => {
       try {
         const res = await apiClient.get('/users', { params: { role: 'TELECALLER' } });
-        return res.data?.data || [];
+        const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : [];
       } catch (e) {
         return [];
       }

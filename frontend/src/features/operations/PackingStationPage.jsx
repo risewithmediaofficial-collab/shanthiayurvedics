@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Package, CheckCircle2, Scale, Box, Tag, RefreshCw } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
@@ -41,7 +41,7 @@ export function PackingStationPage() {
     }
   });
 
-  const allOrders = ordersResponse?.data || [];
+  const allOrders = Array.isArray(ordersResponse?.data) ? ordersResponse?.data : [];
   const orders = statusTab === 'ALL_AWAITING'
     ? allOrders.filter((o) => o.status === 'CONFIRMED' || o.status === 'PROCESSING' || o.status === 'READY_FOR_PACKING')
     : allOrders;

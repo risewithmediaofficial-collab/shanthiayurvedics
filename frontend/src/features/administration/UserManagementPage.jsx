@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   UserPlus, Building, Lock, RefreshCw, Power, Pencil, Phone, Mail, Trash2, AlertTriangle
@@ -43,7 +43,7 @@ export function UserManagementPage() {
   // Branches
   const { data: branchesData } = useQuery({
     queryKey: ['branches'],
-    queryFn: async () => { const res = await apiClient.get('/branches'); return res.data?.data || []; }
+    queryFn: async () => { const res = await apiClient.get('/branches'); const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : []; }
   });
   const branches = Array.isArray(branchesData) ? branchesData : [];
 

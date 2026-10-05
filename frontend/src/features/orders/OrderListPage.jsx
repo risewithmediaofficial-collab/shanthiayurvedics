@@ -1,4 +1,4 @@
-import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
+﻿import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -230,7 +230,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
     queryKey: ['order-districts', selectedBranchId],
     queryFn: async () => {
       const res = await apiClient.get('/orders/districts');
-      return res.data?.data || [];
+      const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : [];
     },
     enabled: Boolean(user)
   });
@@ -241,7 +241,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
     queryFn: async () => {
       try {
         const res = await apiClient.get('/users', { params: { role: 'TELECALLER' } });
-        return res.data?.data || [];
+        const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : [];
       } catch (e) {
         return [];
       }
@@ -266,7 +266,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
     enabled: Boolean(user)
   });
 
-  const orders = ordersResponse?.data || [];
+  const orders = Array.isArray(ordersResponse?.data) ? ordersResponse?.data : [];
   const meta = ordersResponse?.pagination || { page: 1, totalPages: 1, total: 0, totalRevenue: 0 };
   const districts = districtsResponse || [];
   const telecallers = telecallersResponse || [];

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeftRight, Plus, Send, CheckCircle2, Truck } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
@@ -42,7 +42,7 @@ export function StockTransfersPage() {
     queryKey: ['productsAll'],
     queryFn: async () => {
       const res = await apiClient.get('/products', { params: { limit: 100 } });
-      return res.data?.data || [];
+      const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : [];
     }
   });
 
@@ -55,7 +55,7 @@ export function StockTransfersPage() {
     }
   });
 
-  const transfers = transfersResponse?.data || [];
+  const transfers = Array.isArray(transfersResponse?.data) ? transfersResponse?.data : [];
   const meta = transfersResponse?.pagination || transfersResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
   const createMutation = useMutation({

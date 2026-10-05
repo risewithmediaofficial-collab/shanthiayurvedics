@@ -1,4 +1,4 @@
-import { useBranch } from '../../context/BranchContext.jsx';
+﻿import { useBranch } from '../../context/BranchContext.jsx';
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PhoneCall, Calendar, Clock, User, CheckCircle2, MessageSquare, Phone } from 'lucide-react';
@@ -19,7 +19,7 @@ export function CallHistoryPage({ callerId } = {}) {
     }
   });
 
-  const calls = callsResponse?.data || [];
+  const calls = Array.isArray(callsResponse?.data) ? callsResponse?.data : [];
   const meta = callsResponse?.pagination || callsResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
   const handleOpenWhatsApp = (row) => {

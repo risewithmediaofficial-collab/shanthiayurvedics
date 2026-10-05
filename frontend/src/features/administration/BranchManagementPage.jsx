@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Building,
@@ -73,7 +73,7 @@ export function BranchManagementPage() {
       return res.data;
     }
   });
-  const branches = branchesResponse?.data || [];
+  const branches = Array.isArray(branchesResponse?.data) ? branchesResponse?.data : [];
 
   // 2. Fetch Users to populate Manager and Distributor dropdowns
   const { data: usersResponse } = useQuery({
@@ -83,7 +83,7 @@ export function BranchManagementPage() {
       return res.data;
     }
   });
-  const allUsers = usersResponse?.data || [];
+  const allUsers = Array.isArray(usersResponse?.data) ? usersResponse?.data : [];
   const managers = allUsers.filter((u) => u.role === 'MANAGER');
   const distributors = allUsers.filter((u) => u.role === 'DISTRIBUTOR');
 

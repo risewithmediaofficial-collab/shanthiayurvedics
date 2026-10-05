@@ -1,4 +1,4 @@
-import { useBranch } from '../../context/BranchContext.jsx';
+﻿import { useBranch } from '../../context/BranchContext.jsx';
 import { toLocalDateTimeInput } from '../../utils/dateUtils.js';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -53,7 +53,7 @@ export function FollowUpListPage({ callerId } = {}) {
     }
   });
 
-  const followups = followupsResponse?.data || [];
+  const followups = Array.isArray(followupsResponse?.data) ? followupsResponse?.data : [];
 
   const completeMutation = useMutation({
     mutationFn: ({ id, notes }) => apiClient.patch(`/followups/${id}/complete`, { completionNotes: notes }),

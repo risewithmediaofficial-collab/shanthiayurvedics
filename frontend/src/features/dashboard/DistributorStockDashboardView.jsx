@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Package,
@@ -94,7 +94,7 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
     queryKey: ['products-catalog-distributor'],
     queryFn: async () => {
       const res = await apiClient.get('/products');
-      return res.data?.data || [];
+      const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : [];
     }
   });
   const products = Array.isArray(productsData) ? productsData : [];
@@ -167,7 +167,7 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
 
   const kpis = dashboardData?.kpis || {};
   const stockItems = dashboardData?.stockItems || [];
-  const transfers = dashboardData?.transfers || [];
+  const transfers = Array.isArray(dashboardData?.transfers) ? dashboardData?.transfers : [];
   const branch = dashboardData?.branch || {};
 
   // Filtered Stock Items (Search, Category, Status & Date Range)

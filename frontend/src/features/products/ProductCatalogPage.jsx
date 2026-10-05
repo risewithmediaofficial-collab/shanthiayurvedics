@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Layers, Calendar, Tag, Package, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
@@ -97,7 +97,7 @@ export function ProductCatalogPage() {
     }
   });
 
-  const products = productResponse?.data || [];
+  const products = Array.isArray(productResponse?.data) ? productResponse?.data : [];
   const meta = productResponse?.pagination || productResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
   const createProductMutation = useMutation({

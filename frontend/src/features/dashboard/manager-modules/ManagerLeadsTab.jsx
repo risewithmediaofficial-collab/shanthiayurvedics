@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Users,
@@ -93,7 +93,7 @@ export function ManagerLeadsTab() {
     queryKey: ['manager-telecallers', selectedBranchId],
     queryFn: async () => {
       const res = await apiClient.get('/users', { params: { role: 'TELECALLER' } });
-      return res.data?.data || [];
+      const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : [];
     }
   });
 
@@ -114,7 +114,7 @@ export function ManagerLeadsTab() {
     }
   });
 
-  const leads = leadsResponse?.data || [];
+  const leads = Array.isArray(leadsResponse?.data) ? leadsResponse?.data : [];
 
   // Mutations
   const bulkAssignMutation = useMutation({

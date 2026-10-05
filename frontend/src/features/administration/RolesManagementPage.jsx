@@ -239,7 +239,7 @@ export function RolesManagementPage() {
 
   const { data: rolesData, isLoading } = useQuery({
     queryKey: ['roles'],
-    queryFn: async () => { const res = await apiClient.get('/roles'); return res.data?.data || []; }
+    queryFn: async () => { const res = await apiClient.get('/roles'); const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : []; }
   });
 
   const updateMutation = useMutation({

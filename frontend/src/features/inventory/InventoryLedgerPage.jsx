@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Minus, SlidersHorizontal, ArrowLeftRight, History, Package, AlertTriangle, Pencil, Trash2, Search, X } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
@@ -63,7 +63,7 @@ export function InventoryLedgerPage() {
     queryKey: ['productsAll'],
     queryFn: async () => {
       const res = await apiClient.get('/products', { params: { limit: 100 } });
-      return res.data?.data || [];
+      const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : [];
     }
   });
 
@@ -94,8 +94,8 @@ export function InventoryLedgerPage() {
     enabled: activeTab === 'MOVEMENTS'
   });
 
-  const inventory = invResponse?.data || [];
-  const movements = movementsResponse?.data || [];
+  const inventory = Array.isArray(invResponse?.data) ? invResponse?.data : [];
+  const movements = Array.isArray(movementsResponse?.data) ? movementsResponse?.data : [];
   const meta = (activeTab === 'CURRENT' ? invResponse?.pagination || invResponse?.meta : movementsResponse?.pagination || movementsResponse?.meta) || { page: 1, totalPages: 1, total: 0 };
 
   const handleExportInventory = async (format = 'excel') => {

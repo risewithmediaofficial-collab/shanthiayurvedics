@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Clock,
@@ -84,7 +84,7 @@ export function ManagerStuckTab() {
     }
   });
 
-  const allOrders = ordersResponse?.data || [];
+  const allOrders = Array.isArray(ordersResponse?.data) ? ordersResponse?.data : [];
 
   // Filter for stuck/in-transit/unconfirmed orders (not DELIVERED or CANCELLED)
   const outstandingOrders = allOrders.filter(

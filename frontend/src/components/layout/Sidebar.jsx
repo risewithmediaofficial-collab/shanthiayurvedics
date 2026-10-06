@@ -406,7 +406,7 @@ export function Sidebar({ isOpen, onClose }) {
         </div>
 
         {/* Navigation */}
-        <div className="flex-1 overflow-y-auto px-2.5 py-3 space-y-3">
+        <div className="flex-1 overflow-y-auto px-2.5 py-3 space-y-3 scrollbar-thin pb-6">
           {navSections.map((section, sIdx) => {
             const visibleItems = (section.items || []).filter((i) => i?.show);
             if (visibleItems.length === 0) return null;

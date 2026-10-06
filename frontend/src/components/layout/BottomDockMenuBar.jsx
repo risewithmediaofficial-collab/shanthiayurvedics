@@ -97,7 +97,7 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
   return (
     <nav
       aria-label="Bottom Quick Actions Dock"
-      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_25px_rgba(0,0,0,0.06)] select-none"
+      className="shrink-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] select-none relative w-full"
     >
       <div className="max-w-2xl mx-auto grid grid-cols-7 items-center h-14 sm:h-15 px-2 relative">
         {items.map((item) => {

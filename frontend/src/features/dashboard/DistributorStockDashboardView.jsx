@@ -2,30 +2,27 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Package,
-  Layers,
-  Send,
-  AlertTriangle,
-  ArrowRight,
-  Plus,
-  RefreshCw,
-  Building,
+  ShoppingBag,
+  Users,
+  Phone,
+  TrendingUp,
   CheckCircle2,
-  Clock,
+  AlertTriangle,
   Search,
-  Filter,
+  RefreshCw,
+  ArrowRight,
+  ShieldCheck,
   TrendingDown,
   Warehouse,
-  ShieldCheck,
-  Phone
+  Coins,
+  BadgePercent,
+  ExternalLink
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useBranch } from '../../context/BranchContext.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { Button } from '../../components/common/Button.jsx';
-import { Modal } from '../../components/common/Modal.jsx';
-import { Input } from '../../components/common/Input.jsx';
-import { Select } from '../../components/common/Select.jsx';
 import { Spinner } from '../../components/common/Spinner.jsx';
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils.js';
 import { ExportButton } from '../../components/common/ExportButton.jsx';
@@ -41,91 +38,33 @@ const DISTRIBUTOR_SORT_OPTIONS = [
   { value: 'expiryDate', label: '⏳ Expiry Date' }
 ];
 
-export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchToTelecaller }) {
+export function DistributorStockDashboardView({ onSwitchToTelecaller }) {
   const { user } = useAuth();
-  const { selectedBranchId, selectBranch } = useBranch();
+  const { selectedBranchId } = useBranch();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState('STOCK'); // 'STOCK' | 'TRANSFERS' | 'ALERTS'
+  const [activeTab, setActiveTab] = useState('STOCK'); // 'STOCK' | 'SALES' | 'TELECALLERS'
   const [searchTerm, setSearchTerm] = useState('');
+  const [orderSearchTerm, setOrderSearchTerm] = useState('');
+  const [tcSearchTerm, setTcSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'OUT_OF_STOCK' | 'INACTIVE'
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
-  const [transferDateRange, setTransferDateRange] = useState({ startDate: '', endDate: '' });
   const [stockSortBy, setStockSortBy] = useState('productName');
   const [stockSortOrder, setStockSortOrder] = useState('asc');
-  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
-
-  const [transferForm, setTransferForm] = useState({
-    fromBranchId: '',
-    productId: '',
-    quantity: '50',
-    notes: 'Urgent stock refill for branch distribution'
-  });
 
   const showToast = (msg) => {
     setActionSuccessMsg(msg);
     setTimeout(() => setActionSuccessMsg(''), 4000);
   };
 
-  // 1. Fetch Distributor Dashboard Data
+  // 1. Fetch Distributor Dashboard Data (Scoped to their branch)
   const { data: dashboardData, isLoading, refetch } = useQuery({
     queryKey: ['distributor-stock-dashboard', selectedBranchId],
     queryFn: async () => {
       const res = await apiClient.get('/dashboard');
       return res.data?.data;
-    }
-  });
-
-  // 2. Fetch Branches for transfer destination/source
-  const { data: branchesData } = useQuery({
-    queryKey: ['branches'],
-    queryFn: async () => {
-      const res = await apiClient.get('/branches');
-      const result = res.data?.data;
-      return Array.isArray(result) ? result : [];
-    }
-  });
-  const allBranches = Array.isArray(branchesData) ? branchesData : [];
-
-  // 3. Fetch Products for transfer request
-  const { data: productsData } = useQuery({
-    queryKey: ['products-catalog-distributor'],
-    queryFn: async () => {
-      const res = await apiClient.get('/products');
-      const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : [];
-    }
-  });
-  const products = Array.isArray(productsData) ? productsData : [];
-
-  // Transfer Request Mutation
-  const requestTransferMutation = useMutation({
-    mutationFn: (data) =>
-      apiClient.post('/inventory/transfers', {
-        fromBranchId: data.fromBranchId,
-        toBranchId: branch?._id || selectedBranchId,
-        items: [
-          {
-            productId: data.productId,
-            quantity: Number(data.quantity)
-          }
-        ],
-        notes: data.notes
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['distributor-stock-dashboard'] });
-      setIsRequestModalOpen(false);
-      setTransferForm({
-        fromBranchId: '',
-        productId: '',
-        quantity: '50',
-        notes: 'Urgent stock refill for branch distribution'
-      });
-      showToast('✓ Stock replenishment request submitted successfully');
-    },
-    onError: (err) => {
-      alert(err.response?.data?.message || 'Failed to submit stock request');
     }
   });
 
@@ -154,7 +93,7 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       const newActive = !variables.currentActive;
-      showToast(newActive ? '✓ Stock item activated & marked In-Stock' : '✓ Stock item marked as INACTIVE (Noted Out of Stock)');
+      showToast(newActive ? '✓ Stock item marked Active & In-Stock' : '✓ Stock item marked as Inactive (Out of Stock Note)');
     },
     onError: (err) => {
       alert(err.response?.data?.message || 'Failed to update stock status');
@@ -162,15 +101,16 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
   });
 
   if (isLoading) {
-    return <Spinner size="lg" text="Loading Branch Stock Inventory..." className="py-24" />;
+    return <Spinner size="lg" text="Loading Branch Portal Data..." className="py-24" />;
   }
 
   const kpis = dashboardData?.kpis || {};
   const stockItems = Array.isArray(dashboardData?.stockItems) ? dashboardData.stockItems : [];
-  const transfers = Array.isArray(dashboardData?.transfers) ? dashboardData?.transfers : [];
+  const telecallers = Array.isArray(dashboardData?.telecallers) ? dashboardData.telecallers : [];
+  const orders = Array.isArray(dashboardData?.orders) ? dashboardData.orders : [];
   const branch = dashboardData?.branch || {};
 
-  // Filtered Stock Items (Search, Category, Status & Date Range)
+  // 1. Filtered Stock Items
   const filteredStock = stockItems.filter((item) => {
     const matchesSearch =
       (item.productName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -212,17 +152,28 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
     return stockSortOrder === 'asc' ? (valA || 0) - (valB || 0) : (valB || 0) - (valA || 0);
   });
 
-  // Filtered Transfers (with Transfer Date Range)
-  const filteredTransfers = transfers.filter((t) => {
-    if (!transferDateRange.startDate && !transferDateRange.endDate) return true;
-    const rawDate = t.createdAt || t.updatedAt;
-    if (!rawDate) return true;
-    const d = new Date(rawDate).toISOString().slice(0, 10);
-    if (transferDateRange.startDate && d < transferDateRange.startDate) return false;
-    if (transferDateRange.endDate && d > transferDateRange.endDate) return false;
-    return true;
+  // 2. Filtered Branch Orders (Total Sales)
+  const filteredOrders = orders.filter((ord) => {
+    const q = orderSearchTerm.toLowerCase();
+    return (
+      (ord.orderNumber || '').toLowerCase().includes(q) ||
+      (ord.customerName || '').toLowerCase().includes(q) ||
+      (ord.customerPhone || '').toLowerCase().includes(q) ||
+      (ord.telecallerId?.name || '').toLowerCase().includes(q)
+    );
   });
 
+  // 3. Filtered Telecallers (Each Telecaller Sales)
+  const filteredTelecallers = telecallers.filter((tc) => {
+    const q = tcSearchTerm.toLowerCase();
+    return (
+      (tc.name || '').toLowerCase().includes(q) ||
+      (tc.phone || '').toLowerCase().includes(q) ||
+      (tc.email || '').toLowerCase().includes(q)
+    );
+  });
+
+  // Export handlers
   const handleExportBranchStock = (format = 'excel') => {
     const rows = sortedStock.map((item, idx) => ({
       'S.No': idx + 1,
@@ -232,14 +183,49 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
       'Unit Price (₹)': item.price || 0,
       'Available Stock': item.availableQuantity || 0,
       'Reorder Threshold': item.lowStockThreshold || 10,
-      'Status': item.isOutOfStock ? 'Out of Stock' : item.isLowStock ? 'Low Stock' : 'Optimal',
+      'Status': item.isOutOfStock ? 'Out of Stock' : item.isLowStock ? 'Low Stock' : 'In Stock',
       'Stock Valuation (₹)': ((item.availableQuantity || 0) * (item.price || 0)).toFixed(2)
     }));
-
     const filePrefix = `Shanthi_${branch.name ? branch.name.replace(/\s+/g, '_') : 'Branch'}_Stock`;
-    if (format === 'excel') exportToExcel(rows, filePrefix, 'Branch_Stock');
+    if (format === 'excel') exportToExcel(rows, filePrefix, 'Stock_Ledger');
     else exportToCSV(rows, filePrefix);
     showToast(`✓ Exported ${rows.length} product stock records`);
+  };
+
+  const handleExportOrders = (format = 'excel') => {
+    const rows = filteredOrders.map((ord, idx) => ({
+      'S.No': idx + 1,
+      'Order Number': ord.orderNumber || '—',
+      'Customer Name': ord.customerName || '—',
+      'Phone': ord.customerPhone || '—',
+      'Telecaller': ord.telecallerId?.name || '—',
+      'Payment Method': ord.paymentMethod || '—',
+      'Status': ord.status || '—',
+      'Total Amount (₹)': ord.grandTotal || 0,
+      'Date': ord.createdAt ? new Date(ord.createdAt).toLocaleDateString() : '—'
+    }));
+    const filePrefix = `Shanthi_${branch.name ? branch.name.replace(/\s+/g, '_') : 'Branch'}_Sales`;
+    if (format === 'excel') exportToExcel(rows, filePrefix, 'Branch_Sales');
+    else exportToCSV(rows, filePrefix);
+    showToast(`✓ Exported ${rows.length} branch sales orders`);
+  };
+
+  const handleExportTelecallerSales = (format = 'excel') => {
+    const rows = filteredTelecallers.map((tc, idx) => ({
+      'S.No': idx + 1,
+      'Telecaller Name': tc.name || '—',
+      'Phone': tc.phone || '—',
+      'Email': tc.email || '—',
+      'Assigned Leads': tc.assignedLeads || 0,
+      'Orders Completed': tc.totalOrders || 0,
+      'Total Sales (₹)': tc.totalSales || 0,
+      'Avg Order Value (₹)': tc.totalOrders ? Math.round(tc.totalSales / tc.totalOrders) : 0,
+      'Status': tc.isActive ? 'Active' : 'Inactive'
+    }));
+    const filePrefix = `Shanthi_${branch.name ? branch.name.replace(/\s+/g, '_') : 'Branch'}_Telecaller_Sales`;
+    if (format === 'excel') exportToExcel(rows, filePrefix, 'TC_Sales');
+    else exportToCSV(rows, filePrefix);
+    showToast(`✓ Exported ${rows.length} telecaller performance records`);
   };
 
   const lowStockAlerts = stockItems.filter((i) => i.isLowStock || i.isOutOfStock);
@@ -254,7 +240,7 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
         </div>
       )}
 
-      {/* ── 1. DISTRIBUTOR BRANCH STOCK BANNER ── */}
+      {/* ── 1. DISTRIBUTOR BRANCH BANNER ── */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -277,27 +263,19 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
             </div>
 
             <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <span>{branch.name ? `${branch.name} — Stock Control Desk` : 'Branch Stock & Inventory Portal'}</span>
+              <span>{branch.name ? `${branch.name} — Branch Distributor Desk` : 'Branch Distributor Portal'}</span>
             </h1>
             <p className="text-xs text-slate-500 mt-1">
-              Live warehouse ledger, stock allocations, and stock replenishment transfers.
+              Strictly scoped to your branch: Total Sales, Stocks Available, Telecaller Access & Each Telecaller Sales.
             </p>
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Button
-              variant="primary"
-              icon={Plus}
-              onClick={() => setIsRequestModalOpen(true)}
-              className="bg-emerald-700 hover:bg-emerald-800 text-xs font-bold shadow-sm"
-            >
-              Request Stock Refill
-            </Button>
             <button
               type="button"
               onClick={() => refetch()}
-              className="p-2.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors shadow-xs"
-              title="Refresh stock ledger"
+              className="p-2.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors shadow-xs cursor-pointer"
+              title="Refresh branch data"
             >
               <RefreshCw className="w-4 h-4" />
             </button>
@@ -306,7 +284,7 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
                 id="btn-distributor-view-telecaller"
                 type="button"
                 onClick={() => onSwitchToTelecaller()}
-                className="px-3.5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
                 title="View Telecaller Dashboard"
               >
                 <span>🎧</span>
@@ -314,96 +292,111 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
-            {onSwitchToManagerView && (
-              <button
-                type="button"
-                onClick={onSwitchToManagerView}
-                className="px-3.5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer"
-              >
-                Manager View →
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Manager Sync Notice */}
+        {/* Branch Context Ribbon */}
         <div className="mt-4 flex items-center justify-between p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-xs text-slate-700">
           <div className="flex items-center gap-2">
-            <span className="text-base">👔</span>
+            <span className="text-base">🏢</span>
             <span>
-              Assigned Branch Manager: <strong>{branch.managerName || branch.managerId?.name || 'Manager Assigned'}</strong>
-              {branch.managerPhone && <span className="text-slate-400 font-mono ml-1.5">({branch.managerPhone})</span>}
+              Assigned Branch: <strong>{branch.name || 'Primary Branch'}</strong>
+              {branch.code && <span className="text-slate-400 font-mono ml-1.5">[{branch.code}]</span>}
             </span>
           </div>
-          <span className="text-emerald-700 font-bold hidden md:inline">Synchronized with Orders Desk</span>
+          <span className="text-emerald-700 font-bold hidden md:inline">Isolated Branch Scope Enforced</span>
         </div>
       </div>
 
-      {/* ── 2. STOCK METRICS RIBBON (5 Bento Cards) ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div className="bento-card p-4 flex flex-col justify-between">
+      {/* ── 2. THE 4 CORE METRICS (Total Sales, Stocks Available, Telecaller Access, Each Telecaller Sales) ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Metric 1: TOTAL SALES */}
+        <div
+          onClick={() => setActiveTab('SALES')}
+          className={`bento-card p-4 flex flex-col justify-between cursor-pointer transition-all hover:ring-2 hover:ring-indigo-400 ${
+            activeTab === 'SALES' ? 'ring-2 ring-indigo-600 bg-indigo-50/20' : ''
+          }`}
+        >
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Available Stock</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700">Total Sales</span>
+            <ShoppingBag className="w-4 h-4 text-indigo-600" />
+          </div>
+          <div className="text-2xl font-black text-indigo-950 font-mono mt-2">
+            ₹{Math.round(kpis.branchRevenue || 0).toLocaleString()}
+          </div>
+          <div className="text-[11px] text-slate-500 mt-0.5 flex items-center justify-between">
+            <span>{kpis.branchOrdersCount || 0} Orders in branch</span>
+            <span className="text-indigo-600 font-bold">View Sales →</span>
+          </div>
+        </div>
+
+        {/* Metric 2: STOCKS AVAILABLE */}
+        <div
+          onClick={() => setActiveTab('STOCK')}
+          className={`bento-card p-4 flex flex-col justify-between cursor-pointer transition-all hover:ring-2 hover:ring-emerald-400 ${
+            activeTab === 'STOCK' ? 'ring-2 ring-emerald-600 bg-emerald-50/20' : ''
+          }`}
+        >
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Stocks Available</span>
             <Package className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl font-black text-slate-900 font-mono mt-2">
             {kpis.totalStockUnits?.toLocaleString() || 0}
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Total units across all products</div>
+          <div className="text-[11px] text-slate-500 mt-0.5 flex items-center justify-between">
+            <span>₹{Math.round(kpis.inventoryValuation || 0).toLocaleString()} value</span>
+            <span className="text-emerald-600 font-bold">View Stock →</span>
+          </div>
         </div>
 
-        <div className="bento-card p-4 flex flex-col justify-between">
+        {/* Metric 3: TELECALLER ACCESS */}
+        <div
+          onClick={() => setActiveTab('TELECALLERS')}
+          className={`bento-card p-4 flex flex-col justify-between cursor-pointer transition-all hover:ring-2 hover:ring-teal-400 ${
+            activeTab === 'TELECALLERS' ? 'ring-2 ring-teal-600 bg-teal-50/20' : ''
+          }`}
+        >
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Stock Valuation</span>
-            <Warehouse className="w-4 h-4 text-blue-600" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-teal-700">Telecaller Access</span>
+            <Users className="w-4 h-4 text-teal-600" />
           </div>
-          <div className="text-2xl font-black text-blue-900 font-mono mt-2">
-            ₹{Math.round(kpis.inventoryValuation || 0).toLocaleString()}
+          <div className="text-2xl font-black text-teal-950 font-mono mt-2">
+            {kpis.telecallerCount || telecallers.length}
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Asset value at retail base</div>
+          <div className="text-[11px] text-slate-500 mt-0.5 flex items-center justify-between">
+            <span>Active branch agents</span>
+            <span className="text-teal-600 font-bold">View Team →</span>
+          </div>
         </div>
 
-        <div className="bento-card p-4 flex flex-col justify-between">
+        {/* Metric 4: EACH TELECALLER SALES */}
+        <div
+          onClick={() => setActiveTab('TELECALLERS')}
+          className={`bento-card p-4 flex flex-col justify-between cursor-pointer transition-all hover:ring-2 hover:ring-amber-400 ${
+            activeTab === 'TELECALLERS' ? 'ring-2 ring-amber-600 bg-amber-50/20' : ''
+          }`}
+        >
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Low Stock Alerts</span>
-            <AlertTriangle className="w-4 h-4 text-amber-600" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700">Top Telecaller Sales</span>
+            <TrendingUp className="w-4 h-4 text-amber-600" />
           </div>
-          <div className="text-2xl font-black text-amber-700 font-mono mt-2">
-            {kpis.lowStockCount || 0}
+          <div className="text-2xl font-black text-amber-900 font-mono mt-2">
+            ₹{Math.round(kpis.topTelecallerSales || 0).toLocaleString()}
           </div>
-          <div className="text-[11px] text-amber-600 mt-0.5 font-medium">Under reorder threshold</div>
-        </div>
-
-        <div className="bento-card p-4 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Out of Stock</span>
-            <TrendingDown className="w-4 h-4 text-rose-600" />
+          <div className="text-[11px] text-slate-500 mt-0.5 truncate">
+            Top: <strong>{kpis.topTelecallerName || '—'}</strong>
           </div>
-          <div className="text-2xl font-black text-rose-700 font-mono mt-2">
-            {kpis.outOfStockCount || 0}
-          </div>
-          <div className="text-[11px] text-rose-600 mt-0.5 font-medium">Critical refill required</div>
-        </div>
-
-        <div className="bento-card p-4 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Pending Inflow</span>
-            <Send className="w-4 h-4 text-purple-600" />
-          </div>
-          <div className="text-2xl font-black text-purple-700 font-mono mt-2">
-            {kpis.pendingTransfersCount || 0}
-          </div>
-          <div className="text-[11px] text-purple-600 mt-0.5 font-medium">Inbound transfer orders</div>
         </div>
       </div>
 
-      {/* ── 3. SUB-NAV TABS (Stock Ledger, Transfers, Low-Stock Warnings) ── */}
+      {/* ── 3. SUB-NAV TABS (The 3 Dedicated Sections) ── */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="flex items-center gap-2 px-5 pt-3.5 border-b border-slate-200 bg-slate-50/50">
           {[
-            { id: 'STOCK', label: '📦 Branch Stock Ledger', count: stockItems.length },
-            { id: 'TRANSFERS', label: '🚚 Stock Transfers & Shipments', count: transfers.length },
-            { id: 'ALERTS', label: '⚠️ Replenishment Warnings', count: lowStockAlerts.length, badgeColor: 'bg-amber-100 text-amber-800' }
+            { id: 'STOCK', label: '📦 Stocks Available', count: stockItems.length },
+            { id: 'SALES', label: '💰 Total Sales & Orders', count: orders.length },
+            { id: 'TELECALLERS', label: '👥 Telecaller Team & Each Sales', count: telecallers.length }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -416,14 +409,14 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
               }`}
             >
               <span>{tab.label}</span>
-              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono font-bold ${tab.badgeColor || 'bg-slate-200 text-slate-700'}`}>
+              <span className="px-1.5 py-0.2 rounded-md text-[10px] font-mono font-bold bg-slate-200 text-slate-700">
                 {tab.count}
               </span>
             </button>
           ))}
         </div>
 
-        {/* Tab 1: STOCK LEDGER */}
+        {/* ── TAB 1: STOCKS AVAILABLE ── */}
         {activeTab === 'STOCK' && (
           <div className="p-4 sm:p-5 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-wrap">
@@ -439,7 +432,6 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
-                {/* Date Quick Filter (Today, Yesterday, This Month, Date-to-Date) */}
                 <DateRangeFilter
                   startDate={dateRange.startDate}
                   endDate={dateRange.endDate}
@@ -447,7 +439,6 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
                   label="Stock Date"
                 />
 
-                {/* Status Filter Tabs (All / Active / Out of Stock / Inactive) */}
                 <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
                   {[
                     { id: 'ALL', label: 'All Stock' },
@@ -470,7 +461,6 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
                   ))}
                 </div>
 
-                {/* Sort Dropdown */}
                 <SortDropdown
                   options={DISTRIBUTOR_SORT_OPTIONS}
                   sortBy={stockSortBy}
@@ -481,7 +471,6 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
                   }}
                 />
 
-                {/* Export Button */}
                 <ExportButton
                   onExport={handleExportBranchStock}
                   label="Export Stock"
@@ -493,7 +482,7 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
               </div>
             </div>
 
-            {/* Inline scroll container for products over 10 items with sticky header */}
+            {/* Stocks Table with inline scroll */}
             <div className={`overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl relative scrollbar-thin ${sortedStock.length > 10 ? 'max-h-[520px]' : ''}`}>
               <table className="w-full text-left border-collapse text-xs">
                 <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 shadow-2xs">
@@ -504,7 +493,7 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
                     <th className="py-3 px-3 text-center">Threshold</th>
                     <th className="py-3 px-3 text-center">Status</th>
                     <th className="py-3 px-3 text-right">Valuation</th>
-                    <th className="py-3 px-4 text-right">Action</th>
+                    <th className="py-3 px-4 text-right">Stock Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -568,52 +557,34 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
                           ₹{Math.round(item.stockValue || 0).toLocaleString()}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {/* Stock Active / Inactive Toggle Button */}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                toggleStockStatusMutation.mutate({
-                                  id: item._id,
-                                  productId: item.productId,
-                                  currentActive: item.isActive !== false
-                                })
-                              }
-                              disabled={toggleStockStatusMutation.isPending}
-                              title={
-                                item.isActive !== false
-                                  ? 'Click to note as Inactive / Out of Stock'
-                                  : 'Click to activate stock'
-                              }
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer select-none shadow-2xs ${
-                                item.isActive !== false
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
-                                  : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toggleStockStatusMutation.mutate({
+                                id: item._id,
+                                productId: item.productId,
+                                currentActive: item.isActive !== false
+                              })
+                            }
+                            disabled={toggleStockStatusMutation.isPending}
+                            title={
+                              item.isActive !== false
+                                ? 'Click to note as Inactive / Out of Stock'
+                                : 'Click to activate stock'
+                            }
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer select-none shadow-2xs ${
+                              item.isActive !== false
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
+                                : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
+                            }`}
+                          >
+                            <span
+                              className={`w-2 h-2 rounded-full shrink-0 ${
+                                item.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'
                               }`}
-                            >
-                              <span
-                                className={`w-2 h-2 rounded-full shrink-0 ${
-                                  item.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'
-                                }`}
-                              />
-                              <span>{item.isActive !== false ? 'Active' : 'Inactive'}</span>
-                            </button>
-
-                            {/* Refill Button */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setTransferForm((prev) => ({
-                                  ...prev,
-                                  productId: item.productId || ''
-                                }));
-                                setIsRequestModalOpen(true);
-                              }}
-                              className="px-2.5 py-1.5 text-[11px] font-bold text-slate-700 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg border border-slate-200 transition-colors cursor-pointer"
-                            >
-                              Refill +
-                            </button>
-                          </div>
+                            />
+                            <span>{item.isActive !== false ? 'Active' : 'Inactive'}</span>
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -624,93 +595,104 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
           </div>
         )}
 
-        {/* Tab 2: STOCK TRANSFERS */}
-        {activeTab === 'TRANSFERS' && (
+        {/* ── TAB 2: TOTAL SALES & ORDERS ── */}
+        {activeTab === 'SALES' && (
           <div className="p-4 sm:p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-wrap">
+            {/* Sales Summary Banner */}
+            <div className="p-4 bg-indigo-50/70 border border-indigo-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Inter-Branch & Warehouse Stock Transfers</h3>
-                <p className="text-xs text-slate-500">
-                  Track incoming replenishment shipments from central fulfillment hubs to this branch.
+                <h4 className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                  <ShoppingBag className="w-4 h-4 text-indigo-700" />
+                  Branch Total Sales Summary
+                </h4>
+                <p className="text-[11px] text-indigo-700 mt-0.5">
+                  Lifetime Revenue: <strong className="font-mono text-indigo-950">₹{Math.round(kpis.branchRevenue || 0).toLocaleString()}</strong> across <strong className="font-mono text-indigo-950">{kpis.branchOrdersCount || orders.length}</strong> orders.
                 </p>
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <DateRangeFilter
-                  startDate={transferDateRange.startDate}
-                  endDate={transferDateRange.endDate}
-                  onChange={setTransferDateRange}
-                  label="Transfer Date"
+              <div className="flex items-center gap-2">
+                <ExportButton
+                  onExport={handleExportOrders}
+                  label="Export Orders"
                 />
-                <Button variant="primary" icon={Plus} size="sm" onClick={() => setIsRequestModalOpen(true)}>
-                  New Request
-                </Button>
               </div>
             </div>
 
-            <div className={`overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl relative scrollbar-thin ${filteredTransfers.length > 10 ? 'max-h-[520px]' : ''}`}>
+            {/* Orders Search */}
+            <div className="relative max-w-md">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search orders by number, customer name, phone, telecaller..."
+                value={orderSearchTerm}
+                onChange={(e) => setOrderSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:bg-white"
+              />
+            </div>
+
+            {/* Orders Table with inline scroll */}
+            <div className={`overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl relative scrollbar-thin ${filteredOrders.length > 10 ? 'max-h-[520px]' : ''}`}>
               <table className="w-full text-left border-collapse text-xs">
                 <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 shadow-2xs">
                   <tr>
-                    <th className="py-3 px-4">Transfer #</th>
-                    <th className="py-3 px-3">From (Source)</th>
-                    <th className="py-3 px-3">To (Destination)</th>
-                    <th className="py-3 px-3">Items Count</th>
+                    <th className="py-3 px-4">Order #</th>
+                    <th className="py-3 px-3">Customer</th>
+                    <th className="py-3 px-3">Telecaller</th>
+                    <th className="py-3 px-3">Payment</th>
                     <th className="py-3 px-3 text-center">Status</th>
-                    <th className="py-3 px-3">Tracking / Note</th>
-                    <th className="py-3 px-4 text-right">Created Date</th>
+                    <th className="py-3 px-3 text-right">Total Amount</th>
+                    <th className="py-3 px-4 text-right">Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredTransfers.length === 0 ? (
+                  {filteredOrders.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
-                        No transfer records matching filter for this branch.
+                        No orders recorded for this branch yet.
                       </td>
                     </tr>
                   ) : (
-                    filteredTransfers.map((t) => (
-                      <tr key={t._id} className="hover:bg-slate-50/60 transition-colors">
+                    filteredOrders.map((ord) => (
+                      <tr key={ord._id} className="hover:bg-slate-50/60 transition-colors">
                         <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                          {t.transferNumber}
+                          {ord.orderNumber}
                         </td>
                         <td className="py-3 px-3">
-                          <span className="font-semibold text-slate-800">{t.fromBranchId?.name || 'Central Hub'}</span>
-                          <span className="text-[10px] text-slate-400 font-mono ml-1">({t.fromBranchId?.code || 'MAIN'})</span>
+                          <div className="font-semibold text-slate-800">{ord.customerName || '—'}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">{ord.customerPhone || '—'}</div>
                         </td>
-                        <td className="py-3 px-3">
-                          <span className="font-semibold text-emerald-800">{t.toBranchId?.name || branch.name}</span>
-                          <span className="text-[10px] text-emerald-600 font-mono ml-1">({t.toBranchId?.code || branch.code})</span>
+                        <td className="py-3 px-3 text-slate-700">
+                          {ord.telecallerId?.name ? (
+                            <span className="inline-flex items-center gap-1 font-medium">
+                              🎧 {ord.telecallerId.name}
+                            </span>
+                          ) : (
+                            '—'
+                          )}
                         </td>
-                        <td className="py-3 px-3 font-mono font-semibold">
-                          {t.items?.reduce((acc, curr) => acc + (curr.quantity || 0), 0) || 0} units
+                        <td className="py-3 px-3 text-slate-600 font-mono text-[11px]">
+                          {ord.paymentMethod || 'COD'}
                         </td>
                         <td className="py-3 px-3 text-center">
                           <Badge
                             variant={
-                              t.status === 'COMPLETED'
+                              ord.status === 'DELIVERED'
                                 ? 'emerald'
-                                : t.status === 'IN_TRANSIT'
-                                ? 'primary'
-                                : t.status === 'CANCELLED'
+                                : ord.status === 'CANCELLED'
                                 ? 'danger'
-                                : 'warning'
+                                : ord.status === 'DISPATCHED'
+                                ? 'info'
+                                : 'neutral'
                             }
                             size="sm"
                           >
-                            {t.status}
+                            {ord.status}
                           </Badge>
                         </td>
-                        <td className="py-3 px-3 text-slate-500">
-                          {t.trackingNumber ? (
-                            <span className="font-mono text-[11px] text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded">
-                              🚚 {t.trackingNumber}
-                            </span>
-                          ) : (
-                            t.notes || '—'
-                          )}
+                        <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
+                          ₹{Math.round(ord.grandTotal || 0).toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 text-right text-[11px] text-slate-400 font-mono">
-                          {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : '—'}
+                        <td className="py-3 px-4 text-right text-[11px] text-slate-500 font-mono">
+                          {ord.createdAt ? new Date(ord.createdAt).toLocaleDateString() : '—'}
                         </td>
                       </tr>
                     ))
@@ -721,144 +703,113 @@ export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchT
           </div>
         )}
 
-        {/* Tab 3: LOW STOCK WARNINGS */}
-        {activeTab === 'ALERTS' && (
+        {/* ── TAB 3: TELECALLER TEAM & EACH TELECALLER SALES ── */}
+        {activeTab === 'TELECALLERS' && (
           <div className="p-4 sm:p-5 space-y-4">
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-                <div>
-                  <h4 className="text-xs font-bold text-amber-900">
-                    {lowStockAlerts.length} Products Require Stock Replenishment
-                  </h4>
-                  <p className="text-[11px] text-amber-700 mt-0.5">
-                    Stock level is below threshold or depleted. Click 'Refill Stock' to dispatch a replenishment request.
-                  </p>
-                </div>
+            {/* Header / Export */}
+            <div className="p-4 bg-teal-50/70 border border-teal-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 className="text-xs font-bold text-teal-950 flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-teal-700" />
+                  Branch Telecallers Performance & Sales Breakdown
+                </h4>
+                <p className="text-[11px] text-teal-700 mt-0.5">
+                  Each telecaller sales for {branch.name || 'this branch'}. Click <strong>Open Telecaller Desk</strong> to inspect their console.
+                </p>
               </div>
-              <Button
-                variant="primary"
-                size="sm"
-                icon={Plus}
-                onClick={() => setIsRequestModalOpen(true)}
-                className="bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                Bulk Request
-              </Button>
+              <div className="flex items-center gap-2">
+                <ExportButton
+                  onExport={handleExportTelecallerSales}
+                  label="Export TC Sales"
+                />
+              </div>
             </div>
 
-            <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ${lowStockAlerts.length > 9 ? 'max-h-[520px] overflow-y-auto p-1 scrollbar-thin' : ''}`}>
-              {lowStockAlerts.map((item) => (
-                <div key={item._id} className="p-4 bg-white border border-slate-200 rounded-xl shadow-xs space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h5 className="font-bold text-slate-900 text-xs">{item.productName}</h5>
-                      <span className="font-mono text-[10px] text-slate-400">{item.sku}</span>
-                    </div>
-                    <Badge variant={item.availableQuantity === 0 ? 'danger' : 'warning'} size="sm">
-                      {item.availableQuantity === 0 ? 'Out of Stock' : `${item.availableQuantity} Left`}
-                    </Badge>
-                  </div>
+            {/* Filter Search */}
+            <div className="relative max-w-md">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search telecallers by name, phone, or email..."
+                value={tcSearchTerm}
+                onChange={(e) => setTcSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-teal-500 focus:bg-white"
+              />
+            </div>
 
-                  <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
-                    <span className="text-slate-500">Threshold: <strong className="font-mono text-slate-800">{item.lowStockThreshold}</strong></span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTransferForm((prev) => ({
-                          ...prev,
-                          productId: item.productId || ''
-                        }));
-                        setIsRequestModalOpen(true);
-                      }}
-                      className="px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200"
-                    >
-                      Refill Stock →
-                    </button>
-                  </div>
-                </div>
-              ))}
+            {/* Telecallers Table with inline scroll */}
+            <div className={`overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl relative scrollbar-thin ${filteredTelecallers.length > 10 ? 'max-h-[520px]' : ''}`}>
+              <table className="w-full text-left border-collapse text-xs">
+                <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 shadow-2xs">
+                  <tr>
+                    <th className="py-3 px-4">Telecaller Agent</th>
+                    <th className="py-3 px-3">Contact</th>
+                    <th className="py-3 px-3 text-center">Assigned Leads</th>
+                    <th className="py-3 px-3 text-center">Orders Closed</th>
+                    <th className="py-3 px-3 text-right">Total Sales</th>
+                    <th className="py-3 px-3 text-center">Status</th>
+                    <th className="py-3 px-4 text-right">Telecaller Access</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredTelecallers.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
+                        No telecallers assigned to this branch yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredTelecallers.map((tc) => (
+                      <tr key={tc._id || tc.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                            <span className="w-7 h-7 rounded-full bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs shrink-0">
+                              {(tc.name || 'T')[0].toUpperCase()}
+                            </span>
+                            <span>{tc.name || 'Telecaller'}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="font-mono text-slate-800 text-[11px]">{tc.phone || '—'}</div>
+                          <div className="text-[10px] text-slate-400 truncate max-w-[150px]">{tc.email || '—'}</div>
+                        </td>
+                        <td className="py-3 px-3 text-center font-mono font-semibold text-slate-700">
+                          {tc.assignedLeads || 0}
+                        </td>
+                        <td className="py-3 px-3 text-center font-mono font-semibold text-slate-700">
+                          {tc.totalOrders || 0}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono font-black text-emerald-800">
+                          ₹{Math.round(tc.totalSales || 0).toLocaleString()}
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <Badge variant={tc.isActive !== false ? 'emerald' : 'neutral'} size="sm">
+                            {tc.isActive !== false ? '● Active' : '○ Inactive'}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {onSwitchToTelecaller && (
+                            <button
+                              type="button"
+                              onClick={() => onSwitchToTelecaller(tc)}
+                              className="px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ml-auto cursor-pointer"
+                              title={`Open Telecaller Dashboard for ${tc.name}`}
+                            >
+                              <span>🎧</span>
+                              <span>Open Desk</span>
+                              <ExternalLink className="w-3 h-3 text-teal-600" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
       </div>
-
-      {/* ── REQUEST STOCK REFILL MODAL ── */}
-      <Modal
-        isOpen={isRequestModalOpen}
-        onClose={() => setIsRequestModalOpen(false)}
-        title="Request Branch Stock Refill"
-        subtitle={`Request inventory transfer into ${branch.name || 'Branch'}`}
-        maxWidth="max-w-md"
-        icon="📦"
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!transferForm.fromBranchId || !transferForm.productId) {
-              alert('Please select both source warehouse and product');
-              return;
-            }
-            requestTransferMutation.mutate(transferForm);
-          }}
-          className="space-y-4"
-        >
-          <Select
-            label="Source Warehouse / Branch *"
-            required
-            value={transferForm.fromBranchId}
-            onChange={(e) => setTransferForm({ ...transferForm, fromBranchId: e.target.value })}
-            options={[
-              { value: '', label: '— Select Source Hub —' },
-              ...(Array.isArray(allBranches) ? allBranches : [])
-                .filter((b) => (b?._id || b?.id) !== (branch?._id || selectedBranchId))
-                .map((b) => ({
-                  value: b._id || b.id,
-                  label: `${b.name || 'Branch'} (${b.code || 'BR'})`
-                }))
-            ]}
-          />
-
-          <Select
-            label="Product to Replenish *"
-            required
-            value={transferForm.productId}
-            onChange={(e) => setTransferForm({ ...transferForm, productId: e.target.value })}
-            options={[
-              { value: '', label: '— Select Product —' },
-              ...(Array.isArray(products) ? products : []).map((p) => ({
-                value: p._id || p.id,
-                label: `${p.name || 'Product'} (${p.sku || 'SKU'})`
-              }))
-            ]}
-          />
-
-          <Input
-            label="Requested Quantity (Units) *"
-            type="number"
-            min="1"
-            required
-            value={transferForm.quantity}
-            onChange={(e) => setTransferForm({ ...transferForm, quantity: e.target.value })}
-          />
-
-          <Input
-            label="Notes / Urgency"
-            placeholder="e.g. Low stock for upcoming festival campaign"
-            value={transferForm.notes}
-            onChange={(e) => setTransferForm({ ...transferForm, notes: e.target.value })}
-          />
-
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-            <Button variant="secondary" type="button" onClick={() => setIsRequestModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" type="submit" isLoading={requestTransferMutation.isPending}>
-              Submit Stock Request
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 }

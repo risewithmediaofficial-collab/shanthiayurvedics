@@ -58,7 +58,7 @@ export class RbacService {
             description: `Default system role: ${roleName}`,
             isSystemRole: true
           },
-          $addToSet: { permissions: { $each: permissions } }
+          $set: { permissions }
         },
         { upsert: true }
       );

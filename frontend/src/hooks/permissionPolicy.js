@@ -23,16 +23,15 @@ const standardManagerPermissions = [
 ];
 
 const standardDistributorPermissions = [
-  'leads.view', 'leads.create', 'leads.edit', 'leads.delete',
-  'followups.view',
-  'customers.view', 'customers.create', 'customers.edit',
-  'orders.view', 'orders.create', 'orders.edit', 'orders.delete',
-  'products.view',
-  'inventory.view', 'inventory.manage', 'inventory.adjust', 'inventory.transfer',
-  'shipping.view', 'delivery.view', 'rto.view',
-  'reports.view', 'reports.export',
-  'users.view'
+  'orders.view',     // Total sales & each telecaller sales
+  'reports.view',    // Total sales & telecaller performance
+  'inventory.view',  // Stocks available
+  'products.view',   // Product details for stocks
+  'users.view',      // Telecaller access for branch
+  'leads.view',      // Telecaller leads
+  'followups.view'   // Telecaller followups
 ];
+
 
 export function permissionsForUser(user) {
   if (Array.isArray(user?.permissions)) return user.permissions;

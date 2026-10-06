@@ -36,7 +36,7 @@ export function DashboardHub() {
     : isTelecaller
     ? ['TELECALLER']
     : isDistributor
-    ? ['DISTRIBUTOR', 'TELECALLER', 'MANAGER']
+    ? ['DISTRIBUTOR', 'TELECALLER']
     : ['MANAGER', 'TELECALLER'];
   const activeView = allowedViews.includes(urlView) ? urlView : getRoleDefaultView();
 

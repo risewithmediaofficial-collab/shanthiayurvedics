@@ -182,13 +182,34 @@ describe('usePermissions — permissions array', () => {
     expect(result.current.hasPermission('products.edit')).toBe(false);
   });
 
-  it('allows DISTRIBUTOR to view telecaller desk dependencies (users, followups, orders, leads)', () => {
+  it('allows DISTRIBUTOR ONLY total sales, stocks available, telecaller access, each telecaller sales and removes all other permissions', () => {
     const { result } = renderWithUser({ role: 'DISTRIBUTOR' });
-    expect(result.current.hasPermission('leads.view')).toBe(true);
+    // 1. Total Sales & Each Telecaller Sales
     expect(result.current.hasPermission('orders.view')).toBe(true);
-    expect(result.current.hasPermission('followups.view')).toBe(true);
+    expect(result.current.hasPermission('reports.view')).toBe(true);
+    // 2. Stocks Available
+    expect(result.current.hasPermission('inventory.view')).toBe(true);
+    expect(result.current.hasPermission('products.view')).toBe(true);
+    // 3. Telecaller Access
     expect(result.current.hasPermission('users.view')).toBe(true);
+    expect(result.current.hasPermission('leads.view')).toBe(true);
+    expect(result.current.hasPermission('followups.view')).toBe(true);
+
+    // REMAINING ALL ACCESS STRICTLY REMOVED:
+    expect(result.current.hasPermission('orders.create')).toBe(false);
+    expect(result.current.hasPermission('orders.edit')).toBe(false);
+    expect(result.current.hasPermission('orders.delete')).toBe(false);
+    expect(result.current.hasPermission('customers.view')).toBe(false);
+    expect(result.current.hasPermission('customers.create')).toBe(false);
+    expect(result.current.hasPermission('leads.create')).toBe(false);
+    expect(result.current.hasPermission('inventory.manage')).toBe(false);
+    expect(result.current.hasPermission('inventory.transfer')).toBe(false);
+    expect(result.current.hasPermission('shipping.view')).toBe(false);
+    expect(result.current.hasPermission('delivery.view')).toBe(false);
+    expect(result.current.hasPermission('rto.view')).toBe(false);
+    expect(result.current.hasPermission('reports.export')).toBe(false);
   });
 });
+
 
 

@@ -7,7 +7,9 @@ import {
   Scan,
   Plus,
   BarChart3,
-  Shield
+  Shield,
+  Package,
+  PhoneCall
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../../api/apiClient.js';
@@ -16,7 +18,7 @@ import { usePermissions } from '../../hooks/usePermissions.js';
 export function BottomDockMenuBar({ onOpenAddOrder }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isOwner, isManager } = usePermissions();
+  const { isOwner, isManager, isDistributor, hasPermission } = usePermissions();
 
   const currentPath = location.pathname;
 
@@ -35,6 +37,88 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
   });
 
   const ordersCount = metricsData?.totalOrders ?? null;
+
+  // Dedicated Distributor Bottom Dock (Strictly the 4 allowed domains)
+  if (isDistributor) {
+    const distributorItems = [
+      {
+        id: 'stock',
+        label: 'Stocks',
+        icon: Package,
+        color: 'text-emerald-600',
+        isActive: currentPath === '/inventory',
+        onClick: () => navigate('/inventory')
+      },
+      {
+        id: 'sales',
+        label: 'Total Sales',
+        icon: ShoppingBag,
+        color: 'text-indigo-600',
+        badge: ordersCount,
+        isActive: currentPath === '/orders' || currentPath.startsWith('/orders/'),
+        onClick: () => navigate('/orders')
+      },
+      {
+        id: 'tc-sales',
+        label: 'TC Sales',
+        icon: BarChart3,
+        color: 'text-amber-600',
+        isActive: currentPath === '/reports/tc-sales',
+        onClick: () => navigate('/reports/tc-sales')
+      },
+      {
+        id: 'telecaller',
+        label: 'Telecaller',
+        icon: PhoneCall,
+        color: 'text-teal-600',
+        isActive: currentPath.includes('view=telecaller') || currentPath === '/dashboard?view=telecaller',
+        onClick: () => navigate('/dashboard?view=telecaller')
+      }
+    ];
+
+    return (
+      <nav
+        aria-label="Distributor Quick Actions Dock"
+        className="shrink-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] select-none relative w-full"
+      >
+        <div className="max-w-md mx-auto grid grid-cols-4 items-center h-14 sm:h-15 px-2 relative">
+          {distributorItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.isActive;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={item.onClick}
+                className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all cursor-pointer relative group w-full ${
+                  isActive ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-900 font-medium'
+                }`}
+              >
+                <div className="relative flex items-center justify-center">
+                  <Icon
+                    className={`w-5 h-5 transition-transform group-hover:scale-110 ${
+                      isActive ? item.color || 'text-emerald-700' : 'text-slate-500'
+                    }`}
+                  />
+                  {item.badge !== undefined && item.badge !== null && item.badge > 0 && (
+                    <span className="absolute -top-1.5 -right-2.5 px-1 min-w-[15px] h-[15px] rounded-full bg-rose-500 text-white text-[9px] font-mono font-black flex items-center justify-center ring-2 ring-white">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
+                </div>
+                <span className={`text-[10px] mt-0.5 tracking-tight ${isActive ? 'text-slate-900 font-bold' : 'text-slate-500'}`}>
+                  {item.label}
+                </span>
+                {isActive && (
+                  <span className="w-1 h-1 rounded-full bg-emerald-600 mt-0.5" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
 
   // 3 items on left, center Add button, 3 items on right (3 + 1 + 3 = 7 items)
   const items = [
@@ -66,6 +150,7 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
     {
       id: 'add',
       isCenterAction: true,
+      show: hasPermission('orders.create'),
       onClick: () => onOpenAddOrder && onOpenAddOrder()
     },
     {
@@ -102,6 +187,9 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
       <div className="max-w-2xl mx-auto grid grid-cols-7 items-center h-14 sm:h-15 px-2 relative">
         {items.map((item) => {
           if (item.isCenterAction) {
+            if (item.show === false) {
+              return <div key={item.id} className="h-full" />;
+            }
             return (
               <div key={item.id} className="flex items-center justify-center relative h-full">
                 <button

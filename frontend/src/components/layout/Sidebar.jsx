@@ -131,44 +131,26 @@ export function Sidebar({ isOpen, onClose }) {
         title: 'Branch Stock Desk',
         items: [
           {
-            label: 'STOCK OVERVIEW',
+            label: 'OVERVIEW',
             icon: DashboardRounded,
             path: '/dashboard',
             show: true
           },
           {
-            label: 'WAREHOUSE LEDGER',
+            label: 'STOCKS AVAILABLE',
             icon: Inventory2Rounded,
             path: '/inventory',
             badge: lowStockCount,
             badgeVariant: 'danger',
             show: true
-          },
-          {
-            label: 'STOCK TRANSFERS',
-            icon: SendRounded,
-            path: '/inventory/transfers',
-            show: true
-          },
-          {
-            label: 'PRODUCT CATALOG',
-            icon: LayersRounded,
-            path: '/products',
-            show: true
           }
         ]
       },
       {
-        title: 'Branch Sales & Logistics',
+        title: 'Branch Sales & Team',
         items: [
           {
-            label: 'TELECALLER PANEL',
-            icon: PhoneInTalkRounded,
-            path: '/dashboard?view=telecaller',
-            show: true
-          },
-          {
-            label: 'BRANCH ORDERS',
+            label: 'TOTAL SALES',
             icon: ShoppingBagRounded,
             path: '/orders',
             badge: ordersCount,
@@ -176,21 +158,15 @@ export function Sidebar({ isOpen, onClose }) {
             show: true
           },
           {
-            label: 'COUNTER SALE',
-            icon: AddCircleOutlineRounded,
-            path: '/orders/counter-sale',
+            label: 'EACH TELECALLER SALES',
+            icon: PaidRounded,
+            path: '/reports/tc-sales',
             show: true
           },
           {
-            label: 'DELIVERY TRACKING',
-            icon: LocalShippingRounded,
-            path: '/shipping/tracking',
-            show: true
-          },
-          {
-            label: 'RTO MANAGEMENT',
-            icon: AssignmentReturnRounded,
-            path: '/rto',
+            label: 'TELECALLER ACCESS',
+            icon: PhoneInTalkRounded,
+            path: '/dashboard?view=telecaller',
             show: true
           }
         ]

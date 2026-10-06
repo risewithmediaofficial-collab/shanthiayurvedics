@@ -455,7 +455,8 @@ export class DashboardService {
       resolvedBranchId = user?.branchId || user?.branches?.[0];
     }
 
-    const branchFilter = resolvedBranchId && resolvedBranchId !== 'ALL'
+    const isValidBranch = resolvedBranchId && resolvedBranchId !== 'ALL' && mongoose.Types.ObjectId.isValid(resolvedBranchId);
+    const branchFilter = isValidBranch
       ? { branchId: new mongoose.Types.ObjectId(resolvedBranchId) }
       : {};
 
@@ -513,12 +514,12 @@ export class DashboardService {
     });
 
     // 2. Branch Info
-    const branchInfo = resolvedBranchId
+    const branchInfo = isValidBranch
       ? await Branch.findById(resolvedBranchId).populate('managerId', 'name phone email').populate('distributorId', 'name phone email').lean()
       : null;
 
     // 3. Stock Transfers (both incoming and outgoing for this branch)
-    const transferFilter = resolvedBranchId
+    const transferFilter = isValidBranch
       ? { $or: [{ fromBranchId: new mongoose.Types.ObjectId(resolvedBranchId) }, { toBranchId: new mongoose.Types.ObjectId(resolvedBranchId) }] }
       : {};
 
@@ -535,15 +536,62 @@ export class DashboardService {
       (t) => t.toBranchId?._id?.toString() === resolvedBranchId?.toString() && t.status !== 'COMPLETED' && t.status !== 'CANCELLED'
     ).length;
 
-    // 4. Branch Orders & Sales overview for context
-    const branchOrdersFilter = resolvedBranchId ? { branchId: new mongoose.Types.ObjectId(resolvedBranchId) } : {};
-    const [branchOrdersCount, branchSalesAgg] = await Promise.all([
+    // 4. Branch Orders & Total Sales (scoped to this branch)
+    const branchOrdersFilter = isValidBranch ? { branchId: new mongoose.Types.ObjectId(resolvedBranchId) } : {};
+    const [branchOrdersCount, branchSalesAgg, recentBranchOrders] = await Promise.all([
       Order.countDocuments(branchOrdersFilter),
       Order.aggregate([
         { $match: { ...branchOrdersFilter, status: { $ne: ORDER_STATUS.CANCELLED } } },
         { $group: { _id: null, total: { $sum: '$grandTotal' } } }
-      ])
+      ]),
+      Order.find(branchOrdersFilter)
+        .populate('telecallerId', 'name')
+        .select('orderNumber grandTotal status customerName customerPhone createdAt items telecallerId paymentMethod')
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .lean()
     ]);
+
+    // 5. Each Telecaller in this branch & their individual sales
+    const branchTelecallers = await User.find({
+      role: ROLES.TELECALLER,
+      ...branchFilter
+    }).select('name email phone isActive branchId').lean();
+
+    const telecallerStats = await Promise.all(
+      branchTelecallers.map(async (tc) => {
+        const orderMatch = {
+          telecallerId: tc._id,
+          status: { $ne: ORDER_STATUS.CANCELLED }
+        };
+        if (isValidBranch) {
+          orderMatch.branchId = new mongoose.Types.ObjectId(resolvedBranchId);
+        }
+
+        const [assignedLeads, salesAgg] = await Promise.all([
+          Lead.countDocuments({ assignedTo: tc._id }),
+          Order.aggregate([
+            { $match: orderMatch },
+            { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$grandTotal' } } }
+          ])
+        ]);
+
+        return {
+          _id: tc._id,
+          id: tc._id,
+          name: tc.name,
+          email: tc.email,
+          phone: tc.phone,
+          isActive: tc.isActive !== false,
+          assignedLeads,
+          totalOrders: salesAgg[0]?.count || 0,
+          totalSales: salesAgg[0]?.total || 0
+        };
+      })
+    );
+
+    // Sort telecallers by sales descending
+    telecallerStats.sort((a, b) => b.totalSales - a.totalSales);
 
     return {
       kpis: {
@@ -552,13 +600,15 @@ export class DashboardService {
         inventoryValuation,
         lowStockCount,
         outOfStockCount,
-        inactiveCount,
-        pendingTransfersCount: pendingIncomingTransfers,
         branchOrdersCount,
-        branchRevenue: branchSalesAgg[0]?.total || 0
+        branchRevenue: branchSalesAgg[0]?.total || 0,
+        telecallerCount: telecallerStats.length,
+        topTelecallerName: telecallerStats[0]?.name || '—',
+        topTelecallerSales: telecallerStats[0]?.totalSales || 0
       },
       stockItems: stockItems.sort((a, b) => a.availableQuantity - b.availableQuantity),
-      transfers: recentTransfers,
+      telecallers: telecallerStats,
+      orders: recentBranchOrders,
       branch: branchInfo || { name: 'Assigned Branch', code: 'BR' }
     };
   }

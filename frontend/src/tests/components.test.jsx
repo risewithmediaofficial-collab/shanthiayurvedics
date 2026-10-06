@@ -15,6 +15,7 @@ import { Badge } from '../components/common/Badge.jsx';
 import { Button } from '../components/common/Button.jsx';
 import { Input } from '../components/common/Input.jsx';
 import { EmptyState } from '../components/common/EmptyState.jsx';
+import { Table } from '../components/common/Table.jsx';
 
 describe('Badge component', () => {
   it('renders children correctly', () => {
@@ -176,3 +177,45 @@ describe('EmptyState component', () => {
     expect(handleAction).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('Table component', () => {
+  const sampleColumns = [
+    { header: 'Name', key: 'name', className: 'min-w-[150px]' },
+    { header: 'Role', key: 'role' },
+  ];
+  const sampleData = [
+    { id: 1, name: 'Sathish', role: 'Telecaller' },
+    { id: 2, name: 'Ramesh', role: 'Distributor' },
+  ];
+
+  it('renders table headers and data rows', () => {
+    render(<Table columns={sampleColumns} data={sampleData} />);
+    expect(screen.getByText('Name')).toBeInTheDocument();
+    expect(screen.getByText('Role')).toBeInTheDocument();
+    expect(screen.getByText('Sathish')).toBeInTheDocument();
+    expect(screen.getByText('Ramesh')).toBeInTheDocument();
+  });
+
+  it('supports minWidth and inlineScroll props', () => {
+    const { container } = render(
+      <Table
+        columns={sampleColumns}
+        data={sampleData}
+        inlineScroll={true}
+        minWidth="min-w-[1000px]"
+        maxHeight="max-h-[600px]"
+      />
+    );
+
+    const tableEl = container.querySelector('table');
+    expect(tableEl).toHaveClass('min-w-[1000px]');
+
+    const scrollContainer = container.querySelector('.overflow-x-auto');
+    expect(scrollContainer).toHaveClass('max-h-[600px]');
+    expect(scrollContainer).toHaveClass('overflow-y-auto');
+
+    const theadEl = container.querySelector('thead');
+    expect(theadEl).toHaveClass('sticky');
+  });
+});
+

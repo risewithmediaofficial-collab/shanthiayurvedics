@@ -14,20 +14,32 @@ export function Table({
   onPageChange,
   className,
   onRowClick,
-  maxRows = 10
+  maxRows = 10,
+  minWidth = 'min-w-full',
+  inlineScroll = false,
+  maxHeight = 'max-h-[560px]'
 }) {
   const safeData = Array.isArray(data) ? data : [];
   const safeColumns = Array.isArray(columns) ? columns : [];
-  const shouldInlineScroll = safeData.length > maxRows;
+  const shouldInlineScroll = inlineScroll || safeData.length > maxRows;
 
   return (
     <div className={twMerge('w-full overflow-hidden bg-white rounded-xl border border-slate-200 shadow-card flex flex-col', className)}>
-      <div className={twMerge('overflow-x-auto overflow-y-auto relative scrollbar-thin', shouldInlineScroll && 'max-h-[540px]')}>
-        <table aria-busy={isLoading} className="crm-table w-full">
+      <div className={twMerge('overflow-x-auto overflow-y-auto relative scrollbar-thin', shouldInlineScroll && maxHeight)}>
+        <table aria-busy={isLoading} className={twMerge('crm-table w-full', minWidth)}>
           <thead className={shouldInlineScroll ? 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-xs border-b border-slate-200' : ''}>
             <tr>
               {safeColumns.map((col, idx) => (
-                <th scope="col" key={col.key || idx} className={twMerge(col.className, col.align === 'right' && 'text-right', col.align === 'center' && 'text-center')}>
+                <th
+                  scope="col"
+                  key={col.key || idx}
+                  className={twMerge(
+                    shouldInlineScroll && 'bg-slate-50',
+                    col.className,
+                    col.align === 'right' && 'text-right',
+                    col.align === 'center' && 'text-center'
+                  )}
+                >
                   {col.header}
                 </th>
               ))}

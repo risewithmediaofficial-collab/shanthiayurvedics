@@ -264,6 +264,7 @@ export function UserManagementPage() {
   const columns = [
     {
       header: 'Staff Member',
+      className: 'min-w-[220px]',
       cell: row => (
         <div>
           <div className="font-semibold text-slate-900 text-xs">{row.name}</div>
@@ -280,6 +281,7 @@ export function UserManagementPage() {
     },
     {
       header: 'Role',
+      className: 'min-w-[130px]',
       cell: row => {
         const meta = ROLE_COLORS[row.role] || { variant: 'neutral', label: row.role };
         return <Badge variant={meta.variant} size="sm">{meta.label}</Badge>;
@@ -287,6 +289,7 @@ export function UserManagementPage() {
     },
     {
       header: 'Branch',
+      className: 'min-w-[220px]',
       cell: row => {
         const branchObj = row.branchId?.name
           ? row.branchId
@@ -351,6 +354,7 @@ export function UserManagementPage() {
     },
     {
       header: 'Status',
+      className: 'min-w-[110px]',
       cell: row => (
         <Badge variant={row.isActive ? 'emerald' : 'danger'} size="sm">
           {row.isActive ? 'Active' : 'Disabled'}
@@ -360,14 +364,15 @@ export function UserManagementPage() {
     {
       header: 'Actions',
       align: 'right',
+      className: 'min-w-[320px] text-right whitespace-nowrap',
       cell: row => {
         const isAdmin = row.role === 'OWNER';
         return (
-          <div className="flex items-center gap-1.5 justify-end">
+          <div className="flex items-center gap-1.5 justify-end whitespace-nowrap">
             {/* Edit — available for all users */}
             <button
               onClick={() => openEdit(row)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-amber-50 text-slate-600 hover:text-amber-700 border border-slate-200 hover:border-amber-200 transition-colors text-[11px] font-semibold cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-amber-50 text-slate-600 hover:text-amber-700 border border-slate-200 hover:border-amber-200 transition-colors text-[11px] font-semibold cursor-pointer shrink-0"
               title="Edit user"
             >
               <Pencil className="w-3 h-3" />
@@ -377,7 +382,7 @@ export function UserManagementPage() {
             {/* Reset Password — available for all users */}
             <button
               onClick={() => openReset(row)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-700 border border-slate-200 hover:border-blue-200 transition-colors text-[11px] font-semibold cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-700 border border-slate-200 hover:border-blue-200 transition-colors text-[11px] font-semibold cursor-pointer shrink-0"
               title="Reset password"
             >
               <RefreshCw className="w-3 h-3" />
@@ -391,7 +396,7 @@ export function UserManagementPage() {
                   setSelectedUser(row);
                   setStatusToggleOpen(true);
                 }}
-                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border transition-colors text-[11px] font-semibold cursor-pointer ${
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border transition-colors text-[11px] font-semibold cursor-pointer shrink-0 ${
                   row.isActive
                     ? 'bg-amber-50/70 hover:bg-amber-100 text-amber-700 border-amber-200'
                     : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
@@ -410,7 +415,7 @@ export function UserManagementPage() {
                   setSelectedUser(row);
                   setDeleteConfirmOpen(true);
                 }}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 border border-rose-200 hover:border-rose-300 transition-colors text-[11px] font-semibold cursor-pointer shadow-2xs"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 border border-rose-200 hover:border-rose-300 transition-colors text-[11px] font-semibold cursor-pointer shadow-2xs shrink-0"
                 title="Delete staff account permanently"
               >
                 <Trash2 className="w-3 h-3 text-rose-600" />
@@ -420,7 +425,7 @@ export function UserManagementPage() {
 
             {/* Admin lock indicator */}
             {isAdmin && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 text-[10px] text-violet-500 bg-violet-50 border border-violet-100 rounded-lg font-semibold">
+              <span className="inline-flex items-center gap-1 px-2 py-1 text-[10px] text-violet-500 bg-violet-50 border border-violet-100 rounded-lg font-semibold shrink-0">
                 <Lock className="w-3 h-3" />
                 Admin
               </span>
@@ -445,11 +450,11 @@ export function UserManagementPage() {
       </div>
 
       {/* Role Summary & Quick Filter Badges */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin">
         <button
           type="button"
           onClick={() => setSelectedRoleFilter('ALL')}
-          className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer border ${
+          className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all cursor-pointer border shrink-0 ${
             selectedRoleFilter === 'ALL'
               ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
               : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
@@ -473,7 +478,7 @@ export function UserManagementPage() {
               key={role}
               type="button"
               onClick={() => setSelectedRoleFilter(prev => prev === role ? 'ALL' : role)}
-              className={`flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer border ${
+              className={`flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer border shrink-0 ${
                 isSelected
                   ? 'bg-white ring-2 ring-emerald-500/30 border-emerald-500 shadow-2xs'
                   : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
@@ -588,15 +593,15 @@ export function UserManagementPage() {
 
         {/* Quick Branch Filter Pills (Visible only for Owner) */}
         {isOwner && (
-          <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-100">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mr-1">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-2 border-t border-slate-100 scrollbar-thin">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mr-1 shrink-0">
               <Filter className="w-3 h-3 text-slate-400" /> Filter Branch:
             </span>
 
             <button
               type="button"
               onClick={() => setSelectedBranchFilter('ALL')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer shrink-0 ${
                 selectedBranchFilter === 'ALL'
                   ? 'bg-emerald-600 text-white shadow-2xs font-bold'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
@@ -618,7 +623,7 @@ export function UserManagementPage() {
                   key={b._id}
                   type="button"
                   onClick={() => setSelectedBranchFilter(isSelected ? 'ALL' : String(b._id))}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer shrink-0 ${
                     isSelected
                       ? 'bg-emerald-600 text-white shadow-2xs font-bold ring-2 ring-emerald-500/20'
                       : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
@@ -638,7 +643,7 @@ export function UserManagementPage() {
             <button
               type="button"
               onClick={() => setSelectedBranchFilter(selectedBranchFilter === 'UNASSIGNED' ? 'ALL' : 'UNASSIGNED')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer shrink-0 ${
                 selectedBranchFilter === 'UNASSIGNED'
                   ? 'bg-amber-600 text-white shadow-2xs font-bold ring-2 ring-amber-500/20'
                   : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200'
@@ -728,7 +733,9 @@ export function UserManagementPage() {
             ? 'No team members match your current filter criteria. Try selecting another branch or clearing your filters.'
             : 'No staff members registered. Create the first account using the button above.'
         }
-        maxRows={25}
+        inlineScroll={true}
+        minWidth="min-w-[1000px]"
+        maxHeight="max-h-[600px]"
       />
 
       {/* ── Create User Modal ── */}

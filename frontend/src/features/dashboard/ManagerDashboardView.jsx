@@ -89,27 +89,44 @@ export function ManagerDashboardView({ onSwitchToBossView, onSwitchToTelecaller 
   return (
     <div className="space-y-4">
 
-      {/* ── Top Header / View Switcher (Owner & Distributor) ── */}
-      {onSwitchToBossView && (
+      {/* ── Top Header / View Switcher (Owner, Manager & Distributor) ── */}
+      {(onSwitchToBossView || onSwitchToTelecaller) && (
         <div className="flex items-center justify-between pb-1">
           <div className="flex items-center gap-2">
             <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
               👔 Manager Operations Hub
             </span>
-            <span className="text-[11px] text-slate-500 font-medium">
+            <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
               Daily Branch Operations & Fulfillment
             </span>
           </div>
-          <button
-            id="btn-boss-view"
-            type="button"
-            onClick={onSwitchToBossView}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer"
-          >
-            <span>👔</span>
-            <span>Boss View</span>
-            <span className="text-[10px] opacity-80">→</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {onSwitchToTelecaller && (
+              <button
+                id="btn-manager-view-telecaller"
+                type="button"
+                onClick={() => onSwitchToTelecaller()}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer"
+                title="View Telecaller Dashboard"
+              >
+                <span>🎧</span>
+                <span>View Panel: Telecaller</span>
+                <span className="text-[10px] opacity-80">→</span>
+              </button>
+            )}
+            {onSwitchToBossView && (
+              <button
+                id="btn-boss-view"
+                type="button"
+                onClick={onSwitchToBossView}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer"
+              >
+                <span>👔</span>
+                <span>Boss View</span>
+                <span className="text-[10px] opacity-80">→</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
 

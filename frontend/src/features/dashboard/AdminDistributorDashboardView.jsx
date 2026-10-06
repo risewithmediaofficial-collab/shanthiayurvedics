@@ -455,6 +455,19 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                 <span>+ Add Product</span>
               </button>
             )}
+            {onSwitchToTelecaller && (
+              <button
+                id="btn-owner-view-telecaller"
+                type="button"
+                onClick={() => onSwitchToTelecaller()}
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow transition-all cursor-pointer"
+                title="View Telecaller Dashboard"
+              >
+                <span>🎧</span>
+                <span>View Panel: Telecaller</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
             {onSwitchToManagerView && (
               <button
                 id="btn-switch-manager-view"

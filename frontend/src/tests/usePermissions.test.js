@@ -181,6 +181,14 @@ describe('usePermissions — permissions array', () => {
     expect(result.current.hasPermission('products.create')).toBe(false);
     expect(result.current.hasPermission('products.edit')).toBe(false);
   });
+
+  it('allows DISTRIBUTOR to view telecaller desk dependencies (users, followups, orders, leads)', () => {
+    const { result } = renderWithUser({ role: 'DISTRIBUTOR' });
+    expect(result.current.hasPermission('leads.view')).toBe(true);
+    expect(result.current.hasPermission('orders.view')).toBe(true);
+    expect(result.current.hasPermission('followups.view')).toBe(true);
+    expect(result.current.hasPermission('users.view')).toBe(true);
+  });
 });
 
 

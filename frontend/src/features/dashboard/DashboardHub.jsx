@@ -31,7 +31,13 @@ export function DashboardHub() {
     return 'MANAGER';
   };
 
-  const allowedViews = isOwner ? ['OWNER', 'BOSS', 'MANAGER', 'DISTRIBUTOR', 'TELECALLER'] : isTelecaller ? ['TELECALLER'] : isDistributor ? ['DISTRIBUTOR'] : ['MANAGER', 'TELECALLER'];
+  const allowedViews = isOwner
+    ? ['OWNER', 'BOSS', 'MANAGER', 'DISTRIBUTOR', 'TELECALLER']
+    : isTelecaller
+    ? ['TELECALLER']
+    : isDistributor
+    ? ['DISTRIBUTOR', 'TELECALLER', 'MANAGER']
+    : ['MANAGER', 'TELECALLER'];
   const activeView = allowedViews.includes(urlView) ? urlView : getRoleDefaultView();
 
   // Effective caller: either local state or URL param
@@ -95,6 +101,11 @@ export function DashboardHub() {
             ? () => setView('OWNER')
             : undefined
         }
+        onSwitchToDistributorView={
+          isSupervisor && (isDistributor || isOwner)
+            ? () => setView('DISTRIBUTOR')
+            : undefined
+        }
       /></Suspense>
     );
   }
@@ -103,6 +114,7 @@ export function DashboardHub() {
   if (activeView === 'DISTRIBUTOR') {
     return (
       <Suspense fallback={<DashboardLoading />}><DistributorStockDashboardView
+        onSwitchToTelecaller={(caller) => setView('TELECALLER', caller, 'DISTRIBUTOR')}
         onSwitchToManagerView={
           isOwner
             ? () => setView('MANAGER')

@@ -4,6 +4,7 @@ import { BranchSelector } from './BranchSelector.jsx';
 import { NotificationBell } from './NotificationBell.jsx';
 import { UserMenu } from './UserMenu.jsx';
 import { AccountSwitcherPill } from './AccountSwitcher.jsx';
+import { ViewPanelMenu } from './ViewPanelMenu.jsx';
 
 import { useAuth } from '../../context/AuthContext.jsx';
 
@@ -42,13 +43,16 @@ export function Navbar({ onMenuToggle }) {
         </div>
       </div>
 
-      {/* Right: Account Switcher (Boss only) + Branch (mobile) + Notifications + User */}
+      {/* Right: Account Switcher (Boss only) + Branch (mobile) + View Panel + Notifications + User */}
       <div className="flex items-center gap-2 sm:gap-2.5">
         {showSwitcher && (
           <div className="hidden sm:block">
             <AccountSwitcherPill variant="light" />
           </div>
         )}
+
+        {/* Universal View Panel switcher for Owner, Manager, and Distributor */}
+        <ViewPanelMenu />
 
         <div className="sm:hidden">
           <BranchSelector />

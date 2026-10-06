@@ -162,6 +162,12 @@ export function Sidebar({ isOpen, onClose }) {
         title: 'Branch Sales & Logistics',
         items: [
           {
+            label: 'TELECALLER PANEL',
+            icon: PhoneInTalkRounded,
+            path: '/dashboard?view=telecaller',
+            show: true
+          },
+          {
             label: 'BRANCH ORDERS',
             icon: ShoppingBagRounded,
             path: '/orders',
@@ -200,6 +206,12 @@ export function Sidebar({ isOpen, onClose }) {
             label: 'OVERVIEW',
             icon: DashboardRounded,
             path: '/dashboard',
+            show: true
+          },
+          {
+            label: 'TELECALLER PANEL',
+            icon: PhoneInTalkRounded,
+            path: '/dashboard?view=telecaller',
             show: true
           },
           {

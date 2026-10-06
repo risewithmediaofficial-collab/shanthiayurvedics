@@ -41,7 +41,7 @@ const DISTRIBUTOR_SORT_OPTIONS = [
   { value: 'expiryDate', label: '⏳ Expiry Date' }
 ];
 
-export function DistributorStockDashboardView({ onSwitchToManagerView }) {
+export function DistributorStockDashboardView({ onSwitchToManagerView, onSwitchToTelecaller }) {
   const { user } = useAuth();
   const { selectedBranchId, selectBranch } = useBranch();
   const queryClient = useQueryClient();
@@ -301,11 +301,24 @@ export function DistributorStockDashboardView({ onSwitchToManagerView }) {
             >
               <RefreshCw className="w-4 h-4" />
             </button>
+            {onSwitchToTelecaller && (
+              <button
+                id="btn-distributor-view-telecaller"
+                type="button"
+                onClick={() => onSwitchToTelecaller()}
+                className="px-3.5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
+                title="View Telecaller Dashboard"
+              >
+                <span>🎧</span>
+                <span>View Panel: Telecaller</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
             {onSwitchToManagerView && (
               <button
                 type="button"
                 onClick={onSwitchToManagerView}
-                className="px-3.5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow-sm transition-all"
+                className="px-3.5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer"
               >
                 Manager View →
               </button>

@@ -21,7 +21,7 @@ const tabs = [
   { id: 'orders', title: 'Orders', icon: ShoppingBag, Page: OrderListPage }
 ];
 
-export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, onSwitchToBossView, returnView }) {
+export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, onSwitchToBossView, onSwitchToDistributorView, returnView }) {
   const { user } = useAuth();
   const { selectedBranchId } = useBranch();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -30,7 +30,7 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
 
   const isPreview = user?.role !== 'TELECALLER';
 
-  // Fetch list of telecallers when supervisor/owner is previewing
+  // Fetch list of telecallers when supervisor/owner/distributor is previewing
   const { data: telecallersList = [], isLoading: isLoadingTelecallers } = useQuery({
     queryKey: ['telecaller-users-list', selectedBranchId],
     queryFn: async () => {
@@ -75,7 +75,7 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
       return telecallersList[0];
     }
 
-    return previewCaller || null;
+    return previewCaller || (isPreview ? { _id: null, id: null, name: `${user?.name || 'Supervisor'} (Overview Desk)` } : null);
   }, [isPreview, user, previewCaller, searchParams, telecallersList]);
 
   const callerId = activeCaller?._id || activeCaller?.id || null;
@@ -94,13 +94,15 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
   };
 
   const { data: summary, isLoading, isError, refetch } = useQuery({
-    queryKey: ['caller-workspace', selectedBranchId, callerId],
-    enabled: Boolean(callerId),
+    queryKey: ['caller-workspace', selectedBranchId, callerId || 'all'],
     queryFn: async ({ signal }) => {
+      const leadParams = callerId ? { assignedTo: callerId, limit: 1 } : { limit: 1 };
+      const followupParams = callerId ? { telecallerId: callerId, limit: 1 } : { limit: 1 };
+      const orderParams = callerId ? { telecallerId: callerId, limit: 1 } : { limit: 1 };
       const [leads, followups, orders] = await Promise.all([
-        apiClient.get('/leads', { signal, params: { assignedTo: callerId, limit: 1 } }),
-        apiClient.get('/followups', { signal, params: { telecallerId: callerId, limit: 1 } }),
-        apiClient.get('/orders', { signal, params: { telecallerId: callerId, limit: 1 } })
+        apiClient.get('/leads', { signal, params: leadParams }),
+        apiClient.get('/followups', { signal, params: followupParams }),
+        apiClient.get('/orders', { signal, params: orderParams })
       ]);
       return {
         leads: leads.data.pagination?.total || 0,
@@ -111,13 +113,17 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
     }
   });
 
-  const back = returnView === 'OWNER' ? onSwitchToBossView : onSwitchToManagerView;
+  const back = returnView === 'OWNER'
+    ? onSwitchToBossView
+    : returnView === 'DISTRIBUTOR'
+    ? onSwitchToDistributorView
+    : onSwitchToManagerView;
 
-  if (isPreview && isLoadingTelecallers && !callerId) {
+  if (isPreview && isLoadingTelecallers && !activeCaller) {
     return <Spinner text="Loading telecaller workspace…" className="py-20" />;
   }
 
-  if (!callerId) {
+  if (!activeCaller) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-xs">
         <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3 font-bold text-xl">
@@ -129,7 +135,11 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
         </p>
         {back && (
           <Button className="mt-5" onClick={back} variant="secondary">
-            Back to team
+            {returnView === 'OWNER'
+              ? 'Back to Boss Panel'
+              : returnView === 'DISTRIBUTOR'
+              ? 'Back to Distributor Panel'
+              : 'Back to Manager Panel'}
           </Button>
         )}
       </div>
@@ -197,7 +207,11 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
 
           {back && (
             <Button variant="secondary" icon={ArrowLeft} onClick={back} className="text-xs rounded-xl">
-              Back to team
+              {returnView === 'OWNER'
+                ? 'Back to Boss Panel'
+                : returnView === 'DISTRIBUTOR'
+                ? 'Back to Distributor Panel'
+                : 'Back to Manager Panel'}
             </Button>
           )}
         </div>

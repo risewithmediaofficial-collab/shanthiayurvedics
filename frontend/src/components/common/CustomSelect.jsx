@@ -45,8 +45,11 @@ export function CustomSelect({
   icon: IconComponent,
   searchable = false,
   autoStatusDot = true,
+  placement = 'auto',
+  dropUp = false,
 }) {
   const [open, setOpen] = useState(false);
+  const [detectedDropUp, setDetectedDropUp] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const ref = useRef(null);
@@ -137,6 +140,30 @@ export function CustomSelect({
     }
   }, [open, searchable]);
 
+  // Handle dropup detection based on available viewport space
+  useEffect(() => {
+    if (!open) return;
+    if (dropUp || placement === 'top') {
+      setDetectedDropUp(true);
+    } else if (placement === 'bottom') {
+      setDetectedDropUp(false);
+    } else {
+      // placement === 'auto'
+      if (ref.current) {
+        const rect = ref.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        if (spaceBelow < 290 && spaceAbove > spaceBelow) {
+          setDetectedDropUp(true);
+        } else {
+          setDetectedDropUp(false);
+        }
+      }
+    }
+  }, [open, placement, dropUp]);
+
+  const isTop = dropUp || placement === 'top' || (placement !== 'bottom' && detectedDropUp);
+
   const selected = normalizedOptions.find((o) => o.value === value);
 
   const sizeClasses = {
@@ -221,14 +248,17 @@ export function CustomSelect({
       {/* Dropdown Menu */}
       <div
         className={twMerge(
-          'absolute z-50 mt-1.5 py-1',
-          'bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-xl shadow-xl shadow-slate-900/10',
-          'transition-all duration-150 ease-out origin-top',
+          'absolute z-50 py-1.5',
+          'bg-white/98 backdrop-blur-md border border-slate-200/90 rounded-xl shadow-xl shadow-slate-900/15 ring-1 ring-slate-950/5',
+          'transition-all duration-150 ease-out',
+          isTop ? 'bottom-full mb-1.5 origin-bottom' : 'top-full mt-1.5 origin-top',
           minWidth,
           align === 'right' ? 'right-0' : 'left-0',
           open
             ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
-            : 'opacity-0 scale-95 -translate-y-1 pointer-events-none',
+            : isTop
+            ? 'opacity-0 scale-95 translate-y-1.5 pointer-events-none'
+            : 'opacity-0 scale-95 -translate-y-1.5 pointer-events-none',
           menuClassName
         )}
         role="listbox"
@@ -260,7 +290,7 @@ export function CustomSelect({
         )}
 
         {/* Options list */}
-        <div className="max-h-60 overflow-y-auto py-0.5 custom-scroll">
+        <div className="max-h-72 overflow-y-auto py-0.5 custom-scroll scrollbar-thin">
           {filteredOptions.length === 0 ? (
             <div className="px-3 py-2 text-xs text-slate-400 text-center italic">
               No matching options

@@ -1239,6 +1239,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                       }}
                       size="xs"
                       align="right"
+                      placement="top"
                       minWidth="min-w-[170px]"
                       className="border-slate-200 hover:border-emerald-400 bg-white font-semibold text-[11px] shadow-2xs"
                       options={ALL_STATUS_OPTIONS}

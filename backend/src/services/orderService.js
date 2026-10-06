@@ -491,10 +491,13 @@ export class OrderService {
     }
 
     assertRecordAccess(order, user, req, 'telecallerId', 'Order');
-    if (StateMachineService.isDispatchedOrBeyond(order.status)) throw new AppError('Dispatched orders must be retained. Use the returns workflow.', 409);
+    const isCounterSale = order.orderChannel === 'COUNTER_SALE' || order.notes?.includes('Office') || order.notes?.includes('Counter');
+    if (StateMachineService.isDispatchedOrBeyond(order.status) && !isCounterSale) {
+      throw new AppError('Dispatched orders must be retained. Use the returns workflow.', 409);
+    }
 
-    // If order was not yet dispatched/delivered and not cancelled, release reserved stock
-    if (!StateMachineService.isDispatchedOrBeyond(order.status) && order.status !== ORDER_STATUS.CANCELLED) {
+    // If order was not yet dispatched/delivered (or is counter sale) and not cancelled, release reserved stock
+    if ((!StateMachineService.isDispatchedOrBeyond(order.status) || isCounterSale) && order.status !== ORDER_STATUS.CANCELLED) {
       for (const item of order.items) {
         await InventoryService.releaseReservedStock({
           productId: item.productId,

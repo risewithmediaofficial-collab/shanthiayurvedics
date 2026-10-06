@@ -110,10 +110,6 @@ export function ManagerOfficeSaleTab() {
 
   const handleAddToCart = () => {
     if (!selectedProductId) return;
-    if (cart.length >= 5) {
-      alert('Maximum 5 medicine items allowed per treatment order.');
-      return;
-    }
     const prod = products.find((p) => p._id === selectedProductId);
     if (!prod) return;
 
@@ -526,7 +522,7 @@ export function ManagerOfficeSaleTab() {
                   variant="primary"
                   icon={Plus}
                   onClick={handleAddToCart}
-                  disabled={!selectedProductId || cart.length >= 5}
+                  disabled={!selectedProductId}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
                 >
                   Add

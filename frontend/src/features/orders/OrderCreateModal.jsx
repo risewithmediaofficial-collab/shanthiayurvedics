@@ -26,9 +26,12 @@ import { Select } from '../../components/common/Select.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 
-export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, telecallerId = null }) {
+export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, telecallerId = null, isOfficeSale = false }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+
+  const isOfficeSaleRoute = typeof window !== 'undefined' && window.location.pathname.includes('/orders/counter-sale');
+  const [isOfficeOrder, setIsOfficeOrder] = useState(Boolean(isOfficeSale || isOfficeSaleRoute));
 
   // 1. Customer / Patient Details
   const [patientName, setPatientName] = useState('');
@@ -48,7 +51,7 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
   const [isPincodeLoading, setIsPincodeLoading] = useState(false);
   const [availablePostOffices, setAvailablePostOffices] = useState([]);
 
-  // 3. Products (up to 5 items)
+  // 3. Products
   const [products, setProducts] = useState([
     { productId: '', quantity: 1, unitPrice: 0, weight: 0 }
   ]);
@@ -144,9 +147,7 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
   };
 
   const addProductRow = () => {
-    if (products.length < 5) {
-      setProducts([...products, { productId: '', quantity: 1, unitPrice: 0, weight: 0 }]);
-    }
+    setProducts([...products, { productId: '', quantity: 1, unitPrice: 0, weight: 0 }]);
   };
 
   const removeProductRow = (index) => {
@@ -171,12 +172,14 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
     : `${totalWeightGrams} g`;
 
   const discountAmount = discountPercent > 0 ? Math.round((productsSubtotal * discountPercent) / 100) : 0;
-  const parsedShippingCharge = Number(shippingCharge) || 0;
+  const parsedShippingCharge = isOfficeOrder ? 0 : (Number(shippingCharge) || 0);
   const autoCalculatedTotal = Math.max(0, productsSubtotal + parsedShippingCharge - discountAmount);
   const finalPayableTotal = offerPrice.trim() !== '' ? Number(offerPrice) : autoCalculatedTotal;
-  const effectiveCodAmount = paymentMethod === 'COD'
-    ? (codAmount.trim() !== '' ? Number(codAmount) : finalPayableTotal)
-    : 0;
+  const effectiveCodAmount = isOfficeOrder
+    ? 0
+    : (paymentMethod === 'COD'
+        ? (codAmount.trim() !== '' ? Number(codAmount) : finalPayableTotal)
+        : 0);
 
   // Order Submission Mutation
   const createOrderMutation = useMutation({
@@ -198,14 +201,13 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
           .map((i) => `• ${i.quantity}x ${i.productName}`)
           .join('\n');
         const textMsg = encodeURIComponent(
-          `🌿 *Shanthi Ayurvedas Order Confirmation*\n\n` +
+          `🌿 *Shanthi Ayurvedas ${isOfficeOrder ? 'Office Counter Receipt' : 'Order Confirmation'}*\n\n` +
             `Hello *${patientName}*,\n` +
-            `Your Ayurvedic prescription order has been successfully placed!\n\n` +
+            `Your Ayurvedic prescription order has been successfully ${isOfficeOrder ? 'billed at the counter' : 'placed'}!\n\n` +
             `📋 *Order ID:* ${newOrder.orderNumber}\n` +
             `📦 *Prescription Items:*\n${itemsList}\n\n` +
-            `💰 *Total Amount:* ₹${finalPayableTotal} (${paymentMethod})\n` +
-            `📍 *Delivery Address:* ${street}, ${village ? village + ', ' : ''}${district}, ${state} - ${pincode}\n\n` +
-            `🚚 We are preparing your parcel for dispatch with tamper-proof seal.\n` +
+            `💰 *Total Amount:* ₹${finalPayableTotal} (${isOfficeOrder ? 'Direct Counter Payment' : paymentMethod})\n` +
+            `${isOfficeOrder ? '' : `📍 *Delivery Address:* ${street}, ${village ? village + ', ' : ''}${district}, ${state} - ${pincode}\n\n`}` +
             `📱 Track & view dosage guide on *my.shanthiayurvedas.com*.\n\n` +
             `Thank you for trusting Shanthi Ayurvedas! 🙏`
         );
@@ -247,25 +249,28 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
         };
       }),
       weight: totalWeightGrams,
-      shippingCharge: parsedShippingCharge,
-      codAmount: effectiveCodAmount,
+      shippingCharge: isOfficeOrder ? 0 : parsedShippingCharge,
+      codAmount: isOfficeOrder ? 0 : effectiveCodAmount,
       discountTotal: discountAmount,
       offerPrice: offerPrice.trim() !== '' ? Number(offerPrice) : undefined,
-      paymentMethod,
+      paymentMethod: isOfficeOrder ? 'CASH' : paymentMethod,
+      orderChannel: isOfficeOrder ? 'COUNTER_SALE' : 'DIRECT',
+      isOfficeSale: isOfficeOrder,
+      status: isOfficeOrder ? 'DELIVERED' : undefined,
       patientAppRegistered: registerPatientApp,
       deliveryAddress: {
-        street,
+        street: street || (isOfficeOrder ? 'Office Walk-In Counter' : 'Main Clinic Road'),
         landmark,
         village,
         taluk,
-        district,
+        district: district || (isOfficeOrder ? 'Hosur' : ''),
         city: district || 'Hosur',
         state,
-        pincode,
+        pincode: pincode || (isOfficeOrder ? '635109' : '635109'),
         phone: mobile,
         alternatePhone: altMobile
       },
-      notes
+      notes: notes || (isOfficeOrder ? 'Direct Office Counter Sale' : undefined)
     });
   };
 
@@ -291,10 +296,10 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Create Prescription Order"
-      subtitle="Atomically reserves herbal stock and triggers WhatsApp dispatch notification"
+      title={isOfficeOrder ? "Office Sale / Counter Bill" : "Create Prescription Order"}
+      subtitle={isOfficeOrder ? "Direct walk-in counter billing with instant stock reservation (₹0 shipping)" : "Atomically reserves herbal stock and triggers WhatsApp dispatch notification"}
       maxWidth="max-w-3xl"
-      icon="🛒"
+      icon={isOfficeOrder ? "🏪" : "🛒"}
       footer={footerActions}
     >
       <form id="order-create-form" onSubmit={handleSubmit} className="space-y-6 text-slate-800">
@@ -304,6 +309,47 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
             <span>{formError}</span>
           </div>
         )}
+
+        {/* Order Mode Switcher */}
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500">Order Mode:</span>
+            <button
+              type="button"
+              onClick={() => {
+                setIsOfficeOrder(false);
+                if (shippingCharge === '0') setShippingCharge('69');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                !isOfficeOrder
+                  ? 'bg-emerald-700 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              📦 Courier Delivery
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsOfficeOrder(true);
+                setShippingCharge('0');
+                setCodAmount('');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                isOfficeOrder
+                  ? 'bg-purple-700 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              🏪 Office / Counter Sale
+            </button>
+          </div>
+          {isOfficeOrder && (
+            <span className="px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 text-[11px] font-bold">
+              Walk-in Patient • Direct Counter Sale
+            </span>
+          )}
+        </div>
 
         {/* SECTION 1: 👤 Customer Details */}
         <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3">
@@ -352,7 +398,7 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-900">
               <MapPin className="w-4 h-4 text-ayur-600" />
-              <span>Delivery Address</span>
+              <span>{isOfficeOrder ? 'Patient Address (Optional for Walk-In)' : 'Delivery Address'}</span>
             </div>
             {isPincodeLoading && (
               <span className="text-[11px] text-ayur-700 font-semibold animate-pulse">
@@ -513,16 +559,14 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
                 </span>
               )}
             </div>
-            {products.length < 5 && (
-              <button
-                type="button"
-                onClick={addProductRow}
-                className="text-xs text-ayur-700 hover:text-ayur-800 font-bold flex items-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Product ({products.length}/5)</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={addProductRow}
+              className="text-xs text-ayur-700 hover:text-ayur-800 font-bold flex items-center gap-1 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Product</span>
+            </button>
           </div>
 
           <div className="space-y-2.5">
@@ -650,151 +694,159 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
           </div>
         </div>
 
-        {/* SECTION 4: 💰 Payment, Shipping Charge & COD Manual Entry */}
-        <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3.5">
-          <div className="text-xs font-bold uppercase tracking-wider text-slate-900">Payment & Charges</div>
+        {/* SECTION 4: 💳 Payment & Charges (Only for Courier Delivery) */}
+        {!isOfficeOrder && (
+          <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3.5">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-900">Payment & Charges</div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                setPaymentMethod('COD');
-                if (shippingCharge === '0') setShippingCharge('69');
-              }}
-              className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer ${
-                paymentMethod === 'COD'
-                  ? 'border-ayur-700 bg-ayur-50/60 shadow-sm'
-                  : 'border-slate-200 bg-white hover:border-slate-300'
-              }`}
-            >
-              <div className="text-2xl mb-1">💵</div>
-              <div className="font-bold text-slate-900 text-sm">Cash on Delivery (COD)</div>
-              <div className="text-xs text-slate-500 mt-0.5">
-                Collect payment at doorstep
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setPaymentMethod('ONLINE');
-                setShippingCharge('0');
-              }}
-              className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer ${
-                paymentMethod === 'ONLINE'
-                  ? 'border-emerald-700 bg-emerald-50/60 shadow-sm'
-                  : 'border-slate-200 bg-white hover:border-slate-300'
-              }`}
-            >
-              <div className="text-2xl mb-1">💳</div>
-              <div className="font-bold text-slate-900 text-sm">Online Prepaid (UPI / Card)</div>
-              <div className="text-xs text-emerald-700 font-semibold mt-0.5">Payment collected online</div>
-            </button>
-          </div>
-
-          {/* Manual Shipping Charge & Manual COD Amount Grid */}
-          <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Manual Shipping Charge Input */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                  <span>🚚 Shipping Charge (₹) *</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Enter manually</span>
-                </label>
-                <div className="flex items-center gap-1.5">
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={shippingCharge}
-                    onChange={(e) => setShippingCharge(e.target.value)}
-                  />
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentMethod('COD');
+                  if (shippingCharge === '0') setShippingCharge('69');
+                }}
+                className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                  paymentMethod === 'COD'
+                    ? 'border-ayur-700 bg-ayur-50/60 shadow-sm'
+                    : 'border-slate-200 bg-white hover:border-slate-300'
+                }`}
+              >
+                <div className="text-2xl mb-1">💵</div>
+                <div className="font-bold text-slate-900 text-sm">Cash on Delivery (COD)</div>
+                <div className="text-xs text-slate-500 mt-0.5">
+                  Collect payment at doorstep
                 </div>
-                <div className="flex items-center gap-1.5 mt-1.5">
-                  {['0', '50', '69', '100'].map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setShippingCharge(preset)}
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
-                        shippingCharge === preset
-                          ? 'bg-ayur-800 text-white border-ayur-800'
-                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      {preset === '0' ? '₹0 Free' : `₹${preset}`}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              </button>
 
-              {/* Manual COD Collect Amount (Only for COD) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                  <span>💵 COD Collect Amount (₹)</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Enter manually</span>
-                </label>
-                {paymentMethod === 'COD' ? (
-                  <>
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentMethod('ONLINE');
+                  setShippingCharge('0');
+                }}
+                className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                  paymentMethod === 'ONLINE'
+                    ? 'border-emerald-700 bg-emerald-50/60 shadow-sm'
+                    : 'border-slate-200 bg-white hover:border-slate-300'
+                }`}
+              >
+                <div className="text-2xl mb-1">💳</div>
+                <div className="font-bold text-slate-900 text-sm">Online Prepaid (UPI / Card)</div>
+                <div className="text-xs text-emerald-700 font-semibold mt-0.5">Payment collected online</div>
+              </button>
+            </div>
+
+            {/* Manual Shipping Charge & Manual COD Amount Grid */}
+            <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Manual Shipping Charge Input */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                    <span>🚚 Shipping Charge (₹) *</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Enter manually</span>
+                  </label>
+                  <div className="flex items-center gap-1.5">
                     <Input
                       type="number"
                       min="0"
-                      placeholder={`₹${finalPayableTotal} (default)`}
-                      value={codAmount}
-                      onChange={(e) => setCodAmount(e.target.value)}
+                      placeholder="0"
+                      value={shippingCharge}
+                      onChange={(e) => setShippingCharge(e.target.value)}
                     />
-                    <div className="flex items-center justify-between mt-1.5 text-[10px]">
-                      <span className="text-slate-500">
-                        Collecting: <strong className="text-slate-900 font-mono">₹{effectiveCodAmount}</strong>
-                      </span>
-                      {codAmount.trim() !== '' && codAmount !== String(finalPayableTotal) && (
-                        <button
-                          type="button"
-                          onClick={() => setCodAmount(String(finalPayableTotal))}
-                          className="text-ayur-700 hover:underline font-bold cursor-pointer"
-                        >
-                          Sync Total (₹{finalPayableTotal})
-                        </button>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 font-medium">
-                    ₹0 (Prepaid Order — No Cash Collection)
                   </div>
-                )}
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    {['0', '50', '69', '100'].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setShippingCharge(preset)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
+                          shippingCharge === preset
+                            ? 'bg-ayur-800 text-white border-ayur-800'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {preset === '0' ? '₹0 Free' : `₹${preset}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Manual COD Collect Amount (Only for COD) */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                    <span>💵 COD Collect Amount (₹)</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Enter manually</span>
+                  </label>
+                  {paymentMethod === 'COD' ? (
+                    <>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder={`₹${finalPayableTotal} (default)`}
+                        value={codAmount}
+                        onChange={(e) => setCodAmount(e.target.value)}
+                      />
+                      <div className="flex items-center justify-between mt-1.5 text-[10px]">
+                        <span className="text-slate-500">
+                          Collecting: <strong className="text-slate-900 font-mono">₹{effectiveCodAmount}</strong>
+                        </span>
+                        {codAmount.trim() !== '' && codAmount !== String(finalPayableTotal) && (
+                          <button
+                            type="button"
+                            onClick={() => setCodAmount(String(finalPayableTotal))}
+                            className="text-ayur-700 hover:underline font-bold cursor-pointer"
+                          >
+                            Sync Total (₹{finalPayableTotal})
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 font-medium">
+                      ₹0 (Prepaid Order — No Cash Collection)
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Grand Total Bar */}
-          <div className="p-3.5 bg-slate-900 text-white rounded-xl flex items-center justify-between shadow-sm">
-            <div>
-              <div className="text-[11px] text-slate-400 font-medium">Order Summary & Total</div>
-              <div className="text-[10px] text-slate-400 flex items-center gap-2 mt-0.5 flex-wrap">
-                <span>Products: ₹{productsSubtotal}</span>
-                <span>•</span>
-                <span>Shipping: ₹{parsedShippingCharge}</span>
-                {discountAmount > 0 && (
-                  <>
-                    <span>•</span>
-                    <span className="text-amber-300">Discount: -₹{discountAmount}</span>
-                  </>
-                )}
-                <span>•</span>
-                <span className="text-emerald-300 font-mono">Weight: {formattedTotalWeight}</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-2xl font-black text-emerald-400 font-mono">
-                ₹{finalPayableTotal.toLocaleString()}
-              </div>
-              {paymentMethod === 'COD' && (
-                <div className="text-[10px] text-amber-300 font-bold font-mono">
-                  COD: ₹{effectiveCodAmount.toLocaleString()}
-                </div>
+        {/* Order Summary & Grand Total Bar */}
+        <div className="p-3.5 bg-slate-900 text-white rounded-xl flex items-center justify-between shadow-sm">
+          <div>
+            <div className="text-[11px] text-slate-400 font-medium">Order Summary & Total</div>
+            <div className="text-[10px] text-slate-400 flex items-center gap-2 mt-0.5 flex-wrap">
+              <span>Products: ₹{productsSubtotal}</span>
+              {!isOfficeOrder && <span>• Shipping: ₹{parsedShippingCharge}</span>}
+              {isOfficeOrder && (
+                <span className="text-purple-300 font-bold">• Office Counter Sale (₹0 Shipping)</span>
               )}
+              {discountAmount > 0 && (
+                <>
+                  <span>•</span>
+                  <span className="text-amber-300">Discount: -₹{discountAmount}</span>
+                </>
+              )}
+              <span>•</span>
+              <span className="text-emerald-300 font-mono">Weight: {formattedTotalWeight}</span>
             </div>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-black text-emerald-400 font-mono">
+              ₹{finalPayableTotal.toLocaleString()}
+            </div>
+            {!isOfficeOrder && paymentMethod === 'COD' ? (
+              <div className="text-[10px] text-amber-300 font-bold font-mono">
+                COD: ₹{effectiveCodAmount.toLocaleString()}
+              </div>
+            ) : isOfficeOrder ? (
+              <div className="text-[10px] text-purple-300 font-bold">
+                Direct Counter Bill
+              </div>
+            ) : null}
           </div>
         </div>
 

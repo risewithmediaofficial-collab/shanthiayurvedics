@@ -142,13 +142,14 @@ export class OrderService {
 
       const totalWeight = orderItems.reduce((acc, it) => acc + (Number(it.weight || 0) * Number(it.quantity || 1)), 0);
       const orderWeight = orderData.weight !== undefined && orderData.weight !== null ? Number(orderData.weight) : totalWeight;
-      const shippingCharge = Number(orderData.shippingCharge || 0);
+      const isOfficeSale = Boolean(orderData.isOfficeSale || orderData.orderChannel === 'COUNTER_SALE');
+      const shippingCharge = isOfficeSale ? 0 : Number(orderData.shippingCharge || 0);
       const discountTotal = Number(orderData.discountTotal || 0);
       const calculatedTotal = Math.max(0, subtotal + shippingCharge - discountTotal);
       const grandTotal = orderData.offerPrice ? Number(orderData.offerPrice) : calculatedTotal;
-      const codAmount = orderData.codAmount !== undefined && orderData.codAmount !== null && orderData.codAmount !== ''
+      const codAmount = isOfficeSale ? 0 : (orderData.codAmount !== undefined && orderData.codAmount !== null && orderData.codAmount !== ''
         ? Number(orderData.codAmount)
-        : (paymentMethod === 'COD' ? grandTotal : 0);
+        : (paymentMethod === 'COD' ? grandTotal : 0));
 
       const assignedTelecallerId = orderData.telecallerId || user.id || user._id;
       let telecallerName = orderData.telecallerName || '';
@@ -176,6 +177,11 @@ export class OrderService {
         }
       }
 
+      const resolvedPaymentMethod = isOfficeSale ? (orderData.paymentMethod || 'CASH') : paymentMethod;
+      const resolvedPaymentStatus = isOfficeSale ? 'PAID' : (paymentMethod === 'COD' ? 'COD_PENDING' : 'PENDING');
+      const resolvedStatus = isOfficeSale ? (orderData.status || ORDER_STATUS.DELIVERED) : ORDER_STATUS.NEW;
+      const resolvedChannel = isOfficeSale ? 'COUNTER_SALE' : (orderData.orderChannel || 'DIRECT');
+
       const newOrder = new Order({
         orderNumber,
         customerId: customer._id,
@@ -191,9 +197,10 @@ export class OrderService {
         weight: orderWeight,
         offerPrice: orderData.offerPrice ? Number(orderData.offerPrice) : undefined,
         grandTotal,
-        status: ORDER_STATUS.NEW,
-        paymentMethod,
-        paymentStatus: paymentMethod === 'COD' ? 'COD_PENDING' : 'PENDING',
+        orderChannel: resolvedChannel,
+        status: resolvedStatus,
+        paymentMethod: resolvedPaymentMethod,
+        paymentStatus: resolvedPaymentStatus,
         patientDetails: {
           patientName: orderData.patientName || customer.name,
           fatherName: orderData.fatherName || customer.fatherName,
@@ -201,12 +208,13 @@ export class OrderService {
           alternateMobile: orderData.altMobile || orderData.alternateMobile || customer.altMobile
         },
         patientAppRegistered: Boolean(orderData.patientAppRegistered),
+        notes: orderData.notes || (isOfficeSale ? 'Direct Office Counter Sale' : undefined),
         deliveryAddress: {
-          street: deliveryAddress?.street || 'Main Street',
+          street: deliveryAddress?.street || (isOfficeSale ? 'Office Walk-In Counter' : 'Main Street'),
           landmark: deliveryAddress?.landmark || '',
           village: deliveryAddress?.village || '',
           taluk: deliveryAddress?.taluk || '',
-          district: deliveryAddress?.district || '',
+          district: deliveryAddress?.district || (isOfficeSale ? 'Hosur' : ''),
           city: deliveryAddress?.city || 'Hosur',
           state: deliveryAddress?.state || 'Tamil Nadu',
           pincode: deliveryAddress?.pincode || '635109',

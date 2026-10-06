@@ -40,7 +40,7 @@ export function CounterSalePage() {
   // Calculate totals
   const totalSales = orders.reduce((acc, curr) => acc + (curr.grandTotal || 0), 0);
   const codSales = orders.filter((o) => o.paymentMethod === 'COD').reduce((acc, curr) => acc + (curr.grandTotal || 0), 0);
-  const prepaidSales = orders.filter((o) => o.paymentMethod === 'PREPAID').reduce((acc, curr) => acc + (curr.grandTotal || 0), 0);
+  const counterSales = orders.filter((o) => o.paymentMethod !== 'COD').reduce((acc, curr) => acc + (curr.grandTotal || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -81,11 +81,11 @@ export function CounterSalePage() {
         </div>
 
         <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
-          <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Online / UPI Prepaid</div>
+          <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Direct Counter Sales</div>
           <div className="text-2xl sm:text-3xl font-black text-emerald-700 mt-1 font-mono">
-            ₹{prepaidSales.toLocaleString()}
+            ₹{counterSales.toLocaleString()}
           </div>
-          <div className="text-[10px] text-emerald-600 mt-0.5">Instant settlement</div>
+          <div className="text-[10px] text-emerald-600 mt-0.5">Instant register billing</div>
         </div>
 
         <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
@@ -157,6 +157,7 @@ export function CounterSalePage() {
         <OrderCreateModal
           isOpen={isOrderModalOpen}
           onClose={() => setIsOrderModalOpen(false)}
+          isOfficeSale={true}
         />
       )}
 

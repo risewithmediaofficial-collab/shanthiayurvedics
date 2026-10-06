@@ -134,9 +134,14 @@ const orderSchema = new mongoose.Schema(
       default: ORDER_STATUS.NEW,
       index: true
     },
+    orderChannel: {
+      type: String,
+      enum: ['DIRECT', 'COUNTER_SALE', 'ONLINE', 'TELECALLING'],
+      default: 'DIRECT'
+    },
     paymentMethod: {
       type: String,
-      enum: ['COD', 'ONLINE', 'BANK_TRANSFER', 'UPI'],
+      enum: ['COD', 'ONLINE', 'BANK_TRANSFER', 'UPI', 'CASH'],
       default: 'COD'
     },
     paymentStatus: {

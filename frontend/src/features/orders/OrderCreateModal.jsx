@@ -153,6 +153,8 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
   const removeProductRow = (index) => {
     if (products.length > 1) {
       setProducts(products.filter((_, i) => i !== index));
+    } else {
+      setProducts([{ productId: '', quantity: 1, unitPrice: 0, weight: 0 }]);
     }
   };
 
@@ -621,14 +623,14 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
                         {lineWeight > 0 ? `${lineWeight} g` : ''}
                       </div>
                     </div>
-                    {products.length > 1 && (
+                    {(products.length > 1 || Boolean(item.productId)) && (
                       <button
                         type="button"
                         onClick={() => removeProductRow(idx)}
-                        className="p-1 text-slate-400 hover:text-rose-600 transition-colors ml-1 cursor-pointer"
-                        title="Remove product"
+                        className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors ml-2 cursor-pointer shrink-0"
+                        title={products.length > 1 ? "Remove product row" : "Clear selected product"}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     )}
                   </div>

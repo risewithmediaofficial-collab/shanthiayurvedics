@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Layers, Calendar, Tag, Package, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Layers, Calendar, Tag, Package, Pencil, Trash2, AlertTriangle, Boxes } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -27,11 +28,11 @@ const PRODUCT_SORT_OPTIONS = [
 ];
 
 export function ProductCatalogPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isManager, isOwner } = usePermissions();
   const { user } = useAuth();
-  const { selectedBranchId } = useBranch();
-  const isOwner = user?.role === 'OWNER';
+  const { selectedBranchId, availableBranches = [] } = useBranch();
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -48,6 +49,72 @@ export function ProductCatalogPage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [productToDelete, setProductToDelete] = useState(null);
   const [actionMsg, setActionMsg] = useState('');
+
+  // Stock Management Modal State for Manager and Owner
+  const [stockModalOpen, setStockModalOpen] = useState(false);
+  const [stockTargetProduct, setStockTargetProduct] = useState(null);
+  const [stockActionType, setStockActionType] = useState('IN'); // 'IN' | 'OUT' | 'ADJUST'
+  const [stockQuantity, setStockQuantity] = useState('');
+  const [stockReason, setStockReason] = useState('PURCHASE');
+  const [stockNotes, setStockNotes] = useState('');
+  const [stockTargetBranch, setStockTargetBranch] = useState('');
+
+  const openManageStock = (product) => {
+    setStockTargetProduct(product);
+    setStockActionType('IN');
+    setStockReason('PURCHASE');
+    setStockQuantity('');
+    setStockNotes('');
+    const defBranch = selectedBranchId && selectedBranchId !== 'ALL' ? selectedBranchId : (availableBranches[0]?._id ? String(availableBranches[0]._id) : '');
+    setStockTargetBranch(defBranch);
+    setStockModalOpen(true);
+  };
+
+  const manageStockMutation = useMutation({
+    mutationFn: async ({ productId, branchId, actionType, quantity, reason, notes }) => {
+      const effectiveBranchId = branchId || (selectedBranchId && selectedBranchId !== 'ALL' ? selectedBranchId : null) || (availableBranches[0]?._id ? String(availableBranches[0]._id) : user?.branchId?._id || user?.branchId);
+      if (actionType === 'IN') {
+        return apiClient.post('/inventory/in', {
+          productId,
+          branchId: effectiveBranchId,
+          quantity: Number(quantity),
+          reason,
+          notes
+        });
+      } else if (actionType === 'OUT') {
+        return apiClient.post('/inventory/out', {
+          productId,
+          branchId: effectiveBranchId,
+          quantity: Number(quantity),
+          reason,
+          notes
+        });
+      } else {
+        return apiClient.post('/inventory/adjust', {
+          productId,
+          branchId: effectiveBranchId,
+          newAvailable: Number(quantity),
+          reason,
+          notes
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-stock-matrix'] });
+      setStockModalOpen(false);
+      setStockQuantity('');
+      setStockNotes('');
+      setActionMsg('✓ Stock level updated successfully');
+      setTimeout(() => setActionMsg(''), 4000);
+    },
+    onError: (err) => {
+      setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to update stock'}`);
+      setTimeout(() => setActionMsg(''), 5000);
+    }
+  });
 
   const [formData, setFormData] = useState({
     name: '',
@@ -225,6 +292,38 @@ export function ProductCatalogPage() {
       )
     },
     {
+      header: 'Branch Stock',
+      cell: (row) => {
+        const qty = row.stock ?? row.availableQuantity ?? 0;
+        const low = row.lowStockThreshold || 15;
+        const isLow = qty <= low;
+        return (
+          <div>
+            <span
+              className={`inline-flex items-center gap-1 font-mono font-bold text-xs px-2.5 py-0.5 rounded-lg border ${
+                qty <= 0
+                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                  : isLow
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+              }`}
+            >
+              <Package className="w-3 h-3 shrink-0" />
+              <span>{qty} units</span>
+            </span>
+            {isLow && qty > 0 && (
+              <div className="text-[10px] text-amber-600 font-semibold mt-0.5 flex items-center gap-0.5">
+                <AlertTriangle className="w-2.5 h-2.5" /> Low stock
+              </div>
+            )}
+            {qty <= 0 && (
+              <div className="text-[10px] text-rose-600 font-semibold mt-0.5">Out of stock</div>
+            )}
+          </div>
+        );
+      }
+    },
+    {
       header: 'Status',
       cell: (row) => (
         <Badge
@@ -239,71 +338,87 @@ export function ProductCatalogPage() {
     {
       header: 'Actions',
       align: 'right',
-      cell: (row) => (
-        <div className="flex items-center justify-end gap-1.5">
-          {/* Stock Active/Inactive Toggle Button */}
-          {isOwner && (
-            <button
-              type="button"
-              onClick={() => editProductMutation.mutate({ id: row._id, data: { isActive: row.isActive === false } })}
-              title={row.isActive !== false ? 'Click to mark as Inactive' : 'Click to mark as Active'}
-              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer select-none shadow-2xs ${
-                row.isActive !== false
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
-                  : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
-              }`}
-            >
-              <span className={`w-2 h-2 rounded-full shrink-0 ${row.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-              <span>{row.isActive !== false ? 'Active' : 'Inactive'}</span>
-            </button>
-          )}
+      cell: (row) => {
+        const canManageStock = hasPermission('inventory.manage') || hasPermission('inventory.adjust') || isManager || isOwner;
+        return (
+          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+            {/* Manage Stock Action Button (Available for Manager and Owner) */}
+            {canManageStock && (
+              <button
+                type="button"
+                onClick={() => openManageStock(row)}
+                title="Manage & Adjust Stock for this product"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold transition-all shadow-2xs cursor-pointer shrink-0"
+              >
+                <Boxes className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Manage Stock</span>
+              </button>
+            )}
 
-          {/* Edit Product (Owner Only) */}
-          {isOwner && (
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedProduct(row);
-                setEditData({
-                  name: row.name || '',
-                  category: row.category || 'OILS',
-                  price: row.price || '',
-                  mrp: row.mrp || '',
-                  costPrice: row.costPrice || '',
-                  unit: row.unit || 'BOTTLE',
-                  weight: row.weight || '',
-                  lowStockThreshold: row.lowStockThreshold || 15,
-                  description: row.description || ''
-                });
-                setEditModalOpen(true);
-              }}
-              title="Edit Product"
-              className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center cursor-pointer"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
-          )}
+            {/* Stock Active/Inactive Toggle Button (Owner Only) */}
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() => editProductMutation.mutate({ id: row._id, data: { isActive: row.isActive === false } })}
+                title={row.isActive !== false ? 'Click to mark as Inactive' : 'Click to mark as Active'}
+                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer select-none shadow-2xs shrink-0 ${
+                  row.isActive !== false
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
+                    : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full shrink-0 ${row.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                <span>{row.isActive !== false ? 'Active' : 'Inactive'}</span>
+              </button>
+            )}
 
-          {/* Delete Product (Owner Only) */}
-          {isOwner && (
-            <button
-              type="button"
-              onClick={() => {
-                setProductToDelete(row);
-                setDeleteModalOpen(true);
-              }}
-              title="Delete Product"
-              className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors flex items-center cursor-pointer"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
+            {/* Edit Product (Owner Only) */}
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedProduct(row);
+                  setEditData({
+                    name: row.name || '',
+                    category: row.category || 'OILS',
+                    price: row.price || '',
+                    mrp: row.mrp || '',
+                    costPrice: row.costPrice || '',
+                    unit: row.unit || 'BOTTLE',
+                    weight: row.weight || '',
+                    lowStockThreshold: row.lowStockThreshold || 15,
+                    description: row.description || ''
+                  });
+                  setEditModalOpen(true);
+                }}
+                title="Edit Product"
+                className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center cursor-pointer shrink-0"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
 
-          {!isOwner && (
-            <span className="text-[11px] text-slate-400 italic">View Only</span>
-          )}
-        </div>
-      )
+            {/* Delete Product (Owner Only) */}
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() => {
+                  setProductToDelete(row);
+                  setDeleteModalOpen(true);
+                }}
+                title="Delete Product"
+                className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors flex items-center cursor-pointer shrink-0"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {!canManageStock && !isOwner && (
+              <span className="text-[11px] text-slate-400 italic">View Only</span>
+            )}
+          </div>
+        );
+      }
     }
   ];
 
@@ -315,6 +430,14 @@ export function ProductCatalogPage() {
           <p className="text-xs text-slate-500">Master Ayurvedic catalog, SKU numbers, MRPs, and active pricing</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            icon={Boxes}
+            onClick={() => navigate('/inventory')}
+            className="text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border-slate-300 shadow-2xs"
+          >
+            Stock Ledger →
+          </Button>
           <ExportButton
             onExport={handleExportProducts}
             isLoading={isExporting}
@@ -709,6 +832,198 @@ export function ProductCatalogPage() {
               </Button>
             </div>
           </div>
+        </Modal>
+      )}
+      {/* Manage Stock Modal (Available for Manager and Owner) */}
+      {stockModalOpen && stockTargetProduct && (
+        <Modal
+          isOpen={stockModalOpen}
+          onClose={() => {
+            setStockModalOpen(false);
+            setStockTargetProduct(null);
+          }}
+          title={`Manage Stock: ${stockTargetProduct.name}`}
+          subtitle={`SKU: ${stockTargetProduct.sku} • Selling Price: ₹${stockTargetProduct.price}`}
+          maxWidth="max-w-md"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              manageStockMutation.mutate({
+                productId: stockTargetProduct._id,
+                actionType: stockActionType,
+                quantity: stockQuantity,
+                reason: stockReason,
+                notes: stockNotes,
+                branchId: stockTargetBranch
+              });
+            }}
+            className="space-y-4 text-xs"
+          >
+            {/* Current Stock Banner */}
+            <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <div>
+                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Current Branch Stock</span>
+                <span className="font-bold text-slate-800 text-xs">
+                  {availableBranches.find(b => String(b._id || b.id) === String(stockTargetBranch || selectedBranchId))?.name || availableBranches[0]?.name || 'Assigned Branch'}
+                </span>
+              </div>
+              <div className="text-right">
+                <span className={`text-base font-black font-mono ${
+                  (stockTargetProduct.stock ?? stockTargetProduct.availableQuantity ?? 0) <= (stockTargetProduct.lowStockThreshold || 15)
+                    ? 'text-rose-600'
+                    : 'text-emerald-700'
+                }`}>
+                  {stockTargetProduct.stock ?? stockTargetProduct.availableQuantity ?? 0} units
+                </span>
+                <span className="text-[10px] text-slate-400 block">Available</span>
+              </div>
+            </div>
+
+            {/* Action Type Toggle (Stock In, Stock Out, Direct Adjust) */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Select Stock Operation *</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStockActionType('IN');
+                    setStockReason('PURCHASE');
+                  }}
+                  className={`py-2 px-2.5 rounded-xl border font-bold text-center transition-all cursor-pointer ${
+                    stockActionType === 'IN'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-400 ring-2 ring-emerald-500/20 shadow-xs'
+                      : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
+                  }`}
+                >
+                  <div className="text-sm">📥</div>
+                  <div className="text-[11px] mt-0.5">Stock In (+)</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStockActionType('OUT');
+                    setStockReason('DAMAGED');
+                  }}
+                  className={`py-2 px-2.5 rounded-xl border font-bold text-center transition-all cursor-pointer ${
+                    stockActionType === 'OUT'
+                      ? 'bg-rose-50 text-rose-800 border-rose-400 ring-2 ring-rose-500/20 shadow-xs'
+                      : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
+                  }`}
+                >
+                  <div className="text-sm">📤</div>
+                  <div className="text-[11px] mt-0.5">Stock Out (-)</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStockActionType('ADJUST');
+                    setStockReason('PHYSICAL_AUDIT');
+                  }}
+                  className={`py-2 px-2.5 rounded-xl border font-bold text-center transition-all cursor-pointer ${
+                    stockActionType === 'ADJUST'
+                      ? 'bg-blue-50 text-blue-800 border-blue-400 ring-2 ring-blue-500/20 shadow-xs'
+                      : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
+                  }`}
+                >
+                  <div className="text-sm">⚖️</div>
+                  <div className="text-[11px] mt-0.5">Audit Set</div>
+                </button>
+              </div>
+            </div>
+
+            {/* If Owner with multiple branches, show branch picker */}
+            {isOwner && availableBranches.length > 1 && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Target Branch *</label>
+                <select
+                  value={stockTargetBranch || selectedBranchId}
+                  onChange={(e) => setStockTargetBranch(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold"
+                >
+                  {availableBranches.map((b) => (
+                    <option key={b._id} value={b._id}>
+                      {b.name} ({b.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Quantity */}
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label={stockActionType === 'ADJUST' ? 'New Available Stock Level *' : 'Quantity Units *'}
+                type="number"
+                min="1"
+                required
+                placeholder="e.g. 10"
+                value={stockQuantity}
+                onChange={(e) => setStockQuantity(e.target.value)}
+              />
+
+              <Select
+                label="Reason / Category *"
+                value={stockReason}
+                onChange={(e) => setStockReason(e.target.value)}
+                options={
+                  stockActionType === 'IN'
+                    ? [
+                        { value: 'PURCHASE', label: 'Supplier Purchase / Restock' },
+                        { value: 'PRODUCTION', label: 'Factory Production' },
+                        { value: 'INITIAL_STOCK', label: 'Initial Baseline' },
+                        { value: 'RETURN', label: 'Customer Return Restock' }
+                      ]
+                    : stockActionType === 'OUT'
+                    ? [
+                        { value: 'DAMAGED', label: 'Damaged / Broken' },
+                        { value: 'EXPIRED', label: 'Expired Product' },
+                        { value: 'SAMPLE', label: 'Doctor / Marketing Sample' },
+                        { value: 'INTERNAL_USE', label: 'Internal Branch Consumption' }
+                      ]
+                    : [
+                        { value: 'PHYSICAL_AUDIT', label: 'Physical Count Audit' },
+                        { value: 'SYSTEM_CORRECTION', label: 'Discrepancy Correction' }
+                      ]
+                }
+              />
+            </div>
+
+            <Input
+              label="Reference / Movement Notes"
+              placeholder="e.g. GRN-2026-081 or Monthly Stocktake verification"
+              value={stockNotes}
+              onChange={(e) => setStockNotes(e.target.value)}
+            />
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => {
+                  setStockModalOpen(false);
+                  setStockTargetProduct(null);
+                }}
+                disabled={manageStockMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                type="submit"
+                isLoading={manageStockMutation.isPending}
+                className={
+                  stockActionType === 'OUT'
+                    ? 'bg-rose-600 hover:bg-rose-700 text-white font-bold'
+                    : 'bg-emerald-700 hover:bg-emerald-800 text-white font-bold'
+                }
+              >
+                {stockActionType === 'IN' ? 'Confirm Stock In' : stockActionType === 'OUT' ? 'Confirm Stock Out' : 'Save Stock Adjustment'}
+              </Button>
+            </div>
+          </form>
         </Modal>
       )}
     </div>

@@ -76,7 +76,7 @@ export function ManagerStockTab() {
   // Inline Stock Adjust Mutation
   const adjustStockMutation = useMutation({
     mutationFn: async ({ productId, branchId, changeQty, reason }) => {
-      const targetBranch = branchId || (selectedBranchId && selectedBranchId !== 'ALL' ? selectedBranchId : branches[0]?._id);
+      const targetBranch = branchId || (selectedBranchId && selectedBranchId !== 'ALL' ? selectedBranchId : null) || (branches[0]?._id || user?.branchId?._id || user?.branchId);
       // Either call inventory adjust or product update
       if (changeQty > 0) {
         const res = await apiClient.post('/inventory/in', {
@@ -497,6 +497,22 @@ export function ManagerStockTab() {
               🔍 Find Duplicate Products
             </Button>
 
+            <Button
+              size="sm"
+              variant="outline"
+              icon={Boxes}
+              onClick={() => {
+                if (productsData.length > 0) {
+                  setSelectedProductForAdjust(productsData[0]);
+                  setTargetBranchId(selectedBranchId && selectedBranchId !== 'ALL' ? selectedBranchId : (branches[0]?._id || ''));
+                  setIsAdjustModalOpen(true);
+                }
+              }}
+              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300 text-xs font-semibold shadow-xs"
+            >
+              Adjust Stock
+            </Button>
+
             {isOwner && (
               <Button
                 size="sm"
@@ -673,33 +689,35 @@ export function ManagerStockTab() {
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              toggleActiveMutation.mutate({
-                                productId: prod._id,
-                                currentActive: prod.isActive !== false
-                              })
-                            }
-                            disabled={toggleActiveMutation.isPending}
-                            title={
-                              prod.isActive !== false
-                                ? 'Click to note as Inactive / Out of Stock'
-                                : 'Click to activate stock'
-                            }
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer select-none shadow-2xs ${
-                              prod.isActive !== false
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
-                                : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
-                            }`}
-                          >
-                            <span
-                              className={`w-2 h-2 rounded-full shrink-0 ${
-                                prod.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'
+                          {isOwner && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                toggleActiveMutation.mutate({
+                                  productId: prod._id,
+                                  currentActive: prod.isActive !== false
+                                })
+                              }
+                              disabled={toggleActiveMutation.isPending}
+                              title={
+                                prod.isActive !== false
+                                  ? 'Click to note as Inactive / Out of Stock'
+                                  : 'Click to activate stock'
+                              }
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer select-none shadow-2xs ${
+                                prod.isActive !== false
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
+                                  : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
                               }`}
-                            />
-                            <span>{prod.isActive !== false ? 'Active' : 'Inactive'}</span>
-                          </button>
+                            >
+                              <span
+                                className={`w-2 h-2 rounded-full shrink-0 ${
+                                  prod.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'
+                                }`}
+                              />
+                              <span>{prod.isActive !== false ? 'Active' : 'Inactive'}</span>
+                            </button>
+                          )}
 
                           <Button
                             size="xs"

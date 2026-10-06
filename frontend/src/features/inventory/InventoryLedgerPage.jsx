@@ -33,8 +33,7 @@ const MOVEMENT_SORT_OPTIONS = [
 export function InventoryLedgerPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { hasPermission } = usePermissions();
-  const { selectedBranchId } = useBranch();
+  const { selectedBranchId, availableBranches = [] } = useBranch();
 
   const [activeTab, setActiveTab] = useState('CURRENT'); // 'CURRENT' | 'MOVEMENTS'
   const [page, setPage] = useState(1);
@@ -198,7 +197,7 @@ export function InventoryLedgerPage() {
   });
 
   const selectedProductObj = productsData?.find((p) => p._id === formData.productId);
-  const writeBranchId = selectedBranchId !== 'ALL' ? selectedBranchId : formData.branchId;
+  const writeBranchId = (selectedBranchId && selectedBranchId !== 'ALL' ? selectedBranchId : null) || formData.branchId || (availableBranches[0]?._id ? String(availableBranches[0]._id) : null);
 
   const invColumns = [
     {
@@ -498,6 +497,13 @@ export function InventoryLedgerPage() {
           }}
           className="space-y-3.5"
         >
+          <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+            <span className="text-slate-500 font-medium">Target Branch:</span>
+            <span className="font-bold text-slate-800">
+              {availableBranches.find(b => String(b._id || b.id) === String(writeBranchId))?.name || availableBranches[0]?.name || 'Assigned Branch'}
+            </span>
+          </div>
+
           <Select
             label="Select Product *"
             required
@@ -574,6 +580,13 @@ export function InventoryLedgerPage() {
           }}
           className="space-y-3.5"
         >
+          <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+            <span className="text-slate-500 font-medium">Target Branch:</span>
+            <span className="font-bold text-slate-800">
+              {availableBranches.find(b => String(b._id || b.id) === String(writeBranchId))?.name || availableBranches[0]?.name || 'Assigned Branch'}
+            </span>
+          </div>
+
           <Select
             label="Select Product *"
             required
@@ -651,6 +664,13 @@ export function InventoryLedgerPage() {
           }}
           className="space-y-3.5"
         >
+          <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+            <span className="text-slate-500 font-medium">Target Branch:</span>
+            <span className="font-bold text-slate-800">
+              {availableBranches.find(b => String(b._id || b.id) === String(writeBranchId))?.name || availableBranches[0]?.name || 'Assigned Branch'}
+            </span>
+          </div>
+
           <Select
             label="Select Product *"
             required

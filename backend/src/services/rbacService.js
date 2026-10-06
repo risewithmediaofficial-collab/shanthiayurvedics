@@ -52,12 +52,14 @@ export class RbacService {
     for (const [roleName, permissions] of Object.entries(DEFAULT_ROLE_PERMISSIONS)) {
       await Role.findOneAndUpdate(
         { name: roleName },
-        { $setOnInsert: {
-          name: roleName,
-          description: `Default system role: ${roleName}`,
-          permissions,
-          isSystemRole: true
-        } },
+        {
+          $setOnInsert: {
+            name: roleName,
+            description: `Default system role: ${roleName}`,
+            isSystemRole: true
+          },
+          $addToSet: { permissions: { $each: permissions } }
+        },
         { upsert: true }
       );
     }

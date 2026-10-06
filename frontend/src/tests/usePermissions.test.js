@@ -169,5 +169,18 @@ describe('usePermissions — permissions array', () => {
     expect(result.current.permissions).toContain('leads.view');
     expect(result.current.permissions).not.toContain('branches.manage');
   });
+
+  it('allows MANAGER to manage stock but forbids creating products', () => {
+    const { result } = renderWithUser({ role: 'MANAGER' });
+    expect(result.current.hasPermission('inventory.view')).toBe(true);
+    expect(result.current.hasPermission('inventory.manage')).toBe(true);
+    expect(result.current.hasPermission('inventory.adjust')).toBe(true);
+    expect(result.current.hasPermission('inventory.transfer')).toBe(true);
+    expect(result.current.hasPermission('products.view')).toBe(true);
+    // Crucial requirement: Manager CANNOT add products
+    expect(result.current.hasPermission('products.create')).toBe(false);
+    expect(result.current.hasPermission('products.edit')).toBe(false);
+  });
 });
+
 

@@ -6,7 +6,29 @@ import { NotFoundError, ConflictError } from '../utils/errors.js';
 import { AuditService } from '../services/auditService.js';
 
 export const getBranches = asyncHandler(async (req, res) => {
-  const branches = await Branch.find({ isActive: true })
+  const query = { isActive: true };
+
+  // Non-owner staff (Manager, Distributor, Telecaller) must ONLY see their assigned branch(es)
+  if (req.user && req.user.role !== 'OWNER') {
+    const rawIds = [
+      ...(req.user.branchId ? [typeof req.user.branchId === 'object' ? (req.user.branchId._id || req.user.branchId.id) : req.user.branchId] : []),
+      ...(Array.isArray(req.user.branches) ? req.user.branches.map(b => typeof b === 'object' ? (b._id || b.id) : b) : [])
+    ].filter(Boolean);
+
+    const assignedIds = [...new Set(rawIds.map(id => id.toString()))];
+    if (assignedIds.length > 0) {
+      query._id = { $in: assignedIds };
+    } else {
+      const managed = await Branch.find({
+        $or: [{ managerId: req.user._id || req.user.id }, { distributorId: req.user._id || req.user.id }]
+      }).select('_id').lean();
+      if (managed.length > 0) {
+        query._id = { $in: managed.map(m => m._id) };
+      }
+    }
+  }
+
+  const branches = await Branch.find(query)
     .populate('managerId', 'name phone email role')
     .populate('distributorId', 'name phone email role')
     .sort({ name: 1 })

@@ -1,9 +1,20 @@
 import { User } from '../models/User.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { NotFoundError, ConflictError } from '../utils/errors.js';
+import { NotFoundError, ConflictError, ForbiddenError } from '../utils/errors.js';
 import { AuditService } from '../services/auditService.js';
 import { AuthService } from '../services/authService.js';
+import { ROLES } from '../constants/roles.js';
+
+const assertUserBranchAccess = (targetUser, reqUser, req) => {
+  if (reqUser?.role === ROLES.OWNER) return;
+  const managerBranchId = String(req?.branchScope?.branchId || reqUser?.branchId || (Array.isArray(reqUser?.branches) && reqUser.branches[0]) || '');
+  const userBranchId = String(targetUser.branchId?._id || targetUser.branchId || '');
+  const inBranches = Array.isArray(targetUser.branches) && targetUser.branches.some(b => String(b._id || b) === managerBranchId);
+  if (targetUser.role === ROLES.OWNER || (userBranchId !== managerBranchId && !inBranches)) {
+    throw new ForbiddenError('You can only manage users within your assigned branch');
+  }
+};
 
 export const getUsers = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
@@ -18,11 +29,23 @@ export const getUsers = asyncHandler(async (req, res) => {
   if (role) {
     conditions.push({ role });
   }
-  if (effectiveBranchId && effectiveBranchId !== 'ALL') {
+
+  // Non-owner staff (Manager, Distributor, Telecaller) must STRICTLY only view staff from their assigned branch
+  if (req.user?.role !== ROLES.OWNER) {
+    const managerBranchId = req.branchScope?.branchId || req.user?.branchId || (Array.isArray(req.user?.branches) && req.user.branches[0]);
+    if (managerBranchId) {
+      conditions.push({
+        $or: [{ branchId: managerBranchId }, { branches: managerBranchId }]
+      });
+    } else {
+      conditions.push({ _id: null });
+    }
+  } else if (effectiveBranchId && effectiveBranchId !== 'ALL') {
     conditions.push({
       $or: [{ branchId: effectiveBranchId }, { branches: effectiveBranchId }]
     });
   }
+
   if (search) {
     conditions.push({
       $or: [
@@ -61,11 +84,22 @@ export const getUserById = asyncHandler(async (req, res) => {
     throw new NotFoundError('User');
   }
 
+  assertUserBranchAccess(user, req.user, req);
+
   return ApiResponse.success(res, user, 'User details retrieved');
 });
 
 export const createUser = asyncHandler(async (req, res) => {
   const { name, email, password, role, branchId, branches, phone } = req.body;
+
+  // Non-owners (Managers) can only create staff for their own assigned branch
+  let effectiveBranchId = branchId;
+  let effectiveBranches = branches;
+  if (req.user?.role !== ROLES.OWNER) {
+    const managerBranchId = req.branchScope?.branchId || req.user?.branchId || (Array.isArray(req.user?.branches) && req.user.branches[0]);
+    effectiveBranchId = managerBranchId || null;
+    effectiveBranches = managerBranchId ? [managerBranchId] : [];
+  }
 
   const normalizedEmail = email.toLowerCase().trim();
   const existing = await User.findOne({ email: normalizedEmail });
@@ -80,8 +114,8 @@ export const createUser = asyncHandler(async (req, res) => {
     email: normalizedEmail,
     passwordHash,
     role,
-    branchId: branchId || null,
-    branches: branches || (branchId ? [branchId] : []),
+    branchId: effectiveBranchId || null,
+    branches: effectiveBranches || (effectiveBranchId ? [effectiveBranchId] : []),
     phone,
     isActive: true
   });
@@ -90,12 +124,12 @@ export const createUser = asyncHandler(async (req, res) => {
 
   await AuditService.log({
     userId: req.user.id,
-    branchId: branchId || null,
+    branchId: effectiveBranchId || null,
     action: 'USER_CREATED',
     module: 'users',
     resourceType: 'User',
     resourceId: newUser._id,
-    newValue: { name, email: normalizedEmail, role, branchId },
+    newValue: { name, email: normalizedEmail, role, branchId: effectiveBranchId },
     req
   });
 
@@ -113,13 +147,17 @@ export const updateUser = asyncHandler(async (req, res) => {
     throw new NotFoundError('User');
   }
 
+  assertUserBranchAccess(user, req.user, req);
+
   const oldValue = user.toObject();
   const { name, role, branchId, branches, phone, isActive } = req.body;
 
   if (name !== undefined) user.name = name;
-  if (role !== undefined) user.role = role;
-  if (branchId !== undefined) user.branchId = branchId;
-  if (branches !== undefined) user.branches = branches;
+  if (role !== undefined && req.user.role === ROLES.OWNER) user.role = role;
+  if (req.user.role === ROLES.OWNER) {
+    if (branchId !== undefined) user.branchId = branchId;
+    if (branches !== undefined) user.branches = branches;
+  }
   if (phone !== undefined) user.phone = phone;
   if (isActive !== undefined) user.isActive = isActive;
 
@@ -151,6 +189,8 @@ export const toggleUserStatus = asyncHandler(async (req, res) => {
     throw new NotFoundError('User');
   }
 
+  assertUserBranchAccess(user, req.user, req);
+
   user.isActive = !user.isActive;
   await user.save();
 
@@ -178,6 +218,8 @@ export const adminResetPassword = asyncHandler(async (req, res) => {
   if (!user) {
     throw new NotFoundError('User');
   }
+
+  assertUserBranchAccess(user, req.user, req);
 
   user.passwordHash = await User.hashPassword(req.body.password);
   user.passwordChangedAt = new Date();
@@ -207,6 +249,8 @@ export const deleteUser = asyncHandler(async (req, res) => {
   if (!user) {
     throw new NotFoundError('User');
   }
+
+  assertUserBranchAccess(user, req.user, req);
 
   if (user.role === 'OWNER') {
     throw new ConflictError('Cannot delete Owner account');

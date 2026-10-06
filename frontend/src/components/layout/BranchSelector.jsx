@@ -4,10 +4,10 @@ import { useBranch } from '../../context/BranchContext.jsx';
 import { CustomSelect } from '../common/CustomSelect.jsx';
 
 export function BranchSelector() {
-  const { selectedBranchId, selectBranch, availableBranches = [], canSwitchBranch } = useBranch();
+  const { selectedBranchId, selectBranch, availableBranches = [], canSwitchBranch, isOwner } = useBranch();
   const safeBranches = Array.isArray(availableBranches) ? availableBranches : [];
 
-  // Staff locked to single assigned branch (Distributor, Telecaller)
+  // Staff locked to single assigned branch (Manager, Distributor, Telecaller)
   if (!canSwitchBranch) {
     const singleBranch = safeBranches[0];
     return (
@@ -24,12 +24,13 @@ export function BranchSelector() {
   }
 
   const branchOptions = useMemo(() => {
-    const opts = [
-      {
+    const opts = [];
+    if (isOwner) {
+      opts.push({
         value: 'ALL',
         label: '🏢 All Branches (Global)',
-      },
-    ];
+      });
+    }
 
     safeBranches.forEach((branch, index) => {
       const branchId = branch?._id || branch?.id || (typeof branch === 'string' ? branch : `branch-${index}`);
@@ -44,7 +45,7 @@ export function BranchSelector() {
     });
 
     return opts;
-  }, [safeBranches]);
+  }, [safeBranches, isOwner]);
 
   return (
     <div className="flex items-center">

@@ -4,6 +4,8 @@ import {
   UserPlus, Building, Lock, RefreshCw, Power, Pencil, Phone, Mail, Trash2, AlertTriangle,
   Search, Filter, X, RotateCcw, Users
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { useBranch } from '../../context/BranchContext.jsx';
 import apiClient from '../../api/apiClient.js';
 import { Table } from '../../components/common/Table.jsx';
 import { Button } from '../../components/common/Button.jsx';
@@ -29,6 +31,12 @@ const emptyForm = { name: '', email: '', phone: '', password: '', role: 'TELECAL
 
 export function UserManagementPage() {
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
+  const isOwner = currentUser?.role === 'OWNER';
+  const isManager = currentUser?.role === 'MANAGER';
+  const { availableBranches = [] } = useBranch();
+  const managerBranchId = String(currentUser?.branchId?._id || currentUser?.branchId || availableBranches[0]?._id || availableBranches[0]?.id || '');
+
   const [createOpen, setCreateOpen]             = useState(false);
   const [editOpen, setEditOpen]                 = useState(false);
   const [resetOpen, setResetOpen]               = useState(false);
@@ -36,12 +44,15 @@ export function UserManagementPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedUser, setSelectedUser]         = useState(null);
   const [toast, setToast]                       = useState('');
-  const [formData, setFormData]           = useState(emptyForm);
+  const [formData, setFormData]           = useState(() => ({
+    ...emptyForm,
+    branchId: !isOwner ? managerBranchId : ''
+  }));
   const [editData, setEditData]           = useState({});
   const [newPassword, setNewPassword]     = useState('');
 
   // ── Branch & Role Filters State ──
-  const [selectedBranchFilter, setSelectedBranchFilter] = useState('ALL');
+  const [selectedBranchFilter, setSelectedBranchFilter] = useState(!isOwner ? managerBranchId : 'ALL');
   const [selectedRoleFilter, setSelectedRoleFilter]     = useState('ALL');
   const [searchQuery, setSearchQuery]                   = useState('');
   const [statusFilter, setStatusFilter]                 = useState('ALL');
@@ -60,7 +71,17 @@ export function UserManagementPage() {
     queryKey: ['users'],
     queryFn: async () => { const res = await apiClient.get('/users?limit=500'); return res.data; }
   });
-  const users = (usersResponse?.data || []).filter(u => u.role !== 'OWNER');
+  const rawUsers = (usersResponse?.data || []).filter(u => u.role !== 'OWNER');
+
+  // For Manager & non-owners, strictly filter out users belonging to other branches!
+  const users = useMemo(() => {
+    if (isOwner) return rawUsers;
+    return rawUsers.filter(u => {
+      const uBranchId = String(u.branchId?._id || u.branchId || '');
+      const inBranches = Array.isArray(u.branches) && u.branches.some(b => String(b._id || b) === managerBranchId);
+      return uBranchId === managerBranchId || inBranches;
+    });
+  }, [rawUsers, isOwner, managerBranchId]);
 
   // Branch counts map
   const branchCounts = useMemo(() => {
@@ -224,7 +245,7 @@ export function UserManagementPage() {
       name: user.name,
       phone: user.phone || '',
       role: user.role,
-      branchId: user.branchId?._id || user.branchId || ''
+      branchId: !isOwner ? managerBranchId : (user.branchId?._id || user.branchId || '')
     });
     setEditOpen(true);
   };
@@ -274,6 +295,15 @@ export function UserManagementPage() {
         const branchId = branchObj?._id || row.branchId?._id || row.branchId;
 
         if (branchName) {
+          if (!isOwner) {
+            return (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <Building className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>{branchName}</span>
+              </span>
+            );
+          }
+
           const isCurrentFilter = String(selectedBranchFilter) === String(branchId);
           return (
             <button
@@ -305,13 +335,14 @@ export function UserManagementPage() {
         return (
           <button
             type="button"
+            disabled={!isOwner}
             onClick={() => setSelectedBranchFilter(isUnassignedActive ? 'ALL' : 'UNASSIGNED')}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer border ${
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all border ${
               isUnassignedActive
                 ? 'bg-amber-100 text-amber-900 border-amber-300 ring-2 ring-amber-500/20'
                 : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200'
-            }`}
-            title="Click to filter unassigned staff"
+            } ${!isOwner ? 'cursor-default' : 'cursor-pointer'}`}
+            title="Unassigned staff"
           >
             <span>Unassigned</span>
           </button>
@@ -460,10 +491,21 @@ export function UserManagementPage() {
 
       {/* ── Branch-wise Filter & Search Control Panel ── */}
       <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs space-y-3">
-        {/* Controls Grid: Search, Branch Selector, Status, Reset */}
+        {/* If non-owner (Manager), show their assigned branch banner */}
+        {!isOwner && (
+          <div className="flex items-center gap-2 px-3.5 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-800">
+            <Building className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Your Assigned Branch: <strong className="text-emerald-950 font-bold">{availableBranches[0]?.name || 'My Branch'}</strong></span>
+            <span className="text-[10px] bg-emerald-200/70 text-emerald-900 px-2 py-0.5 rounded-full font-bold ml-auto">
+              {users.length} staff members
+            </span>
+          </div>
+        )}
+
+        {/* Controls Grid: Search, Branch Selector (Owner only), Status, Reset */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
           {/* Search Input */}
-          <div className="lg:col-span-5">
+          <div className={isOwner ? "lg:col-span-5" : "lg:col-span-7"}>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
@@ -486,31 +528,33 @@ export function UserManagementPage() {
             </div>
           </div>
 
-          {/* Branch Dropdown Filter */}
-          <div className="lg:col-span-4">
-            <div className="relative">
-              <Building className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 pointer-events-none z-10" />
-              <select
-                value={selectedBranchFilter}
-                onChange={e => setSelectedBranchFilter(e.target.value)}
-                className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer appearance-none"
-              >
-                <option value="ALL">🏢 All Branches ({branchCounts.ALL || users.length})</option>
-                {branches.map(b => (
-                  <option key={b._id} value={b._id}>
-                    📍 {b.name} ({branchCounts[String(b._id)] || 0})
-                  </option>
-                ))}
-                <option value="UNASSIGNED">⚪ Unassigned Staff ({branchCounts.UNASSIGNED || 0})</option>
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
-                ▼
+          {/* Branch Dropdown Filter (Visible only for Owner) */}
+          {isOwner && (
+            <div className="lg:col-span-4">
+              <div className="relative">
+                <Building className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 pointer-events-none z-10" />
+                <select
+                  value={selectedBranchFilter}
+                  onChange={e => setSelectedBranchFilter(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer appearance-none"
+                >
+                  <option value="ALL">🏢 All Branches ({branchCounts.ALL || users.length})</option>
+                  {branches.map(b => (
+                    <option key={b._id} value={b._id}>
+                      📍 {b.name} ({branchCounts[String(b._id)] || 0})
+                    </option>
+                  ))}
+                  <option value="UNASSIGNED">⚪ Unassigned Staff ({branchCounts.UNASSIGNED || 0})</option>
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
+                  ▼
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Status Filter */}
-          <div className="lg:col-span-2">
+          <div className={isOwner ? "lg:col-span-2" : "lg:col-span-3"}>
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
@@ -523,7 +567,7 @@ export function UserManagementPage() {
           </div>
 
           {/* Reset Filters */}
-          <div className="lg:col-span-1 flex justify-end">
+          <div className={isOwner ? "lg:col-span-1 flex justify-end" : "lg:col-span-2 flex justify-end"}>
             {hasActiveFilters ? (
               <button
                 type="button"
@@ -542,71 +586,73 @@ export function UserManagementPage() {
           </div>
         </div>
 
-        {/* Quick Branch Filter Pills */}
-        <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-100">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mr-1">
-            <Filter className="w-3 h-3 text-slate-400" /> Filter Branch:
-          </span>
-
-          <button
-            type="button"
-            onClick={() => setSelectedBranchFilter('ALL')}
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-              selectedBranchFilter === 'ALL'
-                ? 'bg-emerald-600 text-white shadow-2xs font-bold'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-            }`}
-          >
-            <span>All Hubs</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-              selectedBranchFilter === 'ALL' ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-200 text-slate-600'
-            }`}>
-              {branchCounts.ALL || users.length}
+        {/* Quick Branch Filter Pills (Visible only for Owner) */}
+        {isOwner && (
+          <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-100">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mr-1">
+              <Filter className="w-3 h-3 text-slate-400" /> Filter Branch:
             </span>
-          </button>
 
-          {branches.map(b => {
-            const isSelected = selectedBranchFilter === String(b._id);
-            const count = branchCounts[String(b._id)] || 0;
-            return (
-              <button
-                key={b._id}
-                type="button"
-                onClick={() => setSelectedBranchFilter(isSelected ? 'ALL' : String(b._id))}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  isSelected
-                    ? 'bg-emerald-600 text-white shadow-2xs font-bold ring-2 ring-emerald-500/20'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-                }`}
-              >
-                <Building className={`w-3 h-3 ${isSelected ? 'text-white' : 'text-slate-400'}`} />
-                <span>{b.name}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  isSelected ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-200 text-slate-600'
-                }`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+            <button
+              type="button"
+              onClick={() => setSelectedBranchFilter('ALL')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                selectedBranchFilter === 'ALL'
+                  ? 'bg-emerald-600 text-white shadow-2xs font-bold'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+              }`}
+            >
+              <span>All Hubs</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                selectedBranchFilter === 'ALL' ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-200 text-slate-600'
+              }`}>
+                {branchCounts.ALL || users.length}
+              </span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setSelectedBranchFilter(selectedBranchFilter === 'UNASSIGNED' ? 'ALL' : 'UNASSIGNED')}
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-              selectedBranchFilter === 'UNASSIGNED'
-                ? 'bg-amber-600 text-white shadow-2xs font-bold ring-2 ring-amber-500/20'
-                : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200'
-            }`}
-          >
-            <span>Unassigned Staff</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-              selectedBranchFilter === 'UNASSIGNED' ? 'bg-amber-700 text-amber-100' : 'bg-amber-200/70 text-amber-800'
-            }`}>
-              {branchCounts.UNASSIGNED || 0}
-            </span>
-          </button>
-        </div>
+            {branches.map(b => {
+              const isSelected = selectedBranchFilter === String(b._id);
+              const count = branchCounts[String(b._id)] || 0;
+              return (
+                <button
+                  key={b._id}
+                  type="button"
+                  onClick={() => setSelectedBranchFilter(isSelected ? 'ALL' : String(b._id))}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-emerald-600 text-white shadow-2xs font-bold ring-2 ring-emerald-500/20'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                  }`}
+                >
+                  <Building className={`w-3 h-3 ${isSelected ? 'text-white' : 'text-slate-400'}`} />
+                  <span>{b.name}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    isSelected ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+
+            <button
+              type="button"
+              onClick={() => setSelectedBranchFilter(selectedBranchFilter === 'UNASSIGNED' ? 'ALL' : 'UNASSIGNED')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                selectedBranchFilter === 'UNASSIGNED'
+                  ? 'bg-amber-600 text-white shadow-2xs font-bold ring-2 ring-amber-500/20'
+                  : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200'
+              }`}
+            >
+              <span>Unassigned Staff</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                selectedBranchFilter === 'UNASSIGNED' ? 'bg-amber-700 text-amber-100' : 'bg-amber-200/70 text-amber-800'
+              }`}>
+                {branchCounts.UNASSIGNED || 0}
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* Active Filters Summary strip */}
         {hasActiveFilters && (
@@ -723,16 +769,21 @@ export function UserManagementPage() {
               label="Role *"
               value={formData.role}
               onChange={e => setFormData({ ...formData, role: e.target.value })}
-              options={CREATABLE_ROLES}
+              options={isOwner ? CREATABLE_ROLES : CREATABLE_ROLES.filter(r => r.value === 'TELECALLER')}
             />
             <Select
               label="Assign Branch"
-              value={formData.branchId}
+              value={!isOwner ? managerBranchId : formData.branchId}
+              disabled={!isOwner}
               onChange={e => setFormData({ ...formData, branchId: e.target.value })}
-              options={[
-                { value: '', label: formData.role === 'MANAGER' ? '🏢 All Hubs (Multi-Branch)' : 'Select branch...' },
-                ...branches.map(b => ({ value: b._id, label: `${b.name} (${b.code})` }))
-              ]}
+              options={
+                !isOwner
+                  ? [{ value: managerBranchId, label: availableBranches[0]?.name || 'My Branch' }]
+                  : [
+                      { value: '', label: formData.role === 'MANAGER' ? '🏢 All Hubs (Multi-Branch)' : 'Select branch...' },
+                      ...branches.map(b => ({ value: b._id, label: `${b.name} (${b.code})` }))
+                    ]
+              }
               required={formData.role !== 'OWNER' && formData.role !== 'MANAGER'}
             />
           </div>
@@ -779,8 +830,8 @@ export function UserManagementPage() {
                 name: editData.name,
                 phone: editData.phone,
                 role: editData.role,
-                branchId: editData.branchId || null,
-                branches: editData.branchId ? [editData.branchId] : (editData.role === 'MANAGER' ? branches.map(b => b._id) : [])
+                branchId: !isOwner ? managerBranchId : (editData.branchId || null),
+                branches: !isOwner ? (managerBranchId ? [managerBranchId] : []) : (editData.branchId ? [editData.branchId] : (editData.role === 'MANAGER' ? branches.map(b => b._id) : []))
               }
             });
           }}
@@ -801,17 +852,23 @@ export function UserManagementPage() {
             <Select
               label="Role"
               value={editData.role || 'TELECALLER'}
+              disabled={!isOwner}
               onChange={e => setEditData({ ...editData, role: e.target.value })}
-              options={CREATABLE_ROLES}
+              options={isOwner ? CREATABLE_ROLES : CREATABLE_ROLES.filter(r => r.value === 'TELECALLER')}
             />
             <Select
               label="Branch"
-              value={editData.branchId || ''}
+              value={!isOwner ? managerBranchId : (editData.branchId || '')}
+              disabled={!isOwner}
               onChange={e => setEditData({ ...editData, branchId: e.target.value })}
-              options={[
-                { value: '', label: editData.role === 'MANAGER' ? '🏢 All Hubs (Multi-Branch)' : 'No branch' },
-                ...branches.map(b => ({ value: b._id, label: `${b.name} (${b.code})` }))
-              ]}
+              options={
+                !isOwner
+                  ? [{ value: managerBranchId, label: availableBranches[0]?.name || 'My Branch' }]
+                  : [
+                      { value: '', label: editData.role === 'MANAGER' ? '🏢 All Hubs (Multi-Branch)' : 'No branch' },
+                      ...branches.map(b => ({ value: b._id, label: `${b.name} (${b.code})` }))
+                    ]
+              }
             />
           </div>
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">

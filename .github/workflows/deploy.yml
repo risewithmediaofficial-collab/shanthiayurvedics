@@ -73,7 +73,7 @@ jobs:
             git reset --hard origin/main
             git clean -fd
 
-            # 5. Ensure .env file exists and configure ports
+            # 5. Ensure .env file exists and configure ports & database
             if [ ! -f .env ]; then
               echo "⚙️ Creating .env from .env.example..."
               cp .env.example .env
@@ -85,6 +85,11 @@ jobs:
             else
               echo "CRM_PORT=8087" >> .env
             fi
+
+            # Ensure MONGO_URI in .env targets mongodb container host and volume credentials
+            sed -i 's|127.0.0.1:27017|mongodb:27017|g' .env 2>/dev/null || true
+            sed -i 's|localhost:27017|mongodb:27017|g' .env 2>/dev/null || true
+            sed -i 's|replace_with_a_long_url_safe_random_password|SecureAdminPassword123|g' .env 2>/dev/null || true
 
             # 6. Stop and remove conflicting legacy containers and clear ports 8087 and 89
             echo "🛑 Stopping and cleaning up any existing conflicting containers..."
@@ -108,7 +113,12 @@ jobs:
 
             # 8. Start up all containers with healthy dependency waiting
             echo "🚀 Starting new containers..."
-            $DC up -d --force-recreate
+            if ! $DC up -d --force-recreate; then
+              echo "⚠️ Startup issue encountered. Outputting container logs for inspection:"
+              $DC logs --tail 50 backend 2>/dev/null || true
+              $DC logs --tail 50 mongodb 2>/dev/null || true
+              exit 1
+            fi
 
             # 9. Clean up dangling images to keep VPS disk healthy
             echo "🧹 Pruning unused images..."

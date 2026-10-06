@@ -34,12 +34,13 @@ const gracefulShutdown = async (signal, exitCode = 0) => {
 
 const startServer = async () => {
   app.locals.isReady = false;
+  // Start HTTP listener immediately so Nginx reverse-proxy and /health checks have an active socket
+  server.listen(env.PORT, '0.0.0.0', () => logger.info({ port: env.PORT }, 'CRM API server listening'));
   try {
     await connectDB();
     await RbacService.initializeDefaultRoles();
-    // Run account provisioning and sample-data scripts explicitly, never on startup.
     app.locals.isReady = true;
-    server.listen(env.PORT, () => logger.info({ port: env.PORT }, 'CRM API ready'));
+    logger.info({ port: env.PORT }, 'CRM API ready and database connected');
   } catch (err) {
     logger.error({ err }, 'Server initialization failed');
     await gracefulShutdown('STARTUP_FAILURE', 1);

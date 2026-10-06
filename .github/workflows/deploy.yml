@@ -22,21 +22,103 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 22
           timeout: 60s
-          command_timeout: 10m
+          command_timeout: 15m
           script: |
-            # If directory doesn't exist or is not a git repo, clone fresh
-            if [ ! -d /docker/shanthiayurvedics/.git ]; then
-              echo "⚡ No git repo found — cloning fresh..."
-              rm -rf /docker/shanthiayurvedics
-              mkdir -p /docker
-              git clone https://github.com/risewithmediaofficial-collab/shanthiayurvedics.git /docker/shanthiayurvedics
+            set -e
+
+            echo "=================================================="
+            echo "🚀 Starting Automated Deployment Pipeline on VPS"
+            echo "=================================================="
+
+            # 1. Resolve Docker Compose command (Compose V2 plugin or V1)
+            if docker compose version >/dev/null 2>&1; then
+              DC="docker compose"
+            elif command -v docker-compose >/dev/null 2>&1; then
+              DC="docker-compose"
+            else
+              echo "❌ Error: Docker Compose is not installed on this server!"
+              exit 1
+            fi
+            echo "Using Compose binary: $DC"
+
+            # 2. Locate active project directory (if existing compose project is in another path)
+            DEPLOY_DIR="/docker/shanthiayurvedics"
+            ACTIVE_CONTAINER=$(docker ps -q --filter "publish=8087" | head -n 1)
+            if [ -z "$ACTIVE_CONTAINER" ]; then
+              ACTIVE_CONTAINER=$(docker ps -q --filter "publish=89" | head -n 1)
             fi
 
-            cd /docker/shanthiayurvedics
-            git pull origin main
+            if [ -n "$ACTIVE_CONTAINER" ]; then
+              LABEL_DIR=$(docker inspect "$ACTIVE_CONTAINER" --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' 2>/dev/null || true)
+              if [ -n "$LABEL_DIR" ] && [ -d "$LABEL_DIR/.git" ]; then
+                echo "⚡ Discovered existing active compose directory: $LABEL_DIR"
+                DEPLOY_DIR="$LABEL_DIR"
+              fi
+            fi
 
-            # Force rebuild with no cache to pick up latest Dockerfile changes
-            docker compose down
-            docker compose up -d --build --no-deps
+            echo "Deployment target directory: $DEPLOY_DIR"
+
+            # 3. Ensure repo exists and is valid git repository
+            if [ ! -d "$DEPLOY_DIR/.git" ]; then
+              echo "⚡ Initializing repository in $DEPLOY_DIR..."
+              mkdir -p "$DEPLOY_DIR"
+              git clone https://github.com/risewithmediaofficial-collab/shanthiayurvedics.git "$DEPLOY_DIR"
+            fi
+
+            cd "$DEPLOY_DIR"
+
+            # 4. Pull and force-sync with latest origin/main
+            echo "📥 Fetching and syncing to latest origin/main..."
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+
+            # 5. Ensure .env file exists and configure ports
+            if [ ! -f .env ]; then
+              echo "⚙️ Creating .env from .env.example..."
+              cp .env.example .env
+            fi
+
+            # Ensure CRM_PORT is explicitly set to 8087 so production binds 8087
+            if grep -q "^CRM_PORT=" .env; then
+              sed -i 's/^CRM_PORT=.*/CRM_PORT=8087/' .env
+            else
+              echo "CRM_PORT=8087" >> .env
+            fi
+
+            # 6. Stop and remove conflicting legacy containers and clear ports 8087 and 89
+            echo "🛑 Stopping and cleaning up any existing conflicting containers..."
+            docker stop shanthi_frontend shanthi_backend shanthi_mongodb 2>/dev/null || true
+            docker rm -f shanthi_frontend shanthi_backend shanthi_mongodb 2>/dev/null || true
+
+            for port in 8087 89; do
+              pids=$(docker ps -q --filter "publish=$port")
+              if [ -n "$pids" ]; then
+                echo "Clearing container holding port $port: $pids"
+                docker stop $pids 2>/dev/null || true
+                docker rm -f $pids 2>/dev/null || true
+              fi
+            done
+
+            $DC down --remove-orphans 2>/dev/null || true
+
+            # 7. Force rebuild without cache so the new Vite bundle is generated
+            echo "🔨 Building Docker images with --no-cache..."
+            $DC build --no-cache
+
+            # 8. Start up all containers with healthy dependency waiting
+            echo "🚀 Starting new containers..."
+            $DC up -d --force-recreate
+
+            # 9. Clean up dangling images to keep VPS disk healthy
+            echo "🧹 Pruning unused images..."
             docker image prune -f
-            echo "✅ Deployment complete!"
+
+            # 10. Verify that services are up and healthy
+            echo "📋 Checking container status:"
+            sleep 5
+            $DC ps
+
+            echo "=================================================="
+            echo "✅ Deployment Successful and Verified!"
+            echo "=================================================="

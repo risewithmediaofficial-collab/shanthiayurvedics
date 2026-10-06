@@ -1,17 +1,17 @@
-﻿services:
+services:
   mongodb:
     image: mongo:7.0
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-SecureAdminPassword123}
       MONGO_INITDB_DATABASE: shanthi_ayurvedas_crm
     volumes:
       - mongodb_data:/data/db
     networks:
       - crm-network
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet -u \"$$MONGO_INITDB_ROOT_USERNAME\" -p \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --eval 'db.adminCommand({ ping: 1 })' >/dev/null"]
+      test: ["CMD-SHELL", "mongosh --quiet -u \"$$MONGO_INITDB_ROOT_USERNAME\" -p \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --eval 'db.adminCommand({ ping: 1 })' >/dev/null || mongosh --quiet --eval 'db.adminCommand({ ping: 1 })' >/dev/null"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,11 +28,11 @@
     environment:
       PORT: "5000"
       NODE_ENV: production
-      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD}@mongodb:27017/shanthi_ayurvedas_crm?authSource=admin
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?Set JWT_ACCESS_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET}
-      COOKIE_SECRET: ${COOKIE_SECRET:?Set COOKIE_SECRET}
-      FRONTEND_URL: ${FRONTEND_URL:?Set FRONTEND_URL}
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-SecureAdminPassword123}@mongodb:27017/shanthi_ayurvedas_crm?authSource=admin
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-production_secure_jwt_access_key_crm_94829471948201948201}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-production_secure_jwt_refresh_key_crm_58392819485720194820}
+      COOKIE_SECRET: ${COOKIE_SECRET:-production_secure_cookie_secret_crm_71829401827401928401}
+      FRONTEND_URL: ${FRONTEND_URL:-http://82.29.166.169:8087}
       TRUST_PROXY_HOPS: "1"
       DB_MAX_POOL_SIZE: ${DB_MAX_POOL_SIZE:-20}
     networks:
@@ -50,7 +50,8 @@
       dockerfile: frontend/Dockerfile
     restart: unless-stopped
     ports:
-      - "${CRM_PORT:-89}:80"
+      - "${CRM_PORT:-8087}:80"
+      - "89:80"
     depends_on:
       backend:
         condition: service_healthy

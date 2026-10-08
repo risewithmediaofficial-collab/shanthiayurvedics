@@ -100,7 +100,7 @@ export function ViewPanelMenu() {
         id="btn-view-panel-menu"
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200/90 text-slate-800 rounded-xl border border-slate-200/90 text-xs font-bold transition-all shadow-2xs hover:shadow-xs cursor-pointer select-none"
+        className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200/90 text-slate-800 rounded-xl border border-slate-200/90 text-xs font-bold transition-all shadow-2xs hover:shadow-xs cursor-pointer select-none"
         title="View different role panels"
       >
         <span className="text-emerald-700 flex items-center">
@@ -109,7 +109,7 @@ export function ViewPanelMenu() {
         <span className="hidden sm:inline font-extrabold text-slate-700">View Panel:</span>
         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-[11px] font-bold text-slate-900 shadow-2xs">
           <span>{currentPanel?.icon}</span>
-          <span className="truncate max-w-[85px] sm:max-w-[110px]">{currentPanel?.title.split(' ')[0]}</span>
+          <span className="hidden sm:inline truncate max-w-[110px]">{currentPanel?.title.split(' ')[0]}</span>
         </span>
         <KeyboardArrowDownRounded
           sx={{ fontSize: 16 }}

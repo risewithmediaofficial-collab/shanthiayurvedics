@@ -247,14 +247,14 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
       )}
 
       {/* Tab Navigation */}
-      <nav aria-label="Telecaller modules" className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xs">
+      <nav aria-label="Telecaller modules" className="flex gap-1 overflow-x-auto scrollbar-none rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xs whitespace-nowrap">
         {tabs.map(({ id, title, icon: Icon }) => (
           <button
             type="button"
             key={id}
             aria-current={activeTab === id ? 'page' : undefined}
             onClick={() => setActiveTab(id)}
-            className={`flex items-center justify-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-xs font-bold flex-1 transition-all cursor-pointer ${
+            className={`flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-bold shrink-0 sm:flex-1 transition-all cursor-pointer ${
               activeTab === id
                 ? 'bg-emerald-700 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'

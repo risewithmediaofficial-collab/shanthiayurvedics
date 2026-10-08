@@ -994,8 +994,8 @@ export function OrdersFullTableView({
       </div>
 
       {/* ── 9. Comprehensive Data Table ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-sm">
-        <table className="w-full text-xs text-left">
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-sm scrollbar-thin">
+        <table className="w-full min-w-[980px] text-xs text-left">
           <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur-xs text-slate-700 uppercase tracking-wider font-semibold border-b shadow-2xs select-none">
             <tr>
               <th className="p-3 w-10">

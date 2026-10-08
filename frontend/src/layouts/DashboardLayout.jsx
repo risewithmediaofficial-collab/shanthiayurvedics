@@ -36,7 +36,7 @@ export function DashboardLayout() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans relative">
+    <div className="flex h-dvh min-h-dvh bg-slate-50 overflow-hidden font-sans relative">
       <a href="#main-content" className="skip-link">Skip to main content</a>
       {/* Sidebar Navigation */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />

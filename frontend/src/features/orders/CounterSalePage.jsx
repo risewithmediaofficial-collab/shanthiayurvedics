@@ -221,55 +221,57 @@ export function CounterSalePage() {
             {orders.map((ord) => {
               const pat = ord.patientDetails || {};
               return (
-                <div key={ord._id} className="py-3 flex items-center justify-between flex-wrap gap-2">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
+                <div key={ord._id} className="py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-slate-900 text-sm font-mono">{ord.orderNumber}</span>
-                      <span className="text-slate-600 font-semibold">{pat.patientName || ord.customerId?.name || 'Walk-In Patient'}</span>
+                      <span className="text-slate-700 font-semibold truncate">{pat.patientName || ord.customerId?.name || 'Walk-In Patient'}</span>
                       <Badge variant="primary" size="sm">{ord.paymentMethod}</Badge>
                     </div>
-                    <div className="text-slate-400 text-[11px]">
+                    <div className="text-slate-400 text-[11px] truncate">
                       {ord.items?.map((i) => `${i.quantity}x ${i.productName}`).join(', ')} • {new Date(ord.createdAt).toLocaleDateString('en-GB')}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-900 font-mono text-sm mr-2">
+                  <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                    <span className="font-bold text-slate-900 font-mono text-sm sm:mr-2">
                       ₹{ord.grandTotal?.toLocaleString()}
                     </span>
 
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEdit(ord)}
-                      className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                      title="Edit Counter Receipt"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      <span>Edit</span>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(ord)}
+                        className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Edit Counter Receipt"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedOrderForInvoice(ord)}
-                      className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                      title="Print Tax Invoice"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                      <span>Print</span>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOrderForInvoice(ord)}
+                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Print Tax Invoice"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>Print</span>
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedOrderForDelete(ord);
-                        setDeleteError('');
-                      }}
-                      className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                      title="Delete Counter Receipt"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Delete</span>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedOrderForDelete(ord);
+                          setDeleteError('');
+                        }}
+                        className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Delete Counter Receipt"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               );

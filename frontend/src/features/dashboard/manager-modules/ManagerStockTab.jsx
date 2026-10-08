@@ -548,8 +548,8 @@ export function ManagerStockTab() {
         </div>
       ) : (
         <div className={`bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden ${sortedAndFilteredProducts.length > 10 ? 'max-h-[560px] overflow-y-auto relative scrollbar-thin' : ''}`}>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-xs">
+          <div className="overflow-x-auto scrollbar-thin">
+            <table className="w-full min-w-[700px] text-left text-xs">
               <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs text-slate-500 uppercase tracking-wider border-b border-slate-200 shadow-2xs select-none">
                 <tr>
                   <th

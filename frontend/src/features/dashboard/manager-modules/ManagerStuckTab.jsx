@@ -279,8 +279,8 @@ export function ManagerStuckTab() {
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className={`overflow-x-auto ${filteredOrders.length > 10 ? 'max-h-[560px] overflow-y-auto scrollbar-thin relative' : ''}`}>
-            <table className="min-w-full text-left text-xs">
+          <div className={`overflow-x-auto scrollbar-thin ${filteredOrders.length > 10 ? 'max-h-[560px] overflow-y-auto relative' : ''}`}>
+            <table className="w-full min-w-[700px] text-left text-xs">
               <thead className={`bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200 select-none ${filteredOrders.length > 10 ? 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-2xs' : ''}`}>
                 <tr>
                   <th

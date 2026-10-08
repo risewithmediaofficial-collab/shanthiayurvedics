@@ -277,29 +277,29 @@ export function ManagerBranchOrdersTab() {
 
       {/* Sub-Tabs: Received vs Sent */}
       <div className="bento-card flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => setActiveTab('RECEIVED')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'RECEIVED'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            Orders Received from Other Branches ({allTransfers.filter(t => t.toBranchId?.code === 'HSR' || t.toBranchId?.name?.includes('Hosur')).length})
+            <span className="hidden sm:inline">Orders </span>Received ({allTransfers.filter(t => t.toBranchId?.code === 'HSR' || t.toBranchId?.name?.includes('Hosur')).length})
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('SENT')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'SENT'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            Orders Sent to Other Branches ({allTransfers.filter(t => t.fromBranchId?.code === 'HSR' || t.fromBranchId?.name?.includes('Hosur')).length})
+            <span className="hidden sm:inline">Orders </span>Sent ({allTransfers.filter(t => t.fromBranchId?.code === 'HSR' || t.fromBranchId?.name?.includes('Hosur')).length})
           </button>
         </div>
 
@@ -374,8 +374,8 @@ export function ManagerBranchOrdersTab() {
         </div>
       ) : (
         <div className={`bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden ${filteredTransfers.length > 10 ? 'max-h-[540px] overflow-y-auto relative scrollbar-thin' : ''}`}>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-xs">
+          <div className="overflow-x-auto scrollbar-thin">
+            <table className="w-full min-w-[700px] text-left text-xs">
               <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs text-slate-500 uppercase tracking-wider border-b border-slate-200 shadow-2xs">
                 <tr>
                   <th className="py-3 px-4 font-bold">Transfer Ref</th>

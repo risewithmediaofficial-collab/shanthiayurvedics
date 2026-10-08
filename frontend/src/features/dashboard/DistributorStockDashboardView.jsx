@@ -392,7 +392,7 @@ export function DistributorStockDashboardView({ onSwitchToTelecaller }) {
 
       {/* ── 3. SUB-NAV TABS (The 3 Dedicated Sections) ── */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="flex items-center gap-2 px-5 pt-3.5 border-b border-slate-200 bg-slate-50/50">
+        <div className="flex items-center gap-2 px-3 sm:px-5 pt-3.5 border-b border-slate-200 bg-slate-50/50 overflow-x-auto scrollbar-none whitespace-nowrap">
           {[
             { id: 'STOCK', label: '📦 Stocks Available', count: stockItems.length },
             { id: 'SALES', label: '💰 Total Sales & Orders', count: orders.length },
@@ -402,7 +402,7 @@ export function DistributorStockDashboardView({ onSwitchToTelecaller }) {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all border-b-2 -mb-px flex items-center gap-2 cursor-pointer ${
+              className={`px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs font-bold rounded-t-xl transition-all border-b-2 -mb-px flex items-center gap-1.5 sm:gap-2 cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === tab.id
                   ? 'border-emerald-600 text-emerald-800 bg-white shadow-xs'
                   : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100/60'
@@ -484,7 +484,7 @@ export function DistributorStockDashboardView({ onSwitchToTelecaller }) {
 
             {/* Stocks Table with inline scroll */}
             <div className={`overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl relative scrollbar-thin ${sortedStock.length > 10 ? 'max-h-[520px]' : ''}`}>
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full min-w-[680px] text-left border-collapse text-xs">
                 <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 shadow-2xs">
                   <tr>
                     <th className="py-3 px-4">Product & SKU</th>
@@ -631,7 +631,7 @@ export function DistributorStockDashboardView({ onSwitchToTelecaller }) {
 
             {/* Orders Table with inline scroll */}
             <div className={`overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl relative scrollbar-thin ${filteredOrders.length > 10 ? 'max-h-[520px]' : ''}`}>
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full min-w-[680px] text-left border-collapse text-xs">
                 <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 shadow-2xs">
                   <tr>
                     <th className="py-3 px-4">Order #</th>
@@ -739,7 +739,7 @@ export function DistributorStockDashboardView({ onSwitchToTelecaller }) {
 
             {/* Telecallers Table with inline scroll */}
             <div className={`overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl relative scrollbar-thin ${filteredTelecallers.length > 10 ? 'max-h-[520px]' : ''}`}>
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full min-w-[680px] text-left border-collapse text-xs">
                 <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200 shadow-2xs">
                   <tr>
                     <th className="py-3 px-4">Telecaller Agent</th>

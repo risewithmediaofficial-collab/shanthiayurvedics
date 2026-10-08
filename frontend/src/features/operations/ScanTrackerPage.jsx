@@ -729,11 +729,11 @@ export function ScanTrackerPage() {
       {/* ─────────────────────────────────────────────────────────────
           NAVIGATION TABS RIBBON (Scan Barcodes | Export | RTO | Delivered | Re-Export)
       ───────────────────────────────────────────────────────────── */}
-      <nav className="w-full bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center gap-1 sm:gap-2 overflow-x-auto shadow-2xs shrink-0">
+      <nav className="w-full bg-white border-b border-slate-200 px-3 sm:px-6 flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none shadow-2xs shrink-0 whitespace-nowrap">
         <button
           type="button"
           onClick={() => setActiveTab('SCAN')}
-          className={`flex items-center gap-2 px-4 py-3 text-xs font-bold transition-all border-b-2 whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 sm:px-4 py-3 text-xs font-bold transition-all border-b-2 whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'SCAN'
               ? 'text-[#1b254b] border-[#1b254b]'
               : 'text-slate-500 border-transparent hover:text-slate-900'
@@ -749,7 +749,7 @@ export function ScanTrackerPage() {
         <button
           type="button"
           onClick={() => setActiveTab('EXPORT')}
-          className={`flex items-center gap-2 px-4 py-3 text-xs font-bold transition-all border-b-2 whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 sm:px-4 py-3 text-xs font-bold transition-all border-b-2 whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'EXPORT'
               ? 'text-rose-600 border-rose-600'
               : 'text-slate-500 border-transparent hover:text-slate-900'
@@ -765,7 +765,7 @@ export function ScanTrackerPage() {
         <button
           type="button"
           onClick={() => setActiveTab('RTO')}
-          className={`flex items-center gap-2 px-4 py-3 text-xs font-bold transition-all border-b-2 whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 sm:px-4 py-3 text-xs font-bold transition-all border-b-2 whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'RTO'
               ? 'text-blue-600 border-blue-600'
               : 'text-slate-500 border-transparent hover:text-slate-900'
@@ -781,7 +781,7 @@ export function ScanTrackerPage() {
         <button
           type="button"
           onClick={() => setActiveTab('DELIVERED')}
-          className={`flex items-center gap-2 px-4 py-3 text-xs font-bold transition-all border-b-2 whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 sm:px-4 py-3 text-xs font-bold transition-all border-b-2 whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'DELIVERED'
               ? 'text-emerald-600 border-emerald-600'
               : 'text-slate-500 border-transparent hover:text-slate-900'
@@ -797,7 +797,7 @@ export function ScanTrackerPage() {
         <button
           type="button"
           onClick={() => setActiveTab('RE_EXPORT')}
-          className={`flex items-center gap-2 px-4 py-3 text-xs font-bold transition-all border-b-2 whitespace-nowrap cursor-pointer ml-auto ${
+          className={`flex items-center gap-2 px-3.5 sm:px-4 py-3 text-xs font-bold transition-all border-b-2 whitespace-nowrap shrink-0 cursor-pointer sm:ml-auto ${
             activeTab === 'RE_EXPORT'
               ? 'text-[#1b254b] border-[#1b254b]'
               : 'text-slate-500 border-transparent hover:text-slate-900'

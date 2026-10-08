@@ -226,12 +226,12 @@ export function Breadcrumbs() {
 
         {/* Category Pill */}
         {config.category && (
-          <>
+          <span className="hidden sm:inline-flex items-center gap-1.5 shrink-0">
             <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-semibold text-[11px] tracking-tight shrink-0">
               {config.category}
             </span>
             <KeyboardArrowRightRounded sx={{ fontSize: 16 }} className="text-slate-300 shrink-0" />
-          </>
+          </span>
         )}
 
         {/* Parent Link if present */}

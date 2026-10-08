@@ -294,7 +294,7 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
             </div>
 
             {/* Glanceable Metric Chips */}
-            <div className="grid grid-cols-3 gap-2.5 mt-4 pt-3 border-t border-slate-100">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5 mt-4 pt-3 border-t border-slate-100">
               <div className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-100">
                 <div className="text-[10px] text-slate-500 uppercase font-medium">Month Sales</div>
                 <div className="text-base font-semibold text-slate-800 font-mono mt-0.5">
@@ -613,7 +613,7 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
             </div>
           ) : (
             <div className={`overflow-x-auto ${recentOrders.length > 10 ? 'max-h-[380px] overflow-y-auto scrollbar-thin relative' : ''}`}>
-              <table className="w-full text-left text-xs">
+              <table className="w-full min-w-[480px] text-left text-xs">
                 <thead className={recentOrders.length > 10 ? 'sticky top-0 z-10 bg-white/95 backdrop-blur-xs border-b border-slate-200 shadow-2xs' : ''}>
                   <tr className="border-b border-slate-100 text-slate-400 font-medium uppercase tracking-wider text-[10px]">
                     <th className="pb-2 pt-1">Order</th>

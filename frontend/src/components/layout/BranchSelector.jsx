@@ -11,11 +11,11 @@ export function BranchSelector() {
   if (!canSwitchBranch) {
     const singleBranch = safeBranches[0];
     return (
-      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50/90 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-800 shadow-2xs select-none">
+      <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-emerald-50/90 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-800 shadow-2xs select-none max-w-full">
         <Building2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-        <span className="truncate max-w-[240px]">{singleBranch?.name || 'Hosur Main Hub'}</span>
+        <span className="truncate max-w-[110px] sm:max-w-[240px]">{singleBranch?.name || 'Hosur Main Hub'}</span>
         {singleBranch?.code && (
-          <span className="text-[10px] px-1.5 py-0.5 bg-emerald-200/60 rounded text-emerald-900 font-bold ml-0.5">
+          <span className="text-[10px] px-1.5 py-0.5 bg-emerald-200/60 rounded text-emerald-900 font-bold ml-0.5 shrink-0">
             {singleBranch.code}
           </span>
         )}
@@ -55,7 +55,7 @@ export function BranchSelector() {
         options={branchOptions}
         icon={Building2}
         size="sm"
-        minWidth="min-w-[220px]"
+        minWidth="min-w-[130px] sm:min-w-[220px]"
         searchable={branchOptions.length > 5}
         className="bg-white/90 font-semibold border-slate-200 text-slate-700 shadow-xs hover:border-emerald-400"
       />

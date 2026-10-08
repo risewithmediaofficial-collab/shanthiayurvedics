@@ -338,8 +338,8 @@ export function ManagerWithdrawalTab() {
               </div>
             </div>
 
-            <div className={`overflow-x-auto ${filteredLedger.length > 10 ? 'max-h-[500px] overflow-y-auto scrollbar-thin relative' : ''}`}>
-              <table className="min-w-full text-left text-xs">
+            <div className={`overflow-x-auto scrollbar-thin ${filteredLedger.length > 10 ? 'max-h-[500px] overflow-y-auto relative' : ''}`}>
+              <table className="w-full min-w-[650px] text-left text-xs">
                 <thead className={`bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200 ${filteredLedger.length > 10 ? 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-2xs' : ''}`}>
                   <tr>
                     <th className="py-3 px-4 font-bold">Request ID</th>

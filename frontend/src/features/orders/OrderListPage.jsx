@@ -922,7 +922,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                 setStatusFilter(pill.key);
                 setPage(1);
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 select-none ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer flex items-center gap-1.5 select-none ${
                 isSelected
                   ? 'bg-emerald-700 text-white font-bold shadow-xs'
                   : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'

@@ -370,7 +370,7 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
         </div>
 
         <div className={`overflow-x-auto overflow-y-auto relative scrollbar-thin ${filteredCallers.length > 10 ? 'max-h-[540px]' : ''}`}>
-          <table className="min-w-full text-left text-xs">
+          <table className="w-full min-w-[780px] text-left text-xs">
             <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs text-slate-500 uppercase tracking-wider border-b border-slate-200 shadow-2xs select-none">
               <tr>
                 <th

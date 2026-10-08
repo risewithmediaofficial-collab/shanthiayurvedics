@@ -402,10 +402,10 @@ export function ManagerWithdrawalTab() {
         title="Review withdrawal request"
         subtitle={settlementRequest ? `Request ${settlementRequest.id} · ₹${settlementRequest.amount.toLocaleString()}` : ''}
         maxWidth="max-w-md"
-        footer={<>
-          <Button type="button" variant="secondary" onClick={() => setSettlementRequest(null)} disabled={settlementMutation.isPending}>Cancel</Button>
-          <Button type="submit" form="settlement-form" isLoading={settlementMutation.isPending}>Save decision</Button>
-        </>}
+        footer={<div className="flex flex-col-reverse sm:flex-row justify-end gap-2 w-full">
+          <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => setSettlementRequest(null)} disabled={settlementMutation.isPending}>Cancel</Button>
+          <Button type="submit" form="settlement-form" className="w-full sm:w-auto" isLoading={settlementMutation.isPending}>Save decision</Button>
+        </div>}
       >
         <form id="settlement-form" className="space-y-4" onSubmit={(event) => {
           event.preventDefault();

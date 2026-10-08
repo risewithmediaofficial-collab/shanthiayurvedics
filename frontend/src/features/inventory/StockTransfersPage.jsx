@@ -198,7 +198,7 @@ export function StockTransfersPage() {
           }}
           className="space-y-3.5"
         >
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select
               label="Source (From Branch) *"
               required
@@ -221,8 +221,8 @@ export function StockTransfersPage() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="sm:col-span-2">
               <Select
                 label="Product *"
                 required
@@ -253,11 +253,11 @@ export function StockTransfersPage() {
             onChange={(e) => setNotes(e.target.value)}
           />
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" type="button" onClick={() => setCreateModalOpen(false)}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
+            <Button variant="outline" type="button" className="w-full sm:w-auto" onClick={() => setCreateModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" type="submit" isLoading={createMutation.isPending}>
+            <Button variant="primary" type="submit" className="w-full sm:w-auto" isLoading={createMutation.isPending}>
               Create Transfer
             </Button>
           </div>

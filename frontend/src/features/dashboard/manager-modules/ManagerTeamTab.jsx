@@ -929,15 +929,15 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-              <Button variant="secondary" onClick={() => setIsAddUserModalOpen(false)}>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-200">
+              <Button variant="secondary" className="w-full sm:w-auto" onClick={() => setIsAddUserModalOpen(false)}>
                 Cancel
               </Button>
               <Button
                 type="submit"
                 variant="primary"
                 isLoading={createStaffMutation.isPending}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold"
+                className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white font-bold"
               >
                 Create Account
               </Button>
@@ -974,15 +974,15 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-              <Button variant="secondary" onClick={() => setIsResetPasswordModalOpen(false)}>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-200">
+              <Button variant="secondary" className="w-full sm:w-auto" onClick={() => setIsResetPasswordModalOpen(false)}>
                 Cancel
               </Button>
               <Button
                 type="submit"
                 variant="primary"
                 isLoading={resetPasswordMutation.isPending}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold"
+                className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white font-bold"
               >
                 Update Password
               </Button>
@@ -1036,13 +1036,13 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-              <Button variant="secondary" type="button" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-200">
+              <Button variant="secondary" type="button" className="w-full sm:w-auto" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
               <Button
                 type="submit"
                 variant="primary"
                 isLoading={editUserMutation.isPending}
-                className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-bold"
               >
                 Save Changes
               </Button>

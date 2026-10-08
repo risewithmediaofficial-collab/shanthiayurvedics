@@ -460,7 +460,7 @@ export function CustomerListPage() {
             }}
             className="space-y-3.5"
           >
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Customer Name *"
                 required
@@ -473,7 +473,7 @@ export function CustomerListPage() {
                 onChange={(e) => setEditFormData({ ...editFormData, fatherName: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Primary Mobile *"
                 required
@@ -497,7 +497,7 @@ export function CustomerListPage() {
               value={editFormData.street}
               onChange={(e) => setEditFormData({ ...editFormData, street: e.target.value })}
             />
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Input
                 label="City / Town"
                 value={editFormData.city}
@@ -514,11 +514,11 @@ export function CustomerListPage() {
                 onChange={(e) => setEditFormData({ ...editFormData, pincode: e.target.value })}
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-              <Button variant="secondary" type="button" onClick={() => setCustomerToEdit(null)} disabled={updateCustomerMutation.isPending}>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
+              <Button variant="secondary" type="button" className="w-full sm:w-auto" onClick={() => setCustomerToEdit(null)} disabled={updateCustomerMutation.isPending}>
                 Cancel
               </Button>
-              <Button variant="primary" type="submit" isLoading={updateCustomerMutation.isPending}>
+              <Button variant="primary" type="submit" className="w-full sm:w-auto" isLoading={updateCustomerMutation.isPending}>
                 Save Customer
               </Button>
             </div>

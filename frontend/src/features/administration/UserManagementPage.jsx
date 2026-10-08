@@ -771,7 +771,7 @@ export function UserManagementPage() {
             onChange={e => setFormData({ ...formData, phone: e.target.value })}
           />
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select
               label="Role *"
               value={formData.role}
@@ -812,9 +812,9 @@ export function UserManagementPage() {
           />
           <p className="text-[11px] text-slate-400 -mt-2">Use at least 10 characters with uppercase, lowercase, number, and special character.</p>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-            <Button variant="secondary" type="button" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button variant="primary" type="submit" isLoading={createMutation.isPending}>Create Account</Button>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
+            <Button variant="secondary" type="button" className="w-full sm:w-auto" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button variant="primary" type="submit" className="w-full sm:w-auto" isLoading={createMutation.isPending}>Create Account</Button>
           </div>
         </form>
       </Modal>
@@ -855,7 +855,7 @@ export function UserManagementPage() {
             value={editData.phone || ''}
             onChange={e => setEditData({ ...editData, phone: e.target.value })}
           />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select
               label="Role"
               value={editData.role || 'TELECALLER'}
@@ -878,9 +878,9 @@ export function UserManagementPage() {
               }
             />
           </div>
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-            <Button variant="secondary" type="button" onClick={() => setEditOpen(false)}>Cancel</Button>
-            <Button variant="primary" type="submit" isLoading={updateMutation.isPending}>Save Changes</Button>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
+            <Button variant="secondary" type="button" className="w-full sm:w-auto" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button variant="primary" type="submit" className="w-full sm:w-auto" isLoading={updateMutation.isPending}>Save Changes</Button>
           </div>
         </form>
       </Modal>

@@ -851,7 +851,7 @@ export function LeadListPage({ callerId } = {}) {
             placeholder="e.g. Ramesh Kumar"
           />
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="Mobile Number *"
               required
@@ -871,7 +871,7 @@ export function LeadListPage({ callerId } = {}) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select
               label="Lead Source *"
               value={formData.source}
@@ -916,10 +916,11 @@ export function LeadListPage({ callerId } = {}) {
             placeholder="Patient health condition or requested remedy..."
           />
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
             <Button
               variant="secondary"
               type="button"
+              className="w-full sm:w-auto"
               onClick={() => {
                 setIsCreateModalOpen(false);
                 setFormError('');
@@ -928,7 +929,7 @@ export function LeadListPage({ callerId } = {}) {
             >
               Cancel
             </Button>
-            <Button variant="primary" type="submit" isLoading={createLeadMutation.isPending}>
+            <Button variant="primary" type="submit" className="w-full sm:w-auto" isLoading={createLeadMutation.isPending}>
               Save Lead
             </Button>
           </div>
@@ -1011,10 +1012,11 @@ export function LeadListPage({ callerId } = {}) {
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
               <Button
                 variant="secondary"
                 type="button"
+                className="w-full sm:w-auto"
                 onClick={() => {
                   setIsCallModalOpen(false);
                   setCallError('');
@@ -1022,7 +1024,7 @@ export function LeadListPage({ callerId } = {}) {
               >
                 Cancel
               </Button>
-              <Button variant="primary" type="submit" isLoading={logCallMutation.isPending}>
+              <Button variant="primary" type="submit" className="w-full sm:w-auto" isLoading={logCallMutation.isPending}>
                 Save Call Log
               </Button>
             </div>
@@ -1079,7 +1081,7 @@ export function LeadListPage({ callerId } = {}) {
               value={editFormData.name}
               onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
             />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Mobile Number *"
                 required
@@ -1098,7 +1100,7 @@ export function LeadListPage({ callerId } = {}) {
               value={editFormData.email}
               onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
             />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Select
                 label="Lead Status"
                 value={editFormData.status}
@@ -1157,11 +1159,11 @@ export function LeadListPage({ callerId } = {}) {
                 placeholder="Health issue, dosage query, callback request..."
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-              <Button variant="secondary" type="button" onClick={() => setIsEditModalOpen(false)} disabled={updateLeadMutation.isPending}>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
+              <Button variant="secondary" type="button" className="w-full sm:w-auto" onClick={() => setIsEditModalOpen(false)} disabled={updateLeadMutation.isPending}>
                 Cancel
               </Button>
-              <Button variant="primary" type="submit" isLoading={updateLeadMutation.isPending}>
+              <Button variant="primary" type="submit" className="w-full sm:w-auto" isLoading={updateLeadMutation.isPending}>
                 Save Changes
               </Button>
             </div>

@@ -444,7 +444,7 @@ export function BranchManagementPage() {
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1">
               1. Branch Identity
             </h4>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Branch Name *"
                 required
@@ -460,7 +460,7 @@ export function BranchManagementPage() {
                 onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Select
                 label="Branch Type"
                 value={formData.branchType}
@@ -485,7 +485,7 @@ export function BranchManagementPage() {
               <span>👑</span>
               <span>2. Assign Leadership (Distributor & Manager)</span>
             </h4>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Select
                   label="Assigned Distributor (Stock Lead)"
@@ -535,7 +535,7 @@ export function BranchManagementPage() {
               value={formData.street}
               onChange={(e) => setFormData({ ...formData, street: e.target.value })}
             />
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Input
                 label="City"
                 placeholder="Krishnagiri"
@@ -565,11 +565,11 @@ export function BranchManagementPage() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-            <Button variant="secondary" type="button" onClick={() => setCreateModalOpen(false)}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
+            <Button variant="secondary" type="button" className="w-full sm:w-auto" onClick={() => setCreateModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" type="submit" isLoading={createMutation.isPending}>
+            <Button variant="primary" type="submit" className="w-full sm:w-auto" isLoading={createMutation.isPending}>
               Create & Assign Branch
             </Button>
           </div>
@@ -597,7 +597,7 @@ export function BranchManagementPage() {
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1">
               1. Branch Identity
             </h4>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Branch Name *"
                 required
@@ -611,7 +611,7 @@ export function BranchManagementPage() {
                 onChange={(e) => setEditFormData({ ...editFormData, code: e.target.value.toUpperCase() })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Select
                 label="Branch Type"
                 value={editFormData.branchType}
@@ -635,7 +635,7 @@ export function BranchManagementPage() {
               <span>👑</span>
               <span>2. Assigned Leadership</span>
             </h4>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Select
                   label="Assigned Distributor"
@@ -684,7 +684,7 @@ export function BranchManagementPage() {
               value={editFormData.street}
               onChange={(e) => setEditFormData({ ...editFormData, street: e.target.value })}
             />
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Input
                 label="City"
                 value={editFormData.city}
@@ -725,11 +725,11 @@ export function BranchManagementPage() {
             </label>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-            <Button variant="secondary" type="button" onClick={() => setEditModalOpen(false)}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
+            <Button variant="secondary" type="button" className="w-full sm:w-auto" onClick={() => setEditModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" type="submit" isLoading={editMutation.isPending}>
+            <Button variant="primary" type="submit" className="w-full sm:w-auto" isLoading={editMutation.isPending}>
               Save Changes
             </Button>
           </div>

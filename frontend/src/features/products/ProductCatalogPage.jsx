@@ -703,7 +703,7 @@ export function ProductCatalogPage() {
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
 
-            <div className="grid grid-cols-2 gap-3 items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
               <Input
                 label="SKU Code *"
                 required
@@ -770,7 +770,7 @@ export function ProductCatalogPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Select
                 label="Unit *"
                 value={formData.unit}
@@ -792,7 +792,7 @@ export function ProductCatalogPage() {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Input
                 label="Selling Price (₹) *"
                 type="number"
@@ -815,11 +815,11 @@ export function ProductCatalogPage() {
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="secondary" type="button" onClick={() => setCreateModalOpen(false)}>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
+              <Button variant="secondary" type="button" className="w-full sm:w-auto" onClick={() => setCreateModalOpen(false)}>
                 Cancel
               </Button>
-              <Button variant="primary" type="submit" isLoading={createProductMutation.isPending}>
+              <Button variant="primary" type="submit" className="w-full sm:w-auto" isLoading={createProductMutation.isPending}>
                 Create Product
               </Button>
             </div>
@@ -871,7 +871,7 @@ export function ProductCatalogPage() {
               onChange={(e) => setEditData({ ...editData, name: e.target.value })}
             />
 
-            <div className="grid grid-cols-2 gap-3 items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
               <div>
                 {!isCustomCategoryEdit ? (
                   <div>
@@ -945,7 +945,7 @@ export function ProductCatalogPage() {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Input
                 label="Selling Price (₹) *"
                 type="number"
@@ -968,7 +968,7 @@ export function ProductCatalogPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Weight (grams)"
                 type="number"
@@ -995,11 +995,11 @@ export function ProductCatalogPage() {
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-              <Button variant="secondary" type="button" onClick={() => setEditModalOpen(false)} disabled={editProductMutation.isPending}>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
+              <Button variant="secondary" type="button" className="w-full sm:w-auto" onClick={() => setEditModalOpen(false)} disabled={editProductMutation.isPending}>
                 Cancel
               </Button>
-              <Button variant="primary" type="submit" isLoading={editProductMutation.isPending}>
+              <Button variant="primary" type="submit" className="w-full sm:w-auto" isLoading={editProductMutation.isPending}>
                 Save Changes
               </Button>
             </div>
@@ -1163,7 +1163,7 @@ export function ProductCatalogPage() {
             )}
 
             {/* Quantity */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label={stockActionType === 'ADJUST' ? 'New Available Stock Level *' : 'Quantity Units *'}
                 type="number"
@@ -1208,10 +1208,11 @@ export function ProductCatalogPage() {
               onChange={(e) => setStockNotes(e.target.value)}
             />
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
               <Button
                 variant="secondary"
                 type="button"
+                className="w-full sm:w-auto"
                 onClick={() => {
                   setStockModalOpen(false);
                   setStockTargetProduct(null);
@@ -1226,8 +1227,8 @@ export function ProductCatalogPage() {
                 isLoading={manageStockMutation.isPending}
                 className={
                   stockActionType === 'OUT'
-                    ? 'bg-rose-600 hover:bg-rose-700 text-white font-bold'
-                    : 'bg-emerald-700 hover:bg-emerald-800 text-white font-bold'
+                    ? 'w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-white font-bold'
+                    : 'w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white font-bold'
                 }
               >
                 {stockActionType === 'IN' ? 'Confirm Stock In' : stockActionType === 'OUT' ? 'Confirm Stock Out' : 'Save Stock Adjustment'}

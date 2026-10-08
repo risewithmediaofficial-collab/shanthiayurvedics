@@ -89,12 +89,12 @@ export function Modal({
               )}
               <div className="min-w-0">
                 {title && (
-                  <h3 id={titleId} className="text-base sm:text-lg font-bold text-slate-900 leading-snug tracking-tight truncate">
+                  <h3 id={titleId} className="text-sm sm:text-lg font-bold text-slate-900 leading-snug tracking-tight line-clamp-2">
                     {title}
                   </h3>
                 )}
                 {subtitle && (
-                  <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1 font-medium leading-normal truncate">{subtitle}</p>
+                  <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1 font-medium leading-normal line-clamp-2">{subtitle}</p>
                 )}
               </div>
             </div>

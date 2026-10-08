@@ -67,6 +67,7 @@ export function ManagerOfficeSaleTab() {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [selectedQty, setSelectedQty] = useState(1);
   const [selectedCustomPrice, setSelectedCustomPrice] = useState('');
+  const [selectedDiscountPercent, setSelectedDiscountPercent] = useState(0);
 
   // Payment & Feedback
   const [paymentMethod, setPaymentMethod] = useState('CASH'); // 'CASH' | 'COD' | 'PREPAID'
@@ -87,7 +88,7 @@ export function ManagerOfficeSaleTab() {
     }
   });
 
-  // Handle Pincode Auto-Lookup
+  // Handle Pincode Auto-Lookup (optional)
   const handlePincodeChange = (e) => {
     const pin = e.target.value.replace(/\D/g, '').slice(0, 6);
     setPincode(pin);
@@ -104,7 +105,31 @@ export function ManagerOfficeSaleTab() {
     setSelectedProductId(prodId);
     const prod = products.find((p) => p._id === prodId);
     if (prod) {
-      setSelectedCustomPrice(prod.price || prod.mrp || 0);
+      const basePrice = prod.price || prod.mrp || 0;
+      setSelectedCustomPrice(basePrice);
+      setSelectedDiscountPercent(0);
+    }
+  };
+
+  const handleDiscountPercentChange = (percent) => {
+    const p = Math.max(0, Math.min(100, Number(percent) || 0));
+    setSelectedDiscountPercent(p);
+    const prod = products.find((pr) => pr._id === selectedProductId);
+    const basePrice = prod?.price || prod?.mrp || 0;
+    if (basePrice > 0) {
+      const discounted = Math.round(basePrice * (1 - p / 100));
+      setSelectedCustomPrice(discounted);
+    }
+  };
+
+  const handlePriceChange = (priceVal) => {
+    setSelectedCustomPrice(priceVal);
+    const prod = products.find((pr) => pr._id === selectedProductId);
+    const basePrice = prod?.price || prod?.mrp || 0;
+    const numPrice = Number(priceVal) || 0;
+    if (basePrice > 0 && numPrice >= 0) {
+      const p = Math.max(0, Math.min(100, Math.round(((basePrice - numPrice) / basePrice) * 100)));
+      setSelectedDiscountPercent(p);
     }
   };
 
@@ -113,14 +138,19 @@ export function ManagerOfficeSaleTab() {
     const prod = products.find((p) => p._id === selectedProductId);
     if (!prod) return;
 
-    const unitPrice = parseFloat(selectedCustomPrice) || prod.price || 0;
+    const baseMrp = prod.mrp || prod.price || 0;
+    const unitPrice = selectedCustomPrice !== '' && !isNaN(Number(selectedCustomPrice))
+      ? parseFloat(selectedCustomPrice)
+      : baseMrp;
     const qty = Math.max(1, Number(selectedQty) || 1);
+    const discPct = Number(selectedDiscountPercent) || 0;
 
     const existingIndex = cart.findIndex((item) => item.productId === prod._id);
     if (existingIndex > -1) {
       const updated = [...cart];
       updated[existingIndex].quantity += qty;
       updated[existingIndex].price = unitPrice;
+      updated[existingIndex].discountPercent = discPct;
       updated[existingIndex].total = updated[existingIndex].quantity * unitPrice;
       setCart(updated);
     } else {
@@ -130,8 +160,9 @@ export function ManagerOfficeSaleTab() {
           productId: prod._id,
           productName: prod.name,
           sku: prod.sku,
+          mrp: baseMrp,
+          discountPercent: discPct,
           price: unitPrice,
-          mrp: prod.mrp || unitPrice,
           quantity: qty,
           total: qty * unitPrice
         }
@@ -140,6 +171,7 @@ export function ManagerOfficeSaleTab() {
     setSelectedProductId('');
     setSelectedQty(1);
     setSelectedCustomPrice('');
+    setSelectedDiscountPercent(0);
   };
 
   const handleUpdateCartItemPrice = (index, newPrice) => {
@@ -399,76 +431,32 @@ export function ManagerOfficeSaleTab() {
             </div>
           </div>
 
-          {/* Section 2: Patient Address & Pincode Lookup */}
+          {/* Section 2: Counter Walk-in / Optional Location */}
           <div className="bento-card space-y-3">
             <h4 className="font-semibold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-blue-600" />
-              2. Address & Pincode
+              2. Walk-in Location / Notes (Optional)
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Pincode (Auto-Lookup)</label>
-                <input
-                  type="text"
-                  value={pincode}
-                  onChange={handlePincodeChange}
-                  placeholder="e.g. 635109"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">City / Village</label>
+                <label className="block font-semibold text-slate-700 mb-1">City / Locality (Optional)</label>
                 <input
                   type="text"
                   value={village}
                   onChange={(e) => setVillage(e.target.value)}
-                  placeholder="Hosur"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"
+                  placeholder="e.g. Hosur"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:bg-white"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Taluk</label>
-                <input
-                  type="text"
-                  value={taluk}
-                  onChange={(e) => setTaluk(e.target.value)}
-                  placeholder="Hosur"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">District</label>
-                <input
-                  type="text"
-                  value={district}
-                  onChange={(e) => setDistrict(e.target.value)}
-                  placeholder="Krishnagiri"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">State</label>
-                <input
-                  type="text"
-                  value={stateName}
-                  onChange={(e) => setStateName(e.target.value)}
-                  placeholder="Tamil Nadu"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Street / House No.</label>
+                <label className="block font-semibold text-slate-700 mb-1">Clinic Desk / Walk-in Reference</label>
                 <input
                   type="text"
                   value={street}
                   onChange={(e) => setStreet(e.target.value)}
-                  placeholder="Clinic Walk-in"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"
+                  placeholder="Hosur Clinic Walk-in"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:bg-white"
                 />
               </div>
             </div>
@@ -484,11 +472,11 @@ export function ManagerOfficeSaleTab() {
               <span className="text-[11px] text-slate-400 font-mono">{cart.length}/5 items added</span>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs">
+            <div className="space-y-3">
               <select
                 value={selectedProductId}
                 onChange={(e) => handleProductSelect(e.target.value)}
-                className="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800"
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white"
               >
                 <option value="">Select Ayurvedic Medicine from Catalog...</option>
                 {products.map((p) => (
@@ -498,35 +486,74 @@ export function ManagerOfficeSaleTab() {
                 ))}
               </select>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min="1"
-                  title="Quantity"
-                  value={selectedQty}
-                  onChange={(e) => setSelectedQty(Math.max(1, Number(e.target.value)))}
-                  className="w-16 px-2 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold text-center"
-                  placeholder="Qty"
-                />
-                <input
-                  type="number"
-                  min="0"
-                  title="Offer / Selling Price"
-                  value={selectedCustomPrice}
-                  onChange={(e) => setSelectedCustomPrice(e.target.value)}
-                  className="w-24 px-2 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold text-center"
-                  placeholder="₹ Price"
-                />
-                <Button
-                  size="sm"
-                  variant="primary"
-                  icon={Plus}
-                  onClick={handleAddToCart}
-                  disabled={!selectedProductId}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-                >
-                  Add
-                </Button>
+              {/* Controls row: Qty, Disc %, Quick Chips, Rate, Add Button */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 p-3 bg-slate-50/80 rounded-xl border border-slate-200">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-slate-600">Qty:</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={selectedQty}
+                      onChange={(e) => setSelectedQty(Math.max(1, Number(e.target.value)))}
+                      className="w-14 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-center"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-slate-600">Disc %:</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={selectedDiscountPercent}
+                      onChange={(e) => handleDiscountPercentChange(e.target.value)}
+                      className="w-16 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-center"
+                    />
+                  </div>
+
+                  {/* Quick discount chips */}
+                  <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5">
+                    {[0, 5, 10, 15, 20].map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => handleDiscountPercentChange(d)}
+                        className={`px-2 py-1 text-[10px] font-bold rounded-md transition-colors cursor-pointer shrink-0 ${
+                          Number(selectedDiscountPercent) === d
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {d}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between sm:justify-end gap-2 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-200">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-slate-600">Rate ₹:</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={selectedCustomPrice}
+                      onChange={(e) => handlePriceChange(e.target.value)}
+                      className="w-20 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-center"
+                    />
+                  </div>
+
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    icon={Plus}
+                    onClick={handleAddToCart}
+                    disabled={!selectedProductId}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold w-full sm:w-auto shrink-0"
+                  >
+                    Add
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -558,13 +585,13 @@ export function ManagerOfficeSaleTab() {
                       <button
                         type="button"
                         onClick={() => handleRemoveFromCart(idx)}
-                        className="text-red-400 hover:text-red-600 p-0.5 cursor-pointer"
+                        className="text-red-400 hover:text-red-600 p-0.5 cursor-pointer shrink-0"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                      <div className="flex items-center gap-1.5 text-[11px] text-slate-500 flex-wrap">
                         <span>Qty:</span>
                         <input
                           type="number"
@@ -581,8 +608,13 @@ export function ManagerOfficeSaleTab() {
                           onChange={(e) => handleUpdateCartItemPrice(idx, e.target.value)}
                           className="w-16 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-center font-mono font-bold"
                         />
+                        {item.discountPercent > 0 && (
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
+                            -{item.discountPercent}% Off
+                          </span>
+                        )}
                       </div>
-                      <span className="font-mono font-bold text-slate-900 text-xs">
+                      <span className="font-mono font-bold text-slate-900 text-xs shrink-0">
                         ₹{item.total.toLocaleString()}
                       </span>
                     </div>
@@ -669,7 +701,7 @@ export function ManagerOfficeSaleTab() {
           maxWidth="max-w-md"
         >
           <div className="space-y-4 text-xs font-mono text-slate-800">
-            <div className="p-5 bg-white border-2 border-dashed border-slate-300 rounded-xl space-y-3">
+            <div className="p-4 sm:p-5 bg-white border-2 border-dashed border-slate-300 rounded-xl space-y-3">
               <div className="text-center pb-3 border-b border-slate-200">
                 <h3 className="font-black text-lg text-slate-900">SHANTHI AYURVEDAS</h3>
                 <p className="text-[11px] text-slate-600 font-sans">Hosur Main Road, Krishnagiri DT, Tamil Nadu</p>
@@ -689,22 +721,29 @@ export function ManagerOfficeSaleTab() {
               <div className="pt-2 border-t border-slate-200 space-y-1.5">
                 <div className="text-[10px] uppercase font-bold text-slate-400 pb-1">Prescribed Medicines:</div>
                 {(Array.isArray(printedBill.items) ? printedBill.items : []).map((it, i) => (
-                  <div key={i} className="flex justify-between text-[11px]">
-                    <span>{it.quantity}x {it.productName}</span>
-                    <span className="font-bold">₹{it.total.toLocaleString()}</span>
+                  <div key={i} className="flex justify-between items-center text-[11px] py-0.5 border-b border-dashed border-slate-100 last:border-0">
+                    <div>
+                      <span className="font-semibold">{it.quantity}x {it.productName}</span>
+                      {it.discountPercent > 0 && (
+                        <span className="text-[9px] text-amber-700 ml-1.5 bg-amber-50 px-1 py-0.5 rounded border border-amber-200 font-sans">
+                          ({it.discountPercent}% Off)
+                        </span>
+                      )}
+                    </div>
+                    <span className="font-bold font-mono">₹{it.total.toLocaleString()}</span>
                   </div>
                 ))}
                 {printedBill.serviceFee > 0 && (
                   <div className="flex justify-between text-[11px] text-amber-800 font-semibold">
                     <span>Monthly Regimen Advisory Fee</span>
-                    <span>₹{printedBill.serviceFee.toLocaleString()}</span>
+                    <span className="font-mono">₹{printedBill.serviceFee.toLocaleString()}</span>
                   </div>
                 )}
               </div>
 
               <div className="pt-3 border-t-2 border-slate-300 flex justify-between font-bold text-base">
                 <span>TOTAL PAID:</span>
-                <span>₹{printedBill.grandTotal.toLocaleString()}</span>
+                <span className="font-mono">₹{printedBill.grandTotal.toLocaleString()}</span>
               </div>
 
               <div className="text-center pt-3 text-[10px] text-slate-500 font-sans border-t border-slate-100">
@@ -712,15 +751,15 @@ export function ManagerOfficeSaleTab() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setPrintedBill(null)}>
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={() => setPrintedBill(null)} className="w-full sm:w-auto">
                 Close
               </Button>
               <Button
                 variant="primary"
                 icon={Printer}
                 onClick={() => window.print()}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold w-full sm:w-auto"
               >
                 Print Receipt
               </Button>

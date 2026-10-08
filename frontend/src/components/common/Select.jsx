@@ -1,4 +1,5 @@
 import React, { forwardRef } from 'react';
+import { twMerge } from 'tailwind-merge';
 import { CustomSelect } from './CustomSelect.jsx';
 
 /**
@@ -21,6 +22,7 @@ export const Select = forwardRef(function Select(
     onChange,
     disabled,
     size = 'md',
+    minWidth = 'min-w-full',
     ...props
   },
   ref
@@ -34,8 +36,9 @@ export const Select = forwardRef(function Select(
       helperText={helperText}
       options={options}
       placeholder={placeholder}
-      className={className}
-      containerClassName={containerClassName}
+      className={twMerge('w-full', className)}
+      containerClassName={twMerge('w-full block', containerClassName)}
+      minWidth={minWidth}
       required={required}
       value={value}
       onChange={onChange}

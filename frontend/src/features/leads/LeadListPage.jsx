@@ -121,6 +121,13 @@ export function LeadListPage({ callerId } = {}) {
 
   const leads = Array.isArray(leadsResponse?.data) ? leadsResponse?.data : [];
   const meta = leadsResponse?.pagination || leadsResponse?.meta || { page: 1, totalPages: 1, total: 0 };
+  const statusCounts = leadsResponse?.statusCounts || {};
+  const newCount = statusCounts.NEW ?? leads.filter((l) => l.status === 'NEW').length;
+  const assignedCount = statusCounts.ASSIGNED ?? leads.filter((l) => l.status === 'ASSIGNED').length;
+  const contactedCount = statusCounts.CONTACTED ?? leads.filter((l) => l.status === 'CONTACTED').length;
+  const interestedCount = statusCounts.INTERESTED ?? leads.filter((l) => l.status === 'INTERESTED').length;
+  const convertedCount = statusCounts.CONVERTED ?? leads.filter((l) => l.status === 'CONVERTED').length;
+  const totalLeadsCount = meta.total ?? leads.length;
 
   const { data: telecallersResponse } = useQuery({
     queryKey: ['lead-telecallers', selectedBranchId],
@@ -542,27 +549,27 @@ export function LeadListPage({ callerId } = {}) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bento-card flex flex-col gap-1">
           <div className="bento-metric-title">Total Inquiries</div>
-          <div className="bento-metric-value text-slate-900">{meta.total || leads.length}</div>
+          <div className="bento-metric-value text-slate-900">{totalLeadsCount}</div>
           <div className="text-[11px] text-slate-500 font-medium">Pipeline volume</div>
         </div>
         <div className="bento-card flex flex-col gap-1">
           <div className="bento-metric-title">New Inquiries</div>
           <div className="bento-metric-value text-blue-600">
-            {leads.filter(l => l.status === 'NEW').length}
+            {newCount}
           </div>
           <div className="text-[11px] text-blue-600 font-medium">Awaiting telecaller</div>
         </div>
         <div className="bento-card flex flex-col gap-1">
           <div className="bento-metric-title">Active Outreach</div>
           <div className="bento-metric-value text-amber-600">
-            {leads.filter(l => l.status === 'CONTACTED' || l.status === 'INTERESTED').length}
+            {contactedCount + interestedCount}
           </div>
           <div className="text-[11px] text-amber-600 font-medium">In discussion</div>
         </div>
         <div className="bento-card flex flex-col gap-1">
           <div className="bento-metric-title">Converted Clients</div>
           <div className="bento-metric-value text-emerald-700">
-            {leads.filter(l => l.status === 'CONVERTED').length}
+            {convertedCount}
           </div>
           <div className="text-[11px] text-emerald-600 font-medium">Treatment booked</div>
         </div>
@@ -575,15 +582,16 @@ export function LeadListPage({ callerId } = {}) {
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             Lead Acquisition & Conversion Funnel
           </span>
-          <span className="text-[11px] font-medium text-slate-500">Total: {meta.total || leads.length}</span>
+          <span className="text-[11px] font-medium text-slate-500">Total: {totalLeadsCount}</span>
         </div>
         <SimplePipelineTrack
+          total={totalLeadsCount}
           segments={[
-            { label: 'New', count: leads.filter(l => l.status === 'NEW').length || 18, bgColor: 'bg-blue-500', indicatorColor: 'bg-blue-500' },
-            { label: 'Assigned', count: leads.filter(l => l.status === 'ASSIGNED').length || 24, bgColor: 'bg-indigo-500', indicatorColor: 'bg-indigo-500' },
-            { label: 'Contacted', count: leads.filter(l => l.status === 'CONTACTED').length || 32, bgColor: 'bg-amber-500', indicatorColor: 'bg-amber-500' },
-            { label: 'Interested', count: leads.filter(l => l.status === 'INTERESTED').length || 19, bgColor: 'bg-emerald-500', indicatorColor: 'bg-emerald-500' },
-            { label: 'Converted', count: leads.filter(l => l.status === 'CONVERTED').length || 14, bgColor: 'bg-teal-600', indicatorColor: 'bg-teal-600' }
+            { label: 'New', count: newCount, bgColor: 'bg-blue-500', indicatorColor: 'bg-blue-500' },
+            { label: 'Assigned', count: assignedCount, bgColor: 'bg-indigo-500', indicatorColor: 'bg-indigo-500' },
+            { label: 'Contacted', count: contactedCount, bgColor: 'bg-amber-500', indicatorColor: 'bg-amber-500' },
+            { label: 'Interested', count: interestedCount, bgColor: 'bg-emerald-500', indicatorColor: 'bg-emerald-500' },
+            { label: 'Converted', count: convertedCount, bgColor: 'bg-teal-600', indicatorColor: 'bg-teal-600' }
           ]}
         />
       </div>

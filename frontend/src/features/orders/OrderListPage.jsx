@@ -657,10 +657,10 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
         </div>
         <SimplePipelineTrack
           segments={[
-            { label: 'New', count: metrics.newOrdersCount ?? 2, bgColor: 'bg-blue-500', indicatorColor: 'bg-blue-500' },
+            { label: 'New', count: metrics.newOrdersCount ?? 0, bgColor: 'bg-blue-500', indicatorColor: 'bg-blue-500' },
             { label: 'Packed', count: metrics.packedCount ?? 0, bgColor: 'bg-purple-500', indicatorColor: 'bg-purple-500' },
-            { label: 'In Transit', count: metrics.shippedCount ?? 2, bgColor: 'bg-indigo-500', indicatorColor: 'bg-indigo-500' },
-            { label: 'Delivered', count: metrics.deliveredOrdersCount ?? 9, bgColor: 'bg-emerald-500', indicatorColor: 'bg-emerald-500' },
+            { label: 'In Transit', count: metrics.shippedCount ?? 0, bgColor: 'bg-indigo-500', indicatorColor: 'bg-indigo-500' },
+            { label: 'Delivered', count: metrics.deliveredOrdersCount ?? 0, bgColor: 'bg-emerald-500', indicatorColor: 'bg-emerald-500' },
             { label: 'RTO', count: metrics.rtoOrdersCount ?? 0, bgColor: 'bg-rose-500', indicatorColor: 'bg-rose-500' }
           ]}
         />
@@ -674,7 +674,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
         >
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            <span>{metrics.lowStockCount ?? 55} products low on stock</span>
+            <span>{metrics.lowStockCount ?? 0} products low on stock</span>
           </div>
           <span className="text-amber-900 underline font-bold text-[11px]">View Stock &rarr;</span>
         </div>
@@ -884,7 +884,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
         <div className="flex items-center gap-2">
           <Package className="w-4 h-4 text-blue-600" />
           <span>
-            <strong>{metrics.packedCount ?? 105} packed</strong> — ready to ship
+            <strong>{metrics.packedCount ?? 0} packed</strong> — ready to ship
           </span>
         </div>
 
@@ -1618,10 +1618,19 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                     <label className="block text-slate-600 font-semibold mb-1">Courier / Service</label>
                     <select
                       value={editFormData.courierName}
-                      onChange={(e) => setEditFormData({ ...editFormData, courierName: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const isTPC = /professional/i.test(val);
+                        setEditFormData({
+                          ...editFormData,
+                          courierName: val,
+                          ...(isTPC && editFormData.paymentMethod === 'COD' ? { paymentMethod: 'ONLINE' } : {})
+                        });
+                      }}
                       className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold"
                     >
                       <option value="India Post">India Post (Speed Post)</option>
+                      <option value="The Professional Courier">The Professional Courier (TPC)</option>
                       <option value="BlueDart">BlueDart</option>
                       <option value="DTDC">DTDC</option>
                       <option value="Delhivery">Delhivery</option>
@@ -1645,7 +1654,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                       onChange={(e) => setEditFormData({ ...editFormData, paymentMethod: e.target.value })}
                       className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold"
                     >
-                      <option value="COD">COD</option>
+                      {!/professional/i.test(editFormData.courierName || '') && <option value="COD">COD</option>}
                       <option value="ONLINE">Online</option>
                       <option value="UPI">UPI</option>
                       <option value="BANK_TRANSFER">Bank Transfer</option>

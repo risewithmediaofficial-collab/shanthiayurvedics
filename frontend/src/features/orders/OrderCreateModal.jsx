@@ -26,12 +26,40 @@ import { Select } from '../../components/common/Select.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 
+const INDIAN_STATES = [
+  { value: 'Tamil Nadu', label: 'Tamil Nadu' },
+  { value: 'Karnataka', label: 'Karnataka' },
+  { value: 'Kerala', label: 'Kerala' },
+  { value: 'Andhra Pradesh', label: 'Andhra Pradesh' },
+  { value: 'Telangana', label: 'Telangana' },
+  { value: 'Maharashtra', label: 'Maharashtra' },
+  { value: 'Delhi', label: 'Delhi' },
+  { value: 'Gujarat', label: 'Gujarat' },
+  { value: 'Rajasthan', label: 'Rajasthan' },
+  { value: 'Uttar Pradesh', label: 'Uttar Pradesh' },
+  { value: 'West Bengal', label: 'West Bengal' },
+  { value: 'Madhya Pradesh', label: 'Madhya Pradesh' },
+  { value: 'Odisha', label: 'Odisha' },
+  { value: 'Punjab', label: 'Punjab' },
+  { value: 'Haryana', label: 'Haryana' },
+  { value: 'Other', label: 'Other' }
+];
+
 export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, telecallerId = null, isOfficeSale = false }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
   const isOfficeSaleRoute = typeof window !== 'undefined' && window.location.pathname.includes('/orders/counter-sale');
-  const [isOfficeOrder, setIsOfficeOrder] = useState(Boolean(isOfficeSale || isOfficeSaleRoute));
+  const isTelecaller = user?.role === 'TELECALLER' || Boolean(telecallerId);
+  const [isOfficeOrder, setIsOfficeOrder] = useState(Boolean(!isTelecaller && (isOfficeSale || isOfficeSaleRoute)));
+
+  // Force courier delivery and standard shipping charge for telecallers
+  useEffect(() => {
+    if (isTelecaller) {
+      setIsOfficeOrder(false);
+      if (shippingCharge === '0') setShippingCharge('69');
+    }
+  }, [isTelecaller, isOpen]);
 
   // 1. Customer / Patient Details
   const [patientName, setPatientName] = useState('');
@@ -50,6 +78,7 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
   const [isManualAddressOpen, setIsManualAddressOpen] = useState(false);
   const [isPincodeLoading, setIsPincodeLoading] = useState(false);
   const [availablePostOffices, setAvailablePostOffices] = useState([]);
+  const [isCustomVillage, setIsCustomVillage] = useState(false);
 
   // 3. Products
   const [products, setProducts] = useState([
@@ -58,10 +87,26 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
   const [offerPrice, setOfferPrice] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
 
-  // 4. Payment & Charges (Manual Entry Supported)
+  // 4. Logistics & Payment (Manual Entry Supported)
+  const [courierName, setCourierName] = useState('India Post'); // 'India Post' | 'The Professional Courier'
   const [paymentMethod, setPaymentMethod] = useState('COD'); // 'COD' | 'ONLINE'
   const [shippingCharge, setShippingCharge] = useState('69');
   const [codAmount, setCodAmount] = useState('');
+
+  const handleCourierChange = (newCourier) => {
+    setCourierName(newCourier);
+    if (newCourier === 'The Professional Courier') {
+      setPaymentMethod('ONLINE');
+      setCodAmount('');
+    }
+  };
+
+  useEffect(() => {
+    if (courierName === 'The Professional Courier' && paymentMethod === 'COD') {
+      setPaymentMethod('ONLINE');
+      setCodAmount('');
+    }
+  }, [courierName, paymentMethod]);
 
   // 5. Patient App Registration
   const [registerPatientApp, setRegisterPatientApp] = useState(true);
@@ -104,19 +149,24 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
           setIsPincodeLoading(false);
           if (data?.[0]?.Status === 'Success' && data[0].PostOffice?.length > 0) {
             const poList = data[0].PostOffice;
+            const names = poList.map((p) => p.Name).filter(Boolean);
             const first = poList[0];
             setDistrict(first.District || '');
             setState(first.State || 'Tamil Nadu');
             setTaluk(first.Taluk || first.Block || '');
-            setAvailablePostOffices(poList.map((p) => p.Name));
-            if (!village && poList[0]?.Name) {
-              setVillage(poList[0].Name);
-            }
+            setAvailablePostOffices(names);
+            setIsCustomVillage(false);
+            setVillage((prev) => (names.includes(prev) ? prev : names[0] || ''));
+          } else {
+            setAvailablePostOffices([]);
           }
         })
         .catch(() => {
           setIsPincodeLoading(false);
+          setAvailablePostOffices([]);
         });
+    } else {
+      setAvailablePostOffices([]);
     }
   }, [pincode]);
 
@@ -177,7 +227,7 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
   const parsedShippingCharge = isOfficeOrder ? 0 : (Number(shippingCharge) || 0);
   const autoCalculatedTotal = Math.max(0, productsSubtotal + parsedShippingCharge - discountAmount);
   const finalPayableTotal = offerPrice.trim() !== '' ? Number(offerPrice) : autoCalculatedTotal;
-  const effectiveCodAmount = isOfficeOrder
+  const effectiveCodAmount = isOfficeOrder || courierName === 'The Professional Courier'
     ? 0
     : (paymentMethod === 'COD'
         ? (codAmount.trim() !== '' ? Number(codAmount) : finalPayableTotal)
@@ -208,7 +258,8 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
             `Your Ayurvedic prescription order has been successfully ${isOfficeOrder ? 'billed at the counter' : 'placed'}!\n\n` +
             `📋 *Order ID:* ${newOrder.orderNumber}\n` +
             `📦 *Prescription Items:*\n${itemsList}\n\n` +
-            `💰 *Total Amount:* ₹${finalPayableTotal} (${isOfficeOrder ? 'Direct Counter Payment' : paymentMethod})\n` +
+            `${isOfficeOrder ? '' : `🚚 *Courier Partner:* ${courierName}\n`}` +
+            `💰 *Total Amount:* ₹${finalPayableTotal} (${isOfficeOrder ? 'Direct Counter Payment' : (courierName === 'The Professional Courier' ? 'Pre-Payment (TPC Online/UPI)' : (paymentMethod === 'COD' ? 'Cash on Delivery' : 'Prepaid Online/UPI'))})\n` +
             `${isOfficeOrder ? '' : `📍 *Delivery Address:* ${street}, ${village ? village + ', ' : ''}${district}, ${state} - ${pincode}\n\n`}` +
             `📱 Track & view dosage guide on *my.shanthiayurvedas.com*.\n\n` +
             `Thank you for trusting Shanthi Ayurvedas! 🙏`
@@ -231,11 +282,17 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
       return;
     }
 
+    if (!isOfficeOrder && courierName === 'The Professional Courier' && paymentMethod === 'COD') {
+      setFormError('The Professional Courier does not support Cash on Delivery (COD). Pre-payment (UPI/Online) is required.');
+      return;
+    }
+
     createOrderMutation.mutate({
       patientName,
       fatherName,
       mobile,
       altMobile,
+      courierName: isOfficeOrder ? 'Direct Office Counter' : courierName,
       telecallerId: telecallerId || (user?.role === 'TELECALLER' ? (user._id || user.id) : undefined),
       telecallerName: user?.role === 'TELECALLER' ? user?.name : undefined,
       telecallerPhone: user?.role === 'TELECALLER' ? (user?.phone || user?.mobile) : undefined,
@@ -252,10 +309,10 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
       }),
       weight: totalWeightGrams,
       shippingCharge: isOfficeOrder ? 0 : parsedShippingCharge,
-      codAmount: isOfficeOrder ? 0 : effectiveCodAmount,
+      codAmount: isOfficeOrder || courierName === 'The Professional Courier' ? 0 : effectiveCodAmount,
       discountTotal: discountAmount,
       offerPrice: offerPrice.trim() !== '' ? Number(offerPrice) : undefined,
-      paymentMethod: isOfficeOrder ? 'CASH' : paymentMethod,
+      paymentMethod: isOfficeOrder ? 'CASH' : (courierName === 'The Professional Courier' ? 'ONLINE' : paymentMethod),
       orderChannel: isOfficeOrder ? 'COUNTER_SALE' : 'DIRECT',
       isOfficeSale: isOfficeOrder,
       status: isOfficeOrder ? 'DELIVERED' : undefined,
@@ -312,46 +369,48 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
           </div>
         )}
 
-        {/* Order Mode Switcher */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500">Order Mode:</span>
-            <button
-              type="button"
-              onClick={() => {
-                setIsOfficeOrder(false);
-                if (shippingCharge === '0') setShippingCharge('69');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                !isOfficeOrder
-                  ? 'bg-emerald-700 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              📦 Courier Delivery
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsOfficeOrder(true);
-                setShippingCharge('0');
-                setCodAmount('');
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                isOfficeOrder
-                  ? 'bg-purple-700 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              🏪 Office / Counter Sale
-            </button>
+        {/* Order Mode Switcher (Hidden for Telecallers - Telecaller orders are strictly Courier Delivery) */}
+        {!isTelecaller && (
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500">Order Mode:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOfficeOrder(false);
+                  if (shippingCharge === '0') setShippingCharge('69');
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  !isOfficeOrder
+                    ? 'bg-emerald-700 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                📦 Courier Delivery
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOfficeOrder(true);
+                  setShippingCharge('0');
+                  setCodAmount('');
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  isOfficeOrder
+                    ? 'bg-purple-700 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                🏪 Office / Counter Sale
+              </button>
+            </div>
+            {isOfficeOrder && (
+              <span className="px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 text-[11px] font-bold">
+                Walk-in Patient • Direct Counter Sale
+              </span>
+            )}
           </div>
-          {isOfficeOrder && (
-            <span className="px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 text-[11px] font-bold">
-              Walk-in Patient • Direct Counter Sale
-            </span>
-          )}
-        </div>
+        )}
 
         {/* SECTION 1: 👤 Customer Details */}
         <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3">
@@ -409,17 +468,79 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
               <Input
-                label="Pincode * (auto fills village, taluk, district, state)"
+                label="Pincode *"
                 required
-                placeholder="Enter 6-digit pincode"
+                placeholder="6-digit pincode"
                 value={pincode}
-                onChange={(e) => setPincode(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  setPincode(val);
+                }}
                 maxLength={6}
               />
             </div>
+
+            <div>
+              {availablePostOffices.length > 0 && !isCustomVillage ? (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-slate-700 tracking-wide">
+                      Post Office *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomVillage(true)}
+                      className="text-[10px] text-ayur-700 hover:underline font-semibold cursor-pointer"
+                    >
+                      ✏ Type custom
+                    </button>
+                  </div>
+                  <Select
+                    placeholder="Select Post Office..."
+                    value={village}
+                    onChange={(e) => {
+                      if (e.target.value === '__CUSTOM__') {
+                        setIsCustomVillage(true);
+                        setVillage('');
+                      } else {
+                        setVillage(e.target.value);
+                      }
+                    }}
+                    options={[
+                      { value: '', label: 'Select Post Office...' },
+                      ...availablePostOffices.map((po) => ({ value: po, label: po })),
+                      { value: '__CUSTOM__', label: '✏ Other / Type manually...' }
+                    ]}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-slate-700 tracking-wide">
+                      Post Office / Village
+                    </label>
+                    {availablePostOffices.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomVillage(false)}
+                        className="text-[10px] text-ayur-700 hover:underline font-semibold cursor-pointer"
+                      >
+                        Choose from list
+                      </button>
+                    )}
+                  </div>
+                  <Input
+                    placeholder={isPincodeLoading ? 'Fetching post offices...' : 'Village or post office name'}
+                    value={village}
+                    onChange={(e) => setVillage(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+
             <div>
               <Input
                 label="District"
@@ -428,30 +549,14 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
                 onChange={(e) => setDistrict(e.target.value)}
               />
             </div>
+
             <div>
               <Select
                 label="State"
                 placeholder="Auto filled"
                 value={state}
                 onChange={(e) => setState(e.target.value)}
-                options={[
-                  { value: 'Tamil Nadu', label: 'Tamil Nadu' },
-                  { value: 'Karnataka', label: 'Karnataka' },
-                  { value: 'Kerala', label: 'Kerala' },
-                  { value: 'Andhra Pradesh', label: 'Andhra Pradesh' },
-                  { value: 'Telangana', label: 'Telangana' },
-                  { value: 'Maharashtra', label: 'Maharashtra' },
-                  { value: 'Delhi', label: 'Delhi' },
-                  { value: 'Gujarat', label: 'Gujarat' },
-                  { value: 'Rajasthan', label: 'Rajasthan' },
-                  { value: 'Uttar Pradesh', label: 'Uttar Pradesh' },
-                  { value: 'West Bengal', label: 'West Bengal' },
-                  { value: 'Madhya Pradesh', label: 'Madhya Pradesh' },
-                  { value: 'Odisha', label: 'Odisha' },
-                  { value: 'Punjab', label: 'Punjab' },
-                  { value: 'Haryana', label: 'Haryana' },
-                  { value: 'Other', label: 'Other' }
-                ]}
+                options={INDIAN_STATES}
               />
             </div>
           </div>
@@ -469,83 +574,19 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
             </p>
           </div>
 
-          <Input
-            label="Landmark"
-            placeholder="Near school / temple / hospital"
-            value={landmark}
-            onChange={(e) => setLandmark(e.target.value)}
-          />
-
-          {/* Collapsible Manual Address Override */}
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => setIsManualAddressOpen(!isManualAddressOpen)}
-              className="text-xs text-amber-800 hover:text-amber-900 font-semibold flex items-center gap-1.5 cursor-pointer"
-            >
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-              <span>⚠️ If pincode didn't auto-fill — enter manually:</span>
-              {isManualAddressOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
-
-            {isManualAddressOpen && (
-              <div className="mt-3 p-3 bg-white rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                {availablePostOffices.length > 0 ? (
-                  <Select
-                    label="Village / Post Office"
-                    value={village}
-                    onChange={(e) => setVillage(e.target.value)}
-                    options={[
-                      { value: '', label: 'Select Post Office...' },
-                      ...availablePostOffices.map((po) => ({ value: po, label: po }))
-                    ]}
-                  />
-                ) : (
-                  <Input
-                    label="Village / Post Office"
-                    placeholder="Village name"
-                    value={village}
-                    onChange={(e) => setVillage(e.target.value)}
-                  />
-                )}
-                <Input
-                  label="Taluk"
-                  placeholder="Taluk name"
-                  value={taluk}
-                  onChange={(e) => setTaluk(e.target.value)}
-                />
-                <Input
-                  label="District"
-                  placeholder="District"
-                  value={district}
-                  onChange={(e) => setDistrict(e.target.value)}
-                />
-                <Select
-                  label="State"
-                  placeholder="State"
-                  value={state}
-                  onChange={(e) => setState(e.target.value)}
-                  options={[
-                    { value: 'Tamil Nadu', label: 'Tamil Nadu' },
-                    { value: 'Karnataka', label: 'Karnataka' },
-                    { value: 'Kerala', label: 'Kerala' },
-                    { value: 'Andhra Pradesh', label: 'Andhra Pradesh' },
-                    { value: 'Telangana', label: 'Telangana' },
-                    { value: 'Maharashtra', label: 'Maharashtra' },
-                    { value: 'Delhi', label: 'Delhi' },
-                    { value: 'Gujarat', label: 'Gujarat' },
-                    { value: 'Rajasthan', label: 'Rajasthan' },
-                    { value: 'Uttar Pradesh', label: 'Uttar Pradesh' },
-                    { value: 'West Bengal', label: 'West Bengal' },
-                    { value: 'Madhya Pradesh', label: 'Madhya Pradesh' },
-                    { value: 'Odisha', label: 'Odisha' },
-                    { value: 'Punjab', label: 'Punjab' },
-                    { value: 'Haryana', label: 'Haryana' },
-                    { value: 'Other', label: 'Other' }
-                  ]}
-                />
-              </div>
-            )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              label="Landmark"
+              placeholder="Near school / temple / hospital"
+              value={landmark}
+              onChange={(e) => setLandmark(e.target.value)}
+            />
+            <Input
+              label="Taluk (Optional)"
+              placeholder="Taluk / Block name"
+              value={taluk}
+              onChange={(e) => setTaluk(e.target.value)}
+            />
           </div>
         </div>
 
@@ -696,50 +737,156 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
           </div>
         </div>
 
-        {/* SECTION 4: 💳 Payment & Charges (Only for Courier Delivery) */}
+        {/* SECTION 4: 🚚 Courier Partner & Payment Method (Only for Courier Delivery) */}
         {!isOfficeOrder && (
-          <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3.5">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-900">Payment & Charges</div>
+          <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-4">
+            {/* 4A. Courier Partner Selection */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                  1. Select Courier Service Partner *
+                </span>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  {courierName === 'The Professional Courier' ? '⚡ Professional Express' : '📮 India Post Speed Post'}
+                </span>
+              </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setPaymentMethod('COD');
-                  if (shippingCharge === '0') setShippingCharge('69');
-                }}
-                className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer ${
-                  paymentMethod === 'COD'
-                    ? 'border-ayur-700 bg-ayur-50/60 shadow-sm'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
-              >
-                <div className="text-2xl mb-1">💵</div>
-                <div className="font-bold text-slate-900 text-sm">Cash on Delivery (COD)</div>
-                <div className="text-xs text-slate-500 mt-0.5">
-                  Collect payment at doorstep
-                </div>
-              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* India Post Option */}
+                <button
+                  type="button"
+                  onClick={() => handleCourierChange('India Post')}
+                  className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer relative ${
+                    courierName === 'India Post'
+                      ? 'border-ayur-700 bg-ayur-50/70 shadow-sm ring-2 ring-ayur-600/20'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="text-2xl mb-1">📮</div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      COD + UPI
+                    </span>
+                  </div>
+                  <div className="font-bold text-slate-900 text-sm">India Post (Speed Post)</div>
+                  <div className="text-xs text-slate-500 mt-0.5">
+                    Government postal service · Supports Doorstep COD & Prepaid UPI
+                  </div>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setPaymentMethod('ONLINE');
-                  setShippingCharge('0');
-                }}
-                className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer ${
-                  paymentMethod === 'ONLINE'
-                    ? 'border-emerald-700 bg-emerald-50/60 shadow-sm'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
-              >
-                <div className="text-2xl mb-1">💳</div>
-                <div className="font-bold text-slate-900 text-sm">Online Prepaid (UPI / Card)</div>
-                <div className="text-xs text-emerald-700 font-semibold mt-0.5">Payment collected online</div>
-              </button>
+                {/* The Professional Courier Option */}
+                <button
+                  type="button"
+                  onClick={() => handleCourierChange('The Professional Courier')}
+                  className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer relative ${
+                    courierName === 'The Professional Courier'
+                      ? 'border-blue-600 bg-blue-50/70 shadow-sm ring-2 ring-blue-500/20'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="text-2xl mb-1">⚡</div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                      Pre-Payment Only
+                    </span>
+                  </div>
+                  <div className="font-bold text-slate-900 text-sm">The Professional Courier (TPC)</div>
+                  <div className="text-xs text-slate-500 mt-0.5">
+                    Express courier network · Strictly Pre-Payment (API booking later)
+                  </div>
+                </button>
+              </div>
             </div>
 
-            {/* Manual Shipping Charge & Manual COD Amount Grid */}
+            {/* 4B. Payment Method Selection */}
+            <div className="pt-2 border-t border-slate-200/80 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                  2. Payment Method *
+                </span>
+                {courierName === 'The Professional Courier' ? (
+                  <span className="text-[11px] text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                    COD not supported for Professional Courier
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-slate-500">
+                    Choose doorstep cash or advance prepaid
+                  </span>
+                )}
+              </div>
+
+              {courierName === 'The Professional Courier' ? (
+                /* ONLY Pre-Payment Option for Professional Courier */
+                <div className="space-y-2.5">
+                  <div className="p-3.5 rounded-xl border-2 border-blue-600 bg-white shadow-sm flex items-start gap-3">
+                    <div className="text-2xl shrink-0 mt-0.5">💳</div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <div className="font-bold text-slate-900 text-sm">
+                          Online Pre-Payment (UPI / Card / Bank Transfer)
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                          Prepaid Only
+                        </span>
+                      </div>
+                      <div className="text-xs text-blue-900 font-medium mt-1">
+                        Collect payment in advance via Google Pay, PhonePe, Paytm, or Net Banking prior to shipment.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 bg-amber-50/90 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center gap-2">
+                    <span className="text-base">ℹ️</span>
+                    <span>
+                      <strong>Notice:</strong> The Professional Courier does not offer Cash on Delivery (COD). All orders with this partner must be pre-paid. (Courier API booking will be integrated later).
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* BOTH COD and Online Prepaid for India Post */
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentMethod('COD');
+                      if (shippingCharge === '0') setShippingCharge('69');
+                    }}
+                    className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                      paymentMethod === 'COD'
+                        ? 'border-ayur-700 bg-ayur-50/60 shadow-sm'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="text-2xl mb-1">💵</div>
+                    <div className="font-bold text-slate-900 text-sm">Cash on Delivery (COD)</div>
+                    <div className="text-xs text-slate-500 mt-0.5">
+                      Collect payment at doorstep via Postman
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentMethod('ONLINE');
+                      setShippingCharge('0');
+                    }}
+                    className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                      paymentMethod === 'ONLINE'
+                        ? 'border-emerald-700 bg-emerald-50/60 shadow-sm'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="text-2xl mb-1">💳</div>
+                    <div className="font-bold text-slate-900 text-sm">Prepaid UPI / Online</div>
+                    <div className="text-xs text-emerald-700 font-semibold mt-0.5">
+                      Payment collected online prior to dispatch
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 4C. Shipping Charge & COD Amount */}
             <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Manual Shipping Charge Input */}
@@ -775,13 +922,15 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
                   </div>
                 </div>
 
-                {/* Manual COD Collect Amount (Only for COD) */}
+                {/* Manual COD Collect Amount (Only for COD with India Post) */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
                     <span>💵 COD Collect Amount (₹)</span>
-                    <span className="text-[10px] text-slate-400 font-normal">Enter manually</span>
+                    <span className="text-[10px] text-slate-400 font-normal">
+                      {courierName === 'The Professional Courier' ? 'Not Applicable' : 'Enter manually'}
+                    </span>
                   </label>
-                  {paymentMethod === 'COD' ? (
+                  {courierName !== 'The Professional Courier' && paymentMethod === 'COD' ? (
                     <>
                       <Input
                         type="number"
@@ -807,7 +956,9 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
                     </>
                   ) : (
                     <div className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 font-medium">
-                      ₹0 (Prepaid Order — No Cash Collection)
+                      {courierName === 'The Professional Courier'
+                        ? '₹0 (Professional Courier is Pre-Payment Only)'
+                        : '₹0 (Prepaid Order — No Doorstep Cash Collection)'}
                     </div>
                   )}
                 </div>
@@ -823,6 +974,9 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
             <div className="text-[10px] text-slate-400 flex items-center gap-2 mt-0.5 flex-wrap">
               <span>Products: ₹{productsSubtotal}</span>
               {!isOfficeOrder && <span>• Shipping: ₹{parsedShippingCharge}</span>}
+              {!isOfficeOrder && (
+                <span className="text-cyan-300 font-semibold">• {courierName} ({courierName === 'The Professional Courier' ? 'Pre-Payment Only' : (paymentMethod === 'COD' ? 'COD' : 'Prepaid')})</span>
+              )}
               {isOfficeOrder && (
                 <span className="text-purple-300 font-bold">• Office Counter Sale (₹0 Shipping)</span>
               )}
@@ -840,9 +994,13 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
             <div className="text-2xl font-black text-emerald-400 font-mono">
               ₹{finalPayableTotal.toLocaleString()}
             </div>
-            {!isOfficeOrder && paymentMethod === 'COD' ? (
+            {!isOfficeOrder && courierName !== 'The Professional Courier' && paymentMethod === 'COD' ? (
               <div className="text-[10px] text-amber-300 font-bold font-mono">
                 COD: ₹{effectiveCodAmount.toLocaleString()}
+              </div>
+            ) : !isOfficeOrder && (courierName === 'The Professional Courier' || paymentMethod === 'ONLINE') ? (
+              <div className="text-[10px] text-cyan-300 font-bold font-mono">
+                Prepaid Total: ₹{finalPayableTotal.toLocaleString()}
               </div>
             ) : isOfficeOrder ? (
               <div className="text-[10px] text-purple-300 font-bold">

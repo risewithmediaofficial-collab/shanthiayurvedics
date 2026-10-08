@@ -104,7 +104,7 @@ export function ManagerOfficeSaleTab() {
     setSelectedProductId(prodId);
     const prod = products.find((p) => p._id === prodId);
     if (prod) {
-      setSelectedCustomPrice(prod.price || prod.mrp || 499);
+      setSelectedCustomPrice(prod.price || prod.mrp || 0);
     }
   };
 
@@ -113,7 +113,7 @@ export function ManagerOfficeSaleTab() {
     const prod = products.find((p) => p._id === selectedProductId);
     if (!prod) return;
 
-    const unitPrice = parseFloat(selectedCustomPrice) || prod.price || 499;
+    const unitPrice = parseFloat(selectedCustomPrice) || prod.price || 0;
     const qty = Math.max(1, Number(selectedQty) || 1);
 
     const existingIndex = cart.findIndex((item) => item.productId === prod._id);
@@ -493,7 +493,7 @@ export function ManagerOfficeSaleTab() {
                 <option value="">Select Ayurvedic Medicine from Catalog...</option>
                 {products.map((p) => (
                   <option key={p._id} value={p._id}>
-                    {p.name} — MRP ₹{p.mrp || p.price} (Stock: {p.stock ?? p.availableQuantity ?? 45})
+                    {p.name} — MRP ₹{p.mrp || p.price || 0} (Stock: {p.stock ?? p.availableQuantity ?? 0})
                   </option>
                 ))}
               </select>

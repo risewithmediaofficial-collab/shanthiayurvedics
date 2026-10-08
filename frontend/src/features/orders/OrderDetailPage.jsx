@@ -30,6 +30,7 @@ import { Input } from '../../components/common/Input.jsx';
 import { Select } from '../../components/common/Select.jsx';
 import { PrintableInvoiceModal } from './PrintableInvoiceModal.jsx';
 import { PrintableShippingLabelModal } from './PrintableShippingLabelModal.jsx';
+import { TPCShippingCard } from './components/TPCShippingCard.jsx';
 
 export function OrderDetailPage() {
   const { id } = useParams();
@@ -52,6 +53,7 @@ export function OrderDetailPage() {
   const [editFormData, setEditFormData] = useState({
     patientName: '', fatherName: '', mobile: '', alternateMobile: '',
     street: '', landmark: '', village: '', district: '', city: '', state: 'Tamil Nadu', pincode: '',
+    courierName: 'India Post',
     paymentMethod: 'COD', paymentStatus: 'PENDING', notes: ''
   });
 
@@ -286,6 +288,7 @@ export function OrderDetailPage() {
                 city: addr.city || '',
                 state: addr.state || 'Tamil Nadu',
                 pincode: addr.pincode || '',
+                courierName: order.courierName || 'India Post',
                 paymentMethod: order.paymentMethod || 'COD',
                 paymentStatus: order.paymentStatus || 'PENDING',
                 notes: order.notes || ''
@@ -390,12 +393,22 @@ export function OrderDetailPage() {
                 <div className="text-slate-600">
                   {order.deliveryAddress?.street}, {order.deliveryAddress?.city}, {order.deliveryAddress?.state} - {order.deliveryAddress?.pincode}
                 </div>
-                <div className="text-slate-500 text-[11px]">
-                  Payment Status: <span className="font-semibold text-slate-800">{order.paymentStatus}</span>
+                <div className="text-slate-500 text-[11px] flex items-center justify-between pt-1">
+                  <span>Payment: <strong className="text-slate-800">{order.paymentStatus} ({order.paymentMethod || 'COD'})</strong></span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                    (order.courierName || '').includes('Professional')
+                      ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  }`}>
+                    {(order.courierName || '').includes('Professional') ? '⚡ Professional Courier' : '📮 India Post'}
+                  </span>
                 </div>
               </div>
             </div>
           </Card>
+
+          {/* Courier Logistics (The Professional Couriers TPC Integration) */}
+          <TPCShippingCard order={order} />
         </div>
 
         {/* Right Col: Timeline */}
@@ -505,6 +518,7 @@ export function OrderDetailPage() {
                   pincode: editFormData.pincode,
                   phone: editFormData.mobile
                 },
+                courierName: editFormData.courierName,
                 paymentMethod: editFormData.paymentMethod,
                 paymentStatus: editFormData.paymentStatus,
                 notes: editFormData.notes
@@ -584,14 +598,31 @@ export function OrderDetailPage() {
             </div>
 
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Payment & Notes</h4>
-              <div className="grid grid-cols-2 gap-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Courier Partner & Payment</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Select
+                  label="Courier Partner"
+                  value={editFormData.courierName}
+                  onChange={(e) => {
+                    const newCourier = e.target.value;
+                    const isTPC = /professional/i.test(newCourier);
+                    setEditFormData({
+                      ...editFormData,
+                      courierName: newCourier,
+                      ...(isTPC && editFormData.paymentMethod === 'COD' ? { paymentMethod: 'ONLINE' } : {})
+                    });
+                  }}
+                  options={[
+                    { value: 'India Post', label: 'India Post (Speed Post) - COD & Prepaid' },
+                    { value: 'The Professional Courier', label: 'The Professional Courier (TPC) - Prepaid Only' }
+                  ]}
+                />
                 <Select
                   label="Payment Method"
                   value={editFormData.paymentMethod}
                   onChange={(e) => setEditFormData({ ...editFormData, paymentMethod: e.target.value })}
                   options={[
-                    { value: 'COD', label: 'Cash on Delivery (COD)' },
+                    ...(!/professional/i.test(editFormData.courierName || '') ? [{ value: 'COD', label: 'Cash on Delivery (COD)' }] : []),
                     { value: 'ONLINE', label: 'Online / Gateway' },
                     { value: 'UPI', label: 'UPI Direct' },
                     { value: 'BANK_TRANSFER', label: 'Bank Transfer' }

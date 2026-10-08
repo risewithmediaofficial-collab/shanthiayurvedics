@@ -1,4 +1,5 @@
 import { Product } from '../models/Product.js';
+import { ProductCategory } from '../models/ProductCategory.js';
 import { ProductBatch } from '../models/ProductBatch.js';
 import { Inventory } from '../models/Inventory.js';
 import { ApiResponse } from '../utils/apiResponse.js';
@@ -134,6 +135,24 @@ export const createProduct = asyncHandler(async (req, res) => {
     req
   });
 
+  // If category supplied, ensure it exists in ProductCategory
+  if (category) {
+    const trimmedCat = category.trim();
+    const code = trimmedCat.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+    ProductCategory.findOne({ $or: [{ code }, { name: { $regex: `^${trimmedCat}$`, $options: 'i' } }] })
+      .then(async (found) => {
+        if (!found) {
+          await ProductCategory.create({
+            name: trimmedCat,
+            code,
+            description: `Custom formulation category for ${trimmedCat}`,
+            isSystem: false
+          }).catch(() => {});
+        }
+      })
+      .catch(() => {});
+  }
+
   return ApiResponse.created(res, product, 'Product created successfully');
 });
 
@@ -165,6 +184,24 @@ export const updateProduct = asyncHandler(async (req, res) => {
   Object.assign(product, req.body);
   await product.save();
 
+  // If category changed, ensure it exists in ProductCategory
+  if (req.body.category) {
+    const trimmedCat = req.body.category.trim();
+    const code = trimmedCat.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+    ProductCategory.findOne({ $or: [{ code }, { name: { $regex: `^${trimmedCat}$`, $options: 'i' } }] })
+      .then(async (found) => {
+        if (!found) {
+          await ProductCategory.create({
+            name: trimmedCat,
+            code,
+            description: `Custom formulation category for ${trimmedCat}`,
+            isSystem: false
+          }).catch(() => {});
+        }
+      })
+      .catch(() => {});
+  }
+
   await AuditService.log({
     userId: req.user.id,
     action: 'PRODUCT_UPDATED',
@@ -186,6 +223,10 @@ export const deleteProduct = asyncHandler(async (req, res) => {
   product.isActive = false;
   await product.save();
 
+  // Also remove all stock inventory and batches for this deleted product
+  await Inventory.deleteMany({ productId: product._id });
+  await ProductBatch.deleteMany({ productId: product._id });
+
   await AuditService.log({
     userId: req.user.id,
     action: 'PRODUCT_DELETED',
@@ -195,5 +236,121 @@ export const deleteProduct = asyncHandler(async (req, res) => {
     req
   });
 
-  return ApiResponse.success(res, null, 'Product removed successfully');
+  return ApiResponse.success(res, null, 'Product and its stock removed successfully');
 });
+
+export const getCategories = asyncHandler(async (req, res) => {
+  // If no categories in DB, seed standard defaults
+  const count = await ProductCategory.countDocuments();
+  if (count === 0) {
+    const defaultCategories = [
+      { code: 'OILS', name: 'Ayurvedic Oils', description: 'Classical and proprietary herbal oils / tailams', isSystem: true },
+      { code: 'CHURNAS', name: 'Choornams / Powders', description: 'Micro-pulverized herb blends & churnas', isSystem: true },
+      { code: 'CAPSULES', name: 'Capsules', description: 'Standardized herbal extracts in capsules', isSystem: true },
+      { code: 'TONICS', name: 'Tonics / Syrups', description: 'Herbal asavas, arishtas & decoctions', isSystem: true },
+      { code: 'TABLETS', name: 'Tablets / Vati', description: 'Ayurvedic tablets, gutika & vati', isSystem: true },
+      { code: 'KITS', name: 'Treatment Kits', description: 'Combined ailment treatment protocols & kits', isSystem: true },
+      { code: 'OTHER', name: 'Other Formulations', description: 'Balms, lehyams & miscellaneous formulations', isSystem: true }
+    ];
+    await ProductCategory.insertMany(defaultCategories).catch(() => {});
+  }
+
+  const categories = await ProductCategory.find().sort({ isSystem: -1, createdAt: 1 }).lean();
+
+  // Aggregate product counts per category
+  const productCounts = await Product.aggregate([
+    { $match: { isActive: true } },
+    { $group: { _id: '$category', count: { $sum: 1 } } }
+  ]);
+  const countsMap = {};
+  productCounts.forEach((c) => {
+    if (c._id) {
+      countsMap[String(c._id).toUpperCase()] = c.count;
+    }
+  });
+
+  const enriched = categories.map((cat) => ({
+    ...cat,
+    productCount: countsMap[cat.code.toUpperCase()] || countsMap[cat.name.toUpperCase()] || 0
+  }));
+
+  return ApiResponse.success(res, enriched, 'Product categories retrieved');
+});
+
+export const createCategory = asyncHandler(async (req, res) => {
+  const { name, code, description } = req.body;
+  if (!name || !name.trim()) {
+    return ApiResponse.error(res, 'Category name is required', 400);
+  }
+
+  const trimmedName = name.trim();
+  const rawCode = code && code.trim() ? code.trim() : trimmedName.replace(/[^a-zA-Z0-9]/g, '_');
+  const finalCode = rawCode.toUpperCase();
+
+  const existing = await ProductCategory.findOne({
+    $or: [
+      { code: finalCode },
+      { name: { $regex: `^${trimmedName}$`, $options: 'i' } }
+    ]
+  });
+
+  if (existing) {
+    return ApiResponse.conflict(res, `Category '${existing.name}' (${existing.code}) already exists`);
+  }
+
+  const newCategory = await ProductCategory.create({
+    name: trimmedName,
+    code: finalCode,
+    description: description ? description.trim() : '',
+    isSystem: false
+  });
+
+  await AuditService.log({
+    userId: req.user.id,
+    action: 'CATEGORY_CREATED',
+    module: 'products',
+    resourceType: 'ProductCategory',
+    resourceId: newCategory._id,
+    newValue: newCategory.toObject(),
+    req
+  });
+
+  return ApiResponse.created(res, newCategory, 'Category created successfully');
+});
+
+export const deleteCategory = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const category = await ProductCategory.findById(id);
+  if (!category) throw new NotFoundError('Category');
+
+  if (category.isSystem) {
+    return ApiResponse.error(res, 'System default categories cannot be deleted', 400);
+  }
+
+  const inUse = await Product.countDocuments({
+    isActive: true,
+    $or: [{ category: category.code }, { category: category.name }]
+  });
+
+  if (inUse > 0) {
+    return ApiResponse.error(
+      res,
+      `Cannot delete category '${category.name}': ${inUse} active product(s) are currently assigned to it`,
+      400
+    );
+  }
+
+  await ProductCategory.findByIdAndDelete(id);
+
+  await AuditService.log({
+    userId: req.user.id,
+    action: 'CATEGORY_DELETED',
+    module: 'products',
+    resourceType: 'ProductCategory',
+    resourceId: category._id,
+    req
+  });
+
+  return ApiResponse.success(res, null, 'Category deleted successfully');
+});
+

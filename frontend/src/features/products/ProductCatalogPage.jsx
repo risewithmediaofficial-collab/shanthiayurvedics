@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Layers, Calendar, Tag, Package, Pencil, Trash2, AlertTriangle, Boxes } from 'lucide-react';
+import { Plus, Search, Layers, Calendar, Tag, Package, Pencil, Trash2, AlertTriangle, Boxes, FolderPlus } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -49,6 +49,19 @@ export function ProductCatalogPage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [productToDelete, setProductToDelete] = useState(null);
   const [actionMsg, setActionMsg] = useState('');
+
+  // Category Management Modal State
+  const [categoriesModalOpen, setCategoriesModalOpen] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatCode, setNewCatCode] = useState('');
+  const [newCatDesc, setNewCatDesc] = useState('');
+  const [catError, setCatError] = useState('');
+
+  // Inline custom category states for Create and Edit modals
+  const [isCustomCategoryCreate, setIsCustomCategoryCreate] = useState(false);
+  const [customCategoryCreateName, setCustomCategoryCreateName] = useState('');
+  const [isCustomCategoryEdit, setIsCustomCategoryEdit] = useState(false);
+  const [customCategoryEditName, setCustomCategoryEditName] = useState('');
 
   // Stock Management Modal State for Manager and Owner
   const [stockModalOpen, setStockModalOpen] = useState(false);
@@ -140,6 +153,76 @@ export function ProductCatalogPage() {
     description: ''
   });
 
+  // Categories Query
+  const { data: categories = [] } = useQuery({
+    queryKey: ['product-categories'],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get('/products/categories');
+        const _rd = res.data?.data;
+        return Array.isArray(_rd) ? _rd : [];
+      } catch (e) {
+        return [];
+      }
+    }
+  });
+
+  const displayCategories = useMemo(() => {
+    if (categories.length > 0) return categories;
+    return [
+      { code: 'OILS', name: 'Ayurvedic Oils', isSystem: true },
+      { code: 'CHURNAS', name: 'Choornams / Powders', isSystem: true },
+      { code: 'CAPSULES', name: 'Capsules', isSystem: true },
+      { code: 'TONICS', name: 'Tonics / Syrups', isSystem: true },
+      { code: 'TABLETS', name: 'Tablets / Vati', isSystem: true },
+      { code: 'KITS', name: 'Treatment Kits', isSystem: true },
+      { code: 'OTHER', name: 'Other Formulations', isSystem: true }
+    ];
+  }, [categories]);
+
+  const categoryOptions = useMemo(() => {
+    return displayCategories.map((c) => ({
+      value: c.code || c.name,
+      label: c.name || c.code
+    }));
+  }, [displayCategories]);
+
+  const filterCategoryOptions = useMemo(() => {
+    return [
+      { value: '', label: 'All Categories' },
+      ...categoryOptions
+    ];
+  }, [categoryOptions]);
+
+  const createCategoryMutation = useMutation({
+    mutationFn: (data) => apiClient.post('/products/categories', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['product-categories'] });
+      setNewCatName('');
+      setNewCatCode('');
+      setNewCatDesc('');
+      setCatError('');
+      setActionMsg('✓ Category added successfully');
+      setTimeout(() => setActionMsg(''), 3500);
+    },
+    onError: (err) => {
+      setCatError(err.response?.data?.message || 'Failed to add category');
+    }
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: (id) => apiClient.delete(`/products/categories/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['product-categories'] });
+      setActionMsg('✓ Category deleted successfully');
+      setTimeout(() => setActionMsg(''), 3500);
+    },
+    onError: (err) => {
+      setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to delete category'}`);
+      setTimeout(() => setActionMsg(''), 4000);
+    }
+  });
+
   const { data: productResponse, isLoading } = useQuery({
     queryKey: ['products', page, search, categoryFilter, selectedBranchId, sortBy, sortOrder, startDate, endDate],
     queryFn: async () => {
@@ -166,7 +249,10 @@ export function ProductCatalogPage() {
     mutationFn: (data) => apiClient.post('/products', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['product-categories'] });
       setCreateModalOpen(false);
+      setIsCustomCategoryCreate(false);
+      setCustomCategoryCreateName('');
       setActionMsg('✓ Product created successfully');
       setTimeout(() => setActionMsg(''), 3000);
       setFormData({
@@ -190,7 +276,10 @@ export function ProductCatalogPage() {
     mutationFn: ({ id, data }) => apiClient.patch(`/products/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['product-categories'] });
       setEditModalOpen(false);
+      setIsCustomCategoryEdit(false);
+      setCustomCategoryEditName('');
       setSelectedProduct(null);
       setActionMsg('✓ Product updated successfully');
       setTimeout(() => setActionMsg(''), 3000);
@@ -201,9 +290,12 @@ export function ProductCatalogPage() {
     mutationFn: (id) => apiClient.delete(`/products/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['productsAll'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setDeleteModalOpen(false);
       setProductToDelete(null);
-      setActionMsg('✓ Product removed successfully');
+      setActionMsg('✓ Product and its stock removed successfully');
       setTimeout(() => setActionMsg(''), 3000);
     }
   });
@@ -378,6 +470,8 @@ export function ProductCatalogPage() {
                 type="button"
                 onClick={() => {
                   setSelectedProduct(row);
+                  setIsCustomCategoryEdit(false);
+                  setCustomCategoryEditName('');
                   setEditData({
                     name: row.name || '',
                     category: row.category || 'OILS',
@@ -444,6 +538,16 @@ export function ProductCatalogPage() {
             disabled={products.length === 0}
           />
           {isOwner && (
+            <Button
+              variant="outline"
+              icon={Tag}
+              onClick={() => setCategoriesModalOpen(true)}
+              className="text-xs font-semibold bg-white hover:bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs"
+            >
+              Categories
+            </Button>
+          )}
+          {isOwner && (
             <Button variant="primary" icon={Plus} onClick={() => setCreateModalOpen(true)}>
               New Product
             </Button>
@@ -468,10 +572,26 @@ export function ProductCatalogPage() {
           <div className="bento-metric-value text-slate-900">{meta.total || products.length}</div>
           <div className="text-[11px] text-slate-500 font-medium">Standard catalog SKUs</div>
         </div>
-        <div className="bento-card flex flex-col gap-1">
-          <div className="bento-metric-title">Product Categories</div>
-          <div className="bento-metric-value text-emerald-700">7</div>
-          <div className="text-[11px] text-emerald-600 font-medium">Oils, Churnas, Tonics, Kits</div>
+        <div
+          onClick={() => isOwner && setCategoriesModalOpen(true)}
+          className={`bento-card flex flex-col gap-1 group transition-all ${
+            isOwner ? 'cursor-pointer hover:border-emerald-300 hover:shadow-xs' : ''
+          }`}
+          title={isOwner ? 'Click to manage and add categories manually' : undefined}
+        >
+          <div className="flex items-center justify-between">
+            <span className="bento-metric-title">Product Categories</span>
+            {isOwner && (
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 group-hover:bg-emerald-100 transition-colors flex items-center gap-1">
+                <Tag className="w-2.5 h-2.5" /> Manage / Add +
+              </span>
+            )}
+          </div>
+          <div className="bento-metric-value text-emerald-700">{displayCategories.length}</div>
+          <div className="text-[11px] text-emerald-600 font-medium truncate">
+            {displayCategories.slice(0, 4).map((c) => c.name.split('/')[0].trim()).join(', ')}
+            {displayCategories.length > 4 ? ` +${displayCategories.length - 4} more` : ''}
+          </div>
         </div>
         <div className="bento-card flex flex-col gap-1">
           <div className="bento-metric-title">Stock Architecture</div>
@@ -501,16 +621,7 @@ export function ProductCatalogPage() {
                 setCategoryFilter(e.target.value);
                 setPage(1);
               }}
-              options={[
-                { value: '', label: 'All Categories' },
-                { value: 'OILS', label: 'Ayurvedic Oils' },
-                { value: 'CHURNAS', label: 'Choornams / Powders' },
-                { value: 'CAPSULES', label: 'Capsules / Tablets' },
-                { value: 'TONICS', label: 'Tonics / Syrups' },
-                { value: 'TABLETS', label: 'Tablets' },
-                { value: 'KITS', label: 'Treatment Kits' },
-                { value: 'OTHER', label: 'Other' }
-              ]}
+              options={filterCategoryOptions}
             />
           </div>
           <div className="lg:col-span-4">
@@ -558,7 +669,11 @@ export function ProductCatalogPage() {
       {isOwner && (
         <Modal
           isOpen={createModalOpen}
-          onClose={() => setCreateModalOpen(false)}
+          onClose={() => {
+            setCreateModalOpen(false);
+            setIsCustomCategoryCreate(false);
+            setCustomCategoryCreateName('');
+          }}
           title="Add New Ayurvedic Product"
           subtitle="Define product name, SKU, category, and pricing"
           maxWidth="max-w-lg"
@@ -566,8 +681,12 @@ export function ProductCatalogPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              const finalCat = (isCustomCategoryCreate && customCategoryCreateName.trim())
+                ? customCategoryCreateName.trim().toUpperCase()
+                : (formData.category || 'OILS');
               createProductMutation.mutate({
                 ...formData,
+                category: finalCat,
                 price: Number(formData.price),
                 mrp: Number(formData.mrp),
                 costPrice: Number(formData.costPrice || 0),
@@ -584,7 +703,7 @@ export function ProductCatalogPage() {
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 items-start">
               <Input
                 label="SKU Code *"
                 required
@@ -592,20 +711,63 @@ export function ProductCatalogPage() {
                 value={formData.sku}
                 onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
               />
-              <Select
-                label="Category *"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                options={[
-                  { value: 'OILS', label: 'Ayurvedic Oils' },
-                  { value: 'CHURNAS', label: 'Choornams / Powders' },
-                  { value: 'CAPSULES', label: 'Capsules' },
-                  { value: 'TONICS', label: 'Tonics / Syrups' },
-                  { value: 'TABLETS', label: 'Tablets' },
-                  { value: 'KITS', label: 'Treatment Kits' },
-                  { value: 'OTHER', label: 'Other' }
-                ]}
-              />
+              <div>
+                {!isCustomCategoryCreate ? (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700">Category *</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomCategoryCreate(true);
+                          setCustomCategoryCreateName('');
+                        }}
+                        className="text-[10.5px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5 cursor-pointer"
+                        title="Add a custom formulation category manually"
+                      >
+                        <Plus className="w-3 h-3" /> + Add New
+                      </button>
+                    </div>
+                    <Select
+                      value={formData.category}
+                      onChange={(e) => {
+                        if (e.target.value === '__NEW__') {
+                          setIsCustomCategoryCreate(true);
+                          setCustomCategoryCreateName('');
+                        } else {
+                          setFormData({ ...formData, category: e.target.value });
+                        }
+                      }}
+                      options={[
+                        ...categoryOptions,
+                        { value: '__NEW__', label: '+ Add New Category Manually...' }
+                      ]}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700">New Category *</label>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomCategoryCreate(false)}
+                        className="text-[10.5px] font-semibold text-slate-500 hover:text-slate-800 hover:underline cursor-pointer"
+                      >
+                        ← Existing
+                      </button>
+                    </div>
+                    <Input
+                      required
+                      placeholder="e.g. Herbal Shampoos"
+                      value={customCategoryCreateName}
+                      onChange={(e) => {
+                        setCustomCategoryCreateName(e.target.value);
+                        setFormData({ ...formData, category: e.target.value.trim().toUpperCase() });
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -671,6 +833,8 @@ export function ProductCatalogPage() {
           isOpen={editModalOpen}
           onClose={() => {
             setEditModalOpen(false);
+            setIsCustomCategoryEdit(false);
+            setCustomCategoryEditName('');
             setSelectedProduct(null);
           }}
           title={`Edit Product: ${selectedProduct.name}`}
@@ -680,11 +844,14 @@ export function ProductCatalogPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              const finalCat = (isCustomCategoryEdit && customCategoryEditName.trim())
+                ? customCategoryEditName.trim().toUpperCase()
+                : (editData.category || 'OILS');
               editProductMutation.mutate({
                 id: selectedProduct._id,
                 data: {
                   name: editData.name.trim(),
-                  category: editData.category,
+                  category: finalCat,
                   price: Number(editData.price),
                   mrp: Number(editData.mrp),
                   costPrice: editData.costPrice ? Number(editData.costPrice) : undefined,
@@ -704,21 +871,64 @@ export function ProductCatalogPage() {
               onChange={(e) => setEditData({ ...editData, name: e.target.value })}
             />
 
-            <div className="grid grid-cols-2 gap-3">
-              <Select
-                label="Category *"
-                value={editData.category}
-                onChange={(e) => setEditData({ ...editData, category: e.target.value })}
-                options={[
-                  { value: 'OILS', label: 'Ayurvedic Taila / Oils' },
-                  { value: 'CHURNAS', label: 'Churnas & Powders' },
-                  { value: 'RASAYANAS', label: 'Rasayanas & Lehyams' },
-                  { value: 'TABLETS', label: 'Vati / Tablets' },
-                  { value: 'CAPSULES', label: 'Capsules' },
-                  { value: 'KITS', label: 'Treatment Kits' },
-                  { value: 'RAW_HERBS', label: 'Raw Herbs' }
-                ]}
-              />
+            <div className="grid grid-cols-2 gap-3 items-start">
+              <div>
+                {!isCustomCategoryEdit ? (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700">Category *</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomCategoryEdit(true);
+                          setCustomCategoryEditName('');
+                        }}
+                        className="text-[10.5px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5 cursor-pointer"
+                        title="Add a custom formulation category manually"
+                      >
+                        <Plus className="w-3 h-3" /> + Add New
+                      </button>
+                    </div>
+                    <Select
+                      value={editData.category}
+                      onChange={(e) => {
+                        if (e.target.value === '__NEW__') {
+                          setIsCustomCategoryEdit(true);
+                          setCustomCategoryEditName('');
+                        } else {
+                          setEditData({ ...editData, category: e.target.value });
+                        }
+                      }}
+                      options={[
+                        ...categoryOptions,
+                        { value: '__NEW__', label: '+ Add New Category Manually...' }
+                      ]}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700">New Category *</label>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomCategoryEdit(false)}
+                        className="text-[10.5px] font-semibold text-slate-500 hover:text-slate-800 hover:underline cursor-pointer"
+                      >
+                        ← Existing
+                      </button>
+                    </div>
+                    <Input
+                      required
+                      placeholder="e.g. Pain Relief Balms"
+                      value={customCategoryEditName}
+                      onChange={(e) => {
+                        setCustomCategoryEditName(e.target.value);
+                        setEditData({ ...editData, category: e.target.value.trim().toUpperCase() });
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
               <Select
                 label="Unit of Measurement *"
                 value={editData.unit}
@@ -1024,6 +1234,144 @@ export function ProductCatalogPage() {
               </Button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* Category Management Modal (Owner Only) */}
+      {isOwner && categoriesModalOpen && (
+        <Modal
+          isOpen={categoriesModalOpen}
+          onClose={() => {
+            setCategoriesModalOpen(false);
+            setCatError('');
+          }}
+          title="Product Formulation Categories"
+          subtitle="Manage product categories or add new custom categories manually"
+          maxWidth="max-w-xl"
+        >
+          <div className="space-y-4">
+            {/* Add New Category Form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newCatName.trim()) return;
+                createCategoryMutation.mutate({
+                  name: newCatName.trim(),
+                  code: newCatCode.trim() ? newCatCode.trim().toUpperCase() : undefined,
+                  description: newCatDesc.trim() || undefined
+                });
+              }}
+              className="p-3.5 bg-emerald-50/60 border border-emerald-200/80 rounded-xl space-y-3"
+            >
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-900">
+                <Tag className="w-4 h-4 text-emerald-700" />
+                <span>Add New Category Manually</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <Input
+                  label="Category Name *"
+                  required
+                  placeholder="e.g. Pain Relief Balms"
+                  value={newCatName}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNewCatName(val);
+                    if (!newCatCode || newCatCode === newCatName.toUpperCase().replace(/[^A-Z0-9]/g, '_')) {
+                      setNewCatCode(val.toUpperCase().replace(/[^A-Z0-9]/g, '_'));
+                    }
+                  }}
+                />
+                <Input
+                  label="Code / Tag (Optional)"
+                  placeholder="e.g. BALMS"
+                  value={newCatCode}
+                  onChange={(e) => setNewCatCode(e.target.value.toUpperCase())}
+                />
+              </div>
+              <Input
+                label="Description (Optional)"
+                placeholder="e.g. Topical herbal balms and pain relief ointments"
+                value={newCatDesc}
+                onChange={(e) => setNewCatDesc(e.target.value)}
+              />
+              {catError && (
+                <div className="text-xs text-rose-600 font-semibold bg-rose-50 p-2 rounded-lg border border-rose-200">
+                  {catError}
+                </div>
+              )}
+              <div className="flex justify-end pt-1">
+                <Button
+                  variant="primary"
+                  type="submit"
+                  size="sm"
+                  icon={Plus}
+                  isLoading={createCategoryMutation.isPending}
+                >
+                  Save Category
+                </Button>
+              </div>
+            </form>
+
+            {/* Existing Categories List */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Active Categories ({displayCategories.length})
+                </h4>
+                <span className="text-[11px] text-slate-500">System & Custom formulation tags</span>
+              </div>
+              <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1 divide-y divide-slate-100 border border-slate-100 rounded-xl p-2 bg-slate-50/50">
+                {displayCategories.map((cat) => (
+                  <div
+                    key={cat._id || cat.code}
+                    className="pt-2 first:pt-0 flex items-center justify-between text-xs py-1.5 px-2 hover:bg-white rounded-lg transition-colors"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-800">{cat.name}</span>
+                        <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-mono font-semibold">
+                          {cat.code}
+                        </span>
+                        {cat.isSystem ? (
+                          <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                            Standard
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded">
+                            Custom
+                          </span>
+                        )}
+                      </div>
+                      {cat.description && (
+                        <p className="text-[11px] text-slate-500 truncate mt-0.5">{cat.description}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <span className="text-[11px] font-mono text-slate-500">
+                        {cat.productCount ?? 0} products
+                      </span>
+                      {!cat.isSystem && cat._id && (
+                        <button
+                          type="button"
+                          onClick={() => deleteCategoryMutation.mutate(cat._id)}
+                          title="Delete Custom Category"
+                          className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-100">
+              <Button variant="secondary" onClick={() => setCategoriesModalOpen(false)}>
+                Done
+              </Button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

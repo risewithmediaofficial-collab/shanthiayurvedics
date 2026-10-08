@@ -48,6 +48,7 @@ export function PrintableShippingLabelModal({ isOpen, onClose, order }) {
 
   // Payment & Speed Post row
   const isCOD = (order.paymentMethod || 'COD') === 'COD';
+  const isTPC = (order.courierName || '').toLowerCase().includes('professional');
   const payableAmount = Math.round(Number(
     isCOD
       ? (order.codAmount !== undefined && order.codAmount !== null && order.codAmount !== '' ? order.codAmount : order.grandTotal)
@@ -55,13 +56,24 @@ export function PrintableShippingLabelModal({ isOpen, onClose, order }) {
   ) || 0);
   const amountWords = convertNumberToIndianWords(payableAmount);
 
-  // Speed Post row text
-  const speedPostText = isCOD
-    ? `SPEED POST : Rs ${payableAmount} | ${amountWords} RUPEES ONLY`
-    : `SPEED POST : PREPAID (Rs ${payableAmount}) | ${amountWords} RUPEES ONLY`;
+  // Carrier header text
+  const carrierHeaderText = isTPC
+    ? `THE PROFESSIONAL COURIERS : PREPAID (Rs ${payableAmount}) | ${amountWords} RUPEES ONLY [DEMO MODE]`
+    : (isCOD
+      ? `SPEED POST : Rs ${payableAmount} | ${amountWords} RUPEES ONLY`
+      : `SPEED POST : PREPAID (Rs ${payableAmount}) | ${amountWords} RUPEES ONLY`);
+
+  const carrierSubheaderText = isTPC
+    ? 'TPC EXPRESS LOGISTICS NETWORK · ORIGIN: HOSUR HUB (635109) · SURFACE TRANSIT (ST)'
+    : `BILLER ID : ${order.branchId?.billerId || '1000058077'} (BOOKED AT HOSUR BPC POST - 635110)`;
 
   // Tracking Number / AWB Barcode
-  const trackingNumber = order.trackingNumber || `EM${order.orderNumber?.replace(/[^0-9]/g, '').slice(-9) || Date.now().toString().slice(-9)}IN`;
+  const trackingNumber =
+    order.trackingNumber ||
+    order.awbNumber ||
+    (isTPC
+      ? `TPC${Date.now().toString().slice(-8)}`
+      : `EM${order.orderNumber?.replace(/[^0-9]/g, '').slice(-9) || Date.now().toString().slice(-9)}IN`);
 
   // Telecaller Resolution (Refer By & Phone)
   const telecallerName = (
@@ -113,14 +125,14 @@ export function PrintableShippingLabelModal({ isOpen, onClose, order }) {
             </h1>
           </div>
 
-          {/* 2. Subheader Row 1: SPEED POST : Rs ... | ... RUPEES ONLY */}
+          {/* 2. Subheader Row 1: Carrier info */}
           <div className="border-b border-black px-2.5 py-1.5 font-extrabold text-[11px] sm:text-xs tracking-tight uppercase leading-snug">
-            {speedPostText}
+            {carrierHeaderText}
           </div>
 
-          {/* 3. Subheader Row 2: BILLER ID : 1000058077 (BOOKED AT HOSUR BPC POST - 635110) */}
+          {/* 3. Subheader Row 2: Carrier routing details */}
           <div className="border-b border-black px-2.5 py-1.5 font-extrabold text-[11px] sm:text-xs tracking-tight uppercase leading-snug">
-            BILLER ID : {billerId} (BOOKED AT HOSUR BPC POST - 635110)
+            {carrierSubheaderText}
           </div>
 
           {/* 4. Two-Column Middle Grid */}

@@ -326,7 +326,8 @@ export const getOrderMetricsSummary = asyncHandler(async (req, res) => {
     confirmedOrdersCount,
     processingCount,
     rtoOrdersCount,
-    cancelledCount
+    cancelledCount,
+    stuckOrdersCount: Math.max(0, (totalOrders || 0) - (deliveredOrdersCount || 0) - (cancelledCount || 0) - (rtoOrdersCount || 0))
   }, 'Order metrics summary retrieved');
 });
 

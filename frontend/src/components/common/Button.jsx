@@ -40,6 +40,11 @@ export function Button({
     lg: 18
   };
 
+  // If an icon is provided and children text begins with '+', strip leading plus to avoid duplicate symbols
+  const renderedChildren = typeof children === 'string' && Icon
+    ? children.replace(/^\s*\+\s*/, '')
+    : children;
+
   return (
     <button
       type={type}
@@ -53,7 +58,7 @@ export function Button({
       ) : (
         Icon && iconPosition === 'left' && <Icon sx={{ fontSize: 18 }} className="w-4 h-4" />
       )}
-      <span>{children}</span>
+      <span>{renderedChildren}</span>
       {!isLoading && Icon && iconPosition === 'right' && <Icon sx={{ fontSize: 18 }} className="w-4 h-4" />}
     </button>
   );

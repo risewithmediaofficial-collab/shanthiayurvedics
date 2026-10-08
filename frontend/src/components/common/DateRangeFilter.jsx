@@ -88,9 +88,9 @@ export function DateRangeFilter({
   const hasActiveFilter = Boolean(startDate || endDate);
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+    <div className="flex flex-wrap items-center gap-1.5 text-xs max-w-full">
       {/* Quick Filter Preset Pills */}
-      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+      <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200/90 overflow-x-auto scrollbar-none max-w-full">
         {[
           { key: 'ALL', label: 'All Time' },
           { key: 'TODAY', label: 'Today' },
@@ -104,7 +104,7 @@ export function DateRangeFilter({
               key={preset.key}
               type="button"
               onClick={() => handleSelectPreset(preset.key)}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                 isActive
                   ? 'bg-white text-emerald-800 shadow-2xs font-bold border border-emerald-200/60'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
@@ -118,10 +118,10 @@ export function DateRangeFilter({
 
       {/* Date-to-Date Inputs (shown when CUSTOM or when active filter is set) */}
       {(showCustomPicker || activePreset === 'CUSTOM') && (
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-emerald-300 bg-emerald-50/40 shadow-2xs animate-in fade-in">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 px-2.5 py-1 rounded-xl border border-emerald-300 bg-emerald-50/50 shadow-2xs animate-in fade-in max-w-full">
           <Calendar className="w-3.5 h-3.5 shrink-0 text-emerald-700" />
           
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
             <div className="flex items-center gap-1">
               <span className="text-[10px] font-bold text-slate-500 uppercase">From:</span>
               <input
@@ -133,7 +133,7 @@ export function DateRangeFilter({
               />
             </div>
 
-            <span className="text-slate-400 font-bold">→</span>
+            <span className="text-slate-400 font-bold hidden sm:inline">→</span>
 
             <div className="flex items-center gap-1">
               <span className="text-[10px] font-bold text-slate-500 uppercase">To:</span>
@@ -150,7 +150,7 @@ export function DateRangeFilter({
           <button
             type="button"
             onClick={() => handleSelectPreset('ALL')}
-            className="p-1 rounded-full hover:bg-emerald-100 text-emerald-700 transition-colors ml-0.5 cursor-pointer"
+            className="p-1 rounded-full hover:bg-emerald-100 text-emerald-700 transition-colors ml-auto sm:ml-0.5 cursor-pointer"
             title="Reset to All Time"
           >
             <X className="w-3.5 h-3.5" />

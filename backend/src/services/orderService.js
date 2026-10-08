@@ -42,6 +42,14 @@ export class OrderService {
     for (const key of ['shippingCharge', 'discountTotal', 'offerPrice']) {
       if (orderData[key] !== undefined && (!Number.isFinite(Number(orderData[key])) || Number(orderData[key]) < 0)) throw new AppError('Order amounts must be valid positive amounts', 400);
     }
+
+    const isOfficeSaleInit = Boolean(orderData.isOfficeSale || orderData.orderChannel === 'COUNTER_SALE');
+    const courierName = isOfficeSaleInit ? 'Office Counter' : (orderData.courierName || 'India Post');
+    const isProfessionalCourier = /professional/i.test(courierName);
+    if (isProfessionalCourier && paymentMethod === 'COD') {
+      throw new AppError('The Professional Courier does not support Cash on Delivery (COD). Pre-payment (UPI/Online) is required.', 400);
+    }
+
     let targetCustomerId = customerId;
     let customer = null;
 
@@ -147,7 +155,7 @@ export class OrderService {
       const discountTotal = Number(orderData.discountTotal || 0);
       const calculatedTotal = Math.max(0, subtotal + shippingCharge - discountTotal);
       const grandTotal = orderData.offerPrice ? Number(orderData.offerPrice) : calculatedTotal;
-      const codAmount = isOfficeSale ? 0 : (orderData.codAmount !== undefined && orderData.codAmount !== null && orderData.codAmount !== ''
+      const codAmount = (isOfficeSale || isProfessionalCourier) ? 0 : (orderData.codAmount !== undefined && orderData.codAmount !== null && orderData.codAmount !== ''
         ? Number(orderData.codAmount)
         : (paymentMethod === 'COD' ? grandTotal : 0));
 
@@ -194,6 +202,7 @@ export class OrderService {
         discountTotal,
         shippingCharge,
         codAmount,
+        courierName,
         weight: orderWeight,
         offerPrice: orderData.offerPrice ? Number(orderData.offerPrice) : undefined,
         grandTotal,
@@ -447,6 +456,15 @@ export class OrderService {
 
     if (updateData.paymentMethod) {
       order.paymentMethod = updateData.paymentMethod;
+    }
+
+    const effectiveCourier = order.courierName || 'India Post';
+    const effectivePaymentMethod = order.paymentMethod;
+    if (/professional/i.test(effectiveCourier) && effectivePaymentMethod === 'COD') {
+      throw new AppError('The Professional Courier does not support Cash on Delivery (COD). Pre-payment (UPI/Online) is required.', 400);
+    }
+    if (/professional/i.test(effectiveCourier)) {
+      order.codAmount = 0;
     }
 
     if (updateData.paymentStatus) {
@@ -724,10 +742,15 @@ export class OrderService {
 
         const quantity = Math.max(1, parseInt(row.quantity || row.qty || 1, 10));
         const unitPrice = parseFloat(row.price || row.unitPrice || targetProduct.price || 500);
-        const offerPrice = row.totalAmount || row.offerPrice ? parseFloat(row.totalAmount || row.offerPrice) : undefined;
-        const paymentMethod = ['COD', 'ONLINE', 'UPI', 'BANK_TRANSFER'].includes(row.paymentMethod?.toUpperCase())
+        const rawCourier = row.courierName || row.courier || row['Courier Partner'] || row['Courier'] || 'India Post';
+        const courierName = String(rawCourier).trim();
+        const isProfessional = /professional/i.test(courierName);
+        let paymentMethod = ['COD', 'ONLINE', 'UPI', 'BANK_TRANSFER'].includes(row.paymentMethod?.toUpperCase())
           ? row.paymentMethod.toUpperCase()
           : (row.paymentMode?.toUpperCase() === 'PREPAID' ? 'ONLINE' : 'COD');
+        if (isProfessional && paymentMethod === 'COD') {
+          paymentMethod = 'ONLINE';
+        }
 
         const orderData = {
           patientName,
@@ -736,6 +759,7 @@ export class OrderService {
           altMobile: (row.altMobile || row.alternateMobile || '').toString().trim(),
           patientAppRegistered: Boolean(row.patientAppRegistered),
           branchId: branchId || user.branchId,
+          courierName: isProfessional ? 'The Professional Courier' : courierName,
           paymentMethod,
           offerPrice,
           items: [

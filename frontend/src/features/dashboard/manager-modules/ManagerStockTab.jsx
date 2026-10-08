@@ -350,7 +350,7 @@ export function ManagerStockTab() {
   const totalUnits = productsData.reduce((sum, p) => sum + (p.stock ?? p.totalStock ?? p.availableQuantity ?? 0), 0);
   const totalValuation = productsData.reduce((sum, p) => {
     const qty = p.stock ?? p.totalStock ?? p.availableQuantity ?? 0;
-    return sum + (qty * (p.costPrice || p.price || 500));
+    return sum + (qty * (p.costPrice || p.price || 0));
   }, 0);
 
   return (
@@ -626,9 +626,9 @@ export function ManagerStockTab() {
                   const stockQty = prod.stock ?? prod.totalStock ?? prod.availableQuantity ?? 0;
                   const threshold = prod.lowStockThreshold || 20;
                   const isLow = stockQty <= threshold;
-                  const cost = prod.costPrice || Math.round(prod.price * 0.6) || 300;
-                  const mrp = prod.price || 500;
-                  const marginPct = Math.round(((mrp - cost) / mrp) * 100);
+                  const cost = prod.costPrice || Math.round((prod.price || 0) * 0.6) || 0;
+                  const mrp = prod.price || 0;
+                  const marginPct = mrp > 0 ? Math.round(((mrp - cost) / mrp) * 100) : 0;
 
                   return (
                     <tr key={prod._id} className="hover:bg-slate-50/70 transition-colors">

@@ -1,18 +1,36 @@
 import mongoose from 'mongoose';
+import fs from 'node:fs';
 import { env } from './env.js';
 import { logger } from './logger.js';
 
 mongoose.connection.on('error', (err) => logger.error({ err }, 'Database connection error'));
 mongoose.connection.on('disconnected', () => logger.warn('Database disconnected'));
 
+const isRunningInDocker = () => {
+  try {
+    return fs.existsSync('/.dockerenv') || Boolean(process.env.DOCKER_CONTAINER);
+  } catch {
+    return false;
+  }
+};
+
 export const connectDB = async (customUri = null, maxRetries = 8, retryDelayMs = 2000) => {
   if (mongoose.connection.readyState === 1) return mongoose.connection;
 
   let baseUri = customUri || env.MONGO_URI;
 
-  // In Docker environment, ensure URI targets mongodb container rather than localhost/127.0.0.1
-  if (!customUri && (baseUri.includes('127.0.0.1:27017') || baseUri.includes('localhost:27017'))) {
-    baseUri = baseUri.replace('127.0.0.1:27017', 'mongodb:27017').replace('localhost:27017', 'mongodb:27017');
+  if (!customUri) {
+    if (isRunningInDocker()) {
+      // In Docker container, ensure URI targets mongodb container rather than localhost/127.0.0.1
+      if (baseUri.includes('127.0.0.1:27017') || baseUri.includes('localhost:27017')) {
+        baseUri = baseUri.replace('127.0.0.1:27017', 'mongodb:27017').replace('localhost:27017', 'mongodb:27017');
+      }
+    } else {
+      // Outside Docker (local host/Windows), 'mongodb' host cannot be resolved via DNS
+      if (baseUri.includes('mongodb:27017')) {
+        baseUri = baseUri.replace('mongodb:27017', '127.0.0.1:27017');
+      }
+    }
   }
 
   const urisToAttempt = [baseUri];
@@ -26,6 +44,12 @@ export const connectDB = async (customUri = null, maxRetries = 8, retryDelayMs =
     const unauthUri = baseUri.replace(/mongodb:\/\/[^@]+@/, 'mongodb://').split('?')[0];
     if (!urisToAttempt.includes(unauthUri)) {
       urisToAttempt.push(unauthUri);
+    }
+  } else {
+    // If baseUri is unauthenticated, also allow testing with default admin credentials if unauth fails
+    const authUri = baseUri.replace('mongodb://', 'mongodb://admin:SecureAdminPassword123@') + (baseUri.includes('?') ? '&authSource=admin' : '?authSource=admin');
+    if (!urisToAttempt.includes(authUri)) {
+      urisToAttempt.push(authUri);
     }
   }
 

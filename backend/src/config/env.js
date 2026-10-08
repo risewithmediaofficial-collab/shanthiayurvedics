@@ -34,7 +34,23 @@ const envSchema = z.object({
   SMTP_FROM: z.string().optional().default('no-reply@shanthiayurvedas.com'),
   WHATSAPP_API_URL: z.string().optional().default('https://graph.facebook.com/v19.0'),
   WHATSAPP_ACCESS_TOKEN: z.string().optional().default(''),
-  WHATSAPP_PHONE_NUMBER_ID: z.string().optional().default('')
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional().default(''),
+  // The Professional Couriers (TPC) Integration
+  TPC_MODE: z.enum(['mock', 'live']).default('mock'),
+  TPC_BASE_URL: z.string().default('https://www.tpcglobe.com'),
+  TPC_CLIENT_ID: z.string().optional().default(''),
+  TPC_PASSWORD: z.string().optional().default(''),
+  TPC_SENDER_CODE: z.string().optional().default(''),
+  TPC_SENDER_NAME: z.string().optional().default('Shanthi Ayurvedas'),
+  TPC_SENDER_ADDRESS: z.string().optional().default('No 45 Ayur Bhavan, Main Road'),
+  TPC_SENDER_CITY: z.string().optional().default('Hosur'),
+  TPC_SENDER_PINCODE: z.string().optional().default('635109'),
+  TPC_SENDER_MOB: z.string().optional().default('9876543210'),
+  TPC_SENDER_EMAIL: z.string().optional().default('orders@shanthiayurvedas.com'),
+  TPC_SENDER_GSTIN: z.string().optional().default('33AAAAA0000A1Z5'),
+  TPC_COD_ENABLED: z.preprocess((v) => v === 'true' || v === true, z.boolean()).default(false),
+  TPC_TRACKING_SYNC_ENABLED: z.preprocess((v) => v === undefined || v === 'true' || v === true, z.boolean()).default(true),
+  TPC_TIMEOUT_MS: z.coerce.number().int().default(10000)
 });
 
 const parseEnv = () => {

@@ -202,7 +202,7 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
             id="btn-telecaller-header-new-order"
             className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2 px-3.5 rounded-xl shadow-xs cursor-pointer"
           >
-            + New Prescription Order
+            New Prescription Order
           </Button>
 
           {back && (

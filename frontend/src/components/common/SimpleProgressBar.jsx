@@ -60,23 +60,27 @@ export function SimpleProgressBar({
  * Multi-segment horizontal distribution bar (e.g. Orders/Leads workflow breakdown).
  */
 export function SimplePipelineTrack({ segments = [], total = 0, className = '' }) {
-  const calculatedTotal = total || segments.reduce((acc, s) => acc + (s.count || 0), 0) || 1;
+  const sumCounts = segments.reduce((acc, s) => acc + (Number(s.count) || 0), 0);
+  const calculatedTotal = (Number(total) > 0 ? Number(total) : sumCounts) || 0;
 
   return (
     <div className={`space-y-2 ${className}`}>
       {/* Multi-segment layout bar */}
       <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/80 flex p-0.5 gap-0.5">
-        {segments.map((seg, idx) => {
-          const widthPct = Math.max(2, Math.round(((seg.count || 0) / calculatedTotal) * 100));
-          return (
-            <div
-              key={seg.label || idx}
-              title={`${seg.label}: ${seg.count} (${widthPct}%)`}
-              className={`h-full rounded-sm transition-all duration-300 ${seg.bgColor || 'bg-slate-400'}`}
-              style={{ width: `${widthPct}%` }}
-            />
-          );
-        })}
+        {calculatedTotal > 0 &&
+          segments
+            .filter((seg) => (Number(seg.count) || 0) > 0)
+            .map((seg, idx) => {
+              const widthPct = Math.max(3, Math.round(((Number(seg.count) || 0) / calculatedTotal) * 100));
+              return (
+                <div
+                  key={seg.label || idx}
+                  title={`${seg.label}: ${seg.count} (${widthPct}%)`}
+                  className={`h-full rounded-sm transition-all duration-300 ${seg.bgColor || 'bg-slate-400'}`}
+                  style={{ width: `${widthPct}%` }}
+                />
+              );
+            })}
       </div>
 
       {/* Segment Legend & Counts Ribbon */}
@@ -86,7 +90,7 @@ export function SimplePipelineTrack({ segments = [], total = 0, className = '' }
             <span className={`w-2 h-2 rounded-full ${seg.indicatorColor || 'bg-slate-400'}`} />
             <span className="text-slate-500 font-medium text-[11px]">{seg.label}</span>
             <span className="font-bold text-slate-800 font-mono text-[11px]">
-              {seg.count ?? 0}
+              {Number(seg.count) || 0}
             </span>
           </div>
         ))}

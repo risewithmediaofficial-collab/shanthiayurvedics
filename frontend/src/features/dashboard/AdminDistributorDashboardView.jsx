@@ -118,18 +118,18 @@ const StatCard = ({ label, value, sub, icon: Icon, color = 'green', progress }) 
   const effectiveProgress = progress !== undefined ? progress : (isZeroOrEmpty ? 0 : 100);
 
   return (
-    <div className="clean-card p-4 space-y-3">
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-shadow p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">{label}</span>
+        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">{label}</span>
         <div className={iconClasses[color] || 'icon-box-emerald'}>
           <Icon sx={{ fontSize: 18 }} />
         </div>
       </div>
       <div>
-        <div className="text-2xl font-black text-slate-900 font-mono tracking-tight">{value}</div>
-        {sub && <p className="text-[11px] text-slate-500 font-medium mt-0.5">{sub}</p>}
+        <div className="text-2xl font-black text-slate-900 font-mono tracking-tight leading-none">{value}</div>
+        {sub && <p className="text-xs text-slate-500 font-medium mt-1.5">{sub}</p>}
       </div>
-      <SimpleProgressBar value={effectiveProgress} max={100} size="sm" color={colorKey[color] || 'emerald'} />
+      <SimpleProgressBar value={effectiveProgress} max={100} size="sm" color={colorKey[color] || 'emerald'} showPercentage={false} />
     </div>
   );
 };
@@ -307,7 +307,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
   });
 
   if (isLoading) {
-    return <Spinner size="lg" text="Loading Boss View (Distributor Panel)..." className="py-24" />;
+    return <Spinner size="lg" text="Loading Owner Executive Overview..." className="py-24" />;
   }
 
   const kpis = dashboardData?.kpis || {};
@@ -329,9 +329,9 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
     { id: 'TEAM',       label: 'Team',              testId: 'tab-boss-team' },
     { id: 'PAYOUT',     label: 'Payout',            testId: 'tab-boss-payout' },
     { id: 'SETTLEMENT', label: 'Settlement',        testId: 'tab-boss-settlement' },
-    { id: 'FRANCHISE',  label: '🏪 Franchise',      testId: 'tab-boss-franchise' },
-    { id: 'GST',        label: '🧾 GST Billing',     testId: 'tab-boss-gst' },
-    { id: 'EXPENSES',   label: '🧾 Purchase Expenses', testId: 'tab-boss-expenses' }
+    { id: 'FRANCHISE',  label: 'Franchise',         testId: 'tab-boss-franchise' },
+    { id: 'GST',        label: 'GST Billing',       testId: 'tab-boss-gst' },
+    { id: 'EXPENSES',   label: 'Purchase Expenses', testId: 'tab-boss-expenses' }
   ];
 
   // Telecaller Performance Leaderboard Data (Real-time live stats)
@@ -417,42 +417,55 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
     <div className="space-y-6">
       {/* 1. Header & Distributor Identity Strip */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            {/* Identity & Status Pills */}
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded-full shadow-2xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Active Distributor
+                {user?.role === 'OWNER' ? '👑 Master Admin (Owner)' : 'Active Distributor'}
               </span>
-              <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
-                📍 {activeBranch.address?.city || 'Krishnagiri'}, {activeBranch.address?.state || 'Tamilnadu'}
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200/80 px-2.5 py-1 rounded-full">
+                <MapPin sx={{ fontSize: 13 }} className="text-slate-400" />
+                {activeBranch.address?.city || 'Krishnagiri'}, {activeBranch.address?.state || 'Tamil Nadu'}
               </span>
-              <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
-                📱 {activeBranch.phone || '8884747209'}
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200/80 px-2.5 py-1 rounded-full font-mono">
+                <Phone sx={{ fontSize: 13 }} className="text-slate-400" />
+                {activeBranch.phone || '+91 96299 85341'}
               </span>
-              <span className="text-xs font-mono font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">
+              <span className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-full">
                 Biller ID: {activeBranch.billerId || '1000058077'}
               </span>
-              <span className="text-xs font-bold text-emerald-800 bg-emerald-100/80 border border-emerald-300 px-2.5 py-0.5 rounded-full">
-                🏷️ Brand: {user?.brand || 'Shanthi Ayurvedas'}
-              </span>
             </div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <span>{user?.brand ? `${user.brand} — ${activeBranch.name || 'Hosur'}` : (activeBranch.name || 'Shanthi Ayurvedas Hosur')}</span>
-              <span className="text-slate-400 font-normal text-lg">— Distributor Panel</span>
-            </h1>
+
+            {/* Clean, Non-Duplicated Title & Subtitle */}
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">
+                {(activeBranch.name || 'Hosur Main Hub').toLowerCase().startsWith('shanthi')
+                  ? (activeBranch.name || 'Shanthi Ayurvedas Hosur Main Hub')
+                  : `Shanthi Ayurvedas — ${activeBranch.name || 'Hosur Main Hub'}`}
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1 flex items-center gap-1.5 flex-wrap">
+                <span className="text-emerald-700 font-semibold">
+                  {user?.role === 'OWNER' ? 'Executive Command Center' : 'Distributor Operations'}
+                </span>
+                <span className="text-slate-300">•</span>
+                <span>Multi-Branch Master Hub</span>
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Action Buttons Toolbar */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0 self-start lg:self-center">
             {user?.role === 'OWNER' && (
               <button
                 id="btn-owner-add-product"
                 type="button"
                 onClick={() => setIsAddProductModalOpen(true)}
-                className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition-all cursor-pointer shrink-0"
               >
                 <Plus sx={{ fontSize: 16 }} />
-                <span>+ Add Product</span>
+                <span>Add Product</span>
               </button>
             )}
             {onSwitchToTelecaller && (
@@ -460,11 +473,11 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                 id="btn-owner-view-telecaller"
                 type="button"
                 onClick={() => onSwitchToTelecaller()}
-                className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 bg-slate-800 hover:bg-slate-900 active:bg-slate-950 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition-all cursor-pointer shrink-0"
                 title="View Telecaller Dashboard"
               >
                 <span>🎧</span>
-                <span>View Panel: Telecaller</span>
+                <span>Telecaller Panel</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
@@ -473,23 +486,27 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                 id="btn-switch-manager-view"
                 type="button"
                 onClick={onSwitchToManagerView}
-                className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow transition-all"
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 text-xs font-bold rounded-xl shadow-xs hover:shadow transition-all shrink-0 cursor-pointer"
               >
-                Manager View <ArrowRight className="w-3.5 h-3.5" />
+                <span>Manager View</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
         </div>
 
         {/* India Post Logistics Synced Notice */}
-        <div className="mt-4 flex items-center justify-between p-3 bg-emerald-50/80 border border-emerald-200/90 rounded-xl text-xs text-emerald-800">
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-emerald-50/80 border border-emerald-200/90 rounded-xl text-xs text-emerald-800">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
             <span>
-              <strong>✅ India Post Self Upload Ready!</strong> All sender details are filled. Biller ID: <strong className="font-mono">{activeBranch.billerId || '1000058077'}</strong>
+              <strong>✅ India Post Self Upload Ready!</strong> All sender details are filled. Biller ID: <strong className="font-mono bg-white/70 px-1.5 py-0.5 rounded border border-emerald-200">{activeBranch.billerId || '1000058077'}</strong>
             </span>
           </div>
-          <span className="text-emerald-700 font-bold hidden md:inline">Logistics Synced (Hosur Hub)</span>
+          <span className="text-emerald-700 font-bold shrink-0 self-end sm:self-auto flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Logistics Synced ({activeBranch.address?.city || 'Hosur'} Hub)
+          </span>
         </div>
       </div>
 
@@ -527,16 +544,16 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
 
       {/* 3. Main Navigation Sub-Nav Strip (10 Tabs matching Shanthi Ayurvedas) */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="flex items-center gap-1 overflow-x-auto px-4 pt-3 border-b border-slate-200/80 scrollbar-none bg-slate-50/50">
+        <div className="flex items-center gap-1 overflow-x-auto px-3.5 sm:px-4 pt-3 border-b border-slate-200/80 scrollbar-none bg-slate-50/60">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               id={tab.testId}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3.5 py-2.5 text-xs font-bold rounded-t-xl transition-all whitespace-nowrap border-b-2 -mb-px flex items-center gap-1.5 ${
+              className={`px-3.5 py-2.5 text-xs font-bold rounded-t-xl transition-all whitespace-nowrap border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
                 activeTab === tab.id
-                  ? 'border-emerald-600 text-emerald-800 bg-white shadow-sm'
+                  ? 'border-emerald-600 text-emerald-800 bg-white shadow-2xs font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100/70'
               }`}
             >
@@ -1765,7 +1782,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
               {/* Add Purchase Form matching Shanthi Ayurvedas */}
               {expenseSubTab === 'ADD' && (
                 <form onSubmit={handleSavePurchase} className="p-5 bg-white border border-slate-200 rounded-xl space-y-4 text-xs">
-                  <h4 className="font-bold text-sm text-slate-800">+ Record a Purchase</h4>
+                  <h4 className="font-bold text-sm text-slate-800">Record a Purchase</h4>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <Input

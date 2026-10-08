@@ -453,10 +453,10 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
                       {caller.totalOrders || caller.deliveredOrdersCount}
                     </td>
                     <td className="py-3 px-3 text-center font-semibold text-blue-600">
-                      {caller.newOrders || 2}
+                      {caller.newOrders || 0}
                     </td>
                     <td className="py-3 px-3 text-center font-semibold text-cyan-600">
-                      {caller.inTransitOrders || 4}
+                      {caller.inTransitOrders || 0}
                     </td>
                     <td className="py-3 px-3 text-center font-bold text-emerald-700 bg-emerald-50/50">
                       {caller.deliveredOrdersCount}

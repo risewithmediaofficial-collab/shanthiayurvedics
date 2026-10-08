@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { useBranch } from '../../context/BranchContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { Button } from '../../components/common/Button.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { Spinner } from '../../components/common/Spinner.jsx';
@@ -25,6 +27,11 @@ import { OrderCreateModal } from './OrderCreateModal.jsx';
 import { PrintableInvoiceModal } from './PrintableInvoiceModal.jsx';
 
 export function CounterSalePage() {
+  const { user } = useAuth();
+  if (user?.role === 'TELECALLER') {
+    return <Navigate to="/dashboard?view=telecaller" replace />;
+  }
+
   const queryClient = useQueryClient();
   const { selectedBranchId, branches } = useBranch();
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);

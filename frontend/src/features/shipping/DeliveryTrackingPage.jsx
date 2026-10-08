@@ -385,49 +385,88 @@ export function DeliveryTrackingPage() {
 
   const shipments = Array.isArray(shipmentsResponse?.data) ? shipmentsResponse?.data : [];
   // API returns 'pagination' (from ApiResponse.paginated), not 'meta'
-  const meta = shipmentsResponse?.pagination || shipmentsResponse?.pagination || shipmentsResponse?.meta || { page: 1, totalPages: 1, total: 0 };
+  const meta = shipmentsResponse?.pagination || shipmentsResponse?.meta || { page: 1, totalPages: 1, total: shipments.length };
+
+  // Calculate shipment KPI metrics
+  const totalCount = meta.total || shipments.length;
+  const deliveredCount = shipments.filter((s) => s.trackingStatus === 'DELIVERED').length;
+  const inTransitCount = shipments.filter((s) => ['IN_TRANSIT', 'PICKED_UP'].includes(s.trackingStatus)).length;
+  const outForDeliveryCount = shipments.filter((s) => s.trackingStatus === 'OUT_FOR_DELIVERY').length;
 
   const columns = [
     {
       header: 'AWB Barcode & Carrier',
+      className: 'w-[230px]',
       cell: (row) => (
-        <div>
+        <div className="py-1">
           <div className="font-bold text-slate-900 font-mono text-xs flex items-center gap-1.5">
-            <Truck className="w-3.5 h-3.5 text-ayur-600" />
-            {row.awbNumber}
+            <Truck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <button
+              type="button"
+              onClick={() => setSelectedShipmentAwb(row.awbNumber)}
+              className="hover:underline hover:text-emerald-700 text-left cursor-pointer select-all font-mono"
+              title="Click to track timeline"
+            >
+              {row.awbNumber || '—'}
+            </button>
           </div>
-          <div className="text-[10px] text-slate-500 mt-0.5">{row.courierName}</div>
+          <div className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1.5">
+            <span className="font-semibold text-slate-700">{row.courierName || 'Logistics Partner'}</span>
+            {row.branchId?.name && (
+              <>
+                <span className="text-slate-300">•</span>
+                <span className="text-slate-500">{row.branchId.name}</span>
+              </>
+            )}
+          </div>
         </div>
       )
     },
     {
       header: 'Order Reference',
+      className: 'w-[180px]',
       cell: (row) => (
-        <span className="font-mono text-xs font-semibold text-slate-800">
-          {row.orderId?.orderNumber}
-        </span>
+        <div className="py-1">
+          <span className="font-mono text-xs font-bold text-slate-800 block">
+            {row.orderId?.orderNumber || '—'}
+          </span>
+          {row.orderId?.customerId?.name && (
+            <span className="text-[11px] text-slate-500 font-medium truncate block max-w-[160px]">
+              {row.orderId.customerId.name}
+            </span>
+          )}
+        </div>
       )
     },
     {
       header: 'Destination',
+      className: 'w-[180px]',
       cell: (row) => (
-        <div className="text-xs text-slate-600">
-          {row.orderId?.deliveryAddress?.city}, {row.orderId?.deliveryAddress?.pincode}
+        <div className="text-xs text-slate-600 py-1">
+          <div className="font-semibold text-slate-800">
+            {row.orderId?.deliveryAddress?.city || '—'}
+          </div>
+          <div className="text-[11px] text-slate-400 font-mono">
+            {row.orderId?.deliveryAddress?.pincode ? `PIN: ${row.orderId.deliveryAddress.pincode}` : (row.orderId?.deliveryAddress?.state || '')}
+          </div>
         </div>
       )
     },
     {
       header: 'Tracking Status',
+      className: 'w-[160px]',
       cell: (row) => getStatusBadge(row.trackingStatus)
     },
     {
       header: 'Actions',
       align: 'right',
+      className: 'w-[130px]',
       cell: (row) => (
         <Button
           size="sm"
           variant="secondary"
           onClick={() => setSelectedShipmentAwb(row.awbNumber)}
+          className="text-xs font-semibold hover:border-emerald-300 hover:text-emerald-700 transition-colors"
         >
           Track Timeline
         </Button>
@@ -435,17 +474,28 @@ export function DeliveryTrackingPage() {
     }
   ];
 
+  const hasActiveFilters = Boolean(searchAwb || startDate || endDate);
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Shipments &amp; Live Courier Tracking</h2>
-          <p className="text-xs text-slate-500">Real-time parcel milestone sync across postal and commercial carriers</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center justify-center shrink-0 shadow-xs">
+            <Truck className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+              Shipments &amp; Live Courier Tracking
+            </h1>
+            <p className="text-xs text-slate-500">
+              Real-time parcel milestone sync across postal and commercial carriers
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 self-start sm:self-center shrink-0 w-full sm:w-auto justify-end">
           <ExportButton
             onExport={handleExportShipments}
             isLoading={isExporting}
@@ -454,34 +504,114 @@ export function DeliveryTrackingPage() {
           <Button
             variant="primary"
             onClick={handleOpenImport}
-            className="flex items-center gap-2 shrink-0"
+            className="flex items-center gap-2 shrink-0 shadow-xs font-semibold text-xs"
           >
             <Upload className="w-4 h-4" />
-            Import Courier Status
+            <span>Import Courier Status</span>
           </Button>
         </div>
       </div>
 
-      {/* Quick AWB Lookup and Date Filter */}
-      <div className="bento-card p-4 space-y-3">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
-          <div className="lg:col-span-5 flex gap-2">
-            <div className="flex-1">
-              <Input
+      {/* KPI Metric Overview Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+        <div className="p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+            <Package className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
+              {totalCount}
+            </div>
+            <div className="text-[11px] text-slate-500 font-medium truncate">
+              Total Shipments
+            </div>
+          </div>
+        </div>
+
+        <div className="p-3.5 bg-white rounded-2xl border border-blue-200/80 shadow-2xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+            <Truck className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xl sm:text-2xl font-bold text-blue-700 leading-tight">
+              {inTransitCount}
+            </div>
+            <div className="text-[11px] text-blue-600 font-medium truncate">
+              In Transit / Active
+            </div>
+          </div>
+        </div>
+
+        <div className="p-3.5 bg-white rounded-2xl border border-amber-200/80 shadow-2xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <Clock className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xl sm:text-2xl font-bold text-amber-700 leading-tight">
+              {outForDeliveryCount}
+            </div>
+            <div className="text-[11px] text-amber-600 font-medium truncate">
+              Out for Delivery
+            </div>
+          </div>
+        </div>
+
+        <div className="p-3.5 bg-white rounded-2xl border border-emerald-200/80 shadow-2xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xl sm:text-2xl font-bold text-emerald-800 leading-tight">
+              {deliveredCount}
+            </div>
+            <div className="text-[11px] text-emerald-700 font-medium truncate">
+              Delivered
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick AWB Lookup and Date Filter Bar */}
+      <div className="bento-card p-3.5 sm:p-4 bg-white rounded-2xl border border-slate-200/90 shadow-2xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Direct AWB Search with Track Button */}
+          <div className="flex items-center gap-2 w-full lg:max-w-md">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
                 placeholder="Direct AWB lookup or carrier..."
-                icon={Search}
                 value={searchAwb}
                 onChange={(e) => setSearchAwb(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchAwb.trim()) {
+                    setSelectedShipmentAwb(searchAwb.trim());
+                  }
+                }}
+                className="w-full h-10 pl-9 pr-8 text-xs sm:text-sm bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all font-mono placeholder:font-sans placeholder:text-slate-400"
               />
+              {searchAwb && (
+                <button
+                  type="button"
+                  onClick={() => setSearchAwb('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors"
+                  title="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
             <Button
               variant="secondary"
               onClick={() => searchAwb.trim() && setSelectedShipmentAwb(searchAwb.trim())}
+              className="h-10 px-4 text-xs font-semibold rounded-xl shrink-0"
             >
               Track
             </Button>
           </div>
-          <div className="lg:col-span-7">
+
+          {/* Date Range Filter with horizontal scroll clearance */}
+          <div className="w-full lg:w-auto flex items-center justify-start lg:justify-end overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
             <DateRangeFilter
               startDate={startDate}
               endDate={endDate}
@@ -495,11 +625,18 @@ export function DeliveryTrackingPage() {
         </div>
       </div>
 
+      {/* Shipments Table */}
       <Table
         columns={columns}
         data={shipments}
         isLoading={isLoading}
-        emptyMessage="No shipments recorded."
+        emptyTitle="No Shipments Found"
+        emptyDescription={
+          hasActiveFilters
+            ? 'No records match the selected filters or date range.'
+            : 'No courier shipments recorded yet. Upload tracking files using the Import button.'
+        }
+        minWidth="min-w-[760px]"
       />
 
       <Pagination

@@ -484,7 +484,7 @@ export function ManagerBranchOrdersTab() {
                 <option value="">Select Product...</option>
                 {products.map((p) => (
                   <option key={p._id} value={p._id}>
-                    {p.name} (In-Stock: {p.stock ?? p.availableQuantity ?? 45})
+                    {p.name} (In-Stock: {p.stock ?? p.availableQuantity ?? 0})
                   </option>
                 ))}
               </select>

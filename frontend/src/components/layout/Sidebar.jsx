@@ -62,26 +62,29 @@ export function Sidebar({ isOpen, onClose }) {
     refetchIntervalInBackground: false
   });
 
-  // Fetch team members
+  // Fetch team members / staff
   const { data: teamUsers = [] } = useQuery({
-    queryKey: ['sidebar-telecallers', selectedBranchId],
+    queryKey: ['sidebar-users', selectedBranchId],
     queryFn: async () => {
       try {
-        const res = await apiClient.get('/users', { params: { role: 'TELECALLER' } });
+        const res = await apiClient.get('/users?limit=500');
         const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : [];
       } catch (e) {
         return [];
       }
     },
-    enabled: Boolean(user) && hasPermission('users.view')
+    enabled: Boolean(user) && (isOwner || hasPermission('users.view'))
   });
 
   const ordersCount = metricsData?.totalOrders ?? 0;
   const lowStockCount = metricsData?.lowStockCount ?? 0;
   const leadsCount = metricsData?.totalLeads ?? 0;
+  const stuckOrdersCount = metricsData?.stuckOrdersCount ?? 0;
 
-  const safeTeamUsers = Array.isArray(teamUsers) ? teamUsers : [];
-  const displayCallers = safeTeamUsers.length > 0 ? safeTeamUsers.slice(0, 5) : [];
+  const rawStaffUsers = Array.isArray(teamUsers) ? teamUsers : [];
+  const safeTeamUsers = rawStaffUsers.filter((u) => u.role !== 'OWNER');
+  const telecallerUsers = safeTeamUsers.filter((u) => u.role === 'TELECALLER');
+  const displayCallers = telecallerUsers.length > 0 ? telecallerUsers.slice(0, 5) : [];
 
   let navSections = [];
 
@@ -100,7 +103,7 @@ export function Sidebar({ isOpen, onClose }) {
             label: 'MY ASSIGNED LEADS',
             icon: PeopleAltRounded,
             path: '/leads',
-            badge: leadsCount,
+            badge: leadsCount > 0 ? leadsCount : undefined,
             badgeVariant: 'neutral',
             show: true
           },
@@ -117,9 +120,11 @@ export function Sidebar({ isOpen, onClose }) {
             show: true
           },
           {
-            label: 'CREATE ORDER',
-            icon: AddCircleOutlineRounded,
-            path: '/orders/counter-sale',
+            label: 'MY ORDERS',
+            icon: ShoppingBagRounded,
+            path: '/orders',
+            badge: ordersCount > 0 ? ordersCount : undefined,
+            badgeVariant: 'neutral',
             show: true
           }
         ]
@@ -140,7 +145,7 @@ export function Sidebar({ isOpen, onClose }) {
             label: 'STOCKS AVAILABLE',
             icon: Inventory2Rounded,
             path: '/inventory',
-            badge: lowStockCount,
+            badge: lowStockCount > 0 ? lowStockCount : undefined,
             badgeVariant: 'danger',
             show: true
           }
@@ -153,7 +158,7 @@ export function Sidebar({ isOpen, onClose }) {
             label: 'TOTAL SALES',
             icon: ShoppingBagRounded,
             path: '/orders',
-            badge: ordersCount,
+            badge: ordersCount > 0 ? ordersCount : undefined,
             badgeVariant: 'primary',
             show: true
           },
@@ -194,7 +199,7 @@ export function Sidebar({ isOpen, onClose }) {
             label: 'ORDERS',
             icon: ShoppingBagRounded,
             path: '/orders',
-            badge: ordersCount,
+            badge: ordersCount > 0 ? ordersCount : undefined,
             badgeVariant: 'primary',
             show: hasPermission('orders.view')
           },
@@ -202,7 +207,7 @@ export function Sidebar({ isOpen, onClose }) {
             label: 'LEADS',
             icon: PeopleAltRounded,
             path: '/leads',
-            badge: leadsCount,
+            badge: leadsCount > 0 ? leadsCount : undefined,
             badgeVariant: 'neutral',
             show: hasPermission('leads.view')
           },
@@ -210,7 +215,7 @@ export function Sidebar({ isOpen, onClose }) {
             label: 'STOCK',
             icon: Inventory2Rounded,
             path: '/inventory',
-            badge: lowStockCount,
+            badge: lowStockCount > 0 ? lowStockCount : undefined,
             badgeVariant: 'danger',
             show: hasPermission('inventory.view')
           },
@@ -224,7 +229,7 @@ export function Sidebar({ isOpen, onClose }) {
             label: 'TEAM',
             icon: PeopleAltRounded,
             path: '/admin/users',
-            badge: safeTeamUsers.length,
+            badge: safeTeamUsers.length > 0 ? safeTeamUsers.length : undefined,
             badgeVariant: 'neutral',
             show: isOwner || hasPermission('users.view')
           }
@@ -258,10 +263,10 @@ export function Sidebar({ isOpen, onClose }) {
             show: isOwner || hasPermission('reports.view')
           },
           {
-            label: 'STUCK SHIPPED / OUTSTANDING',
+            label: 'STUCK / OUTSTANDING',
             icon: AccessTimeRounded,
             path: '/orders/stuck',
-            badge: '!',
+            badge: stuckOrdersCount > 0 ? stuckOrdersCount : undefined,
             badgeVariant: 'danger',
             show: hasPermission('orders.view')
           }
@@ -468,7 +473,7 @@ export function Sidebar({ isOpen, onClose }) {
                             }`}
                           />
                           <span className="truncate flex-1 tracking-tight">{item.label}</span>
-                          {item.badge !== undefined && (
+                          {item.badge !== undefined && item.badge !== null && item.badge !== '' && item.badge !== 0 && item.badge !== '0' && (
                             <span
                               className={`ml-auto px-1.5 py-0.5 rounded-md text-[10px] font-black font-mono ${
                                 item.badgeVariant === 'danger'

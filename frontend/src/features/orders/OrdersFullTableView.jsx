@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/common/Button.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
+import { CustomSelect } from '../../components/common/CustomSelect.jsx';
 
 // Status styling configuration
 const STATUS_META = {
@@ -44,6 +45,58 @@ const STATUS_META = {
   RTO:                { label: 'RTO Return',        badge: 'danger',   bg: 'bg-red-50 text-red-700 border-red-200' },
   CANCELLED:          { label: 'Cancelled',         badge: 'neutral',  bg: 'bg-slate-100 text-slate-600 border-slate-200' },
 };
+
+const BULK_STATUS_OPTIONS = [
+  { value: '', label: '-- Bulk Update Status --' },
+  { value: 'NEW', label: 'New' },
+  { value: 'CONFIRMED', label: 'Confirmed' },
+  { value: 'PROCESSING', label: 'Processing' },
+  { value: 'READY_FOR_PACKING', label: 'Ready for Packing' },
+  { value: 'PACKED', label: 'Packed' },
+  { value: 'READY_FOR_DISPATCH', label: 'Ready to Dispatch' },
+  { value: 'DISPATCHED', label: 'Shipped / Dispatched' },
+  { value: 'IN_TRANSIT', label: 'In Transit' },
+  { value: 'DELIVERED', label: 'Delivered' },
+  { value: 'DELIVERY_FAILED', label: 'Delivery Failed' },
+  { value: 'RTO', label: 'RTO Return' },
+  { value: 'CANCELLED', label: 'Cancelled' }
+];
+
+const STATUS_FILTER_OPTIONS = [
+  { value: '', label: 'All Status' },
+  { value: 'NEW', label: 'New' },
+  { value: 'CONFIRMED', label: 'Confirmed' },
+  { value: 'PROCESSING', label: 'Processing' },
+  { value: 'PACKED', label: 'Packed' },
+  { value: 'READY_FOR_DISPATCH', label: 'Ready for Dispatch' },
+  { value: 'IN_TRANSIT', label: 'Shipped / In Transit' },
+  { value: 'DELIVERED', label: 'Delivered' },
+  { value: 'RTO', label: 'RTO' },
+  { value: 'CANCELLED', label: 'Cancelled' }
+];
+
+const PAYMENT_FILTER_OPTIONS = [
+  { value: '', label: 'All Payments' },
+  { value: 'COD', label: 'COD' },
+  { value: 'PREPAID', label: 'Prepaid' },
+  { value: 'ONLINE', label: 'Online' },
+  { value: 'UPI', label: 'UPI' },
+  { value: 'BANK_TRANSFER', label: 'Bank Transfer' }
+];
+
+const ROW_STATUS_OPTIONS = [
+  { value: 'NEW', label: 'New' },
+  { value: 'CONFIRMED', label: 'Confirmed' },
+  { value: 'PROCESSING', label: 'Processing' },
+  { value: 'PACKED', label: 'Packed' },
+  { value: 'READY_FOR_DISPATCH', label: 'Ready to Dispatch' },
+  { value: 'DISPATCHED', label: 'Shipped / Dispatched' },
+  { value: 'IN_TRANSIT', label: 'In Transit' },
+  { value: 'DELIVERED', label: 'Delivered' },
+  { value: 'DELIVERY_FAILED', label: 'Delivery Failed' },
+  { value: 'RTO', label: 'RTO' },
+  { value: 'CANCELLED', label: 'Cancelled' }
+];
 
 export function OrdersFullTableView({
   orders = [],
@@ -156,13 +209,12 @@ export function OrdersFullTableView({
     return orders.filter((o) => !o.trackingNumber && ['PACKED', 'READY_FOR_DISPATCH'].includes(o.status));
   }, [orders]);
 
-  // Courier counts
   const indiaPostReadyCount = useMemo(() => {
     return orders.filter((o) => (o.courierName === 'India Post' || !o.courierName) && ['PACKED', 'READY_FOR_DISPATCH'].includes(o.status)).length;
   }, [orders]);
 
-  const velocityReadyCount = useMemo(() => {
-    return orders.filter((o) => (o.courierName === 'Velocity' || o.courierName === 'BlueDart') && ['PACKED', 'READY_FOR_DISPATCH'].includes(o.status)).length;
+  const professionalReadyCount = useMemo(() => {
+    return orders.filter((o) => /professional/i.test(o.courierName || '') && ['PACKED', 'READY_FOR_DISPATCH'].includes(o.status)).length;
   }, [orders]);
 
   // RTO Low Risk Orders
@@ -314,7 +366,7 @@ export function OrdersFullTableView({
           }`}
         >
           <div className="text-2xl sm:text-3xl font-black text-[#1e88e5] font-mono">
-            {metrics.newOrdersCount ?? 40}
+            {metrics.newOrdersCount ?? 0}
           </div>
           <div className="text-xs font-semibold text-slate-500 mt-1">New</div>
         </div>
@@ -330,7 +382,7 @@ export function OrdersFullTableView({
           }`}
         >
           <div className="text-2xl sm:text-3xl font-black text-[#fb8c00] font-mono">
-            {metrics.packedCount ?? 105}
+            {metrics.packedCount ?? 0}
           </div>
           <div className="text-xs font-semibold text-slate-500 mt-1">Packed</div>
         </div>
@@ -346,7 +398,7 @@ export function OrdersFullTableView({
           }`}
         >
           <div className="text-2xl sm:text-3xl font-black text-[#43a047] font-mono">
-            {metrics.shippedCount ?? 48}
+            {metrics.shippedCount ?? 0}
           </div>
           <div className="text-xs font-semibold text-slate-500 mt-1">Shipped</div>
         </div>
@@ -386,28 +438,30 @@ export function OrdersFullTableView({
         {/* 6. Revenue */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs text-center">
           <div className="text-xl sm:text-2xl font-black text-[#8e24aa] font-mono truncate">
-            Rs {(metrics.todayRev ?? meta.totalRevenue ?? 19139).toLocaleString()}
+            Rs {(metrics.todayRev ?? meta.totalRevenue ?? 0).toLocaleString()}
           </div>
           <div className="text-xs font-semibold text-slate-500 mt-1">Revenue</div>
         </div>
       </div>
 
-      {/* ── 3. Red Alert Banner (Prepaid Payment Pending) ── */}
-      <div className="bg-[#d32f2f] text-white px-4 py-2.5 rounded-xl flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-2 font-bold text-xs sm:text-sm">
-          <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
-          <span>
-            {prepaidPendingOrders.length > 0 ? prepaidPendingOrders.length : 1} PREPAID order with PAYMENT PENDING!
-          </span>
+      {/* ── 3. Red Alert Banner (Prepaid Payment Pending - Only when > 0) ── */}
+      {prepaidPendingOrders.length > 0 && (
+        <div className="bg-[#d32f2f] text-white px-4 py-2.5 rounded-xl flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2 font-bold text-xs sm:text-sm">
+            <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
+            <span>
+              {prepaidPendingOrders.length} PREPAID {prepaidPendingOrders.length === 1 ? 'order' : 'orders'} with PAYMENT PENDING!
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSpecialFilter(specialFilter === 'PREPAID_PENDING' ? 'ALL' : 'PREPAID_PENDING')}
+            className="text-xs font-black bg-white text-[#d32f2f] hover:bg-red-50 px-3.5 py-1 rounded-full transition-colors cursor-pointer shadow-xs"
+          >
+            {specialFilter === 'PREPAID_PENDING' ? 'Show All Orders' : 'View All →'}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setSpecialFilter(specialFilter === 'PREPAID_PENDING' ? 'ALL' : 'PREPAID_PENDING')}
-          className="text-xs font-black bg-white text-[#d32f2f] hover:bg-red-50 px-3.5 py-1 rounded-full transition-colors cursor-pointer shadow-xs"
-        >
-          {specialFilter === 'PREPAID_PENDING' ? 'Show All Orders' : 'View All →'}
-        </button>
-      </div>
+      )}
 
       {/* ── 4. Search and Multi-Dropdown Filter Box (matching Image 2) ── */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-3">
@@ -452,86 +506,74 @@ export function OrdersFullTableView({
 
           {/* All Status */}
           <div>
-            <select
+            <CustomSelect
               value={statusFilter}
               onChange={(e) => setStatusFilter && setStatusFilter(e.target.value)}
-              className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 outline-none focus:border-[#1a237e] cursor-pointer"
-            >
-              <option value="">All Status</option>
-              <option value="NEW">New</option>
-              <option value="CONFIRMED">Confirmed</option>
-              <option value="PROCESSING">Processing</option>
-              <option value="PACKED">Packed</option>
-              <option value="READY_FOR_DISPATCH">Ready for Dispatch</option>
-              <option value="IN_TRANSIT">Shipped / In Transit</option>
-              <option value="DELIVERED">Delivered</option>
-              <option value="RTO">RTO</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
+              options={STATUS_FILTER_OPTIONS}
+              placeholder="All Status"
+              size="sm"
+              minWidth="min-w-[150px]"
+            />
           </div>
 
           {/* All Payments */}
           <div>
-            <select
+            <CustomSelect
               value={paymentMethodFilter}
               onChange={(e) => setPaymentMethodFilter(e.target.value)}
-              className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 outline-none focus:border-[#1a237e] cursor-pointer"
-            >
-              <option value="">All Payments</option>
-              <option value="COD">COD</option>
-              <option value="PREPAID">Prepaid</option>
-              <option value="ONLINE">Online</option>
-              <option value="UPI">UPI</option>
-              <option value="BANK_TRANSFER">Bank Transfer</option>
-            </select>
+              options={PAYMENT_FILTER_OPTIONS}
+              placeholder="All Payments"
+              size="sm"
+              minWidth="min-w-[150px]"
+            />
           </div>
 
           {/* All Districts */}
           <div>
-            <select
+            <CustomSelect
               value={districtFilter}
               onChange={(e) => setDistrictFilter && setDistrictFilter(e.target.value)}
-              className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 outline-none focus:border-[#1a237e] cursor-pointer"
-            >
-              <option value="">All Districts</option>
-              {districts.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: '', label: 'All Districts' },
+                ...districts.map((d) => ({ value: d, label: d }))
+              ]}
+              placeholder="All Districts"
+              searchable
+              size="sm"
+              minWidth="min-w-[160px]"
+            />
           </div>
 
           {/* All Products */}
           <div>
-            <select
+            <CustomSelect
               value={productFilter}
               onChange={(e) => setProductFilter(e.target.value)}
-              className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 outline-none focus:border-[#1a237e] cursor-pointer"
-            >
-              <option value="">All Products</option>
-              {products.map((p) => (
-                <option key={p._id} value={p._id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: '', label: 'All Products' },
+                ...products.map((p) => ({ value: p._id, label: p.name }))
+              ]}
+              placeholder="All Products"
+              searchable
+              size="sm"
+              minWidth="min-w-[170px]"
+            />
           </div>
 
           {/* All Telecallers */}
           <div>
-            <select
+            <CustomSelect
               value={telecallerFilter}
               onChange={(e) => setTelecallerFilter(e.target.value)}
-              className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 outline-none focus:border-[#1a237e] cursor-pointer"
-            >
-              <option value="">All Telecallers</option>
-              {telecallers.map((tc) => (
-                <option key={tc._id} value={tc._id}>
-                  {tc.name}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: '', label: 'All Telecallers' },
+                ...telecallers.map((tc) => ({ value: tc._id, label: tc.name }))
+              ]}
+              placeholder="All Telecallers"
+              searchable
+              size="sm"
+              minWidth="min-w-[160px]"
+            />
           </div>
 
           {/* Search Button & My Own Checkbox */}
@@ -640,7 +682,9 @@ export function OrdersFullTableView({
               </span>
             </div>
             <p className="text-xs text-slate-500 mb-3">
-              Not enough data yet (0 complete orders) · Speed Post Tracking & Export
+              {indiaPostReadyCount > 0
+                ? `${indiaPostReadyCount} orders pending postal dispatch · Speed Post Tracking & Export`
+                : 'All orders processed · Speed Post Tracking & Export'}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -661,36 +705,40 @@ export function OrdersFullTableView({
           </div>
         </div>
 
-        {/* Velocity Card */}
+        {/* The Professional Courier Card */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
-                <h4 className="font-bold text-slate-900 text-sm">Velocity</h4>
+                <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: '#1e88e5' }} />
+                <h4 className="font-bold text-slate-900 text-sm">The Professional Courier (TPC)</h4>
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11px] font-bold border border-amber-200">
-                {velocityReadyCount} ready to dispatch
+              <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 text-[11px] font-bold border border-blue-200">
+                {professionalReadyCount} ready to dispatch
               </span>
             </div>
             <p className="text-xs text-slate-500 mb-3">
-              Not enough data yet (0 complete orders) · API Push & Express Manifest
+              {professionalReadyCount > 0
+                ? `${professionalReadyCount} express prepaid orders ready · Direct courier dispatch`
+                : 'All orders processed · Direct courier dispatch (API booking later)'}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => exportOrders && exportOrders('csv')}
-              className="px-3 py-1.5 rounded-lg bg-[#1e88e5] hover:bg-[#1565c0] text-white text-xs font-bold shadow-xs cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-[#1e88e5] hover:bg-[#1565c0] text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors"
+              style={{ backgroundColor: '#1e88e5', color: '#ffffff' }}
             >
-              🚚 Velocity Export
+              <span>⚡</span>
+              <span>Export TPC Orders</span>
             </button>
             <button
               type="button"
               onClick={() => navigate('/shipping/tracking')}
               className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 cursor-pointer"
             >
-              Push API & Track
+              Logistics Desk
             </button>
           </div>
         </div>
@@ -745,13 +793,14 @@ export function OrdersFullTableView({
           <span>📮 India Post Export</span>
         </button>
 
-        {/* 5. Velocity Export */}
+        {/* 5. TPC Export */}
         <button
           type="button"
           onClick={() => exportOrders && exportOrders('csv')}
           className="px-3 py-1.5 rounded-lg bg-[#1e88e5] hover:bg-[#1565c0] text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+          style={{ backgroundColor: '#1e88e5', color: '#ffffff' }}
         >
-          <span>🚚 Velocity Export</span>
+          <span>⚡ TPC Export</span>
         </button>
 
         {/* 6. Not Exported */}
@@ -851,25 +900,14 @@ export function OrdersFullTableView({
           </label>
 
           <div className="flex items-center gap-2">
-            <select
+            <CustomSelect
               value={bulkStatusToApply}
               onChange={(e) => setBulkStatusToApply(e.target.value)}
-              className="px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium outline-none focus:border-ayur-600 cursor-pointer"
-            >
-              <option value="">-- Bulk Update Status --</option>
-              <option value="NEW">New</option>
-              <option value="CONFIRMED">Confirmed</option>
-              <option value="PROCESSING">Processing</option>
-              <option value="READY_FOR_PACKING">Ready for Packing</option>
-              <option value="PACKED">Packed</option>
-              <option value="READY_FOR_DISPATCH">Ready to Dispatch</option>
-              <option value="DISPATCHED">Shipped / Dispatched</option>
-              <option value="IN_TRANSIT">In Transit</option>
-              <option value="DELIVERED">Delivered</option>
-              <option value="DELIVERY_FAILED">Delivery Failed</option>
-              <option value="RTO">RTO Return</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
+              options={BULK_STATUS_OPTIONS}
+              placeholder="-- Bulk Update Status --"
+              minWidth="min-w-[210px]"
+              size="sm"
+            />
 
             <label className="flex items-center gap-1 text-[11px] text-slate-600 cursor-pointer select-none">
               <input
@@ -1065,9 +1103,20 @@ export function OrdersFullTableView({
                     {/* Amount & Payment */}
                     <td className="p-3">
                       <span className="font-bold font-mono text-slate-900 block">₹{row.grandTotal?.toLocaleString()}</span>
-                      <span className="text-[10px] uppercase font-bold text-slate-500">
-                        {row.paymentMethod || 'COD'}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] uppercase font-bold text-slate-500">
+                          {row.paymentMethod || 'COD'}
+                        </span>
+                        {row.courierName && (
+                          <span className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-semibold border ${
+                            row.courierName.includes('Professional')
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}>
+                            {row.courierName.includes('Professional') ? '⚡ TPC' : '📮 Post'}
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Status Badge */}
@@ -1079,30 +1128,37 @@ export function OrdersFullTableView({
 
                     {/* Quick Status Dropdown */}
                     <td className="p-3">
-                      <select
-                        value={row.status}
-                        onChange={(e) => {
-                          singleTransitionMutation &&
-                            singleTransitionMutation.mutate({
-                              orderId: row._id,
-                              status: e.target.value,
-                              forceRevert: true
-                            });
-                        }}
-                        className="px-2 py-1 bg-white border border-slate-300 rounded text-[11px] font-semibold text-slate-800 outline-none focus:border-[#1a237e] cursor-pointer"
-                      >
-                        <option value="NEW">New</option>
-                        <option value="CONFIRMED">Confirmed</option>
-                        <option value="PROCESSING">Processing</option>
-                        <option value="PACKED">Packed</option>
-                        <option value="READY_FOR_DISPATCH">Ready to Dispatch</option>
-                        <option value="DISPATCHED">Shipped / Dispatched</option>
-                        <option value="IN_TRANSIT">In Transit</option>
-                        <option value="DELIVERED">Delivered</option>
-                        <option value="DELIVERY_FAILED">Delivery Failed</option>
-                        <option value="RTO">RTO</option>
-                        <option value="CANCELLED">Cancelled</option>
-                      </select>
+                      <div className="relative inline-block">
+                        <select
+                          value={row.status}
+                          onChange={(e) => {
+                            singleTransitionMutation &&
+                              singleTransitionMutation.mutate({
+                                orderId: row._id,
+                                status: e.target.value,
+                                forceRevert: true
+                              });
+                          }}
+                          className="appearance-none pl-2.5 pr-6 py-1 bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 rounded-lg text-[11px] font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all cursor-pointer shadow-2xs"
+                        >
+                          <option value="NEW">New</option>
+                          <option value="CONFIRMED">Confirmed</option>
+                          <option value="PROCESSING">Processing</option>
+                          <option value="PACKED">Packed</option>
+                          <option value="READY_FOR_DISPATCH">Ready to Dispatch</option>
+                          <option value="DISPATCHED">Shipped / Dispatched</option>
+                          <option value="IN_TRANSIT">In Transit</option>
+                          <option value="DELIVERED">Delivered</option>
+                          <option value="DELIVERY_FAILED">Delivery Failed</option>
+                          <option value="RTO">RTO</option>
+                          <option value="CANCELLED">Cancelled</option>
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-1.5 text-slate-400">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
                     </td>
 
                     {/* District & City */}

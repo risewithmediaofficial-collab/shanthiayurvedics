@@ -365,7 +365,7 @@ export function ManagerStuckTab() {
                       <td className="py-3 px-4 text-right font-mono font-black text-slate-900 text-sm">
                         ₹{(ord.grandTotal ?? 0).toLocaleString()}
                         <div className="text-[10px] text-rose-700 font-semibold">
-                          Locked: ₹{Math.round((ord.grandTotal || 1500) * 0.4).toLocaleString()}
+                          Locked: ₹{Math.round((ord.grandTotal || 0) * 0.4).toLocaleString()}
                         </div>
                       </td>
 

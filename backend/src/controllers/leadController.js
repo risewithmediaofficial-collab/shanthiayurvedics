@@ -75,7 +75,10 @@ export const getLeads = asyncHandler(async (req, res) => {
   }
 
   const skip = (page - 1) * limit;
-  const [total, leads] = await Promise.all([
+  const baseStatusQuery = { ...query };
+  delete baseStatusQuery.status;
+
+  const [total, leads, newCount, assignedCount, contactedCount, interestedCount, convertedCount] = await Promise.all([
     Lead.countDocuments(query),
     Lead.find(query)
       .populate('assignedTo', 'name email')
@@ -83,10 +86,29 @@ export const getLeads = asyncHandler(async (req, res) => {
       .sort(sortObj)
       .skip(skip)
       .limit(limit)
-      .lean()
+      .lean(),
+    Lead.countDocuments({ ...baseStatusQuery, status: 'NEW' }),
+    Lead.countDocuments({ ...baseStatusQuery, status: 'ASSIGNED' }),
+    Lead.countDocuments({ ...baseStatusQuery, status: 'CONTACTED' }),
+    Lead.countDocuments({ ...baseStatusQuery, status: 'INTERESTED' }),
+    Lead.countDocuments({ ...baseStatusQuery, status: 'CONVERTED' })
   ]);
 
-  return ApiResponse.paginated(res, leads, { page, limit, total, sortBy, sortOrder: sortOrder === 1 ? 'asc' : 'desc' }, 'Leads retrieved successfully');
+  return ApiResponse.paginated(
+    res,
+    leads,
+    { page, limit, total, sortBy, sortOrder: sortOrder === 1 ? 'asc' : 'desc' },
+    'Leads retrieved successfully',
+    {
+      statusCounts: {
+        NEW: newCount,
+        ASSIGNED: assignedCount,
+        CONTACTED: contactedCount,
+        INTERESTED: interestedCount,
+        CONVERTED: convertedCount
+      }
+    }
+  );
 });
 
 export const getLeadById = asyncHandler(async (req, res) => {

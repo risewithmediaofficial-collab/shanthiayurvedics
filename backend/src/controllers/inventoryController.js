@@ -1,9 +1,13 @@
+import mongoose from 'mongoose';
+import { Product } from '../models/Product.js';
 import { Inventory } from '../models/Inventory.js';
 import { StockMovement } from '../models/StockMovement.js';
 import { StockTransfer } from '../models/StockTransfer.js';
 import { InventoryService } from '../services/inventoryService.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { NotFoundError } from '../utils/errors.js';
+import { AuditService } from '../services/auditService.js';
 
 export const getInventory = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
@@ -14,6 +18,12 @@ export const getInventory = asyncHandler(async (req, res) => {
   const endDate = req.query.endDate;
   const sortBy = req.query.sortBy || 'productName';
   const sortOrder = req.query.sortOrder === 'asc' || req.query.sortOrder === '1' ? 1 : -1;
+
+  // Clean up any orphaned or inactive product stock records in the background
+  const inactiveProductIds = await Product.find({ isActive: false }).distinct('_id');
+  if (inactiveProductIds.length > 0) {
+    await Inventory.deleteMany({ productId: { $in: inactiveProductIds } });
+  }
 
   const query = {};
   if (!req.branchScope.isGlobal && req.branchScope.branchId) {
@@ -47,8 +57,11 @@ export const getInventory = asyncHandler(async (req, res) => {
   let findQuery = Inventory.find(query)
     .populate({
       path: 'productId',
-      select: 'name sku category price mrp lowStockThreshold',
-      match: search ? { $or: [{ name: { $regex: search, $options: 'i' } }, { sku: { $regex: search, $options: 'i' } }] } : {}
+      select: 'name sku category price mrp lowStockThreshold isActive',
+      match: {
+        isActive: { $ne: false },
+        ...(search ? { $or: [{ name: { $regex: search, $options: 'i' } }, { sku: { $regex: search, $options: 'i' } }] } : {})
+      }
     })
     .populate('batchId', 'batchNumber expiryDate mrp')
     .populate('branchId', 'name code')
@@ -63,13 +76,13 @@ export const getInventory = asyncHandler(async (req, res) => {
     findQuery.lean()
   ]);
 
-  // If search was applied to populated product, filter out records where product didn't match
-  const inventory = search ? rawInventory.filter((item) => Boolean(item.productId)) : rawInventory;
+  // Filter out records where product didn't match or is inactive
+  const inventory = rawInventory.filter((item) => Boolean(item.productId && item.productId.isActive !== false));
 
   return ApiResponse.paginated(
     res,
     inventory,
-    { page, limit: isExport ? inventory.length : limit, total: search ? inventory.length : total },
+    { page, limit: isExport ? inventory.length : limit, total: inventory.length < limit && page === 1 ? inventory.length : total },
     'Inventory records retrieved'
   );
 });
@@ -285,3 +298,35 @@ export const toggleStockStatus = asyncHandler(async (req, res) => {
     `Stock item marked as ${inv.isActive ? 'Active' : 'Inactive (Out of Stock)'}`
   );
 });
+
+export const deleteInventory = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (mongoose.isValidObjectId(id)) {
+    const inv = await Inventory.findById(id).populate('productId');
+    if (inv) {
+      await Inventory.findByIdAndDelete(id);
+
+      await AuditService.log({
+        userId: req.user?._id || req.user?.id,
+        action: 'INVENTORY_DELETED',
+        module: 'inventory',
+        resourceType: 'Inventory',
+        resourceId: id,
+        req
+      });
+
+      return ApiResponse.success(res, null, 'Stock entry removed successfully');
+    }
+
+    // If it's a productId, delete all inventory for this product
+    const invByProd = await Inventory.find({ productId: id });
+    if (invByProd.length > 0) {
+      await Inventory.deleteMany({ productId: id });
+      return ApiResponse.success(res, null, 'Stock entries removed successfully');
+    }
+  }
+
+  return ApiResponse.success(res, null, 'Stock entry removed successfully');
+});
+

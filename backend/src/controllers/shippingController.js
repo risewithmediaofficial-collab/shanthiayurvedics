@@ -1,6 +1,7 @@
 import { ShippingService } from '../services/shippingService.js';
 import { Shipment } from '../models/Shipment.js';
 import { CourierFactory } from '../integrations/couriers/CourierFactory.js';
+import { TPCServiceFactory } from '../integrations/couriers/tpc/TPCServiceFactory.js';
 import { processImportFile } from '../services/courierImportService.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -100,4 +101,52 @@ export const importCourierStatus = asyncHandler(async (req, res) => {
   );
 
   return ApiResponse.success(res, summary, `Import complete. ${summary.updated} shipment(s) updated.`);
+});
+
+export const getShipmentForOrder = asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
+  const data = await ShippingService.getShipmentForOrder(orderId);
+  return ApiResponse.success(res, data, 'Shipment details retrieved');
+});
+
+export const checkServiceability = asyncHandler(async (req, res) => {
+  const { pincode, carrierCode } = req.query;
+  const result = await ShippingService.checkServiceability({
+    pincode,
+    carrierCode: carrierCode || 'PROFESSIONAL_COURIER'
+  });
+  return ApiResponse.success(res, result, 'Serviceability checked');
+});
+
+export const getCourierStock = asyncHandler(async (req, res) => {
+  const { carrierCode } = req.query;
+  const stock = await ShippingService.checkStock({
+    carrierCode: carrierCode || 'PROFESSIONAL_COURIER'
+  });
+  return ApiResponse.success(res, stock, 'Consignment stock retrieved');
+});
+
+export const syncTracking = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const result = await ShippingService.syncTracking(id, req.user, req);
+  return ApiResponse.success(res, result, 'Tracking synchronized with courier');
+});
+
+export const cancelShipment = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+  const result = await ShippingService.cancelShipment(id, { reason }, req.user, req);
+  return ApiResponse.success(res, result, 'Shipment cancelled');
+});
+
+export const getShippingLabel = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const singleCopy = req.query.singleCopy !== 'false';
+  const labelData = await ShippingService.getShippingLabel(id, { singleCopy });
+  return ApiResponse.success(res, labelData, 'Shipping label retrieved');
+});
+
+export const getCourierConfig = asyncHandler(async (req, res) => {
+  const config = TPCServiceFactory.getConfigSummary();
+  return ApiResponse.success(res, config, 'Courier configuration retrieved');
 });

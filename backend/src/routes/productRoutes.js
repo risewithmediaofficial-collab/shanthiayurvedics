@@ -5,7 +5,10 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
-  addBatch
+  addBatch,
+  getCategories,
+  createCategory,
+  deleteCategory
 } from '../controllers/productController.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePermission, requireRole } from '../middleware/rbac.js';
@@ -17,6 +20,10 @@ const router = Router();
 
 router.use(authenticate);
 router.use(requireBranchScope);
+
+router.get('/categories', requirePermission(PERMISSIONS.PRODUCTS_VIEW), getCategories);
+router.post('/categories', requireRole(ROLES.OWNER), createCategory);
+router.delete('/categories/:id', requireRole(ROLES.OWNER), deleteCategory);
 
 router.get('/', requirePermission(PERMISSIONS.PRODUCTS_VIEW), getProducts);
 router.get('/:id', requirePermission(PERMISSIONS.PRODUCTS_VIEW), getProductById);

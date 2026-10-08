@@ -47,6 +47,8 @@ export function InventoryLedgerPage() {
   const [stockInModalOpen, setStockInModalOpen] = useState(false);
   const [stockOutModalOpen, setStockOutModalOpen] = useState(false);
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
+  const [deleteStockModalOpen, setDeleteStockModalOpen] = useState(false);
+  const [stockItemToDelete, setStockItemToDelete] = useState(null);
   const [actionMsg, setActionMsg] = useState('');
 
   const [formData, setFormData] = useState({
@@ -196,6 +198,23 @@ export function InventoryLedgerPage() {
     }
   });
 
+  const deleteStockMutation = useMutation({
+    mutationFn: (id) => apiClient.delete(`/inventory/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['inventoryMovements'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setDeleteStockModalOpen(false);
+      setStockItemToDelete(null);
+      setActionMsg('✓ Stock item removed from matrix successfully');
+      setTimeout(() => setActionMsg(''), 4000);
+    },
+    onError: (err) => {
+      setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to delete stock item'}`);
+      setTimeout(() => setActionMsg(''), 4000);
+    }
+  });
+
   const selectedProductObj = productsData?.find((p) => p._id === formData.productId);
   const writeBranchId = (selectedBranchId && selectedBranchId !== 'ALL' ? selectedBranchId : null) || formData.branchId || (availableBranches[0]?._id ? String(availableBranches[0]._id) : null);
 
@@ -255,17 +274,10 @@ export function InventoryLedgerPage() {
           <button
             type="button"
             onClick={() => {
-              setFormData({
-                productId: row.productId?._id || '',
-                branchId: row.branchId?._id || row.branchId || '',
-                quantity: '',
-                reason: 'DAMAGED',
-                notes: '',
-                newAvailable: ''
-              });
-              setStockOutModalOpen(true);
+              setStockItemToDelete(row);
+              setDeleteStockModalOpen(true);
             }}
-            title="Remove / Stock Out"
+            title="Delete Stock Item"
             className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors flex items-center cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -709,6 +721,55 @@ export function InventoryLedgerPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Delete Stock Item Confirmation Modal */}
+      {stockItemToDelete && (
+        <Modal
+          isOpen={deleteStockModalOpen}
+          onClose={() => {
+            setDeleteStockModalOpen(false);
+            setStockItemToDelete(null);
+          }}
+          title="Delete Stock Item"
+          maxWidth="max-w-md"
+          footer={
+            <div className="flex items-center justify-end gap-2 w-full">
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => {
+                  setDeleteStockModalOpen(false);
+                  setStockItemToDelete(null);
+                }}
+                disabled={deleteStockMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                type="button"
+                onClick={() => deleteStockMutation.mutate(stockItemToDelete._id)}
+                isLoading={deleteStockMutation.isPending}
+              >
+                Delete Stock
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-3 text-xs text-slate-600">
+            <p>
+              Are you sure you want to permanently delete the stock record for{' '}
+              <strong className="text-slate-900">{stockItemToDelete.productId?.name || 'this product'}</strong>{' '}
+              {stockItemToDelete.productId?.sku && (
+                <span className="font-mono text-slate-700">({stockItemToDelete.productId.sku})</span>
+              )}?
+            </p>
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800">
+              This will remove this product and its <strong>{stockItemToDelete.availableQuantity || 0} available units</strong> from the inventory matrix.
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

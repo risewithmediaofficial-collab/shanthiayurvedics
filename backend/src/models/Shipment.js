@@ -55,6 +55,39 @@ const shipmentSchema = new mongoose.Schema(
       enum: Object.values(SHIPPING_STATUS),
       default: SHIPPING_STATUS.SHIPMENT_CREATED,
       index: true
+    },
+    carrierCode: {
+      type: String,
+      default: 'INDIA_POST',
+      index: true
+    },
+    isMock: {
+      type: Boolean,
+      default: false
+    },
+    labelUrl: {
+      type: String
+    },
+    packageDetails: {
+      weight: { type: Number, default: 0.5 },
+      pieces: { type: Number, default: 1 },
+      length: { type: Number, default: 10 },
+      width: { type: Number, default: 10 },
+      height: { type: Number, default: 10 }
+    },
+    tpcDetails: {
+      refNo: { type: String },
+      podNo: { type: String },
+      cnoteNo: { type: String },
+      transMode: { type: String, default: 'ST' },
+      serviceType: { type: String, default: 'STD' },
+      rawResponse: { type: mongoose.Schema.Types.Mixed }
+    },
+    cancellation: {
+      isCancelled: { type: Boolean, default: false },
+      cancelledAt: { type: Date },
+      cancelledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      reason: { type: String }
     }
   },
   {

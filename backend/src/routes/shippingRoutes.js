@@ -7,7 +7,14 @@ import {
   getTracking,
   addTrackingEvent,
   getCourierProviders,
-  importCourierStatus
+  importCourierStatus,
+  getShipmentForOrder,
+  checkServiceability,
+  getCourierStock,
+  syncTracking,
+  cancelShipment,
+  getShippingLabel,
+  getCourierConfig
 } from '../controllers/shippingController.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
@@ -49,9 +56,16 @@ router.param('orderId', scopeRecord(Order, 'telecallerId'));
 router.param('id', scopeRecord(Shipment));
 
 router.get('/', requirePermission(PERMISSIONS.SHIPPING_VIEW), getShipments);
+router.get('/config', getCourierConfig);
+router.get('/serviceability', checkServiceability);
+router.get('/stock', requirePermission(PERMISSIONS.SHIPPING_VIEW), getCourierStock);
 router.get('/providers', requirePermission(PERMISSIONS.SHIPPING_VIEW), getCourierProviders);
+router.get('/orders/:orderId/shipment', requirePermission(PERMISSIONS.SHIPPING_VIEW), getShipmentForOrder);
 router.post('/orders/:orderId/shipment', requirePermission(PERMISSIONS.SHIPPING_MANAGE), createShipment);
 router.patch('/shipments/:id/dispatch', requirePermission(PERMISSIONS.SHIPPING_MANAGE), dispatchShipment);
+router.post('/shipments/:id/sync-tracking', requirePermission(PERMISSIONS.SHIPPING_MANAGE), syncTracking);
+router.post('/shipments/:id/cancel', requirePermission(PERMISSIONS.SHIPPING_MANAGE), cancelShipment);
+router.get('/shipments/:id/label', requirePermission(PERMISSIONS.SHIPPING_VIEW), getShippingLabel);
 router.post('/track/:awbNumber/events', requirePermission(PERMISSIONS.SHIPPING_MANAGE), addTrackingEvent);
 router.post('/import-status', requirePermission(PERMISSIONS.SHIPPING_MANAGE), importUpload.single('file'), importCourierStatus);
 

@@ -229,7 +229,7 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
                   </span>
                 )}
               </div>
-              <span className={`text-[10px] mt-0.5 tracking-tight ${isActive ? 'text-slate-900 font-bold' : 'text-slate-500'}`}>
+              <span className={`text-[10px] mt-0.5 tracking-tight truncate max-w-full text-center ${isActive ? 'text-slate-900 font-bold' : 'text-slate-500'}`}>
                 {item.label}
               </span>
               {isActive && (

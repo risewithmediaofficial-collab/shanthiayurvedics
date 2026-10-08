@@ -7,12 +7,15 @@ import { Button } from '../../components/common/Button.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Select } from '../../components/common/Select.jsx';
+import { Input } from '../../components/common/Input.jsx';
 
 export function DispatchQueuePage() {
   const queryClient = useQueryClient();
   const [awbModalOpen, setAwbModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [carrierCode, setCarrierCode] = useState('INDIA_POST');
+  const [weightKg, setWeightKg] = useState('0.5');
+  const [pieces, setPieces] = useState('1');
 
   const { data: packedOrdersResponse, isLoading } = useQuery({
     queryKey: ['dispatchQueue'],
@@ -25,8 +28,12 @@ export function DispatchQueuePage() {
   const orders = Array.isArray(packedOrdersResponse?.data) ? packedOrdersResponse?.data : [];
 
   const createShipmentMutation = useMutation({
-    mutationFn: ({ orderId, carrierCode }) =>
-      apiClient.post(`/shipping/orders/${orderId}/shipment`, { carrierCode }),
+    mutationFn: ({ orderId, carrierCode, weight, pieces: pcs }) =>
+      apiClient.post(`/shipping/orders/${orderId}/shipment`, {
+        carrierCode,
+        weight: parseFloat(weight) || 0.5,
+        pieces: parseInt(pcs, 10) || 1
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dispatchQueue'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -84,6 +91,7 @@ export function DispatchQueuePage() {
           icon={Barcode}
           onClick={() => {
             setSelectedOrder(row);
+            setCarrierCode(/professional/i.test(row.courierName || '') ? 'PROFESSIONAL_COURIER' : 'INDIA_POST');
             setAwbModalOpen(true);
           }}
         >
@@ -123,11 +131,19 @@ export function DispatchQueuePage() {
               e.preventDefault();
               createShipmentMutation.mutate({
                 orderId: selectedOrder._id,
-                carrierCode
+                carrierCode,
+                weight: weightKg,
+                pieces
               });
             }}
             className="space-y-4"
           >
+            {createShipmentMutation.isError && (
+              <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800">
+                {createShipmentMutation.error?.response?.data?.message || 'Shipment generation failed'}
+              </div>
+            )}
+
             <Select
               label="Select Shipping Courier Partner *"
               value={carrierCode}
@@ -137,6 +153,38 @@ export function DispatchQueuePage() {
                 { value: 'PROFESSIONAL_COURIER', label: 'The Professional Courier (Express Network)' }
               ]}
             />
+
+            {carrierCode === 'PROFESSIONAL_COURIER' && (
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Weight (kg)</label>
+                  <Input
+                    type="number"
+                    step="0.05"
+                    min="0.05"
+                    max="50"
+                    value={weightKg}
+                    onChange={(e) => setWeightKg(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Pieces Count</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={pieces}
+                    onChange={(e) => setPieces(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {carrierCode === 'PROFESSIONAL_COURIER' && selectedOrder.paymentMethod === 'COD' && (
+              <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800">
+                ⚠️ The Professional Courier does not offer Cash on Delivery (COD). Please select India Post Speed Post for this COD order.
+              </div>
+            )}
 
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
               <div className="flex justify-between">
@@ -153,7 +201,12 @@ export function DispatchQueuePage() {
               <Button variant="secondary" type="button" onClick={() => setAwbModalOpen(false)}>
                 Cancel
               </Button>
-              <Button variant="primary" type="submit" isLoading={createShipmentMutation.isPending}>
+              <Button
+                variant="primary"
+                type="submit"
+                isLoading={createShipmentMutation.isPending}
+                disabled={carrierCode === 'PROFESSIONAL_COURIER' && selectedOrder.paymentMethod === 'COD'}
+              >
                 Generate AWB & Confirm
               </Button>
             </div>

@@ -513,9 +513,8 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
                 <img
                   src="/shanthi_logo.png"
                   alt="Shanthi Ayurvedas"
-                  className="w-12 h-12 object-contain mx-auto mb-1"
+                  className="h-12 w-auto max-w-[160px] object-contain mx-auto mb-1"
                 />
-                <h3 className="font-black text-lg text-slate-900">SHANTHI AYURVEDAS HOSUR</h3>
                 <p className="text-[11px] text-slate-500">Telecaller Performance & Commission Voucher</p>
                 <p className="text-[10px] text-slate-400">Month: {selectedMonth} / {selectedYear}</p>
               </div>
@@ -582,9 +581,8 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
                 <img
                   src="/shanthi_logo.png"
                   alt="Shanthi Ayurvedas"
-                  className="w-12 h-12 object-contain mx-auto mb-1"
+                  className="h-12 w-auto max-w-[160px] object-contain mx-auto mb-1"
                 />
-                <h3 className="font-black text-lg text-slate-900">SHANTHI AYURVEDAS</h3>
                 <p className="text-xs text-slate-600 font-medium">Consolidated Branch Telecaller Commission Report</p>
                 <p className="text-[11px] text-slate-400 font-mono">Period: {selectedMonth}/{selectedYear} · Hosur Main Branch</p>
               </div>

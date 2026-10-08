@@ -27,16 +27,15 @@ export function Navbar({ onMenuToggle }) {
           <MenuRounded sx={{ fontSize: 24 }} />
         </button>
 
-        <div className="flex items-center gap-2.5 lg:hidden">
+        <div className="flex items-center gap-2 lg:hidden">
           <img
             src="/shanthi_logo.png"
             alt="Shanthi Ayurvedas"
-            className="w-10 h-10 object-contain rounded-xl shadow-xs flex-shrink-0"
+            className="h-9 w-auto max-w-[140px] object-contain shrink-0"
           />
-          <div>
-            <span className="text-sm font-bold text-slate-900 tracking-tight block leading-tight">Shanthi Ayurvedas</span>
-            <span className="text-[10px] text-emerald-700 font-bold tracking-wider uppercase">{isOwner ? 'OWNER' : (user?.role || 'CRM')}</span>
-          </div>
+          <span className="text-[10px] text-emerald-700 font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100">
+            {isOwner ? 'OWNER' : (user?.role || 'CRM')}
+          </span>
         </div>
 
         {/* Branch Selector (desktop) */}

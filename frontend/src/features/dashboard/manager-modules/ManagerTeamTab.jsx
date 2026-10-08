@@ -1105,16 +1105,15 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
           <div className="space-y-4 text-xs">
             <div className="p-5 bg-gradient-to-br from-emerald-800 to-teal-900 text-white rounded-2xl shadow-md border border-emerald-700 relative overflow-hidden">
               <div className="flex items-center justify-between pb-3 border-b border-white/20">
-                <div className="flex items-center gap-2">
-                  <img
-                    src="/shanthi_logo.png"
-                    alt="Logo"
-                    className="w-8 h-8 object-contain bg-white rounded-md p-0.5 shrink-0"
-                  />
-                  <div>
-                    <h5 className="font-black text-sm tracking-tight">SHANTHI AYURVEDAS</h5>
-                    <p className="text-[9px] text-emerald-200 tracking-widest uppercase">Hosur Main Branch</p>
+                <div className="flex items-center gap-2.5">
+                  <div className="bg-white rounded-md px-2.5 py-1">
+                    <img
+                      src="/shanthi_logo.png"
+                      alt="Logo"
+                      className="h-6 w-auto object-contain shrink-0"
+                    />
                   </div>
+                  <p className="text-[10px] font-bold text-emerald-200 tracking-wider uppercase">Hosur Main Branch</p>
                 </div>
                 <Badge variant="emerald" size="sm">STAFF ID</Badge>
               </div>
@@ -1166,10 +1165,9 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
               <img
                 src="/shanthi_logo.png"
                 alt="Shanthi Ayurvedas"
-                className="w-12 h-12 object-contain mx-auto mb-1"
+                className="h-12 w-auto max-w-[160px] object-contain mx-auto mb-1"
               />
-              <h3 className="font-black text-base text-slate-900">SHANTHI AYURVEDAS HOSUR</h3>
-              <p className="text-[10px] text-slate-500">Official Letter of Appointment & Employment Contract</p>
+              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Official Letter of Appointment & Employment Contract</p>
             </div>
 
             <p><strong>Date:</strong> {new Date().toLocaleDateString('en-GB')}</p>

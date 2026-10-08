@@ -20,11 +20,10 @@ export function AuthLayout() {
         <img
           src="/shanthi_logo.png"
           alt="Shanthi Ayurvedas"
-          className="w-20 h-20 object-contain mx-auto mb-3 drop-shadow-md"
+          className="h-24 sm:h-28 w-auto max-w-[260px] object-contain mx-auto mb-3 drop-shadow-md"
         />
-        <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Shanthi Ayurvedas</h2>
-        <div className="mt-1.5 flex justify-center">
-          <span className="inline-flex items-center px-3 py-0.5 rounded-full bg-ayur-100/80 border border-ayur-200/80 text-[11px] font-bold text-ayur-800 tracking-wider uppercase">
+        <div className="flex justify-center">
+          <span className="inline-flex items-center px-3.5 py-1 rounded-full bg-ayur-100/90 border border-ayur-200 text-xs font-bold text-ayur-900 tracking-wider uppercase shadow-2xs">
             Enterprise Business CRM
           </span>
         </div>

@@ -362,20 +362,15 @@ export function Sidebar({ isOpen, onClose }) {
       >
         {/* Brand Header with generous top padding away from URL tab */}
         <div className="px-5 pt-7 sm:pt-8 pb-4.5 sm:pb-5 border-b border-slate-100 flex items-start justify-between bg-white shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-          <div className="flex items-start gap-3 min-w-0 pr-2">
+          <div className="min-w-0 pr-2 space-y-1.5">
             <img
               src="/shanthi_logo.png"
               alt="Shanthi Ayurvedas"
-              className="w-10 h-10 object-contain rounded-xl shadow-xs flex-shrink-0 mt-0.5"
+              className="h-10 w-auto max-w-[170px] object-contain shrink-0"
             />
-            <div className="min-w-0">
-              <h1 className="text-base font-bold text-slate-900 tracking-tight leading-snug truncate">
-                Shanthi Ayurvedas
-              </h1>
-              <p className="text-[10.5px] text-emerald-700 font-bold tracking-wider uppercase mt-1 truncate">
-                {roleTitle}
-              </p>
-            </div>
+            <p className="text-[10.5px] text-emerald-700 font-bold tracking-wider uppercase truncate">
+              {roleTitle}
+            </p>
           </div>
           {/* Mobile close button */}
           <button

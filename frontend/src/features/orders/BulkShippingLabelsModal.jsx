@@ -84,9 +84,10 @@ export function BulkShippingLabelsModal({ isOpen, onClose, orders = [] }) {
         return `
         <div class="label-box">
           <!-- 1. Header Banner -->
-          <div class="header-banner" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-            <img src="/shanthi_logo.png" style="width: 26px; height: 26px; object-fit: contain; background: #fff; border-radius: 4px; padding: 2px;" />
-            <h1>SHANTHI AYURVEDAS</h1>
+          <div class="header-banner" style="display: flex; align-items: center; justify-content: center; padding: 4px;">
+            <div style="background: #fff; border-radius: 4px; padding: 2px 10px; display: inline-flex; align-items: center; justify-content: center;">
+              <img src="/shanthi_logo.png" style="height: 24px; width: auto; object-fit: contain;" />
+            </div>
           </div>
 
           <!-- 2. SPEED POST row -->
@@ -290,13 +291,14 @@ export function BulkShippingLabelsModal({ isOpen, onClose, orders = [] }) {
 
             return (
               <div key={ord._id} className="bg-white border-2 border-black max-w-md mx-auto text-xs shadow-sm">
-                <div className="bg-[#15803d] text-white py-1.5 px-2 text-center font-black text-sm tracking-wider uppercase flex items-center justify-center gap-2">
-                  <img
-                    src="/shanthi_logo.png"
-                    alt="Logo"
-                    className="w-5 h-5 object-contain bg-white rounded p-0.5 shrink-0"
-                  />
-                  <span>SHANTHI AYURVEDAS</span>
+                <div className="bg-[#15803d] text-white py-1.5 px-2 text-center flex items-center justify-center">
+                  <div className="bg-white rounded px-3 py-0.5 inline-flex items-center justify-center">
+                    <img
+                      src="/shanthi_logo.png"
+                      alt="Shanthi Ayurvedas"
+                      className="h-6 w-auto object-contain shrink-0"
+                    />
+                  </div>
                 </div>
                 <div className="border-b border-black px-2 py-1 font-extrabold text-[10px] uppercase">
                   SPEED POST : Rs {payVal} | {convertNumberToIndianWords(payVal)} RUPEES ONLY

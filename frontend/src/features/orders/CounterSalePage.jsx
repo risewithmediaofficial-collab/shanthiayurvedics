@@ -152,7 +152,7 @@ export function CounterSalePage() {
           <img
             src="/shanthi_logo.png"
             alt="Shanthi Ayurvedas"
-            className="w-10 h-10 object-contain rounded-xl shadow-xs shrink-0"
+            className="h-10 w-auto max-w-[140px] object-contain shrink-0"
           />
           <div>
             <h2 className="text-lg font-bold text-slate-900 leading-tight">

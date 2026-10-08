@@ -118,16 +118,15 @@ export function PrintableShippingLabelModal({ isOpen, onClose, order }) {
           className="border-2 border-black bg-white text-black text-xs mx-auto shadow-sm select-none"
           style={{ width: '100%', maxWidth: '560px' }}
         >
-          {/* 1. Header Banner: Green Background with SHANTHI AYURVEDAS */}
-          <div className="bg-[#15803d] text-white py-2 px-3 text-center flex items-center justify-center gap-2.5">
-            <img
-              src="/shanthi_logo.png"
-              alt="Shanthi Ayurvedas"
-              className="w-8 h-8 sm:w-9 sm:h-9 object-contain bg-white rounded-md p-0.5 shrink-0"
-            />
-            <h1 className="text-xl sm:text-2xl font-black tracking-wider uppercase m-0 leading-tight">
-              SHANTHI AYURVEDAS
-            </h1>
+          {/* 1. Header Banner: Green Background with Logo */}
+          <div className="bg-[#15803d] text-white py-2 px-3 text-center flex items-center justify-center">
+            <div className="bg-white rounded-md px-4 py-1 inline-flex items-center justify-center shadow-xs">
+              <img
+                src="/shanthi_logo.png"
+                alt="Shanthi Ayurvedas"
+                className="h-8 sm:h-9 w-auto object-contain shrink-0"
+              />
+            </div>
           </div>
 
           {/* 2. Subheader Row 1: Carrier info */}

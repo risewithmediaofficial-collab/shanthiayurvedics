@@ -361,14 +361,16 @@ export function Sidebar({ isOpen, onClose }) {
         }`}
       >
         {/* Brand Header with generous top padding away from URL tab */}
-        <div className="px-5 pt-7 sm:pt-8 pb-4.5 sm:pb-5 border-b border-slate-100 flex items-start justify-between bg-white shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-          <div className="min-w-0 pr-2 space-y-1.5">
-            <img
-              src="/shanthi_logo.png"
-              alt="Shanthi Ayurvedas"
-              className="h-10 w-auto max-w-[170px] object-contain shrink-0"
-            />
-            <p className="text-[10.5px] text-emerald-700 font-bold tracking-wider uppercase truncate">
+        <div className="px-5 pt-6 sm:pt-7 pb-4 sm:pb-5 border-b border-slate-100 flex items-start justify-between bg-white shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+          <div className="min-w-0 flex-1 pr-2 space-y-2">
+            <div className="flex items-center">
+              <img
+                src="/shanthi_logo.png"
+                alt="Shanthi Ayurvedas"
+                className="h-20 sm:h-24 w-auto max-w-[200px] object-contain object-left drop-shadow-xs"
+              />
+            </div>
+            <p className="text-[11px] text-emerald-700 font-bold tracking-wider uppercase truncate">
               {roleTitle}
             </p>
           </div>

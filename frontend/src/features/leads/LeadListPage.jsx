@@ -15,7 +15,8 @@ import {
   Pencil,
   Trash2,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  Eye
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
@@ -33,6 +34,7 @@ import { exportToExcel, exportToCSV } from '../../utils/exportUtils.js';
 import { DateRangeFilter } from '../../components/common/DateRangeFilter.jsx';
 import { ExportButton } from '../../components/common/ExportButton.jsx';
 import { SortDropdown } from '../../components/common/SortDropdown.jsx';
+import { LeadDetailModal } from './LeadDetailModal.jsx';
 
 const LEAD_SORT_OPTIONS = [
   { value: 'createdAt', label: '📅 Created Date' },
@@ -61,6 +63,8 @@ export function LeadListPage({ callerId } = {}) {
   const debouncedSearch = useDebouncedValue(search);
 
   // Modals state
+  const [selectedLeadForDetails, setSelectedLeadForDetails] = useState(null);
+  const [detailModalTab, setDetailModalTab] = useState('calls');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [activeLead, setActiveLead] = useState(null);
@@ -370,12 +374,49 @@ export function LeadListPage({ callerId } = {}) {
       header: 'Lead Name & Contact',
       cell: (row) => (
         <div>
-          <div className="font-bold text-slate-900 flex items-center gap-1.5">
-            {row.name}
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedLeadForDetails(row);
+              setDetailModalTab('calls');
+            }}
+            className="font-bold text-slate-900 flex items-center gap-1.5 cursor-pointer hover:text-emerald-700 transition-colors group"
+            title="Click to view all lead details & call logs"
+          >
+            <span className="group-hover:underline">{row.name}</span>
             {row.isDuplicate && <Badge variant="danger" size="sm">Duplicate</Badge>}
           </div>
           <div className="text-xs text-slate-500 font-mono mt-0.5">{row.mobile}</div>
           {row.city && <div className="text-[10px] text-slate-400">{row.city}</div>}
+
+          {/* Call Logs Indicator Pill */}
+          <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedLeadForDetails(row);
+                setDetailModalTab('calls');
+              }}
+              title="Click to view all call logs & notes"
+              className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                row.callCount > 0
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300'
+                  : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              <PhoneCall className={`w-3 h-3 ${row.callCount > 0 ? 'text-emerald-600' : 'text-slate-400'}`} />
+              <span>{row.callCount > 0 ? `${row.callCount} Call Log${row.callCount > 1 ? 's' : ''}` : 'View Logs'}</span>
+            </button>
+            {row.lastCall?.notes && (
+              <span
+                title={`Latest Call Note: ${row.lastCall.notes}`}
+                className="text-[10px] text-slate-500 italic max-w-[170px] truncate"
+              >
+                "{row.lastCall.notes}"
+              </span>
+            )}
+          </div>
         </div>
       )
     },
@@ -398,6 +439,7 @@ export function LeadListPage({ callerId } = {}) {
           {hasPermission('leads.assign') ? (
             <select
               value={row.assignedTo?._id || ''}
+              onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
                 if (e.target.value) {
                   assignLeadMutation.mutate({ leadId: row._id, assignedTo: e.target.value });
@@ -405,7 +447,7 @@ export function LeadListPage({ callerId } = {}) {
               }}
               disabled={assignLeadMutation.isPending}
               aria-label={`Assign ${row.name}`}
-              className="max-w-[150px] text-xs bg-white border border-slate-200 rounded-md px-2 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ayur-500/20"
+              className="max-w-[150px] text-xs bg-white border border-slate-200 rounded-md px-2 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ayur-500/20 cursor-pointer"
             >
               <option value="">{row.assignedTo?.name || 'Unassigned'}</option>
               {telecallers.map((telecaller) => (
@@ -424,13 +466,31 @@ export function LeadListPage({ callerId } = {}) {
       header: 'Quick Connect & Actions',
       align: 'right',
       cell: (row) => (
-        <div className="flex items-center justify-end gap-1.5">
+        <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+          {/* View Details & Call Logs Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedLeadForDetails(row);
+              setDetailModalTab('calls');
+            }}
+            title="View Details & All Call Logs"
+            className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer border border-emerald-200"
+          >
+            <Eye className="w-3.5 h-3.5 text-emerald-700" />
+            <span className="hidden sm:inline text-[11px] font-bold">Details</span>
+          </button>
+
           {/* WhatsApp Direct */}
           <button
             type="button"
-            onClick={() => handleOpenWhatsApp(row)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenWhatsApp(row);
+            }}
             title="Chat on WhatsApp"
-            className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors flex items-center gap-1"
+            className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
           >
             <MessageSquare className="w-3.5 h-3.5" />
             <span className="hidden md:inline text-[11px]">WhatsApp</span>
@@ -439,6 +499,7 @@ export function LeadListPage({ callerId } = {}) {
           {/* Direct Phone Dial */}
           <a
             href={`tel:${row.mobile}`}
+            onClick={(e) => e.stopPropagation()}
             title="Call"
             className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center gap-1"
           >
@@ -450,9 +511,10 @@ export function LeadListPage({ callerId } = {}) {
             size="sm"
             variant="outline"
             icon={PhoneCall}
-            onClick={() => {
-              setActiveLead(row);
-              setIsCallModalOpen(true);
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedLeadForDetails(row);
+              setDetailModalTab('calls');
             }}
           >
             Log
@@ -461,9 +523,12 @@ export function LeadListPage({ callerId } = {}) {
           {/* Convert to Order */}
           <button
             type="button"
-            onClick={() => setLeadForOrder(row)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setLeadForOrder(row);
+            }}
             title="Create Order for Lead"
-            className="p-1.5 rounded-lg bg-ayur-50 hover:bg-ayur-100 text-ayur-800 text-xs font-semibold transition-colors flex items-center gap-1"
+            className="p-1.5 rounded-lg bg-ayur-50 hover:bg-ayur-100 text-ayur-800 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
           >
             <ShoppingBag className="w-3.5 h-3.5 text-ayur-700" />
             <span className="hidden lg:inline text-[11px]">Order</span>
@@ -472,7 +537,8 @@ export function LeadListPage({ callerId } = {}) {
           {/* Edit Lead */}
           <button
             type="button"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               setLeadToEdit(row);
               setEditFormData({
                 name: row.name || '',
@@ -495,7 +561,8 @@ export function LeadListPage({ callerId } = {}) {
           {/* Delete Lead */}
           <button
             type="button"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               setLeadToDelete(row);
               setIsDeleteModalOpen(true);
             }}
@@ -707,6 +774,10 @@ export function LeadListPage({ callerId } = {}) {
         columns={columns}
         data={leads}
         isLoading={isLoading}
+        onRowClick={(row) => {
+          setSelectedLeadForDetails(row);
+          setDetailModalTab('calls');
+        }}
         emptyMessage="No leads found in this filter scope."
       />
 
@@ -1131,6 +1202,32 @@ export function LeadListPage({ callerId } = {}) {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Lead Details & All Call Logs Modal */}
+      {selectedLeadForDetails && (
+        <LeadDetailModal
+          isOpen={Boolean(selectedLeadForDetails)}
+          leadId={selectedLeadForDetails._id}
+          initialLead={selectedLeadForDetails}
+          initialTab={detailModalTab}
+          onClose={() => setSelectedLeadForDetails(null)}
+          onOpenOrder={(lead) => setLeadForOrder(lead)}
+          onOpenEdit={(lead) => {
+            setLeadToEdit(lead);
+            setEditFormData({
+              name: lead.name || '',
+              mobile: lead.mobile || '',
+              email: lead.email || '',
+              whatsappNumber: lead.whatsappNumber || '',
+              source: lead.source || 'CALL',
+              status: lead.status || 'NEW',
+              city: lead.city || '',
+              notes: lead.notes || ''
+            });
+            setIsEditModalOpen(true);
+          }}
+        />
       )}
     </div>
   );

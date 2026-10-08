@@ -94,9 +94,42 @@ export const getLeads = asyncHandler(async (req, res) => {
     Lead.countDocuments({ ...baseStatusQuery, status: 'CONVERTED' })
   ]);
 
+  const leadIds = leads.map((l) => l._id);
+  let leadsWithStats = leads;
+  if (leadIds.length > 0) {
+    const callStats = await CallHistory.aggregate([
+      { $match: { leadId: { $in: leadIds } } },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: '$leadId',
+          callCount: { $sum: 1 },
+          lastCall: { $first: '$$ROOT' }
+        }
+      }
+    ]);
+    const statsMap = new Map(callStats.map((s) => [s._id.toString(), s]));
+    leadsWithStats = leads.map((l) => {
+      const s = statsMap.get(l._id.toString());
+      return {
+        ...l,
+        callCount: s ? s.callCount : 0,
+        lastCall: s?.lastCall
+          ? {
+              _id: s.lastCall._id,
+              callStatus: s.lastCall.callStatus,
+              notes: s.lastCall.notes,
+              callDurationSeconds: s.lastCall.callDurationSeconds,
+              createdAt: s.lastCall.createdAt
+            }
+          : null
+      };
+    });
+  }
+
   return ApiResponse.paginated(
     res,
-    leads,
+    leadsWithStats,
     { page, limit, total, sortBy, sortOrder: sortOrder === 1 ? 'asc' : 'desc' },
     'Leads retrieved successfully',
     {
@@ -113,9 +146,10 @@ export const getLeads = asyncHandler(async (req, res) => {
 
 export const getLeadById = asyncHandler(async (req, res) => {
   const lead = await Lead.findById(req.params.id)
-    .populate('assignedTo', 'name email role')
+    .populate('assignedTo', 'name email role phone')
     .populate('branchId', 'name code address phone')
     .populate('convertedCustomerId')
+    .populate('interestedProducts', 'name sku price')
     .populate('duplicateOf', 'name mobile status')
     .lean();
 
@@ -124,19 +158,19 @@ export const getLeadById = asyncHandler(async (req, res) => {
   }
 
   // Telecaller ownership check
-  if (req.user.role === ROLES.TELECALLER && lead.assignedTo?._id?.toString() !== req.user.id) {
+  if (req.user.role === ROLES.TELECALLER && (lead.assignedTo?._id?.toString() || lead.assignedTo?.toString()) !== req.user.id) {
     throw new NotFoundError('Lead');
   }
 
   // Fetch timeline calls & assignment logs
   const [calls, assignments] = await Promise.all([
     CallHistory.find({ leadId: lead._id })
-      .populate('telecallerId', 'name email')
+      .populate('telecallerId', 'name email role')
       .sort({ createdAt: -1 })
       .lean(),
     LeadAssignment.find({ leadId: lead._id })
-      .populate('assignedTo', 'name email')
-      .populate('assignedBy', 'name email')
+      .populate('assignedTo', 'name email role')
+      .populate('assignedBy', 'name email role')
       .sort({ createdAt: -1 })
       .lean()
   ]);
@@ -148,8 +182,26 @@ export const getLeadById = asyncHandler(async (req, res) => {
       calls,
       assignments
     },
-    'Lead details retrieved'
+    'Lead details retrieved successfully'
   );
+});
+
+export const getLeadCalls = asyncHandler(async (req, res) => {
+  const lead = await Lead.findById(req.params.id);
+  if (!lead) {
+    throw new NotFoundError('Lead');
+  }
+
+  if (req.user.role === ROLES.TELECALLER && (lead.assignedTo?._id?.toString() || lead.assignedTo?.toString()) !== req.user.id) {
+    throw new NotFoundError('Lead');
+  }
+
+  const calls = await CallHistory.find({ leadId: lead._id })
+    .populate('telecallerId', 'name email role')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return ApiResponse.success(res, calls, 'Lead calls retrieved successfully');
 });
 
 export const createLead = asyncHandler(async (req, res) => {

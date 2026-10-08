@@ -10,7 +10,8 @@ import {
   logCall,
   assignLead,
   bulkAssignLeads,
-  getCallHistory
+  getCallHistory,
+  getLeadCalls
 } from '../controllers/leadController.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
@@ -35,6 +36,7 @@ router.get('/calls/history', requirePermission(PERMISSIONS.LEADS_VIEW), getCallH
 router.post('/', requirePermission(PERMISSIONS.LEADS_CREATE), validate(createLeadSchema), createLead);
 router.post('/bulk-assign', requirePermission(PERMISSIONS.LEADS_ASSIGN), bulkAssignLeads);
 router.get('/:id', requirePermission(PERMISSIONS.LEADS_VIEW), getLeadById);
+router.get('/:id/calls', requirePermission(PERMISSIONS.LEADS_VIEW), getLeadCalls);
 router.patch('/:id', requirePermission(PERMISSIONS.LEADS_EDIT), validate(updateLeadSchema), updateLead);
 router.delete('/:id', requirePermission(PERMISSIONS.LEADS_EDIT), deleteLead);
 router.post('/:id/calls', requirePermission(PERMISSIONS.LEADS_EDIT), validate(logCallSchema), logCall);

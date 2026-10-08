@@ -18,7 +18,8 @@ import {
   RefreshCw,
   RotateCcw,
   ArrowUpDown,
-  AlertTriangle
+  AlertTriangle,
+  Eye
 } from 'lucide-react';
 import apiClient from '../../../api/apiClient.js';
 import { useBranch } from '../../../context/BranchContext.jsx';
@@ -28,6 +29,7 @@ import { Modal } from '../../../components/common/Modal.jsx';
 import { Spinner } from '../../../components/common/Spinner.jsx';
 import { DateRangeFilter } from '../../../components/common/DateRangeFilter.jsx';
 import { OrderCreateModal } from '../../orders/OrderCreateModal.jsx';
+import { LeadDetailModal } from '../../leads/LeadDetailModal.jsx';
 
 export function ManagerLeadsTab() {
   const { selectedBranchId } = useBranch();
@@ -74,7 +76,8 @@ export function ManagerLeadsTab() {
     assignedTo: ''
   });
 
-  // Edit & Delete Lead States
+  // Edit, Details & Delete Lead States
+  const [selectedLeadForDetails, setSelectedLeadForDetails] = useState(null);
   const [selectedLeadForEdit, setSelectedLeadForEdit] = useState(null);
   const [isEditLeadModalOpen, setIsEditLeadModalOpen] = useState(false);
   const [selectedLeadForDelete, setSelectedLeadForDelete] = useState(null);
@@ -484,10 +487,26 @@ export function ManagerLeadsTab() {
                   </button>
 
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 text-sm">{lead.name}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span
+                        onClick={() => setSelectedLeadForDetails(lead)}
+                        className="font-bold text-slate-900 text-sm cursor-pointer hover:text-emerald-700 hover:underline transition-colors"
+                        title="Click to view full lead details & call logs"
+                      >
+                        {lead.name}
+                      </span>
                       <span className="font-mono text-xs text-slate-500">📱 {lead.mobile}</span>
                       <Badge variant="primary" size="sm">{lead.status}</Badge>
+                      {lead.callCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedLeadForDetails(lead)}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
+                        >
+                          <PhoneCall className="w-3 h-3 text-emerald-600" />
+                          <span>{lead.callCount} {lead.callCount === 1 ? 'Log' : 'Logs'}</span>
+                        </button>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
@@ -505,7 +524,18 @@ export function ManagerLeadsTab() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 self-end sm:self-center">
+                <div className="flex items-center gap-1.5 self-end sm:self-center flex-wrap">
+                  {/* View Details & Call Logs Button */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedLeadForDetails(lead)}
+                    title="View Details & All Call Logs"
+                    className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Details</span>
+                  </button>
+
                   <a
                     href={`tel:${cleanMobile}`}
                     onClick={() => openCallModal(lead)}
@@ -893,6 +923,38 @@ export function ManagerLeadsTab() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Lead Details & All Call Logs Modal */}
+      {selectedLeadForDetails && (
+        <LeadDetailModal
+          isOpen={Boolean(selectedLeadForDetails)}
+          leadId={selectedLeadForDetails._id}
+          initialLead={selectedLeadForDetails}
+          initialTab="calls"
+          onClose={() => setSelectedLeadForDetails(null)}
+          onOpenOrder={(lead) => {
+            setOrderInitialData({
+              patientName: lead.name,
+              mobile: lead.mobile,
+              city: lead.city
+            });
+            setIsOrderCreateModalOpen(true);
+          }}
+          onOpenEdit={(lead) => {
+            setSelectedLeadForEdit(lead);
+            setEditLeadData({
+              name: lead.name || '',
+              mobile: lead.mobile || '',
+              city: lead.city || '',
+              source: lead.source || 'CALL',
+              status: lead.status || 'NEW',
+              notes: lead.notes || '',
+              assignedTo: lead.assignedTo?._id || lead.assignedTo || ''
+            });
+            setIsEditLeadModalOpen(true);
+          }}
+        />
       )}
     </div>
   );

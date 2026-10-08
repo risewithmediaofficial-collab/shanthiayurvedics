@@ -1,15 +1,17 @@
 import { useBranch } from '../../context/BranchContext.jsx';
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { PhoneCall, Calendar, Clock, User, CheckCircle2, MessageSquare, Phone } from 'lucide-react';
+import { PhoneCall, Calendar, Clock, User, CheckCircle2, MessageSquare, Phone, Eye } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { Table } from '../../components/common/Table.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { Pagination } from '../../components/common/Pagination.jsx';
+import { LeadDetailModal } from './LeadDetailModal.jsx';
 
 export function CallHistoryPage({ callerId } = {}) {
   const { selectedBranchId } = useBranch();
   const [page, setPage] = useState(1);
+  const [selectedLeadId, setSelectedLeadId] = useState(null);
 
   const { data: callsResponse, isLoading } = useQuery({
     queryKey: ['callHistory', selectedBranchId, callerId, page],
@@ -59,9 +61,20 @@ export function CallHistoryPage({ callerId } = {}) {
       cell: (row) => {
         const name = row.leadId?.name || row.customerId?.name || 'Customer';
         const mobile = row.leadId?.mobile || row.customerId?.mobile || '—';
+        const leadIdVal = row.leadId?._id || row.leadId;
         return (
-          <div>
-            <div className="font-bold text-slate-900">{name}</div>
+          <div
+            onClick={(e) => {
+              if (leadIdVal) {
+                e.stopPropagation();
+                setSelectedLeadId(leadIdVal);
+              }
+            }}
+            className={leadIdVal ? 'cursor-pointer group' : ''}
+          >
+            <div className={`font-bold text-slate-900 ${leadIdVal ? 'group-hover:text-emerald-700 group-hover:underline' : ''}`}>
+              {name}
+            </div>
             <div className="text-xs text-slate-500 font-mono">{mobile}</div>
           </div>
         );
@@ -92,19 +105,37 @@ export function CallHistoryPage({ callerId } = {}) {
       align: 'right',
       cell: (row) => {
         const mobile = row.leadId?.mobile || row.customerId?.mobile || '';
+        const leadIdVal = row.leadId?._id || row.leadId;
         return (
-          <div className="flex items-center justify-end gap-1.5">
+          <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+            {leadIdVal && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedLeadId(leadIdVal);
+                }}
+                title="View Full Lead Details & Logs"
+                className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <Eye className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => handleOpenWhatsApp(row)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenWhatsApp(row);
+              }}
               title="WhatsApp Follow-up"
-              className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors flex items-center gap-1"
+              className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
             >
               <MessageSquare className="w-3.5 h-3.5" />
             </button>
             {mobile && (
               <a
                 href={`tel:${mobile}`}
+                onClick={(e) => e.stopPropagation()}
                 title="Call"
                 className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center gap-1"
               >
@@ -128,6 +159,10 @@ export function CallHistoryPage({ callerId } = {}) {
         columns={columns}
         data={calls}
         isLoading={isLoading}
+        onRowClick={(row) => {
+          const lId = row.leadId?._id || row.leadId;
+          if (lId) setSelectedLeadId(lId);
+        }}
         emptyMessage="No call interactions recorded yet."
       />
 
@@ -138,6 +173,15 @@ export function CallHistoryPage({ callerId } = {}) {
         itemsPerPage={15}
         onPageChange={setPage}
       />
+
+      {/* Lead Details & Call Logs Modal */}
+      {selectedLeadId && (
+        <LeadDetailModal
+          isOpen={Boolean(selectedLeadId)}
+          leadId={selectedLeadId}
+          onClose={() => setSelectedLeadId(null)}
+        />
+      )}
     </div>
   );
 }

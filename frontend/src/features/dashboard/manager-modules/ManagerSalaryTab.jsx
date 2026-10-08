@@ -140,7 +140,16 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
     XLSX.writeFile(workbook, `Shanthi_TC_Salary_${selectedMonth}_${selectedYear}.xlsx`);
   };
 
-  const maxRevenue = Math.max(...telecallers.map((t) => t.deliveredRevenue), 1);
+  const maxRevenue = telecallers.length > 0 ? Math.max(...telecallers.map((t) => t.deliveredRevenue || 0), 1) : 1;
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+        <Spinner size="lg" />
+        <span className="text-xs font-semibold mt-3">Loading telecaller salary records...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -369,7 +378,7 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
           </div>
         </div>
 
-        <div className={`overflow-x-auto overflow-y-auto relative scrollbar-thin ${filteredCallers.length > 10 ? 'max-h-[540px]' : ''}`}>
+        <div className={`overflow-x-auto overflow-y-auto relative scrollbar-thin ${sortedAndFilteredTelecallers.length > 10 ? 'max-h-[540px]' : ''}`}>
           <table className="w-full min-w-[780px] text-left text-xs">
             <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs text-slate-500 uppercase tracking-wider border-b border-slate-200 shadow-2xs select-none">
               <tr>
@@ -537,15 +546,15 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setSelectedCallerForSlip(null)}>
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={() => setSelectedCallerForSlip(null)} className="w-full sm:w-auto">
                 Close
               </Button>
               <Button
                 variant="primary"
                 icon={Printer}
                 onClick={() => window.print()}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold w-full sm:w-auto"
               >
                 Print Voucher
               </Button>
@@ -563,14 +572,14 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
           maxWidth="max-w-2xl"
         >
           <div className="space-y-4 text-xs">
-            <div className="p-5 bg-white border border-slate-300 rounded-xl space-y-4">
+            <div className="p-4 sm:p-5 bg-white border border-slate-300 rounded-xl space-y-4 overflow-x-auto">
               <div className="text-center pb-3 border-b border-slate-200">
                 <h3 className="font-black text-lg text-slate-900">SHANTHI AYURVEDAS</h3>
                 <p className="text-xs text-slate-600 font-medium">Consolidated Branch Telecaller Commission Report</p>
                 <p className="text-[11px] text-slate-400 font-mono">Period: {selectedMonth}/{selectedYear} · Hosur Main Branch</p>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 p-3 bg-slate-50 rounded-xl text-center">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-slate-50 rounded-xl text-center">
                 <div>
                   <div className="text-[10px] uppercase text-slate-400 font-bold">Active Callers</div>
                   <div className="font-black text-sm text-slate-800">{telecallers.length}</div>
@@ -615,15 +624,15 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
               </table>
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setIsBulkPdfModalOpen(false)}>
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={() => setIsBulkPdfModalOpen(false)} className="w-full sm:w-auto">
                 Close
               </Button>
               <Button
                 variant="primary"
                 icon={Printer}
                 onClick={() => window.print()}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold w-full sm:w-auto"
               >
                 Print / Save PDF
               </Button>

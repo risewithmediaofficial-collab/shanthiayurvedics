@@ -284,6 +284,7 @@ export function CounterSalePage() {
           isOpen={isOrderModalOpen}
           onClose={() => setIsOrderModalOpen(false)}
           isOfficeSale={true}
+          onOrderCreated={(newOrder) => setSelectedOrderForInvoice(newOrder)}
         />
       )}
 
@@ -293,6 +294,7 @@ export function CounterSalePage() {
           isOpen={Boolean(selectedOrderForInvoice)}
           onClose={() => setSelectedOrderForInvoice(null)}
           order={selectedOrderForInvoice}
+          autoPrint={true}
         />
       )}
 

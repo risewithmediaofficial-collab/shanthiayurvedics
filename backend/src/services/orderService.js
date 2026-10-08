@@ -95,6 +95,7 @@ export class OrderService {
     // Use withTransaction for atomic stock reservation
     return await withTransaction(async (session) => {
       let subtotal = 0;
+      let totalItemDiscounts = 0;
       const orderItems = [];
 
       for (const item of items) {
@@ -116,11 +117,18 @@ export class OrderService {
         }
 
         const unitPrice = Number(item.unitPrice ?? product.price);
-        if (Number(item.discount || 0) > unitPrice) throw new AppError('Discount cannot exceed the item price', 400);
-        const discount = item.discount || 0;
+        let discount = Number(item.discount || 0);
+        const discountPercent = Number(item.discountPercent || 0);
+        if (discountPercent > 0 && !discount) {
+          discount = Math.round((unitPrice * discountPercent) / 100);
+        }
+        if (discount > unitPrice) throw new AppError('Discount cannot exceed the item price', 400);
         const quantity = item.quantity;
+        const itemGross = unitPrice * quantity;
+        const itemDiscountTotal = discount * quantity;
         const itemTotal = (unitPrice - discount) * quantity;
-        subtotal += itemTotal;
+        subtotal += itemGross;
+        totalItemDiscounts += itemDiscountTotal;
 
         // Atomically reserve stock in inventory inside transaction
         await InventoryService.reserveStock({
@@ -143,6 +151,7 @@ export class OrderService {
           quantity,
           unitPrice,
           discount,
+          discountPercent,
           weight: itemWeight,
           total: itemTotal
         });
@@ -152,8 +161,11 @@ export class OrderService {
       const orderWeight = orderData.weight !== undefined && orderData.weight !== null ? Number(orderData.weight) : totalWeight;
       const isOfficeSale = Boolean(orderData.isOfficeSale || orderData.orderChannel === 'COUNTER_SALE');
       const shippingCharge = isOfficeSale ? 0 : Number(orderData.shippingCharge || 0);
-      const discountTotal = Number(orderData.discountTotal || 0);
-      const calculatedTotal = Math.max(0, subtotal + shippingCharge - discountTotal);
+      const clientDiscountTotal = Number(orderData.discountTotal || 0);
+      const discountTotal = clientDiscountTotal >= totalItemDiscounts
+        ? clientDiscountTotal
+        : (totalItemDiscounts + clientDiscountTotal);
+      const calculatedTotal = Math.max(0, subtotal - discountTotal + shippingCharge);
       const grandTotal = orderData.offerPrice ? Number(orderData.offerPrice) : calculatedTotal;
       const codAmount = (isOfficeSale || isProfessionalCourier) ? 0 : (orderData.codAmount !== undefined && orderData.codAmount !== null && orderData.codAmount !== ''
         ? Number(orderData.codAmount)

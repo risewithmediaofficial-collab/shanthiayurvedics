@@ -16,7 +16,8 @@ import {
   Sparkles,
   Search,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Printer
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { Modal } from '../../components/common/Modal.jsx';
@@ -25,6 +26,7 @@ import { Input } from '../../components/common/Input.jsx';
 import { Select } from '../../components/common/Select.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { PrintableInvoiceModal } from './PrintableInvoiceModal.jsx';
 
 const INDIAN_STATES = [
   { value: 'Tamil Nadu', label: 'Tamil Nadu' },
@@ -45,21 +47,33 @@ const INDIAN_STATES = [
   { value: 'Other', label: 'Other' }
 ];
 
-export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, telecallerId = null, isOfficeSale = false }) {
+export function OrderCreateModal({
+  isOpen,
+  onClose,
+  initialPatientData = null,
+  telecallerId = null,
+  isOfficeSale = false,
+  onOrderCreated = null
+}) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
   const isOfficeSaleRoute = typeof window !== 'undefined' && window.location.pathname.includes('/orders/counter-sale');
   const isTelecaller = user?.role === 'TELECALLER' || Boolean(telecallerId);
   const [isOfficeOrder, setIsOfficeOrder] = useState(Boolean(!isTelecaller && (isOfficeSale || isOfficeSaleRoute)));
+  const [createdOrderForInvoice, setCreatedOrderForInvoice] = useState(null);
 
-  // Force courier delivery and standard shipping charge for telecallers
+  // Sync office order mode and defaults
   useEffect(() => {
     if (isTelecaller) {
       setIsOfficeOrder(false);
       if (shippingCharge === '0') setShippingCharge('69');
+    } else if (isOfficeSale || isOfficeSaleRoute) {
+      setIsOfficeOrder(true);
+      setShippingCharge('0');
+      setPaymentMethod('CASH');
     }
-  }, [isTelecaller, isOpen]);
+  }, [isTelecaller, isOfficeSale, isOfficeSaleRoute, isOpen]);
 
   // 1. Customer / Patient Details
   const [patientName, setPatientName] = useState('');
@@ -82,7 +96,7 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
 
   // 3. Products
   const [products, setProducts] = useState([
-    { productId: '', quantity: 1, unitPrice: 0, weight: 0 }
+    { productId: '', batchId: '', quantity: 1, unitPrice: 0, discountPercent: 0, weight: 0 }
   ]);
   const [offerPrice, setOfferPrice] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
@@ -179,6 +193,7 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
       productId: prodId,
       batchId: prod?.batches?.[0]?._id || '',
       unitPrice: prod?.price || 0,
+      discountPercent: updated[index]?.discountPercent || 0,
       weight: Number(prod?.weight) || 0
     };
     setProducts(updated);
@@ -196,22 +211,41 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
     setProducts(updated);
   };
 
+  const handleDiscountPercentChange = (index, pct) => {
+    const cleanPct = Math.min(100, Math.max(0, Number(pct) || 0));
+    const updated = [...products];
+    updated[index] = {
+      ...updated[index],
+      discountPercent: cleanPct
+    };
+    setProducts(updated);
+  };
+
   const addProductRow = () => {
-    setProducts([...products, { productId: '', quantity: 1, unitPrice: 0, weight: 0 }]);
+    setProducts([...products, { productId: '', batchId: '', quantity: 1, unitPrice: 0, discountPercent: 0, weight: 0 }]);
   };
 
   const removeProductRow = (index) => {
     if (products.length > 1) {
       setProducts(products.filter((_, i) => i !== index));
     } else {
-      setProducts([{ productId: '', quantity: 1, unitPrice: 0, weight: 0 }]);
+      setProducts([{ productId: '', batchId: '', quantity: 1, unitPrice: 0, discountPercent: 0, weight: 0 }]);
     }
   };
 
-  // Calculations: Subtotal, Total Weight, Shipping, and COD
-  const productsSubtotal = products.reduce((acc, item) => {
+  // Calculations: Subtotal, Total Weight, Item Discounts, Shipping, and COD
+  const productsGrossSubtotal = products.reduce((acc, item) => {
     return acc + (Number(item.unitPrice) || 0) * (Number(item.quantity) || 1);
   }, 0);
+
+  const itemsDiscountTotal = products.reduce((acc, item) => {
+    const unitPrice = Number(item.unitPrice) || 0;
+    const pct = Number(item.discountPercent) || 0;
+    const discountPerUnit = Math.round((unitPrice * pct) / 100);
+    return acc + (discountPerUnit * (Number(item.quantity) || 1));
+  }, 0);
+
+  const productsNetSubtotal = Math.max(0, productsGrossSubtotal - itemsDiscountTotal);
 
   const totalWeightGrams = products.reduce((acc, item) => {
     const prod = productsData?.find((p) => p._id === item.productId);
@@ -223,9 +257,11 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
     ? `${(totalWeightGrams / 1000).toFixed(2)} kg (${totalWeightGrams} g)`
     : `${totalWeightGrams} g`;
 
-  const discountAmount = discountPercent > 0 ? Math.round((productsSubtotal * discountPercent) / 100) : 0;
+  // Additional order-level discount (from 10% / 20% overall buttons)
+  const orderLevelDiscountAmount = discountPercent > 0 ? Math.round((productsNetSubtotal * discountPercent) / 100) : 0;
+  const totalDiscountAmount = itemsDiscountTotal + orderLevelDiscountAmount;
   const parsedShippingCharge = isOfficeOrder ? 0 : (Number(shippingCharge) || 0);
-  const autoCalculatedTotal = Math.max(0, productsSubtotal + parsedShippingCharge - discountAmount);
+  const autoCalculatedTotal = Math.max(0, productsGrossSubtotal - totalDiscountAmount + parsedShippingCharge);
   const finalPayableTotal = offerPrice.trim() !== '' ? Number(offerPrice) : autoCalculatedTotal;
   const effectiveCodAmount = isOfficeOrder || courierName === 'The Professional Courier'
     ? 0
@@ -241,16 +277,28 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
     },
     onSuccess: (newOrder) => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['counterOrders'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
-      onClose();
+
+      if (onOrderCreated) {
+        onOrderCreated(newOrder);
+        onClose();
+      } else if (isOfficeOrder) {
+        setCreatedOrderForInvoice(newOrder);
+      } else {
+        onClose();
+      }
 
       // Open WhatsApp directly with patient order confirmation text
       const cleanMobile = mobile.replace(/\D/g, '').slice(-10);
       if (cleanMobile.length === 10) {
         const itemsList = (newOrder.items || [])
-          .map((i) => `• ${i.quantity}x ${i.productName}`)
+          .map((i) => {
+            const hasDisc = (i.discount || 0) > 0 || (i.discountPercent || 0) > 0;
+            return `• ${i.quantity}x ${i.productName}${hasDisc ? ` (${i.discountPercent ? `${i.discountPercent}% off` : `₹${i.discount} off`})` : ''} - ₹${i.total}`;
+          })
           .join('\n');
         const textMsg = encodeURIComponent(
           `🌿 *Shanthi Ayurvedas ${isOfficeOrder ? 'Office Counter Receipt' : 'Order Confirmation'}*\n\n` +
@@ -259,8 +307,8 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
             `📋 *Order ID:* ${newOrder.orderNumber}\n` +
             `📦 *Prescription Items:*\n${itemsList}\n\n` +
             `${isOfficeOrder ? '' : `🚚 *Courier Partner:* ${courierName}\n`}` +
-            `💰 *Total Amount:* ₹${finalPayableTotal} (${isOfficeOrder ? 'Direct Counter Payment' : (courierName === 'The Professional Courier' ? 'Pre-Payment (TPC Online/UPI)' : (paymentMethod === 'COD' ? 'Cash on Delivery' : 'Prepaid Online/UPI'))})\n` +
-            `${isOfficeOrder ? '' : `📍 *Delivery Address:* ${street}, ${village ? village + ', ' : ''}${district}, ${state} - ${pincode}\n\n`}` +
+            `💰 *Total Amount:* ₹${finalPayableTotal} (${isOfficeOrder ? `Direct Counter Payment (${paymentMethod})` : (courierName === 'The Professional Courier' ? 'Pre-Payment (TPC Online/UPI)' : (paymentMethod === 'COD' ? 'Cash on Delivery' : 'Prepaid Online/UPI'))})\n` +
+            `${isOfficeOrder ? `📍 *Counter Location:* Hosur Main Branch Desk\n\n` : `📍 *Delivery Address:* ${street}, ${village ? village + ', ' : ''}${district}, ${state} - ${pincode}\n\n`}` +
             `📱 Track & view dosage guide on *my.shanthiayurvedas.com*.\n\n` +
             `Thank you for trusting Shanthi Ayurvedas! 🙏`
         );
@@ -298,34 +346,38 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
       telecallerPhone: user?.role === 'TELECALLER' ? (user?.phone || user?.mobile) : undefined,
       items: validItems.map((p) => {
         const prod = productsData?.find((pr) => pr._id === p.productId);
+        const uPrice = Number(p.unitPrice);
+        const dPct = Number(p.discountPercent || 0);
+        const dAmount = Math.round((uPrice * dPct) / 100);
         return {
           productId: p.productId,
           batchId: p.batchId || undefined,
           quantity: Number(p.quantity),
-          unitPrice: Number(p.unitPrice),
-          weight: Number(p.weight ?? prod?.weight ?? 0),
-          discount: 0
+          unitPrice: uPrice,
+          discountPercent: dPct,
+          discount: dAmount,
+          weight: Number(p.weight ?? prod?.weight ?? 0)
         };
       }),
       weight: totalWeightGrams,
       shippingCharge: isOfficeOrder ? 0 : parsedShippingCharge,
       codAmount: isOfficeOrder || courierName === 'The Professional Courier' ? 0 : effectiveCodAmount,
-      discountTotal: discountAmount,
+      discountTotal: totalDiscountAmount,
       offerPrice: offerPrice.trim() !== '' ? Number(offerPrice) : undefined,
-      paymentMethod: isOfficeOrder ? 'CASH' : (courierName === 'The Professional Courier' ? 'ONLINE' : paymentMethod),
+      paymentMethod: isOfficeOrder ? paymentMethod : (courierName === 'The Professional Courier' ? 'ONLINE' : paymentMethod),
       orderChannel: isOfficeOrder ? 'COUNTER_SALE' : 'DIRECT',
       isOfficeSale: isOfficeOrder,
       status: isOfficeOrder ? 'DELIVERED' : undefined,
       patientAppRegistered: registerPatientApp,
       deliveryAddress: {
-        street: street || (isOfficeOrder ? 'Office Walk-In Counter' : 'Main Clinic Road'),
-        landmark,
-        village,
-        taluk,
-        district: district || (isOfficeOrder ? 'Hosur' : ''),
+        street: isOfficeOrder ? 'Direct Walk-In Office Counter' : (street || 'Main Clinic Road'),
+        landmark: isOfficeOrder ? undefined : landmark,
+        village: isOfficeOrder ? undefined : village,
+        taluk: isOfficeOrder ? undefined : taluk,
+        district: district || 'Hosur',
         city: district || 'Hosur',
-        state,
-        pincode: pincode || (isOfficeOrder ? '635109' : '635109'),
+        state: isOfficeOrder ? 'Tamil Nadu' : state,
+        pincode: isOfficeOrder ? '635109' : (pincode || '635109'),
         phone: mobile,
         alternatePhone: altMobile
       },
@@ -334,21 +386,36 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
   };
 
   const footerActions = (
-    <>
+    <div className="flex items-center justify-between w-full">
       <Button variant="secondary" type="button" onClick={onClose}>
         Cancel
       </Button>
-      <Button
-        variant="primary"
-        type="submit"
-        form="order-create-form"
-        icon={MessageSquare}
-        isLoading={createOrderMutation.isPending}
-        className="px-6 bg-gradient-to-r from-emerald-700 to-ayur-800 hover:from-emerald-600 hover:to-ayur-700 text-white font-bold shadow-sm text-xs tracking-wide"
-      >
-        🛒 Save Order & Send WhatsApp
-      </Button>
-    </>
+      <div className="flex items-center gap-2">
+        {isOfficeOrder ? (
+          <Button
+            variant="primary"
+            type="submit"
+            form="order-create-form"
+            icon={Printer}
+            isLoading={createOrderMutation.isPending}
+            className="px-6 bg-purple-700 hover:bg-purple-800 text-white font-bold shadow-sm text-xs tracking-wide cursor-pointer"
+          >
+            🖨️ Save & Print Counter Bill
+          </Button>
+        ) : (
+          <Button
+            variant="primary"
+            type="submit"
+            form="order-create-form"
+            icon={MessageSquare}
+            isLoading={createOrderMutation.isPending}
+            className="px-6 bg-gradient-to-r from-emerald-700 to-ayur-800 hover:from-emerald-600 hover:to-ayur-700 text-white font-bold shadow-sm text-xs tracking-wide cursor-pointer"
+          >
+            🛒 Save Order & Send WhatsApp
+          </Button>
+        )}
+      </div>
+    </div>
   );
 
   return (
@@ -454,141 +521,195 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
           </div>
         </div>
 
-        {/* SECTION 2: 📍 Delivery Address */}
-        <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-900">
-              <MapPin className="w-4 h-4 text-ayur-600" />
-              <span>{isOfficeOrder ? 'Patient Address (Optional for Walk-In)' : 'Delivery Address'}</span>
-            </div>
-            {isPincodeLoading && (
-              <span className="text-[11px] text-ayur-700 font-semibold animate-pulse">
-                Fetching postal data...
+        {/* SECTION 2: Delivery Address for Courier OR Simplified Walk-In Counter Info */}
+        {isOfficeOrder ? (
+          <div className="p-4 bg-purple-50/70 rounded-2xl border border-purple-200 space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-purple-950">
+                <span className="text-base">🏪</span>
+                <span>Counter Walk-In Sale (No Courier Shipping Required)</span>
+              </div>
+              <span className="text-[11px] font-bold text-purple-800 bg-purple-100/90 px-2.5 py-0.5 rounded-full border border-purple-200">
+                Hosur Main Clinic Desk • Direct Patient Handover (₹0 Delivery)
               </span>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div>
-              <Input
-                label="Pincode *"
-                required
-                placeholder="6-digit pincode"
-                value={pincode}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, '').slice(0, 6);
-                  setPincode(val);
-                }}
-                maxLength={6}
-              />
             </div>
 
-            <div>
-              {availablePostOffices.length > 0 && !isCustomVillage ? (
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-semibold text-slate-700 tracking-wide">
-                      Post Office *
-                    </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Payment Mode *
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'CASH', label: '💵 Cash' },
+                    { id: 'ONLINE', label: '📱 UPI / QR' },
+                    { id: 'CARD', label: '💳 Card POS' }
+                  ].map((mode) => (
                     <button
+                      key={mode.id}
                       type="button"
-                      onClick={() => setIsCustomVillage(true)}
-                      className="text-[10px] text-ayur-700 hover:underline font-semibold cursor-pointer"
+                      onClick={() => setPaymentMethod(mode.id)}
+                      className={`py-2 px-1 text-center rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                        paymentMethod === mode.id
+                          ? 'border-purple-600 bg-purple-700 text-white shadow-xs'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-purple-300'
+                      }`}
                     >
-                      ✏ Type custom
+                      {mode.label}
                     </button>
-                  </div>
-                  <Select
-                    placeholder="Select Post Office..."
-                    value={village}
-                    onChange={(e) => {
-                      if (e.target.value === '__CUSTOM__') {
-                        setIsCustomVillage(true);
-                        setVillage('');
-                      } else {
-                        setVillage(e.target.value);
-                      }
-                    }}
-                    options={[
-                      { value: '', label: 'Select Post Office...' },
-                      ...availablePostOffices.map((po) => ({ value: po, label: po })),
-                      { value: '__CUSTOM__', label: '✏ Other / Type manually...' }
-                    ]}
-                  />
+                  ))}
                 </div>
-              ) : (
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-semibold text-slate-700 tracking-wide">
-                      Post Office / Village
-                    </label>
-                    {availablePostOffices.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setIsCustomVillage(false)}
-                        className="text-[10px] text-ayur-700 hover:underline font-semibold cursor-pointer"
-                      >
-                        Choose from list
-                      </button>
-                    )}
-                  </div>
-                  <Input
-                    placeholder={isPincodeLoading ? 'Fetching post offices...' : 'Village or post office name'}
-                    value={village}
-                    onChange={(e) => setVillage(e.target.value)}
-                  />
-                </div>
+              </div>
+
+              <div>
+                <Input
+                  label="Patient City / Area (Optional)"
+                  placeholder="e.g. Hosur / Bagalur / Bangalore"
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Pincode, courier partner, and postal address are not needed for counter walk-ins.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-900">
+                <MapPin className="w-4 h-4 text-ayur-600" />
+                <span>Delivery Address</span>
+              </div>
+              {isPincodeLoading && (
+                <span className="text-[11px] text-ayur-700 font-semibold animate-pulse">
+                  Fetching postal data...
+                </span>
               )}
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <Input
+                  label="Pincode *"
+                  required
+                  placeholder="6-digit pincode"
+                  value={pincode}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    setPincode(val);
+                  }}
+                  maxLength={6}
+                />
+              </div>
+
+              <div>
+                {availablePostOffices.length > 0 && !isCustomVillage ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold text-slate-700 tracking-wide">
+                        Post Office *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomVillage(true)}
+                        className="text-[10px] text-ayur-700 hover:underline font-semibold cursor-pointer"
+                      >
+                        ✏ Type custom
+                      </button>
+                    </div>
+                    <Select
+                      placeholder="Select Post Office..."
+                      value={village}
+                      onChange={(e) => {
+                        if (e.target.value === '__CUSTOM__') {
+                          setIsCustomVillage(true);
+                          setVillage('');
+                        } else {
+                          setVillage(e.target.value);
+                        }
+                      }}
+                      options={[
+                        { value: '', label: 'Select Post Office...' },
+                        ...availablePostOffices.map((po) => ({ value: po, label: po })),
+                        { value: '__CUSTOM__', label: '✏ Other / Type manually...' }
+                      ]}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold text-slate-700 tracking-wide">
+                        Post Office / Village
+                      </label>
+                      {availablePostOffices.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setIsCustomVillage(false)}
+                          className="text-[10px] text-ayur-700 hover:underline font-semibold cursor-pointer"
+                        >
+                          Choose from list
+                        </button>
+                      )}
+                    </div>
+                    <Input
+                      placeholder={isPincodeLoading ? 'Fetching post offices...' : 'Village or post office name'}
+                      value={village}
+                      onChange={(e) => setVillage(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <Input
+                  label="District"
+                  placeholder="Auto filled"
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Select
+                  label="State"
+                  placeholder="Auto filled"
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                  options={INDIAN_STATES}
+                />
+              </div>
+            </div>
+
             <div>
               <Input
-                label="District"
-                placeholder="Auto filled"
-                value={district}
-                onChange={(e) => setDistrict(e.target.value)}
+                label="House No / Street *"
+                required
+                placeholder="e.g. No 12, Main Road"
+                value={street}
+                onChange={(e) => setStreet(e.target.value)}
               />
+              <p className="text-[11px] text-slate-500 mt-1">
+                Village, Taluk, District and State will be added automatically
+              </p>
             </div>
 
-            <div>
-              <Select
-                label="State"
-                placeholder="Auto filled"
-                value={state}
-                onChange={(e) => setState(e.target.value)}
-                options={INDIAN_STATES}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Landmark"
+                placeholder="Near school / temple / hospital"
+                value={landmark}
+                onChange={(e) => setLandmark(e.target.value)}
+              />
+              <Input
+                label="Taluk (Optional)"
+                placeholder="Taluk / Block name"
+                value={taluk}
+                onChange={(e) => setTaluk(e.target.value)}
               />
             </div>
           </div>
-
-          <div>
-            <Input
-              label="House No / Street *"
-              required
-              placeholder="e.g. No 12, Main Road"
-              value={street}
-              onChange={(e) => setStreet(e.target.value)}
-            />
-            <p className="text-[11px] text-slate-500 mt-1">
-              Village, Taluk, District and State will be added automatically
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input
-              label="Landmark"
-              placeholder="Near school / temple / hospital"
-              value={landmark}
-              onChange={(e) => setLandmark(e.target.value)}
-            />
-            <Input
-              label="Taluk (Optional)"
-              placeholder="Taluk / Block name"
-              value={taluk}
-              onChange={(e) => setTaluk(e.target.value)}
-            />
-          </div>
-        </div>
+        )}
 
         {/* SECTION 3: 📦 Products & Weight */}
         <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3">
@@ -612,69 +733,142 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
             </button>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {products.map((item, idx) => {
               const currentProd = productsData?.find((p) => p._id === item.productId);
               const itemWeight = Number(item.weight ?? currentProd?.weight ?? 0);
-              const lineWeight = itemWeight * (Number(item.quantity) || 1);
+              const qty = Number(item.quantity) || 1;
+              const lineWeight = itemWeight * qty;
+              const unitPrice = Number(item.unitPrice) || 0;
+              const pct = Number(item.discountPercent) || 0;
+              const discountPerUnit = Math.round((unitPrice * pct) / 100);
+              const netUnitPrice = Math.max(0, unitPrice - discountPerUnit);
+              const grossLineTotal = unitPrice * qty;
+              const netLineTotal = netUnitPrice * qty;
+              const discountLineTotal = discountPerUnit * qty;
+
               return (
                 <div
                   key={idx}
-                  className="grid grid-cols-12 gap-3 p-2.5 bg-white rounded-xl border border-slate-200 items-center text-xs shadow-xs"
+                  className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs space-y-2.5 transition-all hover:border-slate-300"
                 >
-                  <div className="col-span-6">
-                    <Select
-                      label={`Product ${idx + 1} ${idx === 0 ? '*' : '(optional)'}`}
-                      value={item.productId}
-                      onChange={(e) => handleProductChange(idx, e.target.value)}
-                      options={[
-                        { value: '', label: `Select Product ${idx + 1}...` },
-                        ...(productsData || []).map((p) => ({
-                          value: p._id,
-                          label: `${p.name} (₹${p.price}${p.weight ? ` • ${p.weight}g` : ''})`
-                        }))
-                      ]}
-                      required={idx === 0}
-                    />
-                    {currentProd && (
-                      <div className="text-[10px] text-slate-500 font-medium mt-0.5 flex items-center gap-1.5 pl-0.5">
-                        <span className="font-mono">⚖️ {itemWeight}g each</span>
-                        <span>•</span>
-                        <span className="font-semibold text-slate-700 font-mono">Row: {lineWeight}g</span>
-                      </div>
-                    )}
-                  </div>
+                  <div className="grid grid-cols-12 gap-3 items-start">
+                    <div className="col-span-12 sm:col-span-5">
+                      <Select
+                        label={`Product ${idx + 1} ${idx === 0 ? '*' : '(optional)'}`}
+                        value={item.productId}
+                        onChange={(e) => handleProductChange(idx, e.target.value)}
+                        options={[
+                          { value: '', label: `Select Product ${idx + 1}...` },
+                          ...(productsData || []).map((p) => ({
+                            value: p._id,
+                            label: `${p.name} (₹${p.price}${p.weight ? ` • ${p.weight}g` : ''})`
+                          }))
+                        ]}
+                        required={idx === 0}
+                      />
+                      {currentProd && (
+                        <div className="text-[10px] text-slate-500 font-medium mt-1 flex items-center gap-1.5 pl-0.5">
+                          <span className="font-mono">Base Rate: ₹{unitPrice}</span>
+                          <span>•</span>
+                          <span className="font-mono">⚖️ {itemWeight}g</span>
+                          {lineWeight > 0 && (
+                            <>
+                              <span>•</span>
+                              <span className="font-semibold text-slate-700 font-mono">Row: {lineWeight}g</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
-                  <div className="col-span-2">
-                    <Input
-                      label="Qty"
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) => handleQuantityChange(idx, e.target.value)}
-                    />
-                  </div>
+                    <div className="col-span-4 sm:col-span-2">
+                      <Input
+                        label="Qty"
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => handleQuantityChange(idx, e.target.value)}
+                      />
+                    </div>
 
-                  <div className="col-span-4 flex items-center justify-between pt-4">
-                    <div className="text-right w-full">
-                      <div className="font-bold text-slate-900 text-xs">
-                        ₹{((item.unitPrice || 0) * (item.quantity || 1)).toLocaleString()}
-                      </div>
-                      <div className="text-[10px] text-slate-400 font-mono">
-                        {lineWeight > 0 ? `${lineWeight} g` : ''}
+                    <div className="col-span-4 sm:col-span-2">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Discount %
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          placeholder="0"
+                          value={item.discountPercent || ''}
+                          onChange={(e) => handleDiscountPercentChange(idx, e.target.value)}
+                          className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono font-bold text-slate-900 pr-6"
+                        />
+                        <span className="absolute right-2 top-1.5 text-xs text-slate-400 font-bold pointer-events-none">%</span>
                       </div>
                     </div>
-                    {(products.length > 1 || Boolean(item.productId)) && (
-                      <button
-                        type="button"
-                        onClick={() => removeProductRow(idx)}
-                        className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors ml-2 cursor-pointer shrink-0"
-                        title={products.length > 1 ? "Remove product row" : "Clear selected product"}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+
+                    <div className="col-span-4 sm:col-span-3 flex items-center justify-end gap-2 pt-4">
+                      <div className="text-right">
+                        {pct > 0 && (
+                          <div className="text-[10px] text-slate-400 line-through font-mono">
+                            ₹{grossLineTotal.toLocaleString()}
+                          </div>
+                        )}
+                        <div className={`font-black font-mono text-sm ${pct > 0 ? 'text-emerald-700' : 'text-slate-900'}`}>
+                          ₹{netLineTotal.toLocaleString()}
+                        </div>
+                        {pct > 0 && (
+                          <div className="text-[9px] text-emerald-600 font-semibold font-mono">
+                            Saved ₹{discountLineTotal}
+                          </div>
+                        )}
+                      </div>
+                      {(products.length > 1 || Boolean(item.productId)) && (
+                        <button
+                          type="button"
+                          onClick={() => removeProductRow(idx)}
+                          className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors ml-1 cursor-pointer shrink-0"
+                          title={products.length > 1 ? "Remove product row" : "Clear selected product"}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Quick Discount % Pill Buttons & Per-Product Breakdown */}
+                  {Boolean(item.productId) && (
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 flex-wrap gap-2 text-[11px]">
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-slate-500 font-semibold mr-0.5">Quick Disc:</span>
+                        {[0, 5, 10, 15, 20].map((presetPct) => (
+                          <button
+                            key={presetPct}
+                            type="button"
+                            onClick={() => handleDiscountPercentChange(idx, presetPct)}
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors cursor-pointer ${
+                              pct === presetPct
+                                ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
+                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            {presetPct === 0 ? '0%' : `${presetPct}%`}
+                          </button>
+                        ))}
+                      </div>
+
+                      {pct > 0 && (
+                        <div className="text-[11px] font-medium text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1.5">
+                          <span>🏷️ {pct}% Off:</span>
+                          <span className="font-mono font-bold">-₹{discountLineTotal}</span>
+                          <span className="text-slate-500">(@ ₹{netUnitPrice}/unit)</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -972,7 +1166,7 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
           <div>
             <div className="text-[11px] text-slate-400 font-medium">Order Summary & Total</div>
             <div className="text-[10px] text-slate-400 flex items-center gap-2 mt-0.5 flex-wrap">
-              <span>Products: ₹{productsSubtotal}</span>
+              <span>Gross Products: ₹{productsGrossSubtotal.toLocaleString()}</span>
               {!isOfficeOrder && <span>• Shipping: ₹{parsedShippingCharge}</span>}
               {!isOfficeOrder && (
                 <span className="text-cyan-300 font-semibold">• {courierName} ({courierName === 'The Professional Courier' ? 'Pre-Payment Only' : (paymentMethod === 'COD' ? 'COD' : 'Prepaid')})</span>
@@ -980,10 +1174,10 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
               {isOfficeOrder && (
                 <span className="text-purple-300 font-bold">• Office Counter Sale (₹0 Shipping)</span>
               )}
-              {discountAmount > 0 && (
+              {totalDiscountAmount > 0 && (
                 <>
                   <span>•</span>
-                  <span className="text-amber-300">Discount: -₹{discountAmount}</span>
+                  <span className="text-emerald-400 font-bold">Total Discount: -₹{totalDiscountAmount.toLocaleString()}</span>
                 </>
               )}
               <span>•</span>
@@ -1004,7 +1198,7 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
               </div>
             ) : isOfficeOrder ? (
               <div className="text-[10px] text-purple-300 font-bold">
-                Direct Counter Bill
+                Counter Bill ({paymentMethod})
               </div>
             ) : null}
           </div>
@@ -1045,6 +1239,19 @@ export function OrderCreateModal({ isOpen, onClose, initialPatientData = null, t
         />
 
       </form>
+
+      {/* Direct Counter Printable Invoice Modal (if not intercepted by parent) */}
+      {createdOrderForInvoice && (
+        <PrintableInvoiceModal
+          isOpen={Boolean(createdOrderForInvoice)}
+          onClose={() => {
+            setCreatedOrderForInvoice(null);
+            onClose();
+          }}
+          order={createdOrderForInvoice}
+          autoPrint={true}
+        />
+      )}
     </Modal>
   );
 }

@@ -3,7 +3,7 @@ import { Printer } from 'lucide-react';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Button } from '../../components/common/Button.jsx';
 
-export function PrintableInvoiceModal({ isOpen, onClose, order }) {
+export function PrintableInvoiceModal({ isOpen, onClose, order, autoPrint = false }) {
   useEffect(() => {
     const clearPrintMode = () => document.body.classList.remove('printing-invoice');
     window.addEventListener('afterprint', clearPrintMode);
@@ -13,12 +13,21 @@ export function PrintableInvoiceModal({ isOpen, onClose, order }) {
     };
   }, []);
 
-  if (!order) return null;
-
   const handlePrint = () => {
     document.body.classList.add('printing-invoice');
     window.print();
   };
+
+  useEffect(() => {
+    if (isOpen && autoPrint && order) {
+      const timer = setTimeout(() => {
+        handlePrint();
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, autoPrint, order?._id]);
+
+  if (!order) return null;
 
   const patientName = order.patientDetails?.patientName || order.customerId?.name || 'Valued Patient';
   const mobile = order.patientDetails?.mobile || order.customerId?.mobile || '—';
@@ -59,12 +68,23 @@ export function PrintableInvoiceModal({ isOpen, onClose, order }) {
               <div className="text-slate-600 font-mono">📱 {mobile}</div>
             </div>
             <div>
-              <div className="font-bold text-slate-900 uppercase text-[10px] tracking-wider mb-1">Delivery Destination:</div>
+              <div className="font-bold text-slate-900 uppercase text-[10px] tracking-wider mb-1">
+                {order.orderChannel === 'COUNTER_SALE' || order.isOfficeSale ? 'Counter Billing Location:' : 'Delivery Destination:'}
+              </div>
               <div className="text-slate-700">
-                {addr.street}, {addr.landmark ? addr.landmark + ', ' : ''}
-                {addr.village ? addr.village + ', ' : ''}
-                {addr.taluk ? addr.taluk + ', ' : ''}
-                {addr.district || addr.city}, {addr.state} - {addr.pincode}
+                {order.orderChannel === 'COUNTER_SALE' || order.isOfficeSale ? (
+                  <>
+                    <span className="font-semibold text-slate-900">Shanthi Ayurvedas Hosur Main Clinic</span>
+                    <div className="text-slate-500 text-[11px] mt-0.5">Direct Counter POS • Handed over to patient in-person</div>
+                  </>
+                ) : (
+                  <>
+                    {addr.street}, {addr.landmark ? addr.landmark + ', ' : ''}
+                    {addr.village ? addr.village + ', ' : ''}
+                    {addr.taluk ? addr.taluk + ', ' : ''}
+                    {addr.district || addr.city}, {addr.state} - {addr.pincode}
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -75,23 +95,34 @@ export function PrintableInvoiceModal({ isOpen, onClose, order }) {
               <tr>
                 <th className="py-2 px-2">#</th>
                 <th className="py-2 px-2">Herbal Formulation</th>
-                <th className="py-2 px-2">Batch</th>
+                <th className="py-2 px-2">Batch / SKU</th>
                 <th className="py-2 px-2 text-right">Qty</th>
                 <th className="py-2 px-2 text-right">Rate</th>
+                <th className="py-2 px-2 text-right">Discount</th>
                 <th className="py-2 px-2 text-right">Amount</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {(order.items || []).map((item, idx) => (
-                <tr key={idx}>
-                  <td className="py-2 px-2 text-slate-500">{idx + 1}</td>
-                  <td className="py-2 px-2 font-semibold text-slate-900">{item.productName}</td>
-                  <td className="py-2 px-2 font-mono text-[11px] text-slate-600">{item.sku}</td>
-                  <td className="py-2 px-2 text-right font-bold">{item.quantity}</td>
-                  <td className="py-2 px-2 text-right font-mono">₹{item.unitPrice}</td>
-                  <td className="py-2 px-2 text-right font-mono font-bold">₹{item.total?.toLocaleString()}</td>
-                </tr>
-              ))}
+              {(order.items || []).map((item, idx) => {
+                const hasDisc = (item.discount || 0) > 0 || (item.discountPercent || 0) > 0;
+                return (
+                  <tr key={idx}>
+                    <td className="py-2 px-2 text-slate-500">{idx + 1}</td>
+                    <td className="py-2 px-2 font-semibold text-slate-900">{item.productName}</td>
+                    <td className="py-2 px-2 font-mono text-[11px] text-slate-600">{item.sku || '—'}</td>
+                    <td className="py-2 px-2 text-right font-bold">{item.quantity}</td>
+                    <td className="py-2 px-2 text-right font-mono">₹{item.unitPrice}</td>
+                    <td className="py-2 px-2 text-right font-mono text-emerald-700">
+                      {hasDisc
+                        ? item.discountPercent
+                          ? `${item.discountPercent}% (-₹${item.discount * item.quantity})`
+                          : `-₹${item.discount * item.quantity}`
+                        : '—'}
+                    </td>
+                    <td className="py-2 px-2 text-right font-mono font-bold">₹{item.total?.toLocaleString()}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 
@@ -103,13 +134,15 @@ export function PrintableInvoiceModal({ isOpen, onClose, order }) {
             </div>
             {order.discountTotal > 0 && (
               <div className="flex justify-between text-emerald-700">
-                <span>Discount / Offer Concession:</span>
+                <span>Discount / Concession:</span>
                 <span className="font-mono">-₹{order.discountTotal?.toLocaleString()}</span>
               </div>
             )}
             <div className="flex justify-between text-slate-600">
-              <span>Shipping & Tamper-Proof Packaging:</span>
-              <span className="font-mono">₹{order.shippingCharge || 0}</span>
+              <span>{order.orderChannel === 'COUNTER_SALE' || order.isOfficeSale ? 'Shipping / Walk-In Delivery:' : 'Shipping & Packaging:'}</span>
+              <span className="font-mono">
+                {order.shippingCharge > 0 ? `₹${order.shippingCharge}` : '₹0 (Walk-In / Free)'}
+              </span>
             </div>
             <div className="flex justify-between text-sm font-black text-slate-900 border-t border-slate-300 pt-2">
               <span>Total Amount Payable:</span>

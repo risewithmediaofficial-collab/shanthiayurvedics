@@ -36,6 +36,11 @@ const orderItemSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
+  discountPercent: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   weight: {
     type: Number,
     default: 0,
@@ -164,14 +169,14 @@ const orderSchema = new mongoose.Schema(
       type: Number
     },
     deliveryAddress: {
-      street: { type: String, required: true },
+      street: { type: String, default: 'Direct Office Counter' },
       landmark: { type: String },
       village: { type: String },
       taluk: { type: String },
       district: { type: String },
-      city: { type: String, required: true },
-      state: { type: String, required: true },
-      pincode: { type: String, required: true },
+      city: { type: String, default: 'Hosur' },
+      state: { type: String, default: 'Tamil Nadu' },
+      pincode: { type: String, default: '635109' },
       phone: { type: String },
       alternatePhone: { type: String }
     },

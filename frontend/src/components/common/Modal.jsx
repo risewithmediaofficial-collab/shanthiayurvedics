@@ -83,8 +83,12 @@ export function Modal({
           <div className="shrink-0 px-4 sm:px-7 pt-4 sm:pt-8 pb-3.5 sm:pb-5 border-b border-slate-100 bg-white flex items-start justify-between shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
             <div className="flex items-start gap-2.5 sm:gap-3.5 min-w-0 pr-2 sm:pr-3">
               {icon && (
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-ayur-50 border border-ayur-100 flex items-center justify-center text-base sm:text-lg shrink-0 mt-0.5 shadow-xs">
-                  {icon}
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-ayur-50 border border-ayur-100 flex items-center justify-center text-base sm:text-lg shrink-0 mt-0.5 shadow-xs overflow-hidden">
+                  {typeof icon === 'string' && (icon.startsWith('/') || icon.endsWith('.png') || icon.endsWith('.svg')) ? (
+                    <img src={icon} alt="Logo" className="w-full h-full object-contain p-1" />
+                  ) : (
+                    icon
+                  )}
                 </div>
               )}
               <div className="min-w-0">

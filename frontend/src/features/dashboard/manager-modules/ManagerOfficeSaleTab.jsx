@@ -310,9 +310,11 @@ export function ManagerOfficeSaleTab() {
       {/* POS Billing Header */}
       <div className="bento-card flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center justify-center text-lg shadow-xs shrink-0 font-bold">
-            🌿
-          </div>
+          <img
+            src="/shanthi_logo.png"
+            alt="Shanthi Ayurvedas"
+            className="w-10 h-10 object-contain rounded-xl shadow-xs shrink-0"
+          />
           <div>
             <h3 className="font-bold text-sm text-slate-900 leading-tight flex items-center gap-2">
               <span>Shanthi Ayurvedas Hosur — Walk-in Treatment & Counter Billing Desk</span>
@@ -703,6 +705,11 @@ export function ManagerOfficeSaleTab() {
           <div className="space-y-4 text-xs font-mono text-slate-800">
             <div className="p-4 sm:p-5 bg-white border-2 border-dashed border-slate-300 rounded-xl space-y-3">
               <div className="text-center pb-3 border-b border-slate-200">
+                <img
+                  src="/shanthi_logo.png"
+                  alt="Shanthi Ayurvedas"
+                  className="w-14 h-14 object-contain mx-auto mb-1.5"
+                />
                 <h3 className="font-black text-lg text-slate-900">SHANTHI AYURVEDAS</h3>
                 <p className="text-[11px] text-slate-600 font-sans">Hosur Main Road, Krishnagiri DT, Tamil Nadu</p>
                 <p className="text-[10px] text-slate-500">Ph: 8884747209 · Biller ID: 1000058077</p>

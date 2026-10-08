@@ -363,9 +363,11 @@ export function Sidebar({ isOpen, onClose }) {
         {/* Brand Header with generous top padding away from URL tab */}
         <div className="px-5 pt-7 sm:pt-8 pb-4.5 sm:pb-5 border-b border-slate-100 flex items-start justify-between bg-white shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
           <div className="flex items-start gap-3 min-w-0 pr-2">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-base flex items-center justify-center shadow-xs flex-shrink-0 mt-0.5">
-              🌿
-            </div>
+            <img
+              src="/shanthi_logo.png"
+              alt="Shanthi Ayurvedas"
+              className="w-10 h-10 object-contain rounded-xl shadow-xs flex-shrink-0 mt-0.5"
+            />
             <div className="min-w-0">
               <h1 className="text-base font-bold text-slate-900 tracking-tight leading-snug truncate">
                 Shanthi Ayurvedas

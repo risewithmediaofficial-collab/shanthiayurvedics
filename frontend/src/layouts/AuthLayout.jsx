@@ -17,9 +17,11 @@ export function AuthLayout() {
       <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-gold-200/25 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-md mx-auto text-center px-2 mb-6">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-ayur-700 via-ayur-600 to-ayur-500 text-white font-black text-2xl shadow-lg shadow-ayur-700/20 ring-4 ring-white mb-3">
-          🌿
-        </div>
+        <img
+          src="/shanthi_logo.png"
+          alt="Shanthi Ayurvedas"
+          className="w-20 h-20 object-contain mx-auto mb-3 drop-shadow-md"
+        />
         <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Shanthi Ayurvedas</h2>
         <div className="mt-1.5 flex justify-center">
           <span className="inline-flex items-center px-3 py-0.5 rounded-full bg-ayur-100/80 border border-ayur-200/80 text-[11px] font-bold text-ayur-800 tracking-wider uppercase">

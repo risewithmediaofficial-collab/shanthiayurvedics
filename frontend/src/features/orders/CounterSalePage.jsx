@@ -149,9 +149,11 @@ export function CounterSalePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-700 text-white flex items-center justify-center text-xl shadow-xs">
-            🏪
-          </div>
+          <img
+            src="/shanthi_logo.png"
+            alt="Shanthi Ayurvedas"
+            className="w-10 h-10 object-contain rounded-xl shadow-xs shrink-0"
+          />
           <div>
             <h2 className="text-lg font-bold text-slate-900 leading-tight">
               Direct Counter & Office Walk-In POS

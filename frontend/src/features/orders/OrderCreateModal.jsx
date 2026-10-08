@@ -425,7 +425,7 @@ export function OrderCreateModal({
       title={isOfficeOrder ? "Office Sale / Counter Bill" : "Create Prescription Order"}
       subtitle={isOfficeOrder ? "Direct walk-in counter billing with instant stock reservation (₹0 shipping)" : "Atomically reserves herbal stock and triggers WhatsApp dispatch notification"}
       maxWidth="max-w-3xl"
-      icon={isOfficeOrder ? "🏪" : "🛒"}
+      icon="/shanthi_logo.png"
       footer={footerActions}
     >
       <form id="order-create-form" onSubmit={handleSubmit} className="space-y-6 text-slate-800">

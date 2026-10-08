@@ -40,14 +40,18 @@ export function PrintableInvoiceModal({ isOpen, onClose, order, autoPrint = fals
         <div id="printable-tax-invoice" className="border border-slate-300 rounded-xl p-6 bg-white space-y-4 print:border-none print:p-0">
           {/* Header */}
           <div className="flex justify-between items-start border-b border-slate-200 pb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🌿</span>
-                <h1 className="text-lg font-black text-slate-900 tracking-tight">SHANTHI AYURVEDAS</h1>
+            <div className="flex items-start gap-3">
+              <img
+                src="/shanthi_logo.png"
+                alt="Shanthi Ayurvedas"
+                className="w-14 h-14 object-contain rounded-lg shrink-0"
+              />
+              <div>
+                <h1 className="text-lg font-black text-slate-900 tracking-tight leading-tight">SHANTHI AYURVEDAS</h1>
+                <p className="text-xs text-slate-500 mt-0.5">Authentic Herbal Wellness & Telemedicine</p>
+                <p className="text-[11px] text-slate-500">Hosur Main Clinic, Krishnagiri, Tamil Nadu - 635109</p>
+                <p className="text-[11px] text-slate-500 font-mono">GSTIN: 33AAAAA0000A1Z5 | Biller ID: 1000058077</p>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">Authentic Herbal Wellness & Telemedicine</p>
-              <p className="text-[11px] text-slate-500">Hosur Main Clinic, Krishnagiri, Tamil Nadu - 635109</p>
-              <p className="text-[11px] text-slate-500 font-mono">GSTIN: 33AAAAA0000A1Z5 | Biller ID: 1000058077</p>
             </div>
             <div className="text-right">
               <div className="text-sm font-black text-slate-900 uppercase font-mono">TAX INVOICE</div>

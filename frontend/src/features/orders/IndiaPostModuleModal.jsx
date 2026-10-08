@@ -102,10 +102,13 @@ export function IndiaPostModuleModal({ isOpen, onClose, orders = [] }) {
       </head>
       <body>
         <div class="header">
-          <div>
-            <h2>DEPARTMENT OF POSTS — INDIA POST DAILY MANIFEST</h2>
-            <p><strong>Booking Centre:</strong> Hosur Head Post Office (HSR-HO)</p>
-            <p><strong>Merchant:</strong> Shanthi Ayurvedas Hosur (Manager: Dr Shanthi) · Tel: 9629985345</p>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="/shanthi_logo.png" style="width: 44px; height: 44px; object-fit: contain;" />
+            <div>
+              <h2>DEPARTMENT OF POSTS — INDIA POST DAILY MANIFEST</h2>
+              <p><strong>Booking Centre:</strong> Hosur Head Post Office (HSR-HO)</p>
+              <p><strong>Merchant:</strong> Shanthi Ayurvedas Hosur (Manager: Dr Shanthi) · Tel: 9629985345</p>
+            </div>
           </div>
           <div style="text-align: right;">
             <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-GB')}</p>

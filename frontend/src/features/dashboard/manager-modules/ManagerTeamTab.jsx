@@ -1106,7 +1106,11 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
             <div className="p-5 bg-gradient-to-br from-emerald-800 to-teal-900 text-white rounded-2xl shadow-md border border-emerald-700 relative overflow-hidden">
               <div className="flex items-center justify-between pb-3 border-b border-white/20">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">🌿</span>
+                  <img
+                    src="/shanthi_logo.png"
+                    alt="Logo"
+                    className="w-8 h-8 object-contain bg-white rounded-md p-0.5 shrink-0"
+                  />
                   <div>
                     <h5 className="font-black text-sm tracking-tight">SHANTHI AYURVEDAS</h5>
                     <p className="text-[9px] text-emerald-200 tracking-widest uppercase">Hosur Main Branch</p>
@@ -1159,6 +1163,11 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
         >
           <div className="space-y-3 text-xs text-slate-800 p-4 border border-slate-200 rounded-2xl bg-white shadow-xs">
             <div className="text-center pb-3 border-b border-slate-200">
+              <img
+                src="/shanthi_logo.png"
+                alt="Shanthi Ayurvedas"
+                className="w-12 h-12 object-contain mx-auto mb-1"
+              />
               <h3 className="font-black text-base text-slate-900">SHANTHI AYURVEDAS HOSUR</h3>
               <p className="text-[10px] text-slate-500">Official Letter of Appointment & Employment Contract</p>
             </div>
@@ -1186,15 +1195,15 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3">
-              <Button variant="secondary" onClick={() => setIsAppointmentModalOpen(false)}>
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-3">
+              <Button variant="secondary" onClick={() => setIsAppointmentModalOpen(false)} className="w-full sm:w-auto">
                 Close
               </Button>
               <Button
                 variant="primary"
                 icon={Printer}
                 onClick={() => window.print()}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold w-full sm:w-auto"
               >
                 Print Letter
               </Button>
@@ -1212,7 +1221,11 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
           maxWidth="max-w-lg"
         >
           <div className="p-6 bg-amber-50/50 border-4 border-amber-300 text-center rounded-2xl space-y-4">
-            <div className="text-3xl">🏆</div>
+            <img
+              src="/shanthi_logo.png"
+              alt="Shanthi Ayurvedas"
+              className="w-16 h-16 object-contain mx-auto mb-1 drop-shadow-sm"
+            />
             <h3 className="font-serif font-black text-xl text-amber-950 tracking-wider">CERTIFICATE OF EXCELLENCE</h3>
             <p className="text-xs text-slate-600 italic">This is proudly presented to</p>
             <h2 className="text-2xl font-black text-emerald-900 underline decoration-amber-400 underline-offset-8">

@@ -84,7 +84,8 @@ export function BulkShippingLabelsModal({ isOpen, onClose, orders = [] }) {
         return `
         <div class="label-box">
           <!-- 1. Header Banner -->
-          <div class="header-banner">
+          <div class="header-banner" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <img src="/shanthi_logo.png" style="width: 26px; height: 26px; object-fit: contain; background: #fff; border-radius: 4px; padding: 2px;" />
             <h1>SHANTHI AYURVEDAS</h1>
           </div>
 
@@ -289,8 +290,13 @@ export function BulkShippingLabelsModal({ isOpen, onClose, orders = [] }) {
 
             return (
               <div key={ord._id} className="bg-white border-2 border-black max-w-md mx-auto text-xs shadow-sm">
-                <div className="bg-[#15803d] text-white py-1.5 text-center font-black text-sm tracking-wider uppercase">
-                  SHANTHI AYURVEDAS
+                <div className="bg-[#15803d] text-white py-1.5 px-2 text-center font-black text-sm tracking-wider uppercase flex items-center justify-center gap-2">
+                  <img
+                    src="/shanthi_logo.png"
+                    alt="Logo"
+                    className="w-5 h-5 object-contain bg-white rounded p-0.5 shrink-0"
+                  />
+                  <span>SHANTHI AYURVEDAS</span>
                 </div>
                 <div className="border-b border-black px-2 py-1 font-extrabold text-[10px] uppercase">
                   SPEED POST : Rs {payVal} | {convertNumberToIndianWords(payVal)} RUPEES ONLY

@@ -119,7 +119,12 @@ export function PrintableShippingLabelModal({ isOpen, onClose, order }) {
           style={{ width: '100%', maxWidth: '560px' }}
         >
           {/* 1. Header Banner: Green Background with SHANTHI AYURVEDAS */}
-          <div className="bg-[#15803d] text-white py-2 text-center">
+          <div className="bg-[#15803d] text-white py-2 px-3 text-center flex items-center justify-center gap-2.5">
+            <img
+              src="/shanthi_logo.png"
+              alt="Shanthi Ayurvedas"
+              className="w-8 h-8 sm:w-9 sm:h-9 object-contain bg-white rounded-md p-0.5 shrink-0"
+            />
             <h1 className="text-xl sm:text-2xl font-black tracking-wider uppercase m-0 leading-tight">
               SHANTHI AYURVEDAS
             </h1>

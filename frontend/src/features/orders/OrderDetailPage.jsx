@@ -413,23 +413,43 @@ export function OrderDetailPage() {
 
         {/* Right Col: Timeline */}
         <div>
-          <Card title="Order Lifecycle Timeline" subtitle="Append-only audit trail">
-            <div className="space-y-4 relative before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-              {statusHistory.map((item, idx) => (
-                <div key={idx} className="flex items-start gap-3 relative pl-1">
-                  <div className="w-6 h-6 rounded-full bg-ayur-100 text-ayur-800 flex items-center justify-center shrink-0 z-10">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-900">{item.toStatus}</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">{item.notes}</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">
-                      {new Date(item.timestamp).toLocaleString()}
+          <Card
+            title="Order Lifecycle Timeline"
+            subtitle="Append-only audit trail"
+            action={
+              statusHistory.length > 0 && (
+                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                  {statusHistory.length} events
+                </span>
+              )
+            }
+          >
+            {statusHistory.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                No lifecycle events recorded yet.
+              </div>
+            ) : (
+              <div className="max-h-[360px] sm:max-h-[440px] overflow-y-auto pr-2 scrollbar-thin touch-pan-y">
+                <div className="space-y-4 relative before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 py-1">
+                  {statusHistory.map((item, idx) => (
+                    <div key={idx} className="flex items-start gap-3 relative pl-1">
+                      <div className="w-6 h-6 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shrink-0 z-10 shadow-2xs">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold text-slate-900 tracking-tight">{item.toStatus}</div>
+                        {item.notes && (
+                          <div className="text-[11px] text-slate-600 mt-0.5 break-words">{item.notes}</div>
+                        )}
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          {new Date(item.timestamp).toLocaleString()}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </Card>
         </div>
       </div>

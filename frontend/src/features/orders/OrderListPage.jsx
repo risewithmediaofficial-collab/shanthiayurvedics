@@ -25,7 +25,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Filter
+  Filter,
+  UserCheck
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
@@ -35,6 +36,7 @@ import { Badge } from '../../components/common/Badge.jsx';
 import { Pagination } from '../../components/common/Pagination.jsx';
 import { CustomSelect } from '../../components/common/CustomSelect.jsx';
 import { OrderCreateModal } from './OrderCreateModal.jsx';
+import { CustomerProfileModal } from '../customers/CustomerProfileModal.jsx';
 import { PrintableInvoiceModal } from './PrintableInvoiceModal.jsx';
 import { PrintableShippingLabelModal } from './PrintableShippingLabelModal.jsx';
 import { ExcelImportModal } from './ExcelImportModal.jsx';
@@ -116,6 +118,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
   const [viewMode, setViewModeState] = useState(() => {
     return searchParams.get('view') === 'full' ? 'full' : 'card';
   });
+  const [selectedCustomerForProfile, setSelectedCustomerForProfile] = useState(null);
 
   const setViewMode = (mode) => {
     setViewModeState(mode);
@@ -557,6 +560,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
           onSelectLabel={(order) => setSelectedOrderForLabel(order)}
           onSelectEdit={(order) => handleOpenEditOrder(order)}
           onSelectDelete={(order) => setSelectedOrderForDelete(order)}
+          onSelectCustomerProfile={(cust) => setSelectedCustomerForProfile(cust)}
           selectedOrderIds={selectedOrderIds}
           onToggleSelectOrder={handleToggleSelectOrder}
           onSelectAll={handleSelectAll}
@@ -1212,8 +1216,31 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                 {/* Row 2: Customer Info (Left) & Price, Badges (Right) */}
                 <div className="flex items-start justify-between gap-2 pt-0.5">
                   <div className="min-w-0 flex-1">
-                    <div className="font-black text-slate-900 text-sm sm:text-base truncate">
-                      {customerName}
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCustomerForProfile({
+                          id: order.customerId?._id || order.customerId,
+                          phone: mobile,
+                          name: customerName
+                        })}
+                        className="font-black text-slate-900 hover:text-emerald-700 hover:underline text-sm sm:text-base truncate text-left cursor-pointer transition-colors"
+                        title="View Customer Profile & All Past Orders"
+                      >
+                        {customerName}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCustomerForProfile({
+                          id: order.customerId?._id || order.customerId,
+                          phone: mobile,
+                          name: customerName
+                        })}
+                        className="p-1 rounded text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors shrink-0"
+                        title="Customer Profile & Order History"
+                      >
+                        <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      </button>
                     </div>
                     <div className="flex items-center gap-2 mt-0.5 text-xs">
                       <span className="font-mono text-slate-600 font-medium shrink-0">{mobile}</span>
@@ -1781,6 +1808,22 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Customer Profile Modal with complete order history & 15-day reorder alert */}
+      {selectedCustomerForProfile && (
+        <CustomerProfileModal
+          isOpen={Boolean(selectedCustomerForProfile)}
+          onClose={() => setSelectedCustomerForProfile(null)}
+          customerId={selectedCustomerForProfile.id || selectedCustomerForProfile._id}
+          customerPhone={selectedCustomerForProfile.phone || selectedCustomerForProfile.mobile}
+          initialData={selectedCustomerForProfile}
+          onOrderCreated={() => {
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
+            refetchOrders();
+            refetchMetrics();
+          }}
+        />
       )}
     </div>
   );

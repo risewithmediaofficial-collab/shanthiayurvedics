@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import NotificationsRounded from '@mui/icons-material/NotificationsRounded';
 import DoneAllRounded from '@mui/icons-material/DoneAllRounded';
 import AccessTimeRounded from '@mui/icons-material/AccessTimeRounded';
 import { useNotifications } from '../../context/NotificationContext.jsx';
 import { Drawer } from '../common/Drawer.jsx';
+import { CustomerProfileModal } from '../../features/customers/CustomerProfileModal.jsx';
 
 export function NotificationBell() {
+  const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedCustomerForProfile, setSelectedCustomerForProfile] = useState(null);
 
   return (
     <>
@@ -56,32 +60,75 @@ export function NotificationBell() {
               </p>
             </div>
           ) : (
-            safeNotifications.map((n) => (
-              <div
-                key={n._id || n.id}
-                onClick={() => !n.isRead && markAsRead(n._id || n.id)}
-                className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
-                  n.isRead
-                    ? 'bg-white border-slate-100 text-slate-600'
-                    : 'bg-ayur-50/50 border-ayur-200/80 text-slate-900 shadow-xs'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <h4 className="text-xs font-semibold text-slate-800">{n.title}</h4>
-                  {!n.isRead && (
-                    <span className="w-2 h-2 rounded-full bg-ayur-600 shrink-0 mt-1" />
-                  )}
+            safeNotifications.map((n) => {
+              const isReorder = n.type === 'REORDER_DUE';
+              return (
+                <div
+                  key={n._id || n.id}
+                  onClick={() => {
+                    if (!n.isRead) markAsRead(n._id || n.id);
+                    if (isReorder || n.data?.customerId) {
+                      setSelectedCustomerForProfile({
+                        customerId: n.data?.customerId,
+                        phone: n.data?.mobile,
+                        name: n.data?.patientName
+                      });
+                      setIsOpen(false);
+                    } else if (n.data?.orderId) {
+                      navigate(`/orders/${n.data.orderId}`);
+                      setIsOpen(false);
+                    }
+                  }}
+                  className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+                    n.isRead
+                      ? 'bg-white border-slate-100 text-slate-600'
+                      : isReorder
+                      ? 'bg-amber-50/70 border-amber-300 text-slate-900 shadow-xs ring-1 ring-amber-400/30'
+                      : 'bg-ayur-50/50 border-ayur-200/80 text-slate-900 shadow-xs'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                      <span>{n.title}</span>
+                      {isReorder && (
+                        <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[9px] font-black">
+                          15-DAY REFILL
+                        </span>
+                      )}
+                    </h4>
+                    {!n.isRead && (
+                      <span className="w-2 h-2 rounded-full bg-ayur-600 shrink-0 mt-1" />
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1">{n.message}</p>
+                  <div className="flex items-center justify-between mt-2 text-[10px] text-slate-400 font-mono">
+                    <div className="flex items-center gap-1">
+                      <AccessTimeRounded sx={{ fontSize: 13 }} />
+                      <span>{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    {isReorder && (
+                      <span className="text-emerald-700 font-bold hover:underline">
+                        Open Customer Profile ➔
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <p className="text-xs text-slate-600 mt-1">{n.message}</p>
-                <div className="flex items-center gap-1 mt-2 text-[10px] text-slate-400 font-mono">
-                  <AccessTimeRounded sx={{ fontSize: 13 }} />
-                  <span>{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </Drawer>
+
+      {/* Customer Profile Modal on notification click */}
+      {selectedCustomerForProfile && (
+        <CustomerProfileModal
+          isOpen={Boolean(selectedCustomerForProfile)}
+          onClose={() => setSelectedCustomerForProfile(null)}
+          customerId={selectedCustomerForProfile.customerId}
+          customerPhone={selectedCustomerForProfile.phone}
+          initialData={selectedCustomerForProfile}
+        />
+      )}
     </>
   );
 }

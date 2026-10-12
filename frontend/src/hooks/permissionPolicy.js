@@ -23,6 +23,7 @@ const standardManagerPermissions = [
 ];
 
 const standardDistributorPermissions = [
+  'customers.view',  // Customer profiles and order histories
   'orders.view',     // Total sales & each telecaller sales
   'reports.view',    // Total sales & telecaller performance
   'inventory.view',  // Stocks available

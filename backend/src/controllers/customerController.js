@@ -1,5 +1,6 @@
 import { Customer } from '../models/Customer.js';
 import { CustomerService } from '../services/customerService.js';
+import { ReorderService } from '../services/reorderService.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { NotFoundError } from '../utils/errors.js';
@@ -124,4 +125,32 @@ export const deleteCustomer = asyncHandler(async (req, res) => {
 
   await Customer.findByIdAndDelete(req.params.id);
   return ApiResponse.success(res, null, 'Customer deleted successfully');
+});
+
+export const getCustomerByPhone = asyncHandler(async (req, res) => {
+  const timeline = await CustomerService.getCustomerByPhone(req.params.phone);
+  if (!timeline) {
+    throw new NotFoundError('Customer with this mobile number');
+  }
+  return ApiResponse.success(res, timeline, 'Customer details retrieved by phone');
+});
+
+export const getReordersDue = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 50;
+  const search = req.query.search?.trim() || '';
+  const minDays = parseInt(req.query.minDays, 10) || 15;
+
+  const result = await ReorderService.getReordersDue(
+    { page, limit, search, minDays },
+    req.user,
+    req.branchScope
+  );
+
+  return ApiResponse.paginated(res, result.data, result.meta, '15-day reorders due retrieved');
+});
+
+export const triggerReorderCheck = asyncHandler(async (req, res) => {
+  const createdCount = await ReorderService.checkAndCreateReorderNotifications();
+  return ApiResponse.success(res, { createdCount }, `Reorder check completed. ${createdCount} notifications generated.`);
 });

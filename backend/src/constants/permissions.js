@@ -78,7 +78,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     PERMISSIONS.PRODUCTS_VIEW,   // Product details for stocks
     PERMISSIONS.USERS_VIEW,      // Telecaller access for branch
     PERMISSIONS.LEADS_VIEW,      // Telecaller leads
-    PERMISSIONS.FOLLOWUPS_VIEW   // Telecaller followups
+    PERMISSIONS.FOLLOWUPS_VIEW,  // Telecaller followups
+    PERMISSIONS.CUSTOMERS_VIEW   // View customer profiles & orders
   ],
 
   MANAGER: [

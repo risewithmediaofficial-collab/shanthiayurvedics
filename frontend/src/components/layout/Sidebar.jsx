@@ -22,6 +22,7 @@ import KeyboardArrowRightRounded from '@mui/icons-material/KeyboardArrowRightRou
 import PhoneInTalkRounded from '@mui/icons-material/PhoneInTalkRounded';
 import CloseRounded from '@mui/icons-material/CloseRounded';
 import LocalPharmacyRounded from '@mui/icons-material/LocalPharmacyRounded';
+import ContactPhoneRounded from '@mui/icons-material/ContactPhoneRounded';
 import { useQuery } from '@tanstack/react-query';
 
 import apiClient from '../../api/apiClient.js';
@@ -126,6 +127,12 @@ export function Sidebar({ isOpen, onClose }) {
             badge: ordersCount > 0 ? ordersCount : undefined,
             badgeVariant: 'neutral',
             show: true
+          },
+          {
+            label: 'CUSTOMER PROFILES',
+            icon: ContactPhoneRounded,
+            path: '/customers',
+            show: true
           }
         ]
       }
@@ -160,6 +167,12 @@ export function Sidebar({ isOpen, onClose }) {
             path: '/orders',
             badge: ordersCount > 0 ? ordersCount : undefined,
             badgeVariant: 'primary',
+            show: true
+          },
+          {
+            label: 'CUSTOMER PROFILES',
+            icon: ContactPhoneRounded,
+            path: '/customers',
             show: true
           },
           {
@@ -202,6 +215,12 @@ export function Sidebar({ isOpen, onClose }) {
             badge: ordersCount > 0 ? ordersCount : undefined,
             badgeVariant: 'primary',
             show: hasPermission('orders.view')
+          },
+          {
+            label: 'CUSTOMERS',
+            icon: ContactPhoneRounded,
+            path: '/customers',
+            show: isOwner || hasPermission('customers.view')
           },
           {
             label: 'LEADS',

@@ -23,7 +23,8 @@ import {
   Truck,
   ArrowUpDown,
   Building2,
-  Calendar
+  Calendar,
+  UserCheck
 } from 'lucide-react';
 import { Button } from '../../components/common/Button.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
@@ -115,6 +116,7 @@ export function OrdersFullTableView({
   onSelectLabel,
   onSelectEdit,
   onSelectDelete,
+  onSelectCustomerProfile,
   selectedOrderIds = [],
   onToggleSelectOrder,
   onSelectAll,
@@ -1065,7 +1067,30 @@ export function OrdersFullTableView({
                     {/* Customer & Phone */}
                     <td className="p-3">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-900">{customerName}</span>
+                        <button
+                          type="button"
+                          onClick={() => onSelectCustomerProfile && onSelectCustomerProfile({
+                            id: row.customerId?._id || row.customerId,
+                            phone: mobile,
+                            name: customerName
+                          })}
+                          className="font-bold text-slate-900 hover:text-emerald-700 hover:underline text-left cursor-pointer transition-colors"
+                          title="View Customer Profile & Complete Order History"
+                        >
+                          {customerName}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onSelectCustomerProfile && onSelectCustomerProfile({
+                            id: row.customerId?._id || row.customerId,
+                            phone: mobile,
+                            name: customerName
+                          })}
+                          className="p-0.5 text-slate-400 hover:text-emerald-700 rounded transition-colors cursor-pointer"
+                          title="Customer Profile & Past Orders"
+                        >
+                          <UserCheck className="w-3 h-3 text-emerald-600" />
+                        </button>
                         {isDuplicate && (
                           <span className="px-1.5 py-0.2 rounded-full bg-orange-100 text-orange-800 text-[9px] font-black" title="Possible Duplicate Order">
                             DUP

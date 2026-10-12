@@ -32,6 +32,9 @@ const gracefulShutdown = async (signal, exitCode = 0) => {
   }
 };
 
+import cron from 'node-cron';
+import { ReorderService } from './services/reorderService.js';
+
 const startServer = async () => {
   app.locals.isReady = false;
   // Start HTTP listener immediately so Nginx reverse-proxy and /health checks have an active socket
@@ -41,6 +44,12 @@ const startServer = async () => {
     await RbacService.initializeDefaultRoles();
     app.locals.isReady = true;
     logger.info({ port: env.PORT }, 'CRM API ready and database connected');
+
+    // Initial check and recurring cron for 15-day reorder notifications
+    ReorderService.checkAndCreateReorderNotifications().catch((err) => logger.warn({ err }, 'Initial reorder check error'));
+    cron.schedule('0 */2 * * *', () => {
+      ReorderService.checkAndCreateReorderNotifications().catch((err) => logger.warn({ err }, 'Cron reorder check error'));
+    });
   } catch (err) {
     logger.error({ err }, 'Server initialization failed');
     await gracefulShutdown('STARTUP_FAILURE', 1);

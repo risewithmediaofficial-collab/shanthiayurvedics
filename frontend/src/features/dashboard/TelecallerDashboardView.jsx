@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { PhoneCall, Users, CalendarClock, ShoppingBag, ArrowLeft, Plus, UserCheck } from 'lucide-react';
+import { PhoneCall, Users, CalendarClock, ShoppingBag, ArrowLeft, Plus, UserCheck, RotateCcw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useBranch } from '../../context/BranchContext.jsx';
 import apiClient from '../../api/apiClient.js';
@@ -13,12 +13,14 @@ const LeadListPage = lazy(() => import('../leads/LeadListPage.jsx'));
 const FollowUpListPage = lazy(() => import('../followups/FollowUpListPage.jsx'));
 const CallHistoryPage = lazy(() => import('../leads/CallHistoryPage.jsx'));
 const OrderListPage = lazy(() => import('../orders/OrderListPage.jsx'));
+const CustomerListPage = lazy(() => import('../customers/CustomerListPage.jsx'));
 
 const tabs = [
   { id: 'leads', title: 'Assigned leads', icon: Users, Page: LeadListPage },
   { id: 'followups', title: 'Follow-ups', icon: CalendarClock, Page: FollowUpListPage },
   { id: 'calls', title: 'Call history', icon: PhoneCall, Page: CallHistoryPage },
-  { id: 'orders', title: 'Orders', icon: ShoppingBag, Page: OrderListPage }
+  { id: 'orders', title: 'Orders', icon: ShoppingBag, Page: OrderListPage },
+  { id: 'customers', title: 'Customer Profiles & 15-Day Reorders', icon: RotateCcw, Page: CustomerListPage }
 ];
 
 export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, onSwitchToBossView, onSwitchToDistributorView, returnView }) {
@@ -99,16 +101,18 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
       const leadParams = callerId ? { assignedTo: callerId, limit: 1 } : { limit: 1 };
       const followupParams = callerId ? { telecallerId: callerId, limit: 1 } : { limit: 1 };
       const orderParams = callerId ? { telecallerId: callerId, limit: 1 } : { limit: 1 };
-      const [leads, followups, orders] = await Promise.all([
+      const [leads, followups, orders, reorders] = await Promise.all([
         apiClient.get('/leads', { signal, params: leadParams }),
         apiClient.get('/followups', { signal, params: followupParams }),
-        apiClient.get('/orders', { signal, params: orderParams })
+        apiClient.get('/orders', { signal, params: orderParams }),
+        apiClient.get('/customers/reorders-due', { signal, params: { limit: 1 } }).catch(() => ({ data: { meta: { total: 0 } } }))
       ]);
       return {
         leads: leads.data.pagination?.total || 0,
         today: followups.data.stats?.today || 0,
         overdue: followups.data.stats?.overdue || 0,
-        orders: orders.data.pagination?.total || 0
+        orders: orders.data.pagination?.total || 0,
+        reordersDue: reorders.data?.meta?.total || 0
       };
     }
   });
@@ -226,19 +230,33 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
           {[
             ['Assigned leads', 'leads', Users],
             ["Today's follow-ups", 'today', CalendarClock],
             ['Overdue follow-ups', 'overdue', PhoneCall],
-            ['Orders', 'orders', ShoppingBag]
+            ['Orders', 'orders', ShoppingBag],
+            ['15-Day Reorders Due', 'reordersDue', RotateCcw]
           ].map(([label, key, Icon]) => (
-            <div key={key} className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm">
+            <div
+              key={key}
+              onClick={() => {
+                if (key === 'reordersDue') setActiveTab('customers');
+                else if (key === 'leads') setActiveTab('leads');
+                else if (key === 'today' || key === 'overdue') setActiveTab('followups');
+                else if (key === 'orders') setActiveTab('orders');
+              }}
+              className={`rounded-xl border bg-white p-3 sm:p-4 shadow-sm cursor-pointer transition-all hover:scale-101 ${
+                key === 'reordersDue' && (summary?.reordersDue || 0) > 0
+                  ? 'border-amber-300 bg-amber-50/40 ring-1 ring-amber-300'
+                  : 'border-slate-200 hover:border-slate-300'
+              }`}
+            >
               <div className="flex justify-between gap-1.5">
-                <p className="text-[11px] sm:text-xs font-medium text-slate-600 uppercase tracking-wide truncate">{label}</p>
-                <Icon size={16} className={key === 'overdue' ? 'text-amber-600 shrink-0' : 'text-emerald-700 shrink-0'} />
+                <p className="text-[11px] sm:text-xs font-bold text-slate-600 uppercase tracking-wide truncate">{label}</p>
+                <Icon size={16} className={key === 'overdue' ? 'text-amber-600 shrink-0' : key === 'reordersDue' ? 'text-amber-700 shrink-0' : 'text-emerald-700 shrink-0'} />
               </div>
-              <p className="mt-2 text-2xl sm:text-3xl font-semibold tabular-nums text-slate-900">
+              <p className={`mt-2 text-2xl sm:text-3xl font-black tabular-nums ${key === 'reordersDue' ? 'text-amber-900' : 'text-slate-900'}`}>
                 {isLoading ? '…' : summary?.[key] ?? 0}
               </p>
             </div>

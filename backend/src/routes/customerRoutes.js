@@ -4,6 +4,9 @@ import { Router } from 'express';
 import {
   getCustomers,
   getCustomerById,
+  getCustomerByPhone,
+  getReordersDue,
+  triggerReorderCheck,
   convertLead,
   addCustomerAddress,
   updateCustomer,
@@ -18,10 +21,17 @@ const router = Router();
 
 router.use(authenticate);
 router.use(requireBranchScope);
-router.param('id', scopeRecord(Customer, 'assignedTelecallerId'));
+
+// Dedicated reorder and phone lookup routes (defined before :id to prevent collision)
+router.get('/reorders-due', requirePermission(PERMISSIONS.CUSTOMERS_VIEW), getReordersDue);
+router.get('/by-phone/:phone', requirePermission(PERMISSIONS.CUSTOMERS_VIEW), getCustomerByPhone);
+router.post('/check-reorders', requirePermission(PERMISSIONS.CUSTOMERS_VIEW), triggerReorderCheck);
 
 router.get('/', requirePermission(PERMISSIONS.CUSTOMERS_VIEW), getCustomers);
+// Allow all roles (Owner, Manager, Telecaller, Distributor) with CUSTOMERS_VIEW to view customer profiles and order histories
 router.get('/:id', requirePermission(PERMISSIONS.CUSTOMERS_VIEW), getCustomerById);
+
+// Scoped mutations for edit/delete
 router.patch('/:id', requirePermission(PERMISSIONS.CUSTOMERS_EDIT), updateCustomer);
 router.put('/:id', requirePermission(PERMISSIONS.CUSTOMERS_EDIT), updateCustomer);
 router.delete('/:id', requirePermission(PERMISSIONS.CUSTOMERS_EDIT), deleteCustomer);

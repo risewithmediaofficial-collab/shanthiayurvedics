@@ -30,6 +30,7 @@ import { Input } from '../../components/common/Input.jsx';
 import { Select } from '../../components/common/Select.jsx';
 import { PrintableInvoiceModal } from './PrintableInvoiceModal.jsx';
 import { PrintableShippingLabelModal } from './PrintableShippingLabelModal.jsx';
+import { CustomerProfileModal } from '../customers/CustomerProfileModal.jsx';
 import { TPCShippingCard } from './components/TPCShippingCard.jsx';
 
 export function OrderDetailPage() {
@@ -37,6 +38,7 @@ export function OrderDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
+  const [isCustomerProfileOpen, setIsCustomerProfileOpen] = useState(false);
 
   const [transitionModalOpen, setTransitionModalOpen] = useState(false);
   const [targetStatus, setTargetStatus] = useState('');
@@ -374,9 +376,24 @@ export function OrderDetailPage() {
           {/* Delivery & Customer Info */}
           <Card title="Customer & Delivery Details">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-3.5 bg-slate-50 rounded-xl space-y-1.5">
-                <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-ayur-600" /> {patientName}
+              <div className="p-3.5 bg-slate-50 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomerProfileOpen(true)}
+                    className="font-bold text-slate-800 hover:text-emerald-700 hover:underline flex items-center gap-1.5 cursor-pointer text-left"
+                    title="View Customer Profile & All Past Orders"
+                  >
+                    <User className="w-3.5 h-3.5 text-ayur-600 shrink-0" />
+                    <span>{patientName}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomerProfileOpen(true)}
+                    className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer shrink-0"
+                  >
+                    360° Profile ➔
+                  </button>
                 </div>
                 <div className="text-slate-600 flex items-center gap-1.5 font-mono">
                   <Phone className="w-3.5 h-3.5 text-slate-400" /> {patientMobile}
@@ -729,6 +746,25 @@ export function OrderDetailPage() {
           isOpen={isLabelOpen}
           onClose={() => setIsLabelOpen(false)}
           order={order}
+        />
+      )}
+
+      {/* Customer Profile Modal with complete order history & 15-day reorder alert */}
+      {isCustomerProfileOpen && (
+        <CustomerProfileModal
+          isOpen={isCustomerProfileOpen}
+          onClose={() => setIsCustomerProfileOpen(false)}
+          customerId={order.customerId?._id || order.customerId}
+          customerPhone={patientMobile}
+          initialData={{
+            name: patientName,
+            mobile: patientMobile,
+            addresses: [order.deliveryAddress].filter(Boolean)
+          }}
+          onOrderCreated={() => {
+            queryClient.invalidateQueries({ queryKey: ['order', id] });
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
+          }}
         />
       )}
     </div>

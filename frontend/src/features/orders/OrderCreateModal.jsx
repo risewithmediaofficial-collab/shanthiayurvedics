@@ -139,16 +139,22 @@ export function OrderCreateModal({
     enabled: isOpen
   });
 
-  // Pre-fill initial data if provided (e.g. from Lead)
+  // Pre-fill initial data if provided (e.g. from Lead or Repeat Customer Order)
   useEffect(() => {
     if (initialPatientData) {
-      if (initialPatientData.name) setPatientName(initialPatientData.name);
+      if (initialPatientData.name || initialPatientData.patientName) setPatientName(initialPatientData.name || initialPatientData.patientName);
       if (initialPatientData.mobile) setMobile(initialPatientData.mobile);
       if (initialPatientData.fatherName) setFatherName(initialPatientData.fatherName);
-      if (initialPatientData.altMobile) setAltMobile(initialPatientData.altMobile);
+      if (initialPatientData.altMobile || initialPatientData.alternateMobile) setAltMobile(initialPatientData.altMobile || initialPatientData.alternateMobile);
       if (initialPatientData.city) setDistrict(initialPatientData.city);
       if (initialPatientData.state) setState(initialPatientData.state);
       if (initialPatientData.pincode) setPincode(initialPatientData.pincode);
+      if (initialPatientData.street) setStreet(initialPatientData.street);
+      if (initialPatientData.landmark) setLandmark(initialPatientData.landmark);
+      if (initialPatientData.village) setVillage(initialPatientData.village);
+      if (Array.isArray(initialPatientData.items) && initialPatientData.items.length > 0) {
+        setProducts(initialPatientData.items);
+      }
     }
   }, [initialPatientData, isOpen]);
 

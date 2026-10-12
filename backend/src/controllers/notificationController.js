@@ -1,9 +1,13 @@
 import { Notification } from '../models/Notification.js';
+import { ReorderService } from '../services/reorderService.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
 export const getNotifications = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit, 10) || 20;
+
+  // Run 15-day reorder check non-blockingly in background
+  ReorderService.checkAndCreateReorderNotifications().catch(() => {});
 
   const query = {
     $or: [{ userId: req.user.id }, { branchId: req.user.branchId }]

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import DomainRounded from '@mui/icons-material/DomainRounded';
 import StoreRounded from '@mui/icons-material/StoreRounded';
@@ -100,7 +101,19 @@ import { SimpleTrendChart } from '../../components/common/SimpleTrendChart.jsx';
 import { OrderListPage } from '../orders/OrderListPage.jsx';
 import { ManagerLeadsTab } from './manager-modules/ManagerLeadsTab.jsx';
 
-const StatCard = ({ label, value, sub, icon: Icon, color = 'green', progress }) => {
+const StatCard = ({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  color = 'green',
+  progress,
+  onClick,
+  onOpenNewTab,
+  actionLabel,
+  badge,
+  testId
+}) => {
   const iconClasses = {
     green: 'icon-box-emerald',
     blue: 'icon-box-blue',
@@ -114,27 +127,101 @@ const StatCard = ({ label, value, sub, icon: Icon, color = 'green', progress }) 
     purple: 'purple'
   };
 
+  const borderHoverClasses = {
+    green: 'hover:border-emerald-500 hover:shadow-emerald-500/10',
+    blue: 'hover:border-blue-500 hover:shadow-blue-500/10',
+    amber: 'hover:border-amber-500 hover:shadow-amber-500/10',
+    purple: 'hover:border-purple-500 hover:shadow-purple-500/10'
+  };
+
+  const actionBtnClasses = {
+    green: 'bg-emerald-50 group-hover:bg-emerald-600 text-emerald-800 group-hover:text-white border-emerald-200 group-hover:border-emerald-600',
+    blue: 'bg-blue-50 group-hover:bg-blue-600 text-blue-800 group-hover:text-white border-blue-200 group-hover:border-blue-600',
+    amber: 'bg-amber-50 group-hover:bg-amber-500 text-amber-900 group-hover:text-white border-amber-200 group-hover:border-amber-500',
+    purple: 'bg-purple-50 group-hover:bg-purple-600 text-purple-800 group-hover:text-white border-purple-200 group-hover:border-purple-600'
+  };
+
+  const badgeClasses = {
+    green: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    blue: 'bg-blue-100 text-blue-800 border-blue-200',
+    amber: 'bg-amber-100 text-amber-800 border-amber-200',
+    purple: 'bg-purple-100 text-purple-800 border-purple-200'
+  };
+
   const isZeroOrEmpty = !value || value === '₹0' || value === 0 || value === '0' || value === '0%' || value === '0.0%';
   const effectiveProgress = progress !== undefined ? progress : (isZeroOrEmpty ? 0 : 100);
+  const isClickable = Boolean(onClick);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-shadow p-4 space-y-3">
+    <div
+      id={testId}
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={isClickable ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      } : undefined}
+      className={`group relative bg-white rounded-2xl border border-slate-200/90 shadow-2xs transition-all duration-200 p-4 space-y-3 ${
+        isClickable
+          ? `cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 ${borderHoverClasses[color] || 'hover:border-slate-400'}`
+          : 'hover:shadow-xs'
+      }`}
+    >
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">{label}</span>
-        <div className={iconClasses[color] || 'icon-box-emerald'}>
+        <div className="flex items-center gap-1.5 truncate">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">{label}</span>
+          {badge && (
+            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md border tracking-wider uppercase ${badgeClasses[color] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+              {badge}
+            </span>
+          )}
+        </div>
+        <div className={`${iconClasses[color] || 'icon-box-emerald'} group-hover:scale-105 transition-transform duration-200`}>
           <Icon sx={{ fontSize: 18 }} />
         </div>
       </div>
+
       <div>
         <div className="text-2xl font-black text-slate-900 font-mono tracking-tight leading-none">{value}</div>
         {sub && <p className="text-xs text-slate-500 font-medium mt-1.5">{sub}</p>}
       </div>
+
       <SimpleProgressBar value={effectiveProgress} max={100} size="sm" color={colorKey[color] || 'emerald'} showPercentage={false} />
+
+      {/* Button Action Row */}
+      {isClickable && (
+        <div className="pt-1 flex items-center justify-between gap-1.5 border-t border-slate-100">
+          <div
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all duration-150 shadow-2xs ${actionBtnClasses[color] || 'bg-slate-50 text-slate-700'}`}
+          >
+            <span>{actionLabel || `Open ${label}`}</span>
+            <ArrowRight sx={{ fontSize: 14 }} className="group-hover:translate-x-0.5 transition-transform duration-150" />
+          </div>
+
+          {onOpenNewTab && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenNewTab();
+              }}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition cursor-pointer"
+              title={`Open ${label} in new page / tab`}
+            >
+              <ExternalLink sx={{ fontSize: 15 }} />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
 export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchToTelecaller }) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { selectedBranchId, selectBranch } = useBranch();
   const queryClient = useQueryClient();
@@ -414,7 +501,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* 1. Header & Distributor Identity Strip */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -456,13 +543,13 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
           </div>
 
           {/* Action Buttons Toolbar */}
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0 self-start lg:self-center">
+          <div className="flex items-center gap-2 flex-wrap shrink-0 self-start lg:self-center">
             {user?.role === 'OWNER' && (
               <button
                 id="btn-owner-add-product"
                 type="button"
                 onClick={() => setIsAddProductModalOpen(true)}
-                className="inline-flex items-center gap-1.5 h-9 px-3.5 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition-all cursor-pointer shrink-0"
+                className="inline-flex items-center gap-1.5 h-8 sm:h-9 px-2.5 sm:px-3.5 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition-all cursor-pointer shrink-0"
               >
                 <Plus sx={{ fontSize: 16 }} />
                 <span>Add Product</span>
@@ -473,7 +560,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                 id="btn-owner-view-telecaller"
                 type="button"
                 onClick={() => onSwitchToTelecaller()}
-                className="inline-flex items-center gap-1.5 h-9 px-3.5 bg-slate-800 hover:bg-slate-900 active:bg-slate-950 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition-all cursor-pointer shrink-0"
+                className="inline-flex items-center gap-1.5 h-8 sm:h-9 px-2.5 sm:px-3.5 bg-slate-800 hover:bg-slate-900 active:bg-slate-950 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition-all cursor-pointer shrink-0"
                 title="View Telecaller Dashboard"
               >
                 <span>🎧</span>
@@ -486,7 +573,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                 id="btn-switch-manager-view"
                 type="button"
                 onClick={onSwitchToManagerView}
-                className="inline-flex items-center gap-1.5 h-9 px-3.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 text-xs font-bold rounded-xl shadow-xs hover:shadow transition-all shrink-0 cursor-pointer"
+                className="inline-flex items-center gap-1.5 h-8 sm:h-9 px-2.5 sm:px-3.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 text-xs font-bold rounded-xl shadow-xs hover:shadow transition-all shrink-0 cursor-pointer"
               >
                 <span>Manager View</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -510,60 +597,90 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
         </div>
       </div>
 
-      {/* 2. Top Summary KPI Ribbon (4 Cards matching Shanthi Ayurvedas) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 2. Top Summary KPI Ribbon (Interactive Action Buttons matching Shanthi Ayurvedas) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
+          testId="kpi-card-month-revenue"
           label="Month Revenue"
           value={kpis.salesMonth != null ? `₹${kpis.salesMonth.toLocaleString()}` : '₹0'}
           sub={kpis.allTimeRevenue != null ? `All-time ₹${kpis.allTimeRevenue.toLocaleString()}` : 'All-time ₹0'}
           icon={TrendingUp}
           color="green"
+          badge="SETTLEMENT"
+          actionLabel="View Settlement & Revenue"
+          onClick={() => setActiveTab('SETTLEMENT')}
+          onOpenNewTab={() => window.open('/reports/settlement', '_blank')}
         />
         <StatCard
+          testId="kpi-card-total-leads"
           label="Total Leads"
           value={kpis.totalLeads ?? 0}
           sub={`Today: ${kpis.todayLeads ?? 0} new`}
           icon={Users}
           color="blue"
+          badge="OPEN PAGE"
+          actionLabel="Open All Leads Page"
+          onClick={() => navigate('/leads')}
+          onOpenNewTab={() => window.open('/leads', '_blank')}
         />
         <StatCard
+          testId="kpi-card-total-orders"
           label="Total Orders"
           value={kpis.totalOrders ?? orderList.length}
           sub={`Shipped: ${pipelineCounts.shipped}`}
           icon={ShoppingBag}
           color="amber"
+          badge="OPEN PAGE"
+          actionLabel="Open All Orders Page"
+          onClick={() => navigate('/orders')}
+          onOpenNewTab={() => window.open('/orders', '_blank')}
         />
         <StatCard
+          testId="kpi-card-conversion"
           label="Conversion"
           value={kpis.conversionRate != null ? `${kpis.conversionRate}%` : '0%'}
           sub="converted"
           icon={Percent}
           color="purple"
+          badge="REPORTS"
+          actionLabel="View Analytics & Reports"
+          onClick={() => navigate('/reports')}
+          onOpenNewTab={() => window.open('/reports', '_blank')}
         />
       </div>
 
       {/* 3. Main Navigation Sub-Nav Strip (10 Tabs matching Shanthi Ayurvedas) */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="flex items-center gap-1 overflow-x-auto px-3.5 sm:px-4 pt-3 border-b border-slate-200/80 scrollbar-none bg-slate-50/60">
+        <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto px-2.5 sm:px-4 pt-2.5 sm:pt-3 border-b border-slate-200/80 scrollbar-none bg-slate-50/60">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               id={tab.testId}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3.5 py-2.5 text-xs font-bold rounded-t-xl transition-all whitespace-nowrap border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
+              className={`px-2.5 sm:px-3.5 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold rounded-t-xl transition-all whitespace-nowrap border-b-2 -mb-px flex items-center gap-1 sm:gap-1.5 cursor-pointer ${
                 activeTab === tab.id
                   ? 'border-emerald-600 text-emerald-800 bg-white shadow-2xs font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100/70'
               }`}
             >
-              {tab.label}
+              <span>{tab.label}</span>
+              {tab.id === 'LEADS' && (
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${activeTab === 'LEADS' ? 'bg-blue-100 text-blue-700' : 'bg-slate-200/80 text-slate-600'}`}>
+                  {kpis.totalLeads ?? 0}
+                </span>
+              )}
+              {tab.id === 'ORDERS' && (
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${activeTab === 'ORDERS' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200/80 text-slate-600'}`}>
+                  {kpis.totalOrders ?? orderList.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
 
         {/* Tab Content Display Area */}
-        <div className="p-3.5 sm:p-6">
+        <div className="p-3 sm:p-3.5 md:p-6">
           {/* =========================================================================
               TAB 1: HOME / DASHBOARD OVERVIEW
              ========================================================================= */}
@@ -780,6 +897,46 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
              ========================================================================= */}
           {activeTab === 'ORDERS' && (
             <div className="space-y-4">
+              {/* Quick Launch Banner to dedicated full Orders page */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50/60 border border-amber-200/90 rounded-2xl shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs shrink-0">
+                    <ShoppingBag sx={{ fontSize: 20 }} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-900">Orders Management Workspace</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-200">
+                        {kpis.totalOrders ?? orderList.length} Total Orders
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Showing embedded order tracking. Want full-screen standalone page showing only orders?
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    id="btn-orders-tab-open-page"
+                    onClick={() => navigate('/orders')}
+                    className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-xs font-bold rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Open All Orders Page</span>
+                    <ArrowRight sx={{ fontSize: 14 }} />
+                  </button>
+                  <button
+                    type="button"
+                    id="btn-orders-tab-new-tab"
+                    onClick={() => window.open('/orders', '_blank')}
+                    className="p-2 bg-white hover:bg-amber-50 text-amber-700 border border-amber-200 rounded-xl transition shadow-2xs cursor-pointer"
+                    title="Open All Orders in new window / tab"
+                  >
+                    <ExternalLink sx={{ fontSize: 16 }} />
+                  </button>
+                </div>
+              </div>
+
               <OrderListPage hideHeader={true} />
             </div>
           )}
@@ -789,6 +946,46 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
              ========================================================================= */}
           {activeTab === 'LEADS' && (
             <div className="space-y-4">
+              {/* Quick Launch Banner to dedicated full Leads page */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 bg-gradient-to-r from-blue-50 via-sky-50 to-indigo-50/60 border border-blue-200/90 rounded-2xl shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                    <Users sx={{ fontSize: 20 }} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-900">Leads Management Workspace</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800 border border-blue-200">
+                        {kpis.totalLeads ?? 0} Total Leads
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Showing embedded leads manager. Want full-screen standalone page showing only leads?
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    id="btn-leads-tab-open-page"
+                    onClick={() => navigate('/leads')}
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Open All Leads Page</span>
+                    <ArrowRight sx={{ fontSize: 14 }} />
+                  </button>
+                  <button
+                    type="button"
+                    id="btn-leads-tab-new-tab"
+                    onClick={() => window.open('/leads', '_blank')}
+                    className="p-2 bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 rounded-xl transition shadow-2xs cursor-pointer"
+                    title="Open All Leads in new window / tab"
+                  >
+                    <ExternalLink sx={{ fontSize: 16 }} />
+                  </button>
+                </div>
+              </div>
+
               <ManagerLeadsTab />
             </div>
           )}
@@ -1300,7 +1497,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                       Settlement & Payout History
                     </div>
                     <div className="overflow-x-auto max-h-[500px] overflow-y-auto scrollbar-thin relative">
-                      <table className="w-full text-xs">
+                      <table className="w-full min-w-[600px] text-xs">
                         <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs border-b border-slate-200 shadow-2xs">
                           <tr className="text-slate-500 uppercase tracking-wider">
                             <th className="text-left p-3 font-semibold">Settlement ID</th>
@@ -1671,7 +1868,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
               {gstSubTab === 'HISTORY' && (
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                   <div className={`overflow-x-auto ${savedGstInvoices.length > 10 ? 'max-h-[520px] overflow-y-auto scrollbar-thin relative' : ''}`}>
-                    <table className="w-full text-xs">
+                    <table className="w-full min-w-[680px] text-xs">
                       <thead className={savedGstInvoices.length > 10 ? 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-2xs border-b border-slate-200' : 'bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider'}>
                         <tr className="text-slate-500 uppercase tracking-wider">
                           <th className="text-left p-3 font-semibold">Invoice #</th>
@@ -1847,7 +2044,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
               {expenseSubTab === 'HISTORY' && (
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                   <div className={`overflow-x-auto ${savedExpenses.length > 10 ? 'max-h-[520px] overflow-y-auto scrollbar-thin relative' : ''}`}>
-                    <table className="w-full text-xs">
+                    <table className="w-full min-w-[620px] text-xs">
                       <thead className={savedExpenses.length > 10 ? 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-2xs border-b border-slate-200' : 'bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider'}>
                         <tr className="text-slate-500 uppercase tracking-wider">
                           <th className="text-left p-3 font-semibold">Date</th>

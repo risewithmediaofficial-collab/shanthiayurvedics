@@ -266,11 +266,11 @@ export function BulkShippingLabelsModal({ isOpen, onClose, orders = [] }) {
       maxWidth="max-w-2xl"
     >
       <div className="space-y-4">
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-800 flex items-center justify-between">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
           <span>
             Ready to print <strong>{orders.length}</strong> thermal shipping labels with <strong>SHANTHI AYURVEDAS</strong> header, postal amounts in words, and telecaller contacts.
           </span>
-          <Button variant="primary" icon={Printer} onClick={handlePrint} size="sm">
+          <Button variant="primary" icon={Printer} onClick={handlePrint} size="sm" className="w-full sm:w-auto shrink-0">
             Print All ({orders.length})
           </Button>
         </div>
@@ -327,11 +327,11 @@ export function BulkShippingLabelsModal({ isOpen, onClose, orders = [] }) {
           })}
         </div>
 
-        <div className="flex justify-end gap-2 pt-2 border-t">
-          <Button variant="secondary" onClick={onClose}>
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2 border-t border-slate-200">
+          <Button variant="secondary" onClick={onClose} className="w-full sm:w-auto">
             Close
           </Button>
-          <Button variant="primary" icon={Printer} onClick={handlePrint}>
+          <Button variant="primary" icon={Printer} onClick={handlePrint} className="w-full sm:w-auto">
             Open Thermal Print Window ({orders.length})
           </Button>
         </div>

@@ -107,7 +107,7 @@ export function IntegrationsPage() {
           }}
           className="space-y-4 max-w-xl"
         >
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={() => {

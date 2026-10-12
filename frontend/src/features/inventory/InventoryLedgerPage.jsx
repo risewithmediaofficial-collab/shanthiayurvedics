@@ -348,22 +348,22 @@ export function InventoryLedgerPage() {
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Multi-Branch Inventory & Stock Ledger</h2>
           <p className="text-xs text-slate-500">Atomic ledger movements, purchase stock-in, and audit logging</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
           <Button
             variant="secondary"
             icon={Package}
             onClick={() => navigate('/products')}
-            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold shadow-2xs cursor-pointer"
+            className="col-span-2 sm:col-auto bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold shadow-2xs cursor-pointer justify-center"
           >
             📦 Master Products Catalog →
           </Button>
-          <Button variant="outline" icon={Minus} onClick={() => setStockOutModalOpen(true)}>
+          <Button variant="outline" icon={Minus} onClick={() => setStockOutModalOpen(true)} className="justify-center text-xs">
             Stock Out
           </Button>
-          <Button variant="outline" icon={SlidersHorizontal} onClick={() => setAdjustModalOpen(true)}>
+          <Button variant="outline" icon={SlidersHorizontal} onClick={() => setAdjustModalOpen(true)} className="justify-center text-xs">
             Adjust Stock
           </Button>
-          <Button variant="primary" icon={Plus} onClick={() => setStockInModalOpen(true)}>
+          <Button variant="primary" icon={Plus} onClick={() => setStockInModalOpen(true)} className="col-span-2 sm:col-auto justify-center text-xs">
             Stock In
           </Button>
         </div>
@@ -380,10 +380,10 @@ export function InventoryLedgerPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto scrollbar-none whitespace-nowrap">
         <button
           onClick={() => { setActiveTab('CURRENT'); setPage(1); setSortBy('productName'); }}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+          className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition-all ${
             activeTab === 'CURRENT' ? 'bg-ayur-800 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -391,7 +391,7 @@ export function InventoryLedgerPage() {
         </button>
         <button
           onClick={() => { setActiveTab('MOVEMENTS'); setPage(1); setSortBy('createdAt'); }}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+          className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition-all ${
             activeTab === 'MOVEMENTS' ? 'bg-ayur-800 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -400,9 +400,10 @@ export function InventoryLedgerPage() {
       </div>
 
       {/* Search, Filter, Sort & Export Toolbar */}
-      <div className="bento-card p-3 flex flex-wrap items-center gap-2.5">
+      <div className="bento-card p-2.5 sm:p-3 space-y-2.5">
+        {/* Row 1: Search bar (full width) */}
         {activeTab === 'CURRENT' && (
-          <div className="flex-1 min-w-[200px] relative">
+          <div className="relative w-full">
             <input
               type="text"
               value={search}
@@ -417,63 +418,68 @@ export function InventoryLedgerPage() {
           </div>
         )}
 
-        {/* Date to Date Range Filter */}
-        <DateRangeFilter
-          startDate={startDate}
-          endDate={endDate}
-          onChange={({ startDate: s, endDate: e }) => {
-            setStartDate(s);
-            setEndDate(e);
-            setPage(1);
-          }}
-          label={activeTab === 'CURRENT' ? 'Updated Between' : 'Movement Date'}
-        />
-
-        {/* Dynamic Sort Dropdown */}
-        <SortDropdown
-          options={activeTab === 'CURRENT' ? INVENTORY_SORT_OPTIONS : MOVEMENT_SORT_OPTIONS}
-          sortBy={sortBy}
-          sortOrder={sortOrder}
-          onSortChange={(field, order) => {
-            setSortBy(field);
-            setSortOrder(order);
-            setPage(1);
-          }}
-        />
-
-        {/* Direct Export Button */}
-        <ExportButton
-          onExport={handleExportInventory}
-          label="Export Ledger"
-        />
-
-        {/* Reset Filter Button */}
-        {(search || startDate || endDate || (activeTab === 'CURRENT' ? sortBy !== 'productName' : sortBy !== 'createdAt')) && (
-          <button
-            type="button"
-            onClick={() => {
-              setSearch('');
-              setStartDate('');
-              setEndDate('');
-              setSortBy(activeTab === 'CURRENT' ? 'productName' : 'createdAt');
-              setSortOrder('asc');
+        {/* Row 2: Date presets, Sort & Export */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onChange={({ startDate: s, endDate: e }) => {
+              setStartDate(s);
+              setEndDate(e);
               setPage(1);
             }}
-            className="px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
-            title="Reset filters"
-          >
-            <X className="w-3.5 h-3.5" />
-            <span>Reset</span>
-          </button>
-        )}
+            label={activeTab === 'CURRENT' ? 'Updated Between' : 'Movement Date'}
+          />
+
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 flex-wrap">
+            <SortDropdown
+              options={activeTab === 'CURRENT' ? INVENTORY_SORT_OPTIONS : MOVEMENT_SORT_OPTIONS}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onSortChange={(field, order) => {
+                setSortBy(field);
+                setSortOrder(order);
+                setPage(1);
+              }}
+            />
+
+            <ExportButton
+              onExport={handleExportInventory}
+              disabled={(activeTab === 'CURRENT' ? inventory : movements).length === 0}
+            />
+
+            {/* Reset Filter Button */}
+            {(search || startDate || endDate || (activeTab === 'CURRENT' ? sortBy !== 'productName' : sortBy !== 'createdAt')) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  setStartDate('');
+                  setEndDate('');
+                  setSortBy(activeTab === 'CURRENT' ? 'productName' : 'createdAt');
+                  setSortOrder('asc');
+                  setPage(1);
+                }}
+                className="px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                title="Reset filters"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      <Table
-        columns={activeTab === 'CURRENT' ? invColumns : movColumns}
-        data={activeTab === 'CURRENT' ? inventory : movements}
-        isLoading={activeTab === 'CURRENT' ? isInvLoading : isMovLoading}
-        emptyMessage="No inventory records found."
-      />
+      {/* Table with horizontal scroll on mobile */}
+      <div className="overflow-x-auto -mx-0 rounded-2xl">
+        <Table
+          columns={activeTab === 'CURRENT' ? invColumns : movColumns}
+          data={activeTab === 'CURRENT' ? inventory : movements}
+          isLoading={activeTab === 'CURRENT' ? isInvLoading : isMovLoading}
+          emptyMessage="No inventory records found."
+        />
+      </div>
 
       <Pagination
         currentPage={page}

@@ -100,26 +100,26 @@ export function ViewPanelMenu() {
         id="btn-view-panel-menu"
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200/90 text-slate-800 rounded-xl border border-slate-200/90 text-xs font-bold transition-all shadow-2xs hover:shadow-xs cursor-pointer select-none"
+        className="inline-flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-3 py-1 sm:py-1.5 bg-slate-100 hover:bg-slate-200/90 text-slate-800 rounded-lg sm:rounded-xl border border-slate-200/90 text-xs font-bold transition-all shadow-2xs hover:shadow-xs cursor-pointer select-none"
         title="View different role panels"
       >
         <span className="text-emerald-700 flex items-center">
           <DashboardRounded sx={{ fontSize: 16 }} />
         </span>
         <span className="hidden sm:inline font-extrabold text-slate-700">View Panel:</span>
-        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-[11px] font-bold text-slate-900 shadow-2xs">
+        <span className="inline-flex items-center gap-1 px-1 sm:px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-[11px] font-bold text-slate-900 shadow-2xs">
           <span>{currentPanel?.icon}</span>
           <span className="hidden sm:inline truncate max-w-[110px]">{currentPanel?.title.split(' ')[0]}</span>
         </span>
         <KeyboardArrowDownRounded
-          sx={{ fontSize: 16 }}
+          sx={{ fontSize: 14 }}
           className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100">
+        <div className="fixed inset-x-3 top-14 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full mt-1 sm:mt-2 w-auto sm:w-80 bg-white rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100">
           <div className="px-4 py-3 bg-gradient-to-r from-emerald-50 via-slate-50 to-white border-b border-slate-100">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">

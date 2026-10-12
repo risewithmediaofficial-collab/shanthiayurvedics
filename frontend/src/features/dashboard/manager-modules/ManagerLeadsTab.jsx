@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Users,
@@ -19,7 +20,8 @@ import {
   RotateCcw,
   ArrowUpDown,
   AlertTriangle,
-  Eye
+  Eye,
+  ExternalLink
 } from 'lucide-react';
 import apiClient from '../../../api/apiClient.js';
 import { useBranch } from '../../../context/BranchContext.jsx';
@@ -32,6 +34,7 @@ import { OrderCreateModal } from '../../orders/OrderCreateModal.jsx';
 import { LeadDetailModal } from '../../leads/LeadDetailModal.jsx';
 
 export function ManagerLeadsTab() {
+  const navigate = useNavigate();
   const { selectedBranchId } = useBranch();
   const queryClient = useQueryClient();
 
@@ -252,10 +255,20 @@ export function ManagerLeadsTab() {
 
       {/* ── Bento Metrics Strip ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bento-card flex flex-col gap-1">
-          <div className="bento-metric-title">Total Leads</div>
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate('/leads')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/leads'); } }}
+          className="bento-card flex flex-col gap-1 cursor-pointer hover:border-blue-400 hover:shadow-xs transition group"
+          title="Click to open full All Leads page"
+        >
+          <div className="flex items-center justify-between">
+            <span className="bento-metric-title group-hover:text-blue-700">Total Leads</span>
+            <span className="text-[10px] text-blue-600 font-bold group-hover:underline">Open →</span>
+          </div>
           <div className="bento-metric-value text-slate-900">{leads.length}</div>
-          <div className="text-[11px] text-slate-400 font-medium">Pipeline</div>
+          <div className="text-[11px] text-slate-400 font-medium">Pipeline (Click to open all)</div>
         </div>
         <div className="bento-card flex flex-col gap-1">
           <div className="bento-metric-title">New / Unassigned</div>
@@ -324,6 +337,15 @@ export function ManagerLeadsTab() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/leads')}
+              className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              title="Open full dedicated Leads page"
+            >
+              <span>Full Leads Page</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
             <Button
               size="sm"
               variant="primary"

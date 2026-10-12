@@ -91,7 +91,7 @@ export function ManagerDashboardView({ onSwitchToBossView, onSwitchToTelecaller 
 
       {/* ── Top Header / View Switcher (Owner, Manager & Distributor) ── */}
       {(onSwitchToBossView || onSwitchToTelecaller) && (
-        <div className="flex items-center justify-between pb-1">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1">
           <div className="flex items-center gap-2">
             <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
               👔 Manager Operations Hub
@@ -100,17 +100,18 @@ export function ManagerDashboardView({ onSwitchToBossView, onSwitchToTelecaller 
               Daily Branch Operations & Fulfillment
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {onSwitchToTelecaller && (
               <button
                 id="btn-manager-view-telecaller"
                 type="button"
                 onClick={() => onSwitchToTelecaller()}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer"
                 title="View Telecaller Dashboard"
               >
                 <span>🎧</span>
-                <span>View Panel: Telecaller</span>
+                <span className="hidden xs:inline">View Panel:</span>
+                <span>Telecaller</span>
                 <span className="text-[10px] opacity-80">→</span>
               </button>
             )}
@@ -119,7 +120,7 @@ export function ManagerDashboardView({ onSwitchToBossView, onSwitchToTelecaller 
                 id="btn-boss-view"
                 type="button"
                 onClick={onSwitchToBossView}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer"
               >
                 <span>👔</span>
                 <span>Boss View</span>

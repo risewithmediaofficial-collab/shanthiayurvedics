@@ -93,41 +93,43 @@ export function PrintableInvoiceModal({ isOpen, onClose, order, autoPrint = fals
           </div>
 
           {/* Items Table */}
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-100 text-slate-700 font-bold border-y border-slate-200">
-              <tr>
-                <th className="py-2 px-2">#</th>
-                <th className="py-2 px-2">Herbal Formulation</th>
-                <th className="py-2 px-2">Batch / SKU</th>
-                <th className="py-2 px-2 text-right">Qty</th>
-                <th className="py-2 px-2 text-right">Rate</th>
-                <th className="py-2 px-2 text-right">Discount</th>
-                <th className="py-2 px-2 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {(order.items || []).map((item, idx) => {
-                const hasDisc = (item.discount || 0) > 0 || (item.discountPercent || 0) > 0;
-                return (
-                  <tr key={idx}>
-                    <td className="py-2 px-2 text-slate-500">{idx + 1}</td>
-                    <td className="py-2 px-2 font-semibold text-slate-900">{item.productName}</td>
-                    <td className="py-2 px-2 font-mono text-[11px] text-slate-600">{item.sku || '—'}</td>
-                    <td className="py-2 px-2 text-right font-bold">{item.quantity}</td>
-                    <td className="py-2 px-2 text-right font-mono">₹{item.unitPrice}</td>
-                    <td className="py-2 px-2 text-right font-mono text-emerald-700">
-                      {hasDisc
-                        ? item.discountPercent
-                          ? `${item.discountPercent}% (-₹${item.discount * item.quantity})`
-                          : `-₹${item.discount * item.quantity}`
-                        : '—'}
-                    </td>
-                    <td className="py-2 px-2 text-right font-mono font-bold">₹{item.total?.toLocaleString()}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto scrollbar-thin">
+            <table className="w-full min-w-[500px] text-xs text-left">
+              <thead className="bg-slate-100 text-slate-700 font-bold border-y border-slate-200">
+                <tr>
+                  <th className="py-2 px-2">#</th>
+                  <th className="py-2 px-2">Herbal Formulation</th>
+                  <th className="py-2 px-2">Batch / SKU</th>
+                  <th className="py-2 px-2 text-right">Qty</th>
+                  <th className="py-2 px-2 text-right">Rate</th>
+                  <th className="py-2 px-2 text-right">Discount</th>
+                  <th className="py-2 px-2 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {(order.items || []).map((item, idx) => {
+                  const hasDisc = (item.discount || 0) > 0 || (item.discountPercent || 0) > 0;
+                  return (
+                    <tr key={idx}>
+                      <td className="py-2 px-2 text-slate-500">{idx + 1}</td>
+                      <td className="py-2 px-2 font-semibold text-slate-900">{item.productName}</td>
+                      <td className="py-2 px-2 font-mono text-[11px] text-slate-600">{item.sku || '—'}</td>
+                      <td className="py-2 px-2 text-right font-bold">{item.quantity}</td>
+                      <td className="py-2 px-2 text-right font-mono">₹{item.unitPrice}</td>
+                      <td className="py-2 px-2 text-right font-mono text-emerald-700">
+                        {hasDisc
+                          ? item.discountPercent
+                            ? `${item.discountPercent}% (-₹${item.discount * item.quantity})`
+                            : `-₹${item.discount * item.quantity}`
+                          : '—'}
+                      </td>
+                      <td className="py-2 px-2 text-right font-mono font-bold">₹{item.total?.toLocaleString()}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
           {/* Calculations */}
           <div className="border-t border-slate-200 pt-3 space-y-1.5 text-xs">

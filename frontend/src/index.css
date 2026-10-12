@@ -21,7 +21,21 @@
 button:disabled { cursor: not-allowed; }
 [role="dialog"] { overscroll-behavior: contain; }
 @media (max-width: 640px) {
-  input, select, textarea { font-size: 16px !important; }
+  /* Prevent iOS automatic zoom on focus while retaining checkbox/radio sizes */
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Smooth touch momentum scrolling on mobile */
+  .overflow-x-auto, .overflow-y-auto, [class*="overflow-x-"], [class*="overflow-y-"] {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Make tables horizontally scrollable on mobile */
+  .crm-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -109,10 +123,27 @@ button:disabled { cursor: not-allowed; }
   }
 }
 
+/* Utility: hide scrollbar visually but keep functionality */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe-area padding for notched/gesture devices (iOS, Android) */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
 @layer components {
   /* ── Bento Grid UI Tokens ────────────────────────────────────────── */
   .bento-card {
-    @apply bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 hover:shadow-md transition-all duration-200 p-5;
+    @apply bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 hover:shadow-md transition-all duration-200 p-3.5 sm:p-5;
   }
 
   .bento-card-subtle {

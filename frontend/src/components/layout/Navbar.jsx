@@ -15,37 +15,38 @@ export function Navbar({ onMenuToggle }) {
   const showSwitcher = isOwner || isSwitched;
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between min-h-[5.25rem] sm:min-h-[5.65rem] px-4 sm:px-6 bg-white border-b border-slate-200 shadow-xs">
-      {/* Left: Hamburger + Brand (mobile only) */}
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex items-center justify-between min-h-[3.75rem] sm:min-h-[4.75rem] px-2 sm:px-6 bg-white border-b border-slate-200 shadow-xs select-none">
+      {/* Left: Hamburger + Brand */}
+      <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 shrink-0">
         <button
           type="button"
           onClick={onMenuToggle}
-          className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl lg:hidden focus:outline-none transition-colors cursor-pointer"
+          className="p-1 sm:p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg sm:rounded-xl lg:hidden focus:outline-none transition-colors cursor-pointer shrink-0"
           aria-label="Toggle sidebar"
         >
-          <MenuRounded sx={{ fontSize: 24 }} />
+          <MenuRounded sx={{ fontSize: 22 }} />
         </button>
 
-        <div className="flex items-center gap-2 lg:hidden">
+        <div className="flex items-center gap-1.5 lg:hidden min-w-0">
           <img
             src="/shanthi_logo.png"
             alt="Shanthi Ayurvedas"
-            className="h-9 w-auto max-w-[140px] object-contain shrink-0"
+            className="h-6 sm:h-8 w-auto max-w-[65px] xs:max-w-[85px] sm:max-w-[130px] object-contain shrink-0"
           />
-          <span className="text-[10px] text-emerald-700 font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100">
+          {/* Hide text role badge on mobile to eliminate overlap with navbar buttons */}
+          <span className="hidden md:inline-flex text-[10px] text-emerald-700 font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 shrink-0">
             {isOwner ? 'OWNER' : (user?.role || 'CRM')}
           </span>
         </div>
 
         {/* Branch Selector (desktop) */}
         <div className="hidden sm:block">
-          <BranchSelector />
+          <BranchSelector align="left" />
         </div>
       </div>
 
-      {/* Right: Account Switcher (Boss only) + Branch (mobile) + View Panel + Notifications + User */}
-      <div className="flex items-center gap-2 sm:gap-2.5">
+      {/* Right: Account Switcher (Boss only) + View Panel + Branch (mobile) + Notifications + User */}
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
         {showSwitcher && (
           <div className="hidden sm:block">
             <AccountSwitcherPill variant="light" />
@@ -55,12 +56,13 @@ export function Navbar({ onMenuToggle }) {
         {/* Universal View Panel switcher for Owner, Manager, and Distributor */}
         <ViewPanelMenu />
 
+        {/* Branch Selector (mobile) */}
         <div className="sm:hidden">
-          <BranchSelector />
+          <BranchSelector align="right" />
         </div>
 
         <NotificationBell />
-        <div className="w-px h-5 bg-slate-200" />
+        <div className="hidden sm:block w-px h-5 bg-slate-200" />
         <UserMenu />
       </div>
     </header>

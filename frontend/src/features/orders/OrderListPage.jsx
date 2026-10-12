@@ -608,7 +608,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
       )}
 
       {/* ── Bento KPI Metrics Grid ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
         <div className="bento-card flex flex-col gap-0.5">
           <div className="bento-metric-title">Today's Sales</div>
           <div className="text-xl font-semibold font-mono text-slate-900 tracking-tight">₹{(metrics.todayRev ?? 0).toLocaleString()}</div>
@@ -639,8 +639,18 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
           <div className="text-[10px] text-slate-400 font-medium">Unverified bookings</div>
         </div>
 
-        <div className="bento-card flex flex-col gap-0.5">
-          <div className="bento-metric-title">Total Leads</div>
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate('/leads')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/leads'); } }}
+          className="bento-card flex flex-col gap-0.5 cursor-pointer hover:border-blue-400 hover:shadow-xs transition group"
+          title="Click to open All Leads page"
+        >
+          <div className="flex items-center justify-between">
+            <span className="bento-metric-title group-hover:text-blue-700">Total Leads</span>
+            <span className="text-[10px] text-blue-600 font-bold group-hover:underline">Open →</span>
+          </div>
           <div className="text-xl font-semibold font-mono text-slate-800 tracking-tight">{metrics.totalLeads ?? 0}</div>
           <div className="text-[10px] text-slate-400 font-medium">Inbound inquiries</div>
         </div>
@@ -681,11 +691,11 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
       )}
 
       {/* 4. Action Buttons Ribbon (matching Image 1) */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
         <button
           type="button"
           onClick={() => setViewMode('full')}
-          className="px-3.5 py-1.5 rounded-lg bg-[#1b4332] hover:bg-[#143225] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#1b4332] hover:bg-[#143225] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
         >
           <span>📋 Full View</span>
         </button>
@@ -693,7 +703,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
         <button
           type="button"
           onClick={() => navigate('/scan-tracker')}
-          className="px-3.5 py-1.5 rounded-lg bg-[#1e88e5] hover:bg-[#1565c0] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#1e88e5] hover:bg-[#1565c0] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
         >
           <Scan className="w-3.5 h-3.5" />
           <span>Scan</span>
@@ -702,24 +712,24 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
         <button
           type="button"
           onClick={() => setIndiaPostModalOpen(true)}
-          className="px-3.5 py-1.5 rounded-lg bg-[#b78103] hover:bg-[#966a02] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#b78103] hover:bg-[#966a02] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
         >
-          <span>📮 ! India Post</span>
+          <span>📮 India Post</span>
         </button>
 
         <button
           type="button"
           onClick={() => setExcelImportOpen(true)}
-          className="px-3.5 py-1.5 rounded-lg bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
         >
           <FileSpreadsheet className="w-3.5 h-3.5" />
-          <span>Import Excel</span>
+          <span>Import</span>
         </button>
 
         <button
           type="button"
           onClick={() => setCreateModalOpen(true)}
-          className="px-3.5 py-1.5 rounded-lg bg-[#00897b] hover:bg-[#00695c] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#00897b] hover:bg-[#00695c] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>New Order</span>
@@ -734,9 +744,9 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
             setPage(1);
             showToast('Showing all online & counter orders');
           }}
-          className="px-3.5 py-1.5 rounded-lg bg-[#7b1fa2] hover:bg-[#6a1b9a] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#7b1fa2] hover:bg-[#6a1b9a] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
         >
-          <span>🌐 Online Orders</span>
+          <span>🌐 Online</span>
         </button>
 
         <Button
@@ -746,17 +756,17 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
           icon={Download}
           onClick={() => setExcelExportOpen(true)}
         >
-          Export File
+          Export
         </Button>
       </div>
 
       {/* 5. Bulk Action Toolbar */}
-      <div className={`rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs border transition-all ${
+      <div className={`rounded-xl p-2.5 sm:p-3 flex flex-col gap-2 text-xs border transition-all ${
         selectedOrderIds.length > 0
           ? 'bg-amber-50/90 border-amber-300 shadow-sm ring-1 ring-amber-300'
           : 'bg-slate-50 border-slate-200'
       }`}>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Select All Checkbox */}
           <label className="flex items-center gap-1.5 font-bold text-slate-800 cursor-pointer select-none bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-xs">
             <input
@@ -773,13 +783,8 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
             )}
           </label>
 
-          {/* Update Status Dropdown */}
-          <div className="flex flex-wrap items-center gap-2 pl-2 border-l border-slate-200">
-            <span className={`text-[11px] uppercase tracking-wider font-bold ${
-              selectedOrderIds.length > 0 ? 'text-amber-900' : 'text-slate-500'
-            }`}>
-              📦 Batch Action (Update Checked Orders):
-            </span>
+          {/* Batch Action – scrollable on mobile */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none flex-1 min-w-0">
             <CustomSelect
               disabled={selectedOrderIds.length === 0}
               value={bulkStatusToApply}
@@ -787,31 +792,17 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
               options={ALL_STATUS_OPTIONS}
               placeholder={
                 selectedOrderIds.length === 0
-                  ? '← Check orders to batch update'
-                  : 'Choose new status to apply...'
+                  ? 'Check orders first'
+                  : 'Choose new status...'
               }
               size="sm"
-              minWidth="min-w-[210px]"
-              className={`font-semibold ${
+              minWidth="min-w-[160px] sm:min-w-[210px]"
+              className={`font-semibold shrink-0 ${
                 selectedOrderIds.length === 0
                   ? 'bg-slate-100 border-slate-200 text-slate-400'
                   : 'bg-white border-amber-400 text-slate-800'
               }`}
             />
-
-            {/* Force Override Toggle */}
-            <label className={`flex items-center gap-1 text-[11px] select-none bg-white px-2 py-1 rounded border border-slate-200 ${
-              selectedOrderIds.length === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer text-slate-700'
-            }`} title="Overrides state machine to permit transitioning from terminal states like Delivered or Cancelled">
-              <input
-                disabled={selectedOrderIds.length === 0}
-                type="checkbox"
-                checked={forceRevertChecked || isOwner || isManager || isDistributor}
-                onChange={(e) => setForceRevertChecked(e.target.checked)}
-                className="w-3.5 h-3.5 text-emerald-600 rounded cursor-pointer"
-              />
-              <span className="font-semibold text-slate-700">Manager Override</span>
-            </label>
 
             <Button
               size="sm"
@@ -819,31 +810,23 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
               disabled={selectedOrderIds.length === 0 || !bulkStatusToApply}
               onClick={handleApplyBulkStatus}
               isLoading={bulkStatusMutation.isPending}
-              className={`font-bold px-3 transition-all ${
+              className={`font-bold px-3 transition-all shrink-0 ${
                 selectedOrderIds.length > 0 && bulkStatusToApply
                   ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs cursor-pointer'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }`}
             >
-              Apply Status
+              Apply
             </Button>
 
-            {selectedOrderIds.length === 0 && (
-              <span className="text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 hidden sm:inline">
-                ℹ️ To view or filter orders, use the Status Filter below
-              </span>
-            )}
-          </div>
-
-          {/* Assign Verify Telecaller */}
-          <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
             <CustomSelect
               value={assignVerifierId}
               onChange={(e) => setAssignVerifierId(e.target.value)}
               options={telecallers.map((tc) => ({ value: tc._id, label: tc.name }))}
               placeholder="Assign verify..."
               size="sm"
-              minWidth="min-w-[170px]"
+              minWidth="min-w-[130px] sm:min-w-[170px]"
+              className="shrink-0"
             />
 
             <Button
@@ -858,24 +841,21 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                 }
               }}
               isLoading={bulkAssignMutation.isPending || bulkVerifyMutation.isPending}
-              className="bg-amber-700 hover:bg-amber-800 text-white font-bold"
+              className="bg-amber-700 hover:bg-amber-800 text-white font-bold shrink-0"
             >
               Verify
             </Button>
-          </div>
-        </div>
 
-        {/* Labels Button */}
-        <div>
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={selectedOrderIds.length === 0}
-            onClick={() => setBulkLabelsModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
-          >
-            🖨️ Labels ({selectedOrderIds.length})
-          </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={selectedOrderIds.length === 0}
+              onClick={() => setBulkLabelsModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold shrink-0"
+            >
+              🖨️ Labels ({selectedOrderIds.length})
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -944,127 +924,133 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="bento-card flex flex-wrap items-center gap-2.5 text-xs">
-        {/* Search Input */}
-        <div className="relative flex-1 min-w-[200px]">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') refetchOrders();
-            }}
-            placeholder="Search name / mobile / tracking / order #"
-            className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-ayur-600 transition-colors"
-          />
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-        </div>
+      <div className="bento-card flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-2.5 text-xs">
+        {/* Row 1: Search + Status Filter */}
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {/* Search Input */}
+          <div className="relative flex-1 min-w-0">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') refetchOrders();
+              }}
+              placeholder="Search name / mobile / order #"
+              className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-ayur-600 transition-colors"
+            />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+          </div>
 
-        {/* Date to Date Range Filter */}
-        <DateRangeFilter
-          startDate={startDate}
-          endDate={endDate}
-          onChange={({ startDate: s, endDate: e }) => {
-            setStartDate(s);
-            setEndDate(e);
-            setPage(1);
-          }}
-        />
-
-        {/* Status Filter Dropdown */}
-        <div className="w-52">
-          <CustomSelect
-            id="orders-status-filter"
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            placeholder="All Statuses (Filter)"
-            options={STATUS_FILTER_OPTIONS}
-            className="w-full bg-emerald-50/70 border-emerald-300 text-emerald-950 font-bold hover:border-emerald-500 shadow-2xs"
-            minWidth="min-w-[210px]"
-          />
-        </div>
-
-        {/* Districts Filter Dropdown */}
-        <div className="w-40">
-          <CustomSelect
-            value={districtFilter}
-            onChange={(e) => {
-              setDistrictFilter(e.target.value);
-              setPage(1);
-            }}
-            placeholder="All Districts"
-            searchable={districts.length > 5}
-            options={[
-              { value: '', label: 'All Districts' },
-              ...districts.map((d) => ({ value: d, label: d })),
-            ]}
-            className="w-full bg-slate-50 border-slate-200 text-slate-700 font-medium"
-            minWidth="min-w-[180px]"
-          />
-        </div>
-
-        {/* Sort By Dropdown */}
-        <div className="w-56">
-          <CustomSelect
-            id="orders-sort-select"
-            value={`${sortBy}-${sortOrder}`}
-            icon={ArrowUpDown}
-            onChange={(e) => {
-              const [field, dir] = e.target.value.split('-');
-              setSortBy(field);
-              setSortOrder(dir);
-              setPage(1);
-            }}
-            options={SORT_OPTIONS}
-            className="w-full bg-slate-50 border-slate-200 text-slate-700 font-medium"
-            minWidth="min-w-[220px]"
-          />
-        </div>
-
-        {/* Direct Export Button */}
-        <ExportButton
-          onExport={handleExportOrders}
-          label={selectedOrderIds.length > 0 ? `Export (${selectedOrderIds.length})` : 'Export Orders'}
-        />
-
-        {/* Action buttons */}
-        <Button
-          size="sm"
-          variant="primary"
-          onClick={() => refetchOrders()}
-          className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold px-4 cursor-pointer"
-        >
-          Apply
-        </Button>
-
-        {/* Clear Active Filters */}
-        {(statusFilter || districtFilter || startDate || endDate || search || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
-          <button
-            type="button"
-            onClick={() => {
-              setStatusFilter('');
-              setDistrictFilter('');
-              setStartDate('');
-              setEndDate('');
-              setSearch('');
-              setSortBy('createdAt');
-              setSortOrder('desc');
-              setPage(1);
-            }}
-            className="px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
-            title="Reset all search, status, date, and sorting filters"
+          {/* Apply Button */}
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={() => refetchOrders()}
+            className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold px-3 cursor-pointer shrink-0"
           >
-            <X className="w-3.5 h-3.5" />
-            <span>Reset</span>
-          </button>
-        )}
+            Apply
+          </Button>
+        </div>
 
+        {/* Row 2 (sm): Filters in a scrollable strip */}
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
+          {/* Date to Date Range Filter */}
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onChange={({ startDate: s, endDate: e }) => {
+              setStartDate(s);
+              setEndDate(e);
+              setPage(1);
+            }}
+          />
+
+          {/* Status Filter Dropdown */}
+          <div className="shrink-0">
+            <CustomSelect
+              id="orders-status-filter"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
+              placeholder="All Statuses"
+              options={STATUS_FILTER_OPTIONS}
+              className="bg-emerald-50/70 border-emerald-300 text-emerald-950 font-bold hover:border-emerald-500 shadow-2xs"
+              minWidth="min-w-[140px] sm:min-w-[180px]"
+            />
+          </div>
+
+          {/* Districts Filter Dropdown */}
+          <div className="shrink-0">
+            <CustomSelect
+              value={districtFilter}
+              onChange={(e) => {
+                setDistrictFilter(e.target.value);
+                setPage(1);
+              }}
+              placeholder="All Districts"
+              searchable={districts.length > 5}
+              options={[
+                { value: '', label: 'All Districts' },
+                ...districts.map((d) => ({ value: d, label: d })),
+              ]}
+              className="bg-slate-50 border-slate-200 text-slate-700 font-medium"
+              minWidth="min-w-[130px] sm:min-w-[160px]"
+            />
+          </div>
+
+          {/* Sort By Dropdown */}
+          <div className="shrink-0">
+            <CustomSelect
+              id="orders-sort-select"
+              value={`${sortBy}-${sortOrder}`}
+              icon={ArrowUpDown}
+              onChange={(e) => {
+                const [field, dir] = e.target.value.split('-');
+                setSortBy(field);
+                setSortOrder(dir);
+                setPage(1);
+              }}
+              options={SORT_OPTIONS}
+              className="bg-slate-50 border-slate-200 text-slate-700 font-medium"
+              minWidth="min-w-[140px] sm:min-w-[200px]"
+            />
+          </div>
+
+          {/* Direct Export Button */}
+          <ExportButton
+            onExport={handleExportOrders}
+            label={selectedOrderIds.length > 0 ? `Export (${selectedOrderIds.length})` : 'Export'}
+            className="shrink-0"
+          />
+
+          {/* Clear Active Filters */}
+          {(statusFilter || districtFilter || startDate || endDate || search || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter('');
+                setDistrictFilter('');
+                setStartDate('');
+                setEndDate('');
+                setSearch('');
+                setSortBy('createdAt');
+                setSortOrder('desc');
+                setPage(1);
+              }}
+              className="px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+              title="Reset all search, status, date, and sorting filters"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Reset</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Floating Success / Error Notification Toast */}

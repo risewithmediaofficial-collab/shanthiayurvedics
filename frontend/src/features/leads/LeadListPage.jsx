@@ -584,10 +584,10 @@ export function LeadListPage({ callerId } = {}) {
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Leads & Telecaller Pipeline</h2>
           <p className="text-xs text-slate-500">Capture, assign, track calls, edit, and convert leads into customers</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <ExportButton
             onExport={handleExportLeads}
-            label="Export Leads"
+            label="Export"
             disabled={leads.length === 0}
           />
           <Button
@@ -595,7 +595,7 @@ export function LeadListPage({ callerId } = {}) {
             icon={Plus}
             onClick={() => setIsCreateModalOpen(true)}
           >
-            Add New Lead
+            Add Lead
           </Button>
         </div>
       </div>
@@ -664,122 +664,132 @@ export function LeadListPage({ callerId } = {}) {
       </div>
 
       {/* Filter & Sorting Bar */}
-      <div className="bento-card p-3 flex flex-wrap items-center gap-2.5">
-        <div className="flex-1 min-w-[200px]">
-          <Input
-            placeholder="Search by name, mobile, or city..."
-            icon={Search}
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
+      <div className="bento-card p-2.5 sm:p-3 flex flex-col gap-2">
+        {/* Row 1: Search */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <Input
+              placeholder="Search by name, mobile, or city..."
+              icon={Search}
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Row 2: Filters - scrollable on mobile */}
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
+          {/* Date to Date Filter */}
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onChange={({ startDate: s, endDate: e }) => {
+              setStartDate(s);
+              setEndDate(e);
               setPage(1);
             }}
           />
-        </div>
 
-        {/* Date to Date Filter */}
-        <DateRangeFilter
-          startDate={startDate}
-          endDate={endDate}
-          onChange={({ startDate: s, endDate: e }) => {
-            setStartDate(s);
-            setEndDate(e);
-            setPage(1);
-          }}
-        />
+          <div className="shrink-0">
+            <Select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
+              options={[
+                { value: '', label: 'All Statuses' },
+                { value: 'NEW', label: 'New' },
+                { value: 'ASSIGNED', label: 'Assigned' },
+                { value: 'CONTACTED', label: 'Contacted' },
+                { value: 'INTERESTED', label: 'Interested' },
+                { value: 'CONVERTED', label: 'Converted' },
+                { value: 'LOST', label: 'Lost' }
+              ]}
+            />
+          </div>
 
-        <div className="w-36">
-          <Select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
+          <div className="shrink-0">
+            <Select
+              value={sourceFilter}
+              onChange={(e) => {
+                setSourceFilter(e.target.value);
+                setPage(1);
+              }}
+              options={[
+                { value: '', label: 'All Sources' },
+                { value: 'CALL', label: 'Direct Phone Call' },
+                { value: 'WHATSAPP', label: 'WhatsApp' },
+                { value: 'FACEBOOK', label: 'Facebook Ad' },
+                { value: 'META', label: 'Meta (IG/FB)' },
+                { value: 'WEBSITE', label: 'Website' },
+                { value: 'WALKIN', label: 'Walk-in' },
+                { value: 'REFERRAL', label: 'Referral' },
+                { value: 'MANUAL', label: 'Manual' }
+              ]}
+            />
+          </div>
+
+          {/* Dynamic Sort Dropdown */}
+          <SortDropdown
+            options={LEAD_SORT_OPTIONS}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSortChange={(field, order) => {
+              setSortBy(field);
+              setSortOrder(order);
               setPage(1);
             }}
-            options={[
-              { value: '', label: 'All Statuses' },
-              { value: 'NEW', label: 'New' },
-              { value: 'ASSIGNED', label: 'Assigned' },
-              { value: 'CONTACTED', label: 'Contacted' },
-              { value: 'INTERESTED', label: 'Interested' },
-              { value: 'CONVERTED', label: 'Converted' },
-              { value: 'LOST', label: 'Lost' }
-            ]}
+            className="shrink-0"
           />
-        </div>
 
-        <div className="w-40">
-          <Select
-            value={sourceFilter}
-            onChange={(e) => {
-              setSourceFilter(e.target.value);
-              setPage(1);
-            }}
-            options={[
-              { value: '', label: 'All Sources' },
-              { value: 'CALL', label: 'Direct Phone Call' },
-              { value: 'WHATSAPP', label: 'WhatsApp Enquiry' },
-              { value: 'FACEBOOK', label: 'Facebook / Meta Ad' },
-              { value: 'META', label: 'Meta (IG / FB)' },
-              { value: 'WEBSITE', label: 'Website Form' },
-              { value: 'WALKIN', label: 'Walk-in' },
-              { value: 'REFERRAL', label: 'Referral' },
-              { value: 'MANUAL', label: 'Manual Entry' }
-            ]}
+          {/* Direct Export Button */}
+          <ExportButton
+            onExport={handleExportLeads}
+            label="Export"
+            className="shrink-0"
           />
+
+          {/* Clear Active Filters */}
+          {(statusFilter || sourceFilter || startDate || endDate || search || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter('');
+                setSourceFilter('');
+                setStartDate('');
+                setEndDate('');
+                setSearch('');
+                setSortBy('createdAt');
+                setSortOrder('desc');
+                setPage(1);
+              }}
+              className="px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+              title="Reset all filters"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
-
-        {/* Dynamic Sort Dropdown */}
-        <SortDropdown
-          options={LEAD_SORT_OPTIONS}
-          sortBy={sortBy}
-          sortOrder={sortOrder}
-          onSortChange={(field, order) => {
-            setSortBy(field);
-            setSortOrder(order);
-            setPage(1);
-          }}
-        />
-
-        {/* Direct Export Button */}
-        <ExportButton
-          onExport={handleExportLeads}
-          label="Export"
-        />
-
-        {/* Clear Active Filters */}
-        {(statusFilter || sourceFilter || startDate || endDate || search || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
-          <button
-            type="button"
-            onClick={() => {
-              setStatusFilter('');
-              setSourceFilter('');
-              setStartDate('');
-              setEndDate('');
-              setSearch('');
-              setSortBy('createdAt');
-              setSortOrder('desc');
-              setPage(1);
-            }}
-            className="px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
-            title="Reset all filters"
-          >
-            <X className="w-3.5 h-3.5" />
-            <span>Reset</span>
-          </button>
-        )}
       </div>
 
-      {/* Table */}
-      <Table
-        columns={columns}
-        data={leads}
-        isLoading={isLoading}
-        onRowClick={(row) => {
-          setSelectedLeadForDetails(row);
-          setDetailModalTab('calls');
-        }}
-        emptyMessage="No leads found in this filter scope."
-      />
+      {/* Table - horizontally scrollable on mobile */}
+      <div className="overflow-x-auto rounded-2xl">
+        <Table
+          columns={columns}
+          data={leads}
+          isLoading={isLoading}
+          onRowClick={(row) => {
+            setSelectedLeadForDetails(row);
+            setDetailModalTab('calls');
+          }}
+          emptyMessage="No leads found in this filter scope."
+        />
+      </div>
 
       {/* Pagination */}
       <Pagination

@@ -387,7 +387,7 @@ export function BranchManagementPage() {
       </div>
 
       {/* Bento Metric Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bento-card flex flex-col gap-1">
           <div className="bento-metric-title">Operating Branches</div>
           <div className="bento-metric-value text-slate-900">{branches.length}</div>

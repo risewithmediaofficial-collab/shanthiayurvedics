@@ -198,7 +198,7 @@ export function StuckOrdersPage() {
                 className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 space-y-3 hover:border-slate-300 transition-colors"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <span className="font-bold text-slate-900 text-sm">
                       {pat.patientName || ord.customerId?.name || 'Customer'}
                     </span>

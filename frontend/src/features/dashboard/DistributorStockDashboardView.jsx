@@ -241,7 +241,7 @@ export function DistributorStockDashboardView({ onSwitchToTelecaller }) {
       )}
 
       {/* ── 1. DISTRIBUTOR BRANCH BANNER ── */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-5 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -262,7 +262,7 @@ export function DistributorStockDashboardView({ onSwitchToTelecaller }) {
               </span>
             </div>
 
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
               <span>{branch.name ? `${branch.name} — Branch Distributor Desk` : 'Branch Distributor Portal'}</span>
             </h1>
             <p className="text-xs text-slate-500 mt-1">
@@ -270,11 +270,11 @@ export function DistributorStockDashboardView({ onSwitchToTelecaller }) {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
             <button
               type="button"
               onClick={() => refetch()}
-              className="p-2.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors shadow-xs cursor-pointer"
+              className="p-2 sm:p-2.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors shadow-xs cursor-pointer"
               title="Refresh branch data"
             >
               <RefreshCw className="w-4 h-4" />
@@ -284,11 +284,11 @@ export function DistributorStockDashboardView({ onSwitchToTelecaller }) {
                 id="btn-distributor-view-telecaller"
                 type="button"
                 onClick={() => onSwitchToTelecaller()}
-                className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-3 sm:px-4 py-2 sm:py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
                 title="View Telecaller Dashboard"
               >
                 <span>🎧</span>
-                <span>View Panel: Telecaller</span>
+                <span>Telecaller Panel</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
@@ -309,31 +309,31 @@ export function DistributorStockDashboardView({ onSwitchToTelecaller }) {
       </div>
 
       {/* ── 2. THE 4 CORE METRICS (Total Sales, Stocks Available, Telecaller Access, Each Telecaller Sales) ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         {/* Metric 1: TOTAL SALES */}
         <div
           onClick={() => setActiveTab('SALES')}
-          className={`bento-card p-4 flex flex-col justify-between cursor-pointer transition-all hover:ring-2 hover:ring-indigo-400 ${
+          className={`bento-card p-3 sm:p-4 flex flex-col justify-between cursor-pointer transition-all hover:ring-2 hover:ring-indigo-400 ${
             activeTab === 'SALES' ? 'ring-2 ring-indigo-600 bg-indigo-50/20' : ''
           }`}
         >
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700">Total Sales</span>
-            <ShoppingBag className="w-4 h-4 text-indigo-600" />
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-indigo-700 truncate">Total Sales</span>
+            <ShoppingBag className="w-4 h-4 text-indigo-600 shrink-0" />
           </div>
-          <div className="text-2xl font-black text-indigo-950 font-mono mt-2">
+          <div className="text-xl sm:text-2xl font-black text-indigo-950 font-mono mt-2">
             ₹{Math.round(kpis.branchRevenue || 0).toLocaleString()}
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5 flex items-center justify-between">
-            <span>{kpis.branchOrdersCount || 0} Orders in branch</span>
-            <span className="text-indigo-600 font-bold">View Sales →</span>
+          <div className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 flex items-center justify-between">
+            <span className="truncate">{kpis.branchOrdersCount || 0} Orders</span>
+            <span className="text-indigo-600 font-bold shrink-0">Sales →</span>
           </div>
         </div>
 
         {/* Metric 2: STOCKS AVAILABLE */}
         <div
           onClick={() => setActiveTab('STOCK')}
-          className={`bento-card p-4 flex flex-col justify-between cursor-pointer transition-all hover:ring-2 hover:ring-emerald-400 ${
+          className={`bento-card p-3 sm:p-4 flex flex-col justify-between cursor-pointer transition-all hover:ring-2 hover:ring-emerald-400 ${
             activeTab === 'STOCK' ? 'ring-2 ring-emerald-600 bg-emerald-50/20' : ''
           }`}
         >

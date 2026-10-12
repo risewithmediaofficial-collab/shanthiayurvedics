@@ -174,7 +174,7 @@ export function IndiaPostModuleModal({ isOpen, onClose, orders = [] }) {
         )}
 
         {/* Manifest Overview Card */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
             <span className="text-[11px] text-slate-500 block">Articles for Dispatch</span>
             <span className="text-lg font-black text-slate-900">{targetOrders.length}</span>
@@ -228,12 +228,12 @@ export function IndiaPostModuleModal({ isOpen, onClose, orders = [] }) {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-          <Button variant="secondary" onClick={onClose}>
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-2 border-t border-slate-200">
+          <Button variant="secondary" onClick={onClose} className="w-full sm:w-auto">
             Close
           </Button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               icon={Printer}

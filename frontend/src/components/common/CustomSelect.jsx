@@ -76,6 +76,7 @@ export function CustomSelect({
       return {
         value: val,
         label: opt.label ?? val,
+        shortLabel: opt.shortLabel,
         dot: opt.dot || (statusMeta ? statusMeta.dot : undefined),
         badge: opt.badge,
         icon: opt.icon,
@@ -140,6 +141,8 @@ export function CustomSelect({
     }
   }, [open, searchable]);
 
+  const [detectedAlign, setDetectedAlign] = useState(align);
+
   // Handle dropup detection based on available viewport space
   useEffect(() => {
     if (!open) return;
@@ -160,7 +163,19 @@ export function CustomSelect({
         }
       }
     }
-  }, [open, placement, dropUp]);
+
+    // Smart horizontal alignment protection
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      if (align === 'right' && rect.right - 240 < 15) {
+        setDetectedAlign('left');
+      } else if (align === 'left' && rect.left + 240 > window.innerWidth - 15) {
+        setDetectedAlign('right');
+      } else {
+        setDetectedAlign(align);
+      }
+    }
+  }, [open, placement, dropUp, align]);
 
   const isTop = dropUp || placement === 'top' || (placement !== 'bottom' && detectedDropUp);
 
@@ -181,7 +196,7 @@ export function CustomSelect({
   };
 
   return (
-    <div className={twMerge('relative inline-block text-left select-none', containerClassName)} ref={ref}>
+    <div className={twMerge('relative w-full text-left select-none', containerClassName)} ref={ref}>
       {label && (
         <label
           htmlFor={selectId}
@@ -230,7 +245,14 @@ export function CustomSelect({
               {selected.icon && (
                 <span className="flex-shrink-0">{selected.icon}</span>
               )}
-              <span className="truncate font-semibold">{selected.label}</span>
+              {selected.shortLabel ? (
+                <>
+                  <span className="sm:hidden truncate font-semibold">{selected.shortLabel}</span>
+                  <span className="hidden sm:inline truncate font-semibold">{selected.label}</span>
+                </>
+              ) : (
+                <span className="truncate font-semibold">{selected.label}</span>
+              )}
             </span>
           ) : (
             <span className="text-slate-400 font-normal truncate">{placeholder}</span>
@@ -254,7 +276,7 @@ export function CustomSelect({
           isTop ? 'bottom-full mb-1.5 origin-bottom' : 'top-full mt-1.5 origin-top',
           minWidth,
           'max-w-[calc(100vw-2.5rem)]',
-          align === 'right' ? 'right-0' : 'left-0',
+          detectedAlign === 'right' ? 'right-0' : 'left-0',
           open
             ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
             : isTop

@@ -151,8 +151,8 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
   return (
     <div className="space-y-6">
       {/* Header with identity, switch dropdown, and primary actions */}
-      <header className="flex flex-wrap items-start justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="space-y-1.5">
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
               Telecaller Workspace
@@ -164,7 +164,7 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
               </span>
             )}
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
             <span>{isPreview ? `${callerName}'s Desk` : `Welcome, ${callerName?.split(' ')[0] || 'there'}`}</span>
           </h1>
           <p className="text-xs text-slate-500">
@@ -172,10 +172,10 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {/* Telecaller Switcher Dropdown for Supervisor / Owner */}
           {isPreview && telecallersList.length > 0 && (
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-2xs">
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-2xs max-w-full">
               <label htmlFor="caller-switcher" className="text-[11px] font-bold text-slate-600 uppercase tracking-tight">
                 Caller:
               </label>
@@ -183,7 +183,7 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
                 id="caller-switcher"
                 value={callerId || ''}
                 onChange={(e) => handleSwitchCaller(e.target.value)}
-                className="text-xs font-bold text-slate-800 bg-white border border-slate-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-600 cursor-pointer"
+                className="text-xs font-bold text-slate-800 bg-white border border-slate-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-600 cursor-pointer max-w-[150px] sm:max-w-none truncate"
               >
                 {telecallersList.map((tc) => (
                   <option key={tc._id || tc.id} value={tc._id || tc.id}>
@@ -200,18 +200,18 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
             icon={Plus}
             onClick={() => setIsOrderModalOpen(true)}
             id="btn-telecaller-header-new-order"
-            className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2 px-3.5 rounded-xl shadow-xs cursor-pointer"
+            className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-1.5 sm:py-2 px-3 sm:px-3.5 rounded-xl shadow-xs cursor-pointer flex-1 sm:flex-none justify-center"
           >
-            New Prescription Order
+            New Order
           </Button>
 
           {back && (
-            <Button variant="secondary" icon={ArrowLeft} onClick={back} className="text-xs rounded-xl">
+            <Button variant="secondary" icon={ArrowLeft} onClick={back} className="text-xs rounded-xl py-1.5 sm:py-2 px-3">
               {returnView === 'OWNER'
-                ? 'Back to Boss Panel'
+                ? 'Back to Boss'
                 : returnView === 'DISTRIBUTOR'
-                ? 'Back to Distributor Panel'
-                : 'Back to Manager Panel'}
+                ? 'Back to Distributor'
+                : 'Back to Manager'}
             </Button>
           )}
         </div>
@@ -226,19 +226,19 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
           {[
             ['Assigned leads', 'leads', Users],
             ["Today's follow-ups", 'today', CalendarClock],
             ['Overdue follow-ups', 'overdue', PhoneCall],
             ['Orders', 'orders', ShoppingBag]
           ].map(([label, key, Icon]) => (
-            <div key={key} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex justify-between gap-2">
-                <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">{label}</p>
-                <Icon size={18} className={key === 'overdue' ? 'text-amber-600' : 'text-emerald-700'} />
+            <div key={key} className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm">
+              <div className="flex justify-between gap-1.5">
+                <p className="text-[11px] sm:text-xs font-medium text-slate-600 uppercase tracking-wide truncate">{label}</p>
+                <Icon size={16} className={key === 'overdue' ? 'text-amber-600 shrink-0' : 'text-emerald-700 shrink-0'} />
               </div>
-              <p className="mt-3 text-3xl font-semibold tabular-nums text-slate-900">
+              <p className="mt-2 text-2xl sm:text-3xl font-semibold tabular-nums text-slate-900">
                 {isLoading ? '…' : summary?.[key] ?? 0}
               </p>
             </div>

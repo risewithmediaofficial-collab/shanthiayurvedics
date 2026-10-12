@@ -602,34 +602,36 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
                 </div>
               </div>
 
-              <table className="w-full text-left text-xs border border-slate-200">
-                <thead className="bg-slate-100 font-bold text-slate-700">
-                  <tr>
-                    <th className="p-2 border">#</th>
-                    <th className="p-2 border">Staff Name</th>
-                    <th className="p-2 border text-center">Delivered Orders</th>
-                    <th className="p-2 border text-right">Delivered MRP (₹)</th>
-                    <th className="p-2 border text-right">10% Commission (₹)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {telecallers.map((tc, idx) => (
-                    <tr key={idx} className="border">
-                      <td className="p-2 border font-mono">{idx + 1}</td>
-                      <td className="p-2 border font-bold uppercase">{tc.name} ({tc.phone})</td>
-                      <td className="p-2 border text-center font-bold">{tc.deliveredOrdersCount}</td>
-                      <td className="p-2 border text-right font-mono">₹{tc.deliveredRevenue.toLocaleString()}</td>
-                      <td className="p-2 border text-right font-mono font-bold text-emerald-800">₹{tc.commissionEarned.toLocaleString()}</td>
+              <div className="overflow-x-auto scrollbar-thin">
+                <table className="w-full min-w-[540px] text-left text-xs border border-slate-200">
+                  <thead className="bg-slate-100 font-bold text-slate-700">
+                    <tr>
+                      <th className="p-2 border">#</th>
+                      <th className="p-2 border">Staff Name</th>
+                      <th className="p-2 border text-center">Delivered Orders</th>
+                      <th className="p-2 border text-right">Delivered MRP (₹)</th>
+                      <th className="p-2 border text-right">10% Commission (₹)</th>
                     </tr>
-                  ))}
-                  <tr className="bg-slate-50 font-bold border">
-                    <td colSpan="2" className="p-2 border text-right">TOTALS:</td>
-                    <td className="p-2 border text-center font-black">{summary.totalDeliveredOrders}</td>
-                    <td className="p-2 border text-right font-mono font-black">₹{(summary.totalGrossDeliveredRevenue || 0).toLocaleString()}</td>
-                    <td className="p-2 border text-right font-mono font-black text-emerald-800">₹{(summary.totalCommissionEarned || 0).toLocaleString()}</td>
-                  </tr>
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {telecallers.map((tc, idx) => (
+                      <tr key={idx} className="border">
+                        <td className="p-2 border font-mono">{idx + 1}</td>
+                        <td className="p-2 border font-bold uppercase">{tc.name} ({tc.phone})</td>
+                        <td className="p-2 border text-center font-bold">{tc.deliveredOrdersCount}</td>
+                        <td className="p-2 border text-right font-mono">₹{tc.deliveredRevenue.toLocaleString()}</td>
+                        <td className="p-2 border text-right font-mono font-bold text-emerald-800">₹{tc.commissionEarned.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                    <tr className="bg-slate-50 font-bold border">
+                      <td colSpan="2" className="p-2 border text-right">TOTALS:</td>
+                      <td className="p-2 border text-center font-black">{summary.totalDeliveredOrders}</td>
+                      <td className="p-2 border text-right font-mono font-black">₹{(summary.totalGrossDeliveredRevenue || 0).toLocaleString()}</td>
+                      <td className="p-2 border text-right font-mono font-black text-emerald-800">₹{(summary.totalCommissionEarned || 0).toLocaleString()}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2">

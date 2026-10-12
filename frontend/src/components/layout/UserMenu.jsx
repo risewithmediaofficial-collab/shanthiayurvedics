@@ -94,10 +94,10 @@ export function UserMenu() {
       <button
         type="button"
         onClick={() => { setIsOpen(!isOpen); setView('menu'); }}
-        className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-100 transition-colors focus:outline-none cursor-pointer"
+        className="flex items-center gap-1.5 sm:gap-2.5 p-1 sm:p-1.5 rounded-xl hover:bg-slate-100 transition-colors focus:outline-none cursor-pointer"
         title="Profile & Account"
       >
-        <div className="w-8 h-8 rounded-lg bg-ayur-700 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-ayur-700 text-white flex items-center justify-center font-bold text-xs shadow-xs">
           {initials}
         </div>
         <div className="hidden md:block text-left">
@@ -108,7 +108,7 @@ export function UserMenu() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200/80 overflow-hidden z-50 animate-fade-in">
+        <div className="fixed inset-x-3 top-14 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full mt-1 sm:mt-2 w-auto sm:w-72 bg-white rounded-2xl shadow-xl border border-slate-200/80 overflow-hidden z-50 animate-fade-in">
 
           {/* ── MAIN MENU VIEW ── */}
           {view === 'menu' && (

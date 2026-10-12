@@ -79,9 +79,9 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
     return (
       <nav
         aria-label="Distributor Quick Actions Dock"
-        className="shrink-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] select-none relative w-full"
+        className="shrink-0 z-30 bg-white/98 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] select-none relative w-full safe-bottom"
       >
-        <div className="max-w-md mx-auto grid grid-cols-4 items-center h-14 sm:h-15 px-2 relative">
+        <div className="max-w-md mx-auto grid grid-cols-4 items-center h-16 sm:h-[4.25rem] px-2 relative">
           {distributorItems.map((item) => {
             const Icon = item.icon;
             const isActive = item.isActive;
@@ -90,7 +90,7 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
                 key={item.id}
                 type="button"
                 onClick={item.onClick}
-                className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all cursor-pointer relative group w-full ${
+                className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all cursor-pointer relative group w-full ${
                   isActive ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-900 font-medium'
                 }`}
               >
@@ -182,9 +182,9 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
   return (
     <nav
       aria-label="Bottom Quick Actions Dock"
-      className="shrink-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] select-none relative w-full"
+      className="shrink-0 z-30 bg-white/98 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] select-none relative w-full safe-bottom"
     >
-      <div className="max-w-2xl mx-auto grid grid-cols-7 items-center h-14 sm:h-15 px-1 sm:px-2 relative">
+      <div className="max-w-2xl mx-auto grid grid-cols-7 items-center h-16 sm:h-[4.25rem] px-1 sm:px-2 relative">
         {items.map((item) => {
           if (item.isCenterAction) {
             if (item.show === false) {
@@ -197,7 +197,7 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
                   onClick={item.onClick}
                   title="Create New Prescription Order"
                   id="btn-bottom-dock-add"
-                  className="w-11 h-11 sm:w-13 sm:h-13 -top-4 sm:-top-5 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer ring-3 sm:ring-4 ring-white absolute"
+                  className="w-12 h-12 sm:w-13 sm:h-13 -top-4 sm:-top-5 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer ring-3 sm:ring-4 ring-white absolute"
                 >
                   <Plus className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
                 </button>
@@ -213,13 +213,13 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
               key={item.id}
               type="button"
               onClick={item.onClick}
-              className={`flex flex-col items-center justify-center py-1 px-0.5 sm:px-1 rounded-xl transition-all cursor-pointer relative group w-full ${
+              className={`flex flex-col items-center justify-center py-1.5 px-0.5 sm:px-1 rounded-xl transition-all cursor-pointer relative group w-full ${
                 isActive ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-900 font-medium'
               }`}
             >
               <div className="relative flex items-center justify-center">
                 <Icon
-                  className={`w-4.5 h-4.5 sm:w-5 sm:h-5 transition-transform group-hover:scale-110 ${
+                  className={`w-[18px] h-[18px] sm:w-5 sm:h-5 transition-transform group-hover:scale-110 ${
                     isActive ? item.color || 'text-emerald-700' : 'text-slate-500'
                   }`}
                 />

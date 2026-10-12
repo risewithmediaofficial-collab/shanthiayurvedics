@@ -15,12 +15,12 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="relative p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors focus:outline-none cursor-pointer"
+        className="relative p-1.5 sm:p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors focus:outline-none cursor-pointer"
         title="Notifications"
       >
         <NotificationsRounded sx={{ fontSize: 22 }} />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 flex items-center justify-center min-w-4 h-4 px-1 text-[10px] font-bold text-white bg-rose-500 rounded-full ring-2 ring-white font-mono">
+          <span className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 flex items-center justify-center min-w-3.5 h-3.5 sm:min-w-4 sm:h-4 px-0.5 text-[9px] sm:text-[10px] font-bold text-white bg-rose-500 rounded-full ring-1 sm:ring-2 ring-white font-mono">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}

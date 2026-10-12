@@ -88,9 +88,9 @@ export function DateRangeFilter({
   const hasActiveFilter = Boolean(startDate || endDate);
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 text-xs max-w-full">
+    <div className="flex flex-wrap items-center gap-1.5 text-xs max-w-full w-full sm:w-auto">
       {/* Quick Filter Preset Pills */}
-      <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200/90 overflow-x-auto scrollbar-none max-w-full">
+      <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200/90 overflow-x-auto scrollbar-none max-w-full w-full sm:w-auto">
         {[
           { key: 'ALL', label: 'All Time' },
           { key: 'TODAY', label: 'Today' },
@@ -118,30 +118,30 @@ export function DateRangeFilter({
 
       {/* Date-to-Date Inputs (shown when CUSTOM or when active filter is set) */}
       {(showCustomPicker || activePreset === 'CUSTOM') && (
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 px-2.5 py-1 rounded-xl border border-emerald-300 bg-emerald-50/50 shadow-2xs animate-in fade-in max-w-full">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50/50 shadow-2xs animate-in fade-in max-w-full w-full sm:w-auto">
           <Calendar className="w-3.5 h-3.5 shrink-0 text-emerald-700" />
           
-          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
-            <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap flex-1">
+            <div className="flex items-center gap-1 flex-1 sm:flex-none">
               <span className="text-[10px] font-bold text-slate-500 uppercase">From:</span>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => onChange({ startDate: e.target.value, endDate })}
-                className="text-xs font-semibold text-slate-800 bg-white px-1.5 py-0.5 rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                className="w-full sm:w-auto text-xs font-semibold text-slate-800 bg-white px-1.5 py-0.5 rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
                 title="Start Date"
               />
             </div>
 
             <span className="text-slate-400 font-bold hidden sm:inline">→</span>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-1 sm:flex-none">
               <span className="text-[10px] font-bold text-slate-500 uppercase">To:</span>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => onChange({ startDate, endDate: e.target.value })}
-                className="text-xs font-semibold text-slate-800 bg-white px-1.5 py-0.5 rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                className="w-full sm:w-auto text-xs font-semibold text-slate-800 bg-white px-1.5 py-0.5 rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
                 title="End Date"
               />
             </div>

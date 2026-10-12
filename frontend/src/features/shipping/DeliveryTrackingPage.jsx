@@ -495,7 +495,7 @@ export function DeliveryTrackingPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-center shrink-0 w-full sm:w-auto justify-end">
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-center shrink-0 w-full sm:w-auto justify-start sm:justify-end">
           <ExportButton
             onExport={handleExportShipments}
             isLoading={isExporting}

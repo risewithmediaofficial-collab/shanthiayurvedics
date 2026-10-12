@@ -523,7 +523,7 @@ export function ProductCatalogPage() {
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Product Catalog & Formulations</h2>
           <p className="text-xs text-slate-500">Master Ayurvedic catalog, SKU numbers, MRPs, and active pricing</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <Button
             variant="outline"
             icon={Boxes}

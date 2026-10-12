@@ -365,8 +365,8 @@ export function ExcelImportModal({ isOpen, onClose, onImportSuccess, telecallers
                   </button>
                 </div>
 
-                <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-xl">
-                  <table className="w-full text-[11px] text-left">
+                <div className="max-h-60 overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl scrollbar-thin">
+                  <table className="w-full min-w-[620px] text-[11px] text-left">
                     <thead className="bg-slate-100 text-slate-700 uppercase tracking-wider font-semibold sticky top-0">
                       <tr>
                         <th className="px-3 py-2">#</th>
@@ -436,8 +436,8 @@ export function ExcelImportModal({ isOpen, onClose, onImportSuccess, telecallers
               <span className="text-xs text-slate-500">{manualRows.length} order(s) entered</span>
             </div>
 
-            <div className="max-h-72 overflow-y-auto border border-slate-200 rounded-xl">
-              <table className="w-full text-xs text-left">
+            <div className="max-h-72 overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl scrollbar-thin">
+              <table className="w-full min-w-[760px] text-xs text-left">
                 <thead className="bg-slate-100 text-slate-700 uppercase tracking-wider font-semibold sticky top-0">
                   <tr>
                     <th className="px-2 py-2">Patient *</th>

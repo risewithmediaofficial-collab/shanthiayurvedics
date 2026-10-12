@@ -63,9 +63,19 @@ export function PrintableShippingLabelModal({ isOpen, onClose, order }) {
       ? `SPEED POST : Rs ${payableAmount} | ${amountWords} RUPEES ONLY`
       : `SPEED POST : PREPAID (Rs ${payableAmount}) | ${amountWords} RUPEES ONLY`);
 
+  const billerId = order.branchId?.billerId || '1000058077';
+  const bookingLocation = 'HOSUR BPC POST - 635110';
+  const billerBookingDetails = `BILLER ID : ${billerId} (BOOKED AT ${bookingLocation})`;
+
   const carrierSubheaderText = isTPC
-    ? 'TPC EXPRESS LOGISTICS NETWORK · ORIGIN: HOSUR HUB (635109) · SURFACE TRANSIT (ST)'
-    : `BILLER ID : ${order.branchId?.billerId || '1000058077'} (BOOKED AT HOSUR BPC POST - 635110)`;
+    ? `TPC EXPRESS LOGISTICS NETWORK · ${billerBookingDetails}`
+    : billerBookingDetails;
+
+  const printDateFormatted = new Date().toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  }).replace(/ /g, '-'); // e.g. "12-Oct-2026"
 
   // Tracking Number / AWB Barcode
   const trackingNumber =
@@ -79,23 +89,37 @@ export function PrintableShippingLabelModal({ isOpen, onClose, order }) {
   const telecallerName = (
     order.telecallerName ||
     order.telecallerId?.name ||
+    order.createdBy?.name ||
     (user?.role === 'TELECALLER' ? user?.name : '') ||
     'SHANTHI AYURVEDAS'
   ).toUpperCase();
 
-  const telecallerMobile =
+  const rawTelecallerMobile =
     order.telecallerPhone ||
+    order.telecallerMobile ||
     order.telecallerId?.phone ||
     order.telecallerId?.mobile ||
+    order.createdBy?.phone ||
+    order.createdBy?.mobile ||
     (user?.role === 'TELECALLER' ? (user?.phone || user?.mobile) : '') ||
     '';
 
-  // Sender phone: telecaller number first, then office numbers
-  const senderPhoneText = telecallerMobile
-    ? `${telecallerMobile} / 8884747209 / 8884113629`
-    : `8884747209 / 8884113629`;
+  const cleanTelecallerMobile = rawTelecallerMobile ? rawTelecallerMobile.replace(/[^0-9]/g, '').slice(-10) : '';
 
-  const billerId = order.branchId?.billerId || '1000058077';
+  // Sender contact numbers:
+  // Requirement: if telecaller placed the order, their number 1st, then 9629985345, then backup numbers
+  const officePrimary = '9629985345';
+  const officeBackups = ['8884747209', '8884113629'];
+
+  const phoneList = [];
+  if (cleanTelecallerMobile && cleanTelecallerMobile !== officePrimary) {
+    phoneList.push(cleanTelecallerMobile);
+  }
+  phoneList.push(officePrimary);
+  officeBackups.forEach((num) => {
+    if (!phoneList.includes(num)) phoneList.push(num);
+  });
+  const senderPhoneText = phoneList.join(' / ');
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Shipping Label (4x6) — ${order.orderNumber}`} maxWidth="max-w-2xl">
@@ -134,9 +158,14 @@ export function PrintableShippingLabelModal({ isOpen, onClose, order }) {
             {carrierHeaderText}
           </div>
 
-          {/* 3. Subheader Row 2: Carrier routing details */}
-          <div className="border-b border-black px-2.5 py-1.5 font-extrabold text-[11px] sm:text-xs tracking-tight uppercase leading-snug">
-            {carrierSubheaderText}
+          {/* 3. Subheader Row 2: Carrier routing details & Print Date */}
+          <div className="border-b border-black px-2.5 py-1.5 font-extrabold text-[10.5px] sm:text-xs tracking-tight uppercase leading-snug flex items-center justify-between gap-2">
+            <div>
+              {carrierSubheaderText}
+            </div>
+            <div className="text-right shrink-0 font-mono text-[10px] sm:text-[11px] whitespace-nowrap">
+              {printDateFormatted}
+            </div>
           </div>
 
           {/* 4. Two-Column Middle Grid */}
@@ -185,7 +214,7 @@ export function PrintableShippingLabelModal({ isOpen, onClose, order }) {
                       REFER BY
                     </td>
                     <td className="p-1 font-black">
-                      {telecallerName}
+                      {telecallerName} {cleanTelecallerMobile ? `· ${cleanTelecallerMobile}` : ''}
                     </td>
                   </tr>
                   <tr className="border-b border-black">
@@ -228,10 +257,13 @@ export function PrintableShippingLabelModal({ isOpen, onClose, order }) {
           {/* 5. Bottom Sender Section */}
           <div className="border-t border-black p-2 font-extrabold text-[10px] sm:text-[10.5px] uppercase leading-tight space-y-0.5 bg-white">
             <div>
-              FROM : SHANTHI AYURVEDAS, SHANTHI AYURVEDAS NO15, JAYPEE GATEWAY, ANTHIVADI, HOSUR
+              FROM : SHANTHI AYURVEDAS, NO 15, JAYPEE GATEWAY, ANTHIVADI, HOSUR, KRISHNAGIRI DISTRICT, TAMIL NADU - 635110
             </div>
             <div>
               MOBILE : {senderPhoneText}
+            </div>
+            <div className="text-[9px] sm:text-[9.5px] text-neutral-700 tracking-wider pt-0.5 font-bold">
+              EMERGENCY MEDICINE - HANDLE WITH CARE AND DELIVERY IMMEDIATELY
             </div>
           </div>
         </div>

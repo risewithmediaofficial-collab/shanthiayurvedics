@@ -46,6 +46,17 @@ export function BulkShippingLabelsModal({ isOpen, onClose, orders = [] }) {
 
         const tracking = order.trackingNumber || `EM${order.orderNumber?.replace(/[^0-9]/g, '').slice(-9) || Date.now().toString().slice(-9)}IN`;
         const billerId = order.branchId?.billerId || '1000058077';
+        const isTPC = (order.courierName || '').toLowerCase().includes('professional');
+        const bookingLocation = 'HOSUR BPC POST - 635110';
+        const carrierSubheaderText = isTPC
+          ? `TPC EXPRESS LOGISTICS NETWORK · BILLER ID : ${billerId} (BOOKED AT ${bookingLocation})`
+          : `BILLER ID : ${billerId} (BOOKED AT ${bookingLocation})`;
+
+        const printDateFormatted = new Date().toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        }).replace(/ /g, '-');
 
         const totalPieces = order.items?.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0) || 1;
         const orderWeight = order.weight || order.items?.reduce((sum, item) => sum + (Number(item.weight || item.productId?.weight || 0) * (Number(item.quantity) || 1)), 0) || 0;
@@ -54,18 +65,33 @@ export function BulkShippingLabelsModal({ isOpen, onClose, orders = [] }) {
         const telecallerName = (
           order.telecallerName ||
           order.telecallerId?.name ||
+          order.createdBy?.name ||
           'SHANTHI AYURVEDAS'
         ).toUpperCase();
 
-        const telecallerMobile =
+        const rawTelecallerMobile =
           order.telecallerPhone ||
+          order.telecallerMobile ||
           order.telecallerId?.phone ||
           order.telecallerId?.mobile ||
+          order.createdBy?.phone ||
+          order.createdBy?.mobile ||
           '';
 
-        const senderPhoneText = telecallerMobile
-          ? `${telecallerMobile} / 8884747209 / 8884113629`
-          : `8884747209 / 8884113629`;
+        const cleanTelecallerMobile = rawTelecallerMobile ? rawTelecallerMobile.replace(/[^0-9]/g, '').slice(-10) : '';
+
+        const officePrimary = '9629985345';
+        const officeBackups = ['8884747209', '8884113629'];
+
+        const phoneList = [];
+        if (cleanTelecallerMobile && cleanTelecallerMobile !== officePrimary) {
+          phoneList.push(cleanTelecallerMobile);
+        }
+        phoneList.push(officePrimary);
+        officeBackups.forEach((num) => {
+          if (!phoneList.includes(num)) phoneList.push(num);
+        });
+        const senderPhoneText = phoneList.join(' / ');
 
         const productRows = (order.items && order.items.length > 0)
           ? order.items.map((it, idx) => `
@@ -95,9 +121,10 @@ export function BulkShippingLabelsModal({ isOpen, onClose, orders = [] }) {
             ${speedPostText}
           </div>
 
-          <!-- 3. BILLER ID row -->
-          <div class="sub-row">
-            BILLER ID : ${billerId} (BOOKED AT HOSUR BPC POST - 635110)
+          <!-- 3. BILLER ID & PRINT DATE row -->
+          <div class="sub-row" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>${carrierSubheaderText}</span>
+            <span style="font-family: monospace; white-space: nowrap;">${printDateFormatted}</span>
           </div>
 
           <!-- 4. Two-Column Grid -->
@@ -124,7 +151,7 @@ export function BulkShippingLabelsModal({ isOpen, onClose, orders = [] }) {
                 <tbody>
                   <tr style="border-bottom: 1px solid #000;">
                     <td style="padding: 4px 6px; border-right: 1px solid #000; width: 40%; background: #f9fafb;">REFER BY</td>
-                    <td style="padding: 4px 6px; font-weight: 900;">${telecallerName}</td>
+                    <td style="padding: 4px 6px; font-weight: 900;">${telecallerName} ${cleanTelecallerMobile ? `· ${cleanTelecallerMobile}` : ''}</td>
                   </tr>
                   <tr style="border-bottom: 1px solid #000;">
                     <td style="padding: 4px 6px; border-right: 1px solid #000; background: #f9fafb;">WEIGHT</td>
@@ -138,8 +165,9 @@ export function BulkShippingLabelsModal({ isOpen, onClose, orders = [] }) {
 
           <!-- 5. Bottom Sender Section -->
           <div class="footer-sender">
-            <div>FROM : SHANTHI AYURVEDAS, SHANTHI AYURVEDAS NO15, JAYPEE GATEWAY, ANTHIVADI, HOSUR</div>
+            <div>FROM : SHANTHI AYURVEDAS, NO 15, JAYPEE GATEWAY, ANTHIVADI, HOSUR, KRISHNAGIRI DISTRICT, TAMIL NADU - 635110</div>
             <div>MOBILE : ${senderPhoneText}</div>
+            <div style="font-size: 8.5px; color: #404040; margin-top: 2px; font-weight: 700; letter-spacing: 0.5px;">EMERGENCY MEDICINE - HANDLE WITH CARE AND DELIVERY IMMEDIATELY</div>
           </div>
         </div>
       `;
@@ -280,14 +308,33 @@ export function BulkShippingLabelsModal({ isOpen, onClose, orders = [] }) {
           {orders.slice(0, 3).map((ord) => {
             const pName = (ord.patientDetails?.patientName || ord.customerId?.name || 'Valued Patient').toUpperCase();
             const pMob = ord.patientDetails?.mobile || ord.customerId?.mobile || ord.deliveryAddress?.phone || '—';
-            const tcName = (ord.telecallerName || ord.telecallerId?.name || 'SHANTHI AYURVEDAS').toUpperCase();
-            const tcMob = ord.telecallerPhone || ord.telecallerId?.phone || ord.telecallerId?.mobile || '';
+            const tcName = (ord.telecallerName || ord.telecallerId?.name || ord.createdBy?.name || 'SHANTHI AYURVEDAS').toUpperCase();
+            const rawTcMob = ord.telecallerPhone || ord.telecallerMobile || ord.telecallerId?.phone || ord.telecallerId?.mobile || ord.createdBy?.phone || '';
+            const tcMob = rawTcMob ? rawTcMob.replace(/[^0-9]/g, '').slice(-10) : '';
             const isCOD = (ord.paymentMethod || 'COD') === 'COD';
+            const isTPC = (ord.courierName || '').toLowerCase().includes('professional');
             const payVal = Math.round(Number(
               isCOD
                 ? (ord.codAmount !== undefined && ord.codAmount !== null && ord.codAmount !== '' ? ord.codAmount : ord.grandTotal)
                 : ord.grandTotal
             ) || 0);
+
+            const bId = ord.branchId?.billerId || '1000058077';
+            const bookingLoc = 'HOSUR BPC POST - 635110';
+            const subText = isTPC
+              ? `TPC EXPRESS LOGISTICS NETWORK · BILLER ID : ${bId} (BOOKED AT ${bookingLoc})`
+              : `BILLER ID : ${bId} (BOOKED AT ${bookingLoc})`;
+
+            const printDateFormatted = new Date().toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric'
+            }).replace(/ /g, '-');
+
+            const pList = [];
+            if (tcMob && tcMob !== '9629985345') pList.push(tcMob);
+            pList.push('9629985345', '8884747209', '8884113629');
+            const previewSenderPhone = Array.from(new Set(pList)).join(' / ');
 
             return (
               <div key={ord._id} className="bg-white border-2 border-black max-w-md mx-auto text-xs shadow-sm">
@@ -303,8 +350,9 @@ export function BulkShippingLabelsModal({ isOpen, onClose, orders = [] }) {
                 <div className="border-b border-black px-2 py-1 font-extrabold text-[10px] uppercase">
                   SPEED POST : Rs {payVal} | {convertNumberToIndianWords(payVal)} RUPEES ONLY
                 </div>
-                <div className="border-b border-black px-2 py-1 font-extrabold text-[10px] uppercase">
-                  BILLER ID : 1000058077 (BOOKED AT HOSUR BPC POST - 635110)
+                <div className="border-b border-black px-2 py-1 font-extrabold text-[10px] uppercase flex items-center justify-between gap-1">
+                  <div>{subText}</div>
+                  <div className="font-mono whitespace-nowrap text-[9px]">{printDateFormatted}</div>
                 </div>
                 <div className="grid grid-cols-2 divide-x divide-black p-2 text-[10px] font-bold">
                   <div>
@@ -314,13 +362,14 @@ export function BulkShippingLabelsModal({ isOpen, onClose, orders = [] }) {
                     <div className="font-black mt-1">MOBILE : {pMob}</div>
                   </div>
                   <div className="pl-2">
-                    <div>REFER BY: <strong>{tcName}</strong></div>
+                    <div>REFER BY: <strong>{tcName} {tcMob ? `· ${tcMob}` : ''}</strong></div>
                     <div>ITEMS: {ord.items?.length || 1} product(s)</div>
                   </div>
                 </div>
-                <div className="border-t border-black p-1.5 font-bold text-[9px] uppercase">
-                  <div>FROM : SHANTHI AYURVEDAS, NO15, JAYPEE GATEWAY, ANTHIVADI, HOSUR</div>
-                  <div>MOBILE : {tcMob ? `${tcMob} / ` : ''}8884747209 / 8884113629</div>
+                <div className="border-t border-black p-1.5 font-bold text-[9px] uppercase space-y-0.5">
+                  <div>FROM : SHANTHI AYURVEDAS, NO 15, JAYPEE GATEWAY, ANTHIVADI, HOSUR, KRISHNAGIRI DISTRICT, TAMIL NADU - 635110</div>
+                  <div>MOBILE : {previewSenderPhone}</div>
+                  <div className="text-[8px] text-neutral-600 font-bold">EMERGENCY MEDICINE - HANDLE WITH CARE AND DELIVERY IMMEDIATELY</div>
                 </div>
               </div>
             );

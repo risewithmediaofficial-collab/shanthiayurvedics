@@ -697,28 +697,30 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
         </div>
       </div>
 
-      {/* Fulfillment Pipeline */}
-      <div className="bento-card space-y-2">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-semibold text-slate-800 tracking-tight flex items-center gap-1.5">
-            <Package className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.75} />
-            Fulfillment Pipeline
-          </span>
-          <span className="text-[11px] font-medium text-slate-400">Live Stage Distribution</span>
+      {/* Fulfillment Pipeline (Warehouse Dispatch Desk - Hidden for Telecaller) */}
+      {!isTelecaller && (
+        <div className="bento-card space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-800 tracking-tight flex items-center gap-1.5">
+              <Package className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.75} />
+              Fulfillment Pipeline
+            </span>
+            <span className="text-[11px] font-medium text-slate-400">Live Stage Distribution</span>
+          </div>
+          <SimplePipelineTrack
+            segments={[
+              { label: 'New', count: metrics.newOrdersCount ?? 0, bgColor: 'bg-blue-500', indicatorColor: 'bg-blue-500' },
+              { label: 'Packed', count: metrics.packedCount ?? 0, bgColor: 'bg-purple-500', indicatorColor: 'bg-purple-500' },
+              { label: 'In Transit', count: metrics.shippedCount ?? 0, bgColor: 'bg-indigo-500', indicatorColor: 'bg-indigo-500' },
+              { label: 'Delivered', count: metrics.deliveredOrdersCount ?? 0, bgColor: 'bg-emerald-500', indicatorColor: 'bg-emerald-500' },
+              { label: 'RTO', count: metrics.rtoOrdersCount ?? 0, bgColor: 'bg-rose-500', indicatorColor: 'bg-rose-500' }
+            ]}
+          />
         </div>
-        <SimplePipelineTrack
-          segments={[
-            { label: 'New', count: metrics.newOrdersCount ?? 0, bgColor: 'bg-blue-500', indicatorColor: 'bg-blue-500' },
-            { label: 'Packed', count: metrics.packedCount ?? 0, bgColor: 'bg-purple-500', indicatorColor: 'bg-purple-500' },
-            { label: 'In Transit', count: metrics.shippedCount ?? 0, bgColor: 'bg-indigo-500', indicatorColor: 'bg-indigo-500' },
-            { label: 'Delivered', count: metrics.deliveredOrdersCount ?? 0, bgColor: 'bg-emerald-500', indicatorColor: 'bg-emerald-500' },
-            { label: 'RTO', count: metrics.rtoOrdersCount ?? 0, bgColor: 'bg-rose-500', indicatorColor: 'bg-rose-500' }
-          ]}
-        />
-      </div>
+      )}
 
-      {/* 3. Low Stock Alert Banner */}
-      {Boolean(metrics.lowStockCount !== undefined) && (
+      {/* 3. Low Stock Alert Banner (Hidden for Telecaller) */}
+      {!isTelecaller && Boolean(metrics.lowStockCount !== undefined) && (
         <div
           onClick={() => navigate('/inventory')}
           className="bg-amber-50/80 hover:bg-amber-100/70 border border-amber-200 text-amber-800 px-4 py-2.5 rounded-xl flex items-center justify-between text-xs font-semibold cursor-pointer transition-colors"
@@ -913,26 +915,28 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
         </div>
       </div>
 
-      {/* 6. Auto Dispatch Notification Banner */}
-      <div className="bg-blue-50 border border-blue-200 text-blue-900 px-4 py-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs font-medium shadow-sm">
-        <div className="flex items-center gap-2">
-          <Package className="w-4 h-4 text-blue-600 shrink-0" />
-          <span>
-            <strong>{metrics.packedCount ?? 0} packed</strong> — ready to ship
-          </span>
-        </div>
+      {/* 6. Auto Dispatch Notification Banner (Warehouse Only) */}
+      {!isTelecaller && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-900 px-4 py-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs font-medium shadow-sm">
+          <div className="flex items-center gap-2">
+            <Package className="w-4 h-4 text-blue-600 shrink-0" />
+            <span>
+              <strong>{metrics.packedCount ?? 0} packed</strong> — ready to ship
+            </span>
+          </div>
 
-        <Button
-          size="sm"
-          variant="primary"
-          icon={Zap}
-          isLoading={autoDispatchMutation.isPending}
-          onClick={() => autoDispatchMutation.mutate()}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold w-full sm:w-auto"
-        >
-          Auto Dispatch
-        </Button>
-      </div>
+          <Button
+            size="sm"
+            variant="primary"
+            icon={Zap}
+            isLoading={autoDispatchMutation.isPending}
+            onClick={() => autoDispatchMutation.mutate()}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold w-full sm:w-auto"
+          >
+            Auto Dispatch
+          </Button>
+        </div>
+      )}
 
       {/* 6B. Quick Status Filter Ribbon */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none touch-pan-x">
@@ -1179,51 +1183,68 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                   isSelected ? 'border-emerald-600 bg-emerald-50/10 ring-1 ring-emerald-500' : 'border-slate-200 hover:border-slate-300'
                 }`}
               >
-                {/* Card Top: Checkbox, Customer Info, Price & Badges */}
-                <div className="flex items-start justify-between gap-2 sm:gap-3">
-                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                {/* Row 1: Checkbox, Order ID & Timestamp */}
+                <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 text-xs">
+                  <div className="flex items-center gap-2 min-w-0">
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => handleToggleSelectOrder(order._id)}
-                      className="w-4 h-4 rounded text-ayur-600 focus:ring-ayur-500 mt-0.5 cursor-pointer shrink-0"
+                      className="w-4 h-4 rounded text-ayur-600 focus:ring-ayur-500 cursor-pointer shrink-0"
                     />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-black text-slate-900 text-sm truncate max-w-[150px] xs:max-w-[200px] sm:max-w-none">{customerName}</span>
-                        <span className="font-mono text-[10px] text-slate-400 shrink-0">#{order.orderNumber}</span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5 text-xs">
-                        <span className="font-mono text-slate-600 shrink-0">{mobile}</span>
-                        {mobile && (
-                          <div className="flex items-center gap-1">
-                            <a
-                              href={`tel:${mobile}`}
-                              className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-slate-100 rounded transition-colors"
-                              title="Call"
-                            >
-                              <Phone className="w-3 h-3" />
-                            </a>
-                            <a
-                              href={`https://wa.me/91${mobile.replace(/[^0-9]/g, '').slice(-10)}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                              title="WhatsApp"
-                            >
-                              <MessageSquare className="w-3 h-3 text-emerald-600" />
-                            </a>
-                          </div>
-                        )}
-                      </div>
+                    <span className="font-mono font-bold text-slate-800 text-xs tracking-tight truncate">
+                      #{order.orderNumber}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400 shrink-0">
+                    <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                    <span>
+                      {new Date(order.createdAt).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'short'
+                      })}
+                      , {new Date(order.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Row 2: Customer Info (Left) & Price, Badges (Right) */}
+                <div className="flex items-start justify-between gap-2 pt-0.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-black text-slate-900 text-sm sm:text-base truncate">
+                      {customerName}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 text-xs">
+                      <span className="font-mono text-slate-600 font-medium shrink-0">{mobile}</span>
+                      {mobile && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <a
+                            href={`tel:${mobile}`}
+                            className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-slate-100 rounded transition-colors"
+                            title="Call"
+                          >
+                            <Phone className="w-3 h-3" />
+                          </a>
+                          <a
+                            href={`https://wa.me/91${mobile.replace(/[^0-9]/g, '').slice(-10)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                            title="WhatsApp"
+                          >
+                            <MessageSquare className="w-3 h-3 text-emerald-600" />
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div className="text-right shrink-0">
-                    <div className="text-base sm:text-lg font-black text-slate-900 font-mono">
+                  <div className="text-right shrink-0 flex flex-col items-end">
+                    <div className="text-base sm:text-lg font-black text-slate-900 font-mono tracking-tight">
                       ₹{order.grandTotal?.toLocaleString()}
                     </div>
-                    <div className="flex flex-wrap items-center justify-end gap-1 mt-1">
+                    <div className="flex items-center justify-end gap-1 mt-1">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${statusConfig.bg}`}>
                         {statusConfig.label}
                       </span>
@@ -1234,43 +1255,30 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                   </div>
                 </div>
 
-                {/* Items & Address Line */}
+                {/* Row 3: Items & Address Line */}
                 <div className="space-y-1 text-xs text-slate-600 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="w-2 h-2 rounded-full bg-emerald-600 flex-shrink-0" />
-                    <span className="font-medium text-slate-800 truncate">{itemsSummary}</span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
+                    <span className="font-semibold text-slate-800 truncate">{itemsSummary}</span>
                   </div>
                   <div className="flex items-start gap-1.5 text-slate-500 text-[11px] min-w-0">
-                    <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0 mt-0.5" />
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                     <span className="truncate">
                       {addr.street ? `${addr.street}, ` : ''}{addr.landmark ? `${addr.landmark}, ` : ''}{addr.city || 'Hosur'}{addr.district ? `, ${addr.district}` : ''} - {addr.pincode || '635109'}
                     </span>
                   </div>
                 </div>
 
-                {/* Card Bottom: Date & Tracking, Quick Status Changer & Actions */}
-                <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
-                  <div className="flex items-center justify-between sm:justify-start gap-2 text-[11px] text-slate-400 min-w-0">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <Clock className="w-3 h-3 shrink-0" />
-                      <span className="truncate">
-                        {new Date(order.createdAt).toLocaleDateString('en-GB', {
-                          day: 'numeric',
-                          month: 'short'
-                        })}
-                        , {new Date(order.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
+                {/* Row 4: Tracking, Inline Status Changer & Quick Actions */}
+                <div className="pt-2 border-t border-slate-100 flex flex-col xs:flex-row items-stretch xs:items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
                     {order.trackingNumber && (
-                      <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 font-mono text-[10px] border border-amber-200 shrink-0">
-                        📮 {order.trackingNumber}
+                      <span className="px-1.5 py-1 rounded bg-amber-50 text-amber-800 font-mono text-[10px] border border-amber-200 shrink-0 flex items-center gap-1">
+                        <span>📮</span>
+                        <span className="truncate max-w-[85px] sm:max-w-none">{order.trackingNumber}</span>
                       </span>
                     )}
-                  </div>
-
-                  <div className="flex items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto">
-                    {/* Inline Status Dropdown */}
-                    <div className="flex-1 sm:flex-initial min-w-0 max-w-[145px] sm:max-w-none">
+                    <div className="flex-1 min-w-0">
                       <CustomSelect
                         value={order.status}
                         disabled={singleTransitionMutation.isPending}
@@ -1284,59 +1292,59 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                         size="xs"
                         align="left"
                         placement="top"
-                        minWidth="min-w-0 w-full sm:min-w-[160px]"
+                        minWidth="w-full min-w-0 sm:min-w-[150px]"
                         className="border-slate-200 hover:border-emerald-400 bg-white font-semibold text-[11px] shadow-2xs"
                         options={ALL_STATUS_OPTIONS}
                       />
                     </div>
+                  </div>
 
-                    {/* Quick Action Buttons */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedOrderForInvoice(order)}
-                        title="Tax Invoice"
-                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
-                      >
-                        🧾
-                      </button>
+                  {/* Quick Action Buttons */}
+                  <div className="flex items-center justify-end gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOrderForInvoice(order)}
+                      title="Tax Invoice"
+                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer shrink-0"
+                    >
+                      🧾
+                    </button>
 
-                      <button
-                        type="button"
-                        onClick={() => setSelectedOrderForLabel(order)}
-                        title="Shipping Label"
-                        className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold transition-colors cursor-pointer"
-                      >
-                        🏷️
-                      </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOrderForLabel(order)}
+                      title="Shipping Label"
+                      className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold transition-colors cursor-pointer shrink-0"
+                    >
+                      🏷️
+                    </button>
 
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditOrder(order)}
-                        title="Edit Order"
-                        className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center cursor-pointer"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditOrder(order)}
+                      title="Edit Order"
+                      className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center cursor-pointer shrink-0"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
 
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/orders/${order._id}`)}
-                        title="View Details"
-                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/orders/${order._id}`)}
+                      title="View Details"
+                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer shrink-0"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </button>
 
-                      <button
-                        type="button"
-                        onClick={() => setSelectedOrderForDelete(order)}
-                        title="Delete Order"
-                        className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOrderForDelete(order)}
+                      title="Delete Order"
+                      className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors cursor-pointer shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               </div>

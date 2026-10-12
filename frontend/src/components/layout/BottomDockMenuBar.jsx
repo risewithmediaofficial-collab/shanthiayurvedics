@@ -9,7 +9,10 @@ import {
   BarChart3,
   Shield,
   Package,
-  PhoneCall
+  PhoneCall,
+  CalendarClock,
+  Clock,
+  Users
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../../api/apiClient.js';
@@ -18,7 +21,7 @@ import { usePermissions } from '../../hooks/usePermissions.js';
 export function BottomDockMenuBar({ onOpenAddOrder }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isOwner, isManager, isDistributor, hasPermission } = usePermissions();
+  const { isOwner, isManager, isDistributor, isTelecaller, hasPermission } = usePermissions();
 
   const currentPath = location.pathname;
 
@@ -37,6 +40,109 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
   });
 
   const ordersCount = metricsData?.totalOrders ?? null;
+
+  // Dedicated Telecaller Bottom Dock (Focused on Telecalling Workflows)
+  if (isTelecaller) {
+    const telecallerItems = [
+      {
+        id: 'leads',
+        label: 'Leads',
+        icon: Users,
+        color: 'text-teal-600',
+        isActive: currentPath === '/dashboard' || currentPath === '/leads',
+        onClick: () => navigate('/dashboard')
+      },
+      {
+        id: 'orders',
+        label: 'Orders',
+        icon: ShoppingBag,
+        color: 'text-indigo-600',
+        badge: ordersCount,
+        isActive: currentPath === '/orders' || currentPath.startsWith('/orders/'),
+        onClick: () => navigate('/orders')
+      },
+      {
+        id: 'add',
+        isCenterAction: true,
+        show: true,
+        onClick: () => onOpenAddOrder && onOpenAddOrder()
+      },
+      {
+        id: 'followups',
+        label: 'Follow-ups',
+        icon: CalendarClock,
+        color: 'text-amber-600',
+        isActive: currentPath === '/followups',
+        onClick: () => navigate('/followups')
+      },
+      {
+        id: 'calls',
+        label: 'Calls',
+        icon: PhoneCall,
+        color: 'text-blue-600',
+        isActive: currentPath === '/calls' || currentPath.includes('tab=calls'),
+        onClick: () => navigate('/calls')
+      }
+    ];
+
+    return (
+      <nav
+        aria-label="Telecaller Quick Actions Dock"
+        className="shrink-0 z-30 bg-white/98 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] select-none relative w-full safe-bottom"
+      >
+        <div className="max-w-md mx-auto grid grid-cols-5 items-center h-16 sm:h-[4.25rem] px-2 relative">
+          {telecallerItems.map((item) => {
+            if (item.isCenterAction) {
+              return (
+                <div key="center-action" className="flex items-center justify-center relative">
+                  <button
+                    type="button"
+                    onClick={item.onClick}
+                    title="Quick Prescription / Order Booking"
+                    className="w-12 h-12 -mt-5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white flex items-center justify-center shadow-lg shadow-emerald-700/30 hover:scale-105 active:scale-95 transition-all cursor-pointer ring-4 ring-white"
+                  >
+                    <Plus className="w-6 h-6 stroke-[2.5]" />
+                  </button>
+                </div>
+              );
+            }
+
+            const Icon = item.icon;
+            const isActive = item.isActive;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={item.onClick}
+                className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all cursor-pointer relative group w-full ${
+                  isActive ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-900 font-medium'
+                }`}
+              >
+                <div className="relative flex items-center justify-center">
+                  <Icon
+                    className={`w-5 h-5 transition-transform group-hover:scale-110 ${
+                      isActive ? item.color || 'text-emerald-700' : 'text-slate-500'
+                    }`}
+                  />
+                  {item.badge !== undefined && item.badge !== null && item.badge > 0 && (
+                    <span className="absolute -top-1.5 -right-2.5 px-1 min-w-[15px] h-[15px] rounded-full bg-rose-500 text-white text-[9px] font-mono font-black flex items-center justify-center ring-2 ring-white">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
+                </div>
+                <span className={`text-[10px] mt-0.5 tracking-tight ${isActive ? 'text-slate-900 font-bold' : 'text-slate-500'}`}>
+                  {item.label}
+                </span>
+                {isActive && (
+                  <span className="w-1 h-1 rounded-full bg-emerald-600 mt-0.5" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
 
   // Dedicated Distributor Bottom Dock (Strictly the 4 allowed domains)
   if (isDistributor) {
@@ -120,7 +226,7 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
     );
   }
 
-  // 3 items on left, center Add button, 3 items on right (3 + 1 + 3 = 7 items)
+  // 5 items on mobile (Orders, Velocity, Add, Scan, Stats), 7 items on tablet/desktop (+ Export, Admin)
   const items = [
     {
       id: 'orders',
@@ -136,6 +242,7 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
       label: 'Export',
       icon: FileSpreadsheet,
       color: 'text-rose-600',
+      hiddenOnMobile: true,
       isActive: currentPath === '/reports/settlement' || currentPath === '/orders/stuck',
       onClick: () => navigate('/orders?view=full')
     },
@@ -174,6 +281,7 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
       label: 'Admin',
       icon: Shield,
       color: 'text-purple-600',
+      hiddenOnMobile: true,
       isActive: currentPath.startsWith('/admin'),
       onClick: () => navigate('/admin/users')
     }
@@ -184,7 +292,7 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
       aria-label="Bottom Quick Actions Dock"
       className="shrink-0 z-30 bg-white/98 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] select-none relative w-full safe-bottom"
     >
-      <div className="max-w-2xl mx-auto grid grid-cols-7 items-center h-16 sm:h-[4.25rem] px-1 sm:px-2 relative">
+      <div className="max-w-2xl mx-auto grid grid-cols-5 sm:grid-cols-7 items-center h-16 sm:h-[4.25rem] px-1 sm:px-2 relative">
         {items.map((item) => {
           if (item.isCenterAction) {
             if (item.show === false) {
@@ -197,7 +305,7 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
                   onClick={item.onClick}
                   title="Create New Prescription Order"
                   id="btn-bottom-dock-add"
-                  className="w-12 h-12 sm:w-13 sm:h-13 -top-4 sm:-top-5 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer ring-3 sm:ring-4 ring-white absolute"
+                  className="w-11 h-11 sm:w-13 sm:h-13 -top-3.5 sm:-top-5 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer ring-3 sm:ring-4 ring-white absolute"
                 >
                   <Plus className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
                 </button>
@@ -213,7 +321,7 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
               key={item.id}
               type="button"
               onClick={item.onClick}
-              className={`flex flex-col items-center justify-center py-1.5 px-0.5 sm:px-1 rounded-xl transition-all cursor-pointer relative group w-full ${
+              className={`${item.hiddenOnMobile ? 'hidden sm:flex' : 'flex'} flex-col items-center justify-center py-1.5 px-0.5 sm:px-1 rounded-xl transition-all cursor-pointer relative group w-full ${
                 isActive ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-900 font-medium'
               }`}
             >

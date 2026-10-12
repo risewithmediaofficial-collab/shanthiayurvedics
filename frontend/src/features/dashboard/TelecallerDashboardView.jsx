@@ -268,7 +268,7 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
 
       {/* Tab Content */}
       <Suspense fallback={<Spinner text="Loading workspace…" className="py-16" />}>
-        <Page key={`${activeTab}:${callerId}`} callerId={callerId} />
+        <Page key={`${activeTab}:${callerId}`} callerId={callerId} hideHeader={true} />
       </Suspense>
 
       {/* Full-Featured Prescription Order Modal */}

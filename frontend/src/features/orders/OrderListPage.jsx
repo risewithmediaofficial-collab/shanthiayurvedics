@@ -102,7 +102,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { hasPermission, isOwner, isManager, isDistributor, role, user } = usePermissions();
-  const { selectedBranchId } = useBranch();
+  const { selectedBranchId, branches } = useBranch();
 
   // Filters & Sorting State
   const [page, setPage] = useState(1);
@@ -529,6 +529,14 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
 
   const isAllSelected = orders.length > 0 && selectedOrderIds.length === orders.length;
 
+  const isTelecaller = role === 'TELECALLER' || Boolean(callerId);
+  const activeBranchName = selectedBranchId === 'ALL'
+    ? 'All Branches'
+    : (branches?.find((b) => (b._id || b.id) === selectedBranchId)?.name || user?.branchName || 'Hosur');
+  const userDisplayName = (callerId && telecallersResponse?.length)
+    ? (telecallersResponse.find((t) => t._id === callerId)?.name || user?.name || 'Telecaller')
+    : (user?.name || (isTelecaller ? 'Telecaller' : 'Central Hub'));
+
   return (
     <div className="space-y-4 pb-12 font-sans">
       {viewMode === 'full' ? (
@@ -573,39 +581,72 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
         <>
           {/* 1. Header Profile & Title Bar (hidden when embedded in Manager View) */}
           {!hideHeader && (
-        <div className="bg-white text-slate-900 p-4 sm:p-5 rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-slate-200/90">
-          <div>
-            <h2 className="text-lg font-bold tracking-tight text-slate-900 flex items-center gap-2">
-              Dr Shanthi
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
-                MANAGER · SHANTHI AYURVEDAS HOSUR
-              </span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Central Orders Hub & Logistics Dispatch Station
-            </p>
-          </div>
+            <div className="bg-white text-slate-900 p-3.5 sm:p-5 rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-slate-200/90">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 truncate">
+                    {userDisplayName}
+                  </h2>
+                  <span className={`text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider shrink-0 ${
+                    isTelecaller
+                      ? 'bg-blue-50 text-blue-800 border-blue-200'
+                      : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  }`}>
+                    {isTelecaller ? 'TELECALLER' : (role || 'MANAGER')} · {activeBranchName}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5 truncate">
+                  {isTelecaller
+                    ? 'Telecaller Orders Hub · Direct Customer Orders & Bookings'
+                    : 'Central Orders Hub & Logistics Dispatch Station'}
+                </p>
+              </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold"
-              onClick={() => navigate('/reports')}
-            >
-              👔 Boss View
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold"
-              onClick={() => navigate('/inventory')}
-            >
-              📦 Stock Ledger
-            </Button>
-          </div>
-        </div>
-      )}
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+                {isTelecaller ? (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs flex-1 sm:flex-initial"
+                      icon={Plus}
+                      onClick={() => setCreateModalOpen(true)}
+                    >
+                      New Order
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold flex-1 sm:flex-initial"
+                      icon={Download}
+                      onClick={() => setExcelExportOpen(true)}
+                    >
+                      Export
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold flex-1 sm:flex-initial"
+                      onClick={() => navigate('/reports')}
+                    >
+                      👔 Boss View
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold flex-1 sm:flex-initial"
+                      onClick={() => navigate('/inventory')}
+                    >
+                      📦 Stock Ledger
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
       {/* ── Bento KPI Metrics Grid ── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
@@ -690,50 +731,54 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
         </div>
       )}
 
-      {/* 4. Action Buttons Ribbon (matching Image 1) */}
-      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+      {/* 4. Action Buttons Ribbon */}
+      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1.5 scrollbar-none sm:flex-wrap">
         <button
           type="button"
           onClick={() => setViewMode('full')}
-          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#1b4332] hover:bg-[#143225] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#1b4332] hover:bg-[#143225] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
         >
           <span>📋 Full View</span>
         </button>
 
         <button
           type="button"
+          onClick={() => setCreateModalOpen(true)}
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#00897b] hover:bg-[#00695c] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ring-1 ring-teal-400"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>New Order</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => navigate('/scan-tracker')}
-          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#1e88e5] hover:bg-[#1565c0] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#1e88e5] hover:bg-[#1565c0] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
         >
           <Scan className="w-3.5 h-3.5" />
           <span>Scan</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setIndiaPostModalOpen(true)}
-          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#b78103] hover:bg-[#966a02] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
-        >
-          <span>📮 India Post</span>
-        </button>
+        {!isTelecaller && (
+          <button
+            type="button"
+            onClick={() => setIndiaPostModalOpen(true)}
+            className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#b78103] hover:bg-[#966a02] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+          >
+            <span>📮 India Post</span>
+          </button>
+        )}
 
-        <button
-          type="button"
-          onClick={() => setExcelImportOpen(true)}
-          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
-        >
-          <FileSpreadsheet className="w-3.5 h-3.5" />
-          <span>Import</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setCreateModalOpen(true)}
-          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#00897b] hover:bg-[#00695c] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>New Order</span>
-        </button>
+        {!isTelecaller && (
+          <button
+            type="button"
+            onClick={() => setExcelImportOpen(true)}
+            className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Import</span>
+          </button>
+        )}
 
         <button
           type="button"
@@ -744,7 +789,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
             setPage(1);
             showToast('Showing all online & counter orders');
           }}
-          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#7b1fa2] hover:bg-[#6a1b9a] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#7b1fa2] hover:bg-[#6a1b9a] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
         >
           <span>🌐 Online</span>
         </button>
@@ -752,7 +797,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
         <Button
           size="sm"
           variant="secondary"
-          className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold text-xs ml-auto shadow-xs"
+          className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold text-xs shrink-0 sm:ml-auto shadow-xs"
           icon={Download}
           onClick={() => setExcelExportOpen(true)}
         >
@@ -761,14 +806,14 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
       </div>
 
       {/* 5. Bulk Action Toolbar */}
-      <div className={`rounded-xl p-2.5 sm:p-3 flex flex-col gap-2 text-xs border transition-all ${
+      <div className={`rounded-xl p-2.5 sm:p-3 flex flex-col gap-2.5 text-xs border transition-all ${
         selectedOrderIds.length > 0
           ? 'bg-amber-50/90 border-amber-300 shadow-sm ring-1 ring-amber-300'
           : 'bg-slate-50 border-slate-200'
       }`}>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           {/* Select All Checkbox */}
-          <label className="flex items-center gap-1.5 font-bold text-slate-800 cursor-pointer select-none bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-xs">
+          <label className="flex items-center gap-1.5 font-bold text-slate-800 cursor-pointer select-none bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-xs shrink-0 self-start sm:self-auto">
             <input
               type="checkbox"
               checked={isAllSelected}
@@ -783,26 +828,29 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
             )}
           </label>
 
-          {/* Batch Action – scrollable on mobile */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none flex-1 min-w-0">
-            <CustomSelect
-              disabled={selectedOrderIds.length === 0}
-              value={bulkStatusToApply}
-              onChange={(e) => setBulkStatusToApply(e.target.value)}
-              options={ALL_STATUS_OPTIONS}
-              placeholder={
-                selectedOrderIds.length === 0
-                  ? 'Check orders first'
-                  : 'Choose new status...'
-              }
-              size="sm"
-              minWidth="min-w-[160px] sm:min-w-[210px]"
-              className={`font-semibold shrink-0 ${
-                selectedOrderIds.length === 0
-                  ? 'bg-slate-100 border-slate-200 text-slate-400'
-                  : 'bg-white border-amber-400 text-slate-800'
-              }`}
-            />
+          {/* Batch Actions – responsive wrap without clipping */}
+          <div className="flex flex-wrap items-center gap-1.5 flex-1 sm:justify-end">
+            <div className="w-full xs:w-auto xs:min-w-[170px] sm:min-w-[210px]">
+              <CustomSelect
+                disabled={selectedOrderIds.length === 0}
+                value={bulkStatusToApply}
+                onChange={(e) => setBulkStatusToApply(e.target.value)}
+                options={ALL_STATUS_OPTIONS}
+                placeholder={
+                  selectedOrderIds.length === 0
+                    ? 'Check orders first'
+                    : 'Choose new status...'
+                }
+                size="sm"
+                align="left"
+                minWidth="min-w-full sm:min-w-[210px]"
+                className={`font-semibold ${
+                  selectedOrderIds.length === 0
+                    ? 'bg-slate-100 border-slate-200 text-slate-400'
+                    : 'bg-white border-amber-400 text-slate-800'
+                }`}
+              />
+            </div>
 
             <Button
               size="sm"
@@ -819,32 +867,38 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
               Apply
             </Button>
 
-            <CustomSelect
-              value={assignVerifierId}
-              onChange={(e) => setAssignVerifierId(e.target.value)}
-              options={telecallers.map((tc) => ({ value: tc._id, label: tc.name }))}
-              placeholder="Assign verify..."
-              size="sm"
-              minWidth="min-w-[130px] sm:min-w-[170px]"
-              className="shrink-0"
-            />
+            {!isTelecaller && (
+              <div className="w-full xs:w-auto xs:min-w-[140px] sm:min-w-[170px]">
+                <CustomSelect
+                  value={assignVerifierId}
+                  onChange={(e) => setAssignVerifierId(e.target.value)}
+                  options={telecallers.map((tc) => ({ value: tc._id, label: tc.name }))}
+                  placeholder="Assign verify..."
+                  size="sm"
+                  align="left"
+                  minWidth="min-w-full sm:min-w-[170px]"
+                />
+              </div>
+            )}
 
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={selectedOrderIds.length === 0}
-              onClick={() => {
-                if (assignVerifierId) {
-                  handleApplyBulkAssign();
-                } else {
-                  handleApplyBulkVerify();
-                }
-              }}
-              isLoading={bulkAssignMutation.isPending || bulkVerifyMutation.isPending}
-              className="bg-amber-700 hover:bg-amber-800 text-white font-bold shrink-0"
-            >
-              Verify
-            </Button>
+            {!isTelecaller && (
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={selectedOrderIds.length === 0}
+                onClick={() => {
+                  if (assignVerifierId) {
+                    handleApplyBulkAssign();
+                  } else {
+                    handleApplyBulkVerify();
+                  }
+                }}
+                isLoading={bulkAssignMutation.isPending || bulkVerifyMutation.isPending}
+                className="bg-amber-700 hover:bg-amber-800 text-white font-bold shrink-0"
+              >
+                Verify
+              </Button>
+            )}
 
             <Button
               size="sm"
@@ -860,9 +914,9 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
       </div>
 
       {/* 6. Auto Dispatch Notification Banner */}
-      <div className="bg-blue-50 border border-blue-200 text-blue-900 px-4 py-3 rounded-xl flex items-center justify-between text-xs font-medium shadow-sm">
+      <div className="bg-blue-50 border border-blue-200 text-blue-900 px-4 py-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs font-medium shadow-sm">
         <div className="flex items-center gap-2">
-          <Package className="w-4 h-4 text-blue-600" />
+          <Package className="w-4 h-4 text-blue-600 shrink-0" />
           <span>
             <strong>{metrics.packedCount ?? 0} packed</strong> — ready to ship
           </span>
@@ -874,14 +928,14 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
           icon={Zap}
           isLoading={autoDispatchMutation.isPending}
           onClick={() => autoDispatchMutation.mutate()}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold w-full sm:w-auto"
         >
           Auto Dispatch
         </Button>
       </div>
 
       {/* 6B. Quick Status Filter Ribbon */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none touch-pan-x">
         {[
           { key: '', label: 'All Orders', count: metrics.totalOrders ?? meta.total },
           { key: 'NEW', label: 'New', count: metrics.newOrdersCount },
@@ -924,10 +978,9 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="bento-card flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-2.5 text-xs">
-        {/* Row 1: Search + Status Filter */}
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {/* Search Input */}
+      <div className="bento-card flex flex-col gap-2.5 text-xs">
+        {/* Row 1: Search Input + Apply */}
+        <div className="flex items-center gap-2 w-full">
           <div className="relative flex-1 min-w-0">
             <input
               type="text"
@@ -945,20 +998,18 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
           </div>
 
-          {/* Apply Button */}
           <Button
             size="sm"
             variant="primary"
             onClick={() => refetchOrders()}
-            className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold px-3 cursor-pointer shrink-0"
+            className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold px-3.5 cursor-pointer shrink-0"
           >
             Apply
           </Button>
         </div>
 
-        {/* Row 2 (sm): Filters in a scrollable strip */}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
-          {/* Date to Date Range Filter */}
+        {/* Row 2: Date presets ribbon (scrollable, no popups) */}
+        <div className="w-full overflow-x-auto scrollbar-none pb-0.5">
           <DateRangeFilter
             startDate={startDate}
             endDate={endDate}
@@ -968,9 +1019,12 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
               setPage(1);
             }}
           />
+        </div>
 
+        {/* Row 3: Dropdowns Grid — NO overflow-x-auto to prevent menu clipping */}
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-2 w-full pt-1 border-t border-slate-100">
           {/* Status Filter Dropdown */}
-          <div className="shrink-0">
+          <div className="col-span-1 sm:w-48">
             <CustomSelect
               id="orders-status-filter"
               value={statusFilter}
@@ -981,12 +1035,12 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
               placeholder="All Statuses"
               options={STATUS_FILTER_OPTIONS}
               className="bg-emerald-50/70 border-emerald-300 text-emerald-950 font-bold hover:border-emerald-500 shadow-2xs"
-              minWidth="min-w-[140px] sm:min-w-[180px]"
+              minWidth="min-w-full sm:min-w-[180px]"
             />
           </div>
 
           {/* Districts Filter Dropdown */}
-          <div className="shrink-0">
+          <div className="col-span-1 sm:w-44">
             <CustomSelect
               value={districtFilter}
               onChange={(e) => {
@@ -1000,12 +1054,12 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                 ...districts.map((d) => ({ value: d, label: d })),
               ]}
               className="bg-slate-50 border-slate-200 text-slate-700 font-medium"
-              minWidth="min-w-[130px] sm:min-w-[160px]"
+              minWidth="min-w-full sm:min-w-[160px]"
             />
           </div>
 
           {/* Sort By Dropdown */}
-          <div className="shrink-0">
+          <div className="col-span-2 sm:w-48">
             <CustomSelect
               id="orders-sort-select"
               value={`${sortBy}-${sortOrder}`}
@@ -1018,38 +1072,39 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
               }}
               options={SORT_OPTIONS}
               className="bg-slate-50 border-slate-200 text-slate-700 font-medium"
-              minWidth="min-w-[140px] sm:min-w-[200px]"
+              minWidth="min-w-full sm:min-w-[200px]"
             />
           </div>
 
-          {/* Direct Export Button */}
-          <ExportButton
-            onExport={handleExportOrders}
-            label={selectedOrderIds.length > 0 ? `Export (${selectedOrderIds.length})` : 'Export'}
-            className="shrink-0"
-          />
+          {/* Direct Export & Reset Actions */}
+          <div className="col-span-2 sm:col-span-auto flex items-center gap-2 sm:ml-auto">
+            <ExportButton
+              onExport={handleExportOrders}
+              label={selectedOrderIds.length > 0 ? `Export (${selectedOrderIds.length})` : 'Export'}
+              className="flex-1 sm:flex-initial"
+            />
 
-          {/* Clear Active Filters */}
-          {(statusFilter || districtFilter || startDate || endDate || search || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
-            <button
-              type="button"
-              onClick={() => {
-                setStatusFilter('');
-                setDistrictFilter('');
-                setStartDate('');
-                setEndDate('');
-                setSearch('');
-                setSortBy('createdAt');
-                setSortOrder('desc');
-                setPage(1);
-              }}
-              className="px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1 shrink-0"
-              title="Reset all search, status, date, and sorting filters"
-            >
-              <X className="w-3.5 h-3.5" />
-              <span>Reset</span>
-            </button>
-          )}
+            {(statusFilter || districtFilter || startDate || endDate || search || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter('');
+                  setDistrictFilter('');
+                  setStartDate('');
+                  setEndDate('');
+                  setSearch('');
+                  setSortBy('createdAt');
+                  setSortOrder('desc');
+                  setPage(1);
+                }}
+                className="px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1 shrink-0"
+                title="Reset all search, status, date, and sorting filters"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1079,16 +1134,16 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
       )}
 
       {/* 8. Orders Summary Ribbon */}
-      <div className="flex items-center justify-between text-xs text-slate-600 px-1 font-medium">
-        <div className="flex items-center gap-2">
-          <ShoppingBag className="w-4 h-4 text-slate-700" />
+      <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-1 text-xs text-slate-600 px-1 font-medium">
+        <div className="flex items-center gap-2 min-w-0">
+          <ShoppingBag className="w-4 h-4 text-slate-700 shrink-0" />
           <span className="font-bold text-slate-900 text-sm">Orders</span>
-          <span>
+          <span className="truncate">
             {meta.total} total · <strong className="text-emerald-700">₹{meta.totalRevenue?.toLocaleString()}</strong> revenue
           </span>
         </div>
 
-        <span className="text-[11px] text-slate-400">
+        <span className="text-[11px] text-slate-400 shrink-0">
           Showing page {page} of {meta.totalPages || 1}
         </span>
       </div>
@@ -1120,28 +1175,28 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
             return (
               <div
                 key={order._id}
-                className={`bg-white rounded-2xl border transition-all p-4 shadow-sm space-y-3 ${
+                className={`bg-white rounded-2xl border transition-all p-3 sm:p-4 shadow-xs space-y-2.5 ${
                   isSelected ? 'border-emerald-600 bg-emerald-50/10 ring-1 ring-emerald-500' : 'border-slate-200 hover:border-slate-300'
                 }`}
               >
-                {/* Card Top: Checkbox, Name, Price, Status, Payment */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
+                {/* Card Top: Checkbox, Customer Info, Price & Badges */}
+                <div className="flex items-start justify-between gap-2 sm:gap-3">
+                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => handleToggleSelectOrder(order._id)}
-                      className="w-4 h-4 rounded text-ayur-600 focus:ring-ayur-500 mt-1"
+                      className="w-4 h-4 rounded text-ayur-600 focus:ring-ayur-500 mt-0.5 cursor-pointer shrink-0"
                     />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-black text-slate-900 text-sm">{customerName}</span>
-                        <span className="font-mono text-[10px] text-slate-400">#{order.orderNumber}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-black text-slate-900 text-sm truncate max-w-[150px] xs:max-w-[200px] sm:max-w-none">{customerName}</span>
+                        <span className="font-mono text-[10px] text-slate-400 shrink-0">#{order.orderNumber}</span>
                       </div>
                       <div className="flex items-center gap-2 mt-0.5 text-xs">
-                        <span className="font-mono text-slate-600">{mobile}</span>
+                        <span className="font-mono text-slate-600 shrink-0">{mobile}</span>
                         {mobile && (
-                          <div className="flex items-center gap-1 ml-1">
+                          <div className="flex items-center gap-1">
                             <a
                               href={`tel:${mobile}`}
                               className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-slate-100 rounded transition-colors"
@@ -1164,15 +1219,15 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <div className="text-base font-black text-slate-900">
+                  <div className="text-right shrink-0">
+                    <div className="text-base sm:text-lg font-black text-slate-900 font-mono">
                       ₹{order.grandTotal?.toLocaleString()}
                     </div>
-                    <div className="flex items-center justify-end gap-1.5 mt-1">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusConfig.bg}`}>
+                    <div className="flex flex-wrap items-center justify-end gap-1 mt-1">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${statusConfig.bg}`}>
                         {statusConfig.label}
                       </span>
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 uppercase">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 uppercase whitespace-nowrap">
                         {order.paymentMethod}
                       </span>
                     </div>
@@ -1181,105 +1236,107 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
 
                 {/* Items & Address Line */}
                 <div className="space-y-1 text-xs text-slate-600 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <span className="w-2 h-2 rounded-full bg-emerald-600 flex-shrink-0" />
                     <span className="font-medium text-slate-800 truncate">{itemsSummary}</span>
                   </div>
-                  <div className="flex items-start gap-1.5 text-slate-500 text-[11px]">
+                  <div className="flex items-start gap-1.5 text-slate-500 text-[11px] min-w-0">
                     <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0 mt-0.5" />
                     <span className="truncate">
-                      {addr.street}, {addr.landmark ? addr.landmark + ', ' : ''}{addr.city || 'Hosur'} - {addr.pincode || '635109'}
+                      {addr.street ? `${addr.street}, ` : ''}{addr.landmark ? `${addr.landmark}, ` : ''}{addr.city || 'Hosur'}{addr.district ? `, ${addr.district}` : ''} - {addr.pincode || '635109'}
                     </span>
                   </div>
                 </div>
 
-                {/* Card Bottom: Date, Quick Status Changer & Actions */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100 text-xs">
-                  <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                    <Clock className="w-3 h-3" />
-                    <span>
-                      {new Date(order.createdAt).toLocaleDateString('en-GB', {
-                        day: 'numeric',
-                        month: 'short'
-                      })}
-                      , {new Date(order.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                {/* Card Bottom: Date & Tracking, Quick Status Changer & Actions */}
+                <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+                  <div className="flex items-center justify-between sm:justify-start gap-2 text-[11px] text-slate-400 min-w-0">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <Clock className="w-3 h-3 shrink-0" />
+                      <span className="truncate">
+                        {new Date(order.createdAt).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short'
+                        })}
+                        , {new Date(order.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
                     {order.trackingNumber && (
-                      <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 font-mono text-[10px] border border-amber-200">
+                      <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 font-mono text-[10px] border border-amber-200 shrink-0">
                         📮 {order.trackingNumber}
                       </span>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto">
                     {/* Inline Status Dropdown */}
-                    <CustomSelect
-                      value={order.status}
-                      disabled={singleTransitionMutation.isPending}
-                      onChange={(e) => {
-                        singleTransitionMutation.mutate({
-                          orderId: order._id,
-                          status: e.target.value,
-                          forceRevert: isOwner || isManager || isDistributor
-                        });
-                      }}
-                      size="xs"
-                      align="right"
-                      placement="top"
-                      minWidth="min-w-[170px]"
-                      className="border-slate-200 hover:border-emerald-400 bg-white font-semibold text-[11px] shadow-2xs"
-                      options={ALL_STATUS_OPTIONS}
-                    />
+                    <div className="flex-1 sm:flex-initial min-w-0 max-w-[145px] sm:max-w-none">
+                      <CustomSelect
+                        value={order.status}
+                        disabled={singleTransitionMutation.isPending}
+                        onChange={(e) => {
+                          singleTransitionMutation.mutate({
+                            orderId: order._id,
+                            status: e.target.value,
+                            forceRevert: isOwner || isManager || isDistributor
+                          });
+                        }}
+                        size="xs"
+                        align="left"
+                        placement="top"
+                        minWidth="min-w-0 w-full sm:min-w-[160px]"
+                        className="border-slate-200 hover:border-emerald-400 bg-white font-semibold text-[11px] shadow-2xs"
+                        options={ALL_STATUS_OPTIONS}
+                      />
+                    </div>
 
-                    {/* Bill / Invoice */}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedOrderForInvoice(order)}
-                      title="Tax Invoice"
-                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
-                    >
-                      🧾
-                    </button>
+                    {/* Quick Action Buttons */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOrderForInvoice(order)}
+                        title="Tax Invoice"
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        🧾
+                      </button>
 
-                    {/* Shipping Label */}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedOrderForLabel(order)}
-                      title="Shipping Label"
-                      className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold transition-colors"
-                    >
-                      🏷️
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOrderForLabel(order)}
+                        title="Shipping Label"
+                        className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        🏷️
+                      </button>
 
-                    {/* Edit Order */}
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditOrder(order)}
-                      title="Edit Order"
-                      className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center cursor-pointer"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditOrder(order)}
+                        title="Edit Order"
+                        className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center cursor-pointer"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
 
-                    {/* View Details */}
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/orders/${order._id}`)}
-                      title="View Details"
-                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/orders/${order._id}`)}
+                        title="View Details"
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
 
-                    {/* Delete Order */}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedOrderForDelete(order)}
-                      title="Delete Order"
-                      className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOrderForDelete(order)}
+                        title="Delete Order"
+                        className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

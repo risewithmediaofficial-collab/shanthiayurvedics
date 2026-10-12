@@ -323,9 +323,9 @@ export function OrdersFullTableView({
   return (
     <div className="space-y-3 font-sans pb-16">
       {/* ── 1. Top Navy Header Bar (matching Image 2) ── */}
-      <div className="bg-[#1a237e] text-white px-5 py-3 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-md">
+      <div className="bg-[#1a237e] text-white p-3.5 sm:px-5 sm:py-3 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
         <div>
-          <h1 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-lg sm:text-xl font-black tracking-tight text-white flex items-center gap-2">
             Orders Panel
           </h1>
           <p className="text-xs text-blue-200 mt-0.5 font-mono font-medium tracking-wide">
@@ -333,12 +333,12 @@ export function OrdersFullTableView({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <Button
             size="sm"
             variant="secondary"
             onClick={onSwitchView}
-            className="bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs shadow-xs cursor-pointer"
+            className="bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs shadow-xs cursor-pointer flex-1 sm:flex-initial"
           >
             🗂️ Card View
           </Button>
@@ -346,7 +346,7 @@ export function OrdersFullTableView({
             size="sm"
             variant="secondary"
             onClick={() => navigate('/dashboard')}
-            className="bg-white/20 hover:bg-white/30 text-white border border-white/30 font-bold text-xs shadow-xs cursor-pointer"
+            className="bg-white/20 hover:bg-white/30 text-white border border-white/30 font-bold text-xs shadow-xs cursor-pointer flex-1 sm:flex-initial"
           >
             Dashboard
           </Button>
@@ -512,7 +512,7 @@ export function OrdersFullTableView({
               options={STATUS_FILTER_OPTIONS}
               placeholder="All Status"
               size="sm"
-              minWidth="min-w-[150px]"
+              minWidth="min-w-full sm:min-w-[150px]"
             />
           </div>
 
@@ -524,7 +524,7 @@ export function OrdersFullTableView({
               options={PAYMENT_FILTER_OPTIONS}
               placeholder="All Payments"
               size="sm"
-              minWidth="min-w-[150px]"
+              minWidth="min-w-full sm:min-w-[150px]"
             />
           </div>
 
@@ -540,7 +540,7 @@ export function OrdersFullTableView({
               placeholder="All Districts"
               searchable
               size="sm"
-              minWidth="min-w-[160px]"
+              minWidth="min-w-full sm:min-w-[160px]"
             />
           </div>
 
@@ -556,7 +556,7 @@ export function OrdersFullTableView({
               placeholder="All Products"
               searchable
               size="sm"
-              minWidth="min-w-[170px]"
+              minWidth="min-w-full sm:min-w-[170px]"
             />
           </div>
 
@@ -572,7 +572,7 @@ export function OrdersFullTableView({
               placeholder="All Telecallers"
               searchable
               size="sm"
-              minWidth="min-w-[160px]"
+              minWidth="min-w-full sm:min-w-[160px]"
             />
           </div>
 
@@ -745,7 +745,7 @@ export function OrdersFullTableView({
       </div>
 
       {/* ── 6. Action Chips Ribbon (matching Image 2) ── */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none sm:flex-wrap">
         {/* 1. Dispatch Orders (Auto Dispatch) */}
         <button
           type="button"
@@ -879,7 +879,7 @@ export function OrdersFullTableView({
         <button
           type="button"
           onClick={onSwitchView}
-          className="px-3 py-1.5 rounded-lg bg-[#1a237e] hover:bg-[#0d145a] text-white text-xs font-bold shadow-xs flex items-center gap-1.5 ml-auto transition-colors cursor-pointer"
+          className="px-3 py-1.5 rounded-lg bg-[#1a237e] hover:bg-[#0d145a] text-white text-xs font-bold shadow-xs flex items-center gap-1.5 sm:ml-auto transition-colors cursor-pointer shrink-0"
         >
           <span>🗂️ Card View</span>
         </button>
@@ -899,15 +899,17 @@ export function OrdersFullTableView({
             <span>Select All</span>
           </label>
 
-          <div className="flex items-center gap-2">
-            <CustomSelect
-              value={bulkStatusToApply}
-              onChange={(e) => setBulkStatusToApply(e.target.value)}
-              options={BULK_STATUS_OPTIONS}
-              placeholder="-- Bulk Update Status --"
-              minWidth="min-w-[210px]"
-              size="sm"
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="w-full xs:w-auto xs:min-w-[170px] sm:min-w-[210px]">
+              <CustomSelect
+                value={bulkStatusToApply}
+                onChange={(e) => setBulkStatusToApply(e.target.value)}
+                options={BULK_STATUS_OPTIONS}
+                placeholder="-- Bulk Update Status --"
+                minWidth="min-w-full sm:min-w-[210px]"
+                size="sm"
+              />
+            </div>
 
             <label className="flex items-center gap-1 text-[11px] text-slate-600 cursor-pointer select-none">
               <input
@@ -994,7 +996,7 @@ export function OrdersFullTableView({
       </div>
 
       {/* ── 9. Comprehensive Data Table ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-sm scrollbar-thin">
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-sm scrollbar-thin touch-pan-x">
         <table className="w-full min-w-[980px] text-xs text-left">
           <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur-xs text-slate-700 uppercase tracking-wider font-semibold border-b shadow-2xs select-none">
             <tr>

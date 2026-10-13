@@ -218,7 +218,6 @@ export class ReorderService {
       if (createdCount > 0) {
         logger.info(`🔔 Generated ${createdCount} 15-day reorder notifications.`);
       }
-      }
 
       return createdCount;
     } catch (err) {

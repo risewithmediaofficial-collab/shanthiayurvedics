@@ -293,6 +293,8 @@ export function OrderDetailPage() {
                 courierName: order.courierName || 'India Post',
                 paymentMethod: order.paymentMethod || 'COD',
                 paymentStatus: order.paymentStatus || 'PENDING',
+                advanceAmount: order.advanceAmount || '',
+                advanceUtr: order.advanceUtr || '',
                 notes: order.notes || ''
               });
               setIsEditModalOpen(true);
@@ -360,10 +362,23 @@ export function OrderDetailPage() {
                 <span>Shipping & Handling</span>
                 <span>₹{order.shippingCharge || 0}</span>
               </div>
+              {order.advanceAmount > 0 && (
+                <div className="py-1.5 flex justify-between items-center text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                  <div className="flex items-center gap-1.5">
+                    <span>💳 Advance Paid</span>
+                    {order.advanceUtr && (
+                      <span className="font-mono text-[10px] text-emerald-700 font-normal bg-white px-1.5 py-0.5 rounded border border-emerald-200">
+                        UTR: {order.advanceUtr}
+                      </span>
+                    )}
+                  </div>
+                  <span className="font-mono">-₹{order.advanceAmount?.toLocaleString()}</span>
+                </div>
+              )}
               {order.paymentMethod === 'COD' && (
-                <div className="py-1 flex justify-between text-xs font-bold text-amber-900 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">
-                  <span>COD Collect Amount</span>
-                  <span className="font-mono">₹{(order.codAmount || order.grandTotal)?.toLocaleString()}</span>
+                <div className="py-1.5 flex justify-between items-center text-xs font-bold text-amber-900 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
+                  <span>Balance COD to Collect</span>
+                  <span className="font-mono text-sm">₹{(order.codAmount ?? Math.max(0, (order.grandTotal || 0) - (order.advanceAmount || 0)))?.toLocaleString()}</span>
                 </div>
               )}
               <div className="py-2 flex justify-between text-sm font-black text-slate-900 border-t border-slate-200 mt-1">
@@ -411,7 +426,14 @@ export function OrderDetailPage() {
                   {order.deliveryAddress?.street}, {order.deliveryAddress?.city}, {order.deliveryAddress?.state} - {order.deliveryAddress?.pincode}
                 </div>
                 <div className="text-slate-500 text-[11px] flex items-center justify-between pt-1">
-                  <span>Payment: <strong className="text-slate-800">{order.paymentStatus} ({order.paymentMethod || 'COD'})</strong></span>
+                  <div>
+                    <span>Payment: <strong className="text-slate-800">{order.paymentStatus} ({order.paymentMethod || 'COD'})</strong></span>
+                    {order.advanceAmount > 0 && (
+                      <div className="text-emerald-700 font-bold text-[10px] mt-0.5">
+                        Advance Paid: ₹{order.advanceAmount} {order.advanceUtr ? `• UTR: ${order.advanceUtr}` : ''}
+                      </div>
+                    )}
+                  </div>
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
                     (order.courierName || '').includes('Professional')
                       ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
@@ -558,6 +580,8 @@ export function OrderDetailPage() {
                 courierName: editFormData.courierName,
                 paymentMethod: editFormData.paymentMethod,
                 paymentStatus: editFormData.paymentStatus,
+                advanceAmount: Number(editFormData.advanceAmount) || 0,
+                advanceUtr: (editFormData.advanceUtr || '').trim(),
                 notes: editFormData.notes
               });
             }}
@@ -676,6 +700,22 @@ export function OrderDetailPage() {
                     { value: 'FAILED', label: 'Failed' },
                     { value: 'REFUNDED', label: 'Refunded' }
                   ]}
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                <Input
+                  label="Advance Amount Paid (₹)"
+                  type="number"
+                  min="0"
+                  value={editFormData.advanceAmount}
+                  placeholder="0"
+                  onChange={(e) => setEditFormData({ ...editFormData, advanceAmount: e.target.value })}
+                />
+                <Input
+                  label="Advance UTR / Transaction No"
+                  value={editFormData.advanceUtr}
+                  placeholder="e.g. 428910284918 (GooglePay / UPI)"
+                  onChange={(e) => setEditFormData({ ...editFormData, advanceUtr: e.target.value })}
                 />
               </div>
               <div className="mt-3">

@@ -300,8 +300,8 @@ button:disabled { cursor: not-allowed; }
   }
 
   @page shipping-label {
-    size: 4in 6in;
-    margin: 0;
+    size: A4 landscape;
+    margin: 5mm;
   }
 
   body.printing-shipping-label {

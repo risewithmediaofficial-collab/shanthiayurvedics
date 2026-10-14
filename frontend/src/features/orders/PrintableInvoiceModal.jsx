@@ -150,9 +150,29 @@ export function PrintableInvoiceModal({ isOpen, onClose, order, autoPrint = fals
               </span>
             </div>
             <div className="flex justify-between text-sm font-black text-slate-900 border-t border-slate-300 pt-2">
-              <span>Total Amount Payable:</span>
+              <span>Total Invoice Amount:</span>
               <span className="font-mono text-emerald-800">₹{order.grandTotal?.toLocaleString()}</span>
             </div>
+            {order.advanceAmount > 0 && (
+              <>
+                <div className="flex justify-between text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-1 rounded">
+                  <span>Advance Amount Paid (Prepaid Online / UPI):</span>
+                  <span className="font-mono">-₹{order.advanceAmount?.toLocaleString()}</span>
+                </div>
+                {order.advanceUtr && (
+                  <div className="flex justify-between text-[11px] text-slate-500 px-2">
+                    <span>Advance Payment UTR / Ref No:</span>
+                    <span className="font-mono font-bold text-slate-800">{order.advanceUtr}</span>
+                  </div>
+                )}
+                {order.paymentMethod === 'COD' && (
+                  <div className="flex justify-between text-xs font-black text-amber-900 bg-amber-50 px-2 py-1.5 rounded border border-amber-200">
+                    <span>Balance COD Collect at Doorstep:</span>
+                    <span className="font-mono text-sm">₹{(order.codAmount ?? Math.max(0, order.grandTotal - order.advanceAmount))?.toLocaleString()}</span>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           <div className="pt-2 text-[10px] text-slate-400 text-center border-t border-slate-100">

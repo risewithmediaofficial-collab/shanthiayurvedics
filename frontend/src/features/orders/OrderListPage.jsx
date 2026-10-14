@@ -1271,6 +1271,17 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                     <div className="text-base sm:text-lg font-black text-slate-900 font-mono tracking-tight">
                       ₹{order.grandTotal?.toLocaleString()}
                     </div>
+                    {order.advanceAmount > 0 && (
+                      <div className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-0.5">
+                        Adv: ₹{order.advanceAmount.toLocaleString()}
+                        {order.advanceUtr ? ` • UTR: ${order.advanceUtr}` : ''}
+                      </div>
+                    )}
+                    {order.paymentMethod === 'COD' && order.advanceAmount > 0 && (
+                      <div className="text-[10px] text-amber-800 font-bold font-mono">
+                        COD: ₹{(order.codAmount ?? Math.max(0, (order.grandTotal || 0) - order.advanceAmount)).toLocaleString()}
+                      </div>
+                    )}
                     <div className="flex items-center justify-end gap-1 mt-1">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${statusConfig.bg}`}>
                         {statusConfig.label}

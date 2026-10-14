@@ -167,9 +167,11 @@ export class OrderService {
         : (totalItemDiscounts + clientDiscountTotal);
       const calculatedTotal = Math.max(0, subtotal - discountTotal + shippingCharge);
       const grandTotal = orderData.offerPrice ? Number(orderData.offerPrice) : calculatedTotal;
+      const advanceAmount = Math.max(0, Number(orderData.advanceAmount || 0));
+      const advanceUtr = (orderData.advanceUtr || orderData.utrNumber || '').trim();
       const codAmount = (isOfficeSale || isProfessionalCourier) ? 0 : (orderData.codAmount !== undefined && orderData.codAmount !== null && orderData.codAmount !== ''
         ? Number(orderData.codAmount)
-        : (paymentMethod === 'COD' ? grandTotal : 0));
+        : (paymentMethod === 'COD' ? Math.max(0, grandTotal - advanceAmount) : 0));
 
       const assignedTelecallerId = orderData.telecallerId || user.id || user._id;
       let telecallerName = orderData.telecallerName || '';
@@ -214,6 +216,8 @@ export class OrderService {
         discountTotal,
         shippingCharge,
         codAmount,
+        advanceAmount,
+        advanceUtr,
         courierName,
         weight: orderWeight,
         offerPrice: orderData.offerPrice ? Number(orderData.offerPrice) : undefined,
@@ -477,6 +481,18 @@ export class OrderService {
     }
     if (/professional/i.test(effectiveCourier)) {
       order.codAmount = 0;
+    }
+
+    if (updateData.advanceAmount !== undefined) {
+      order.advanceAmount = Math.max(0, Number(updateData.advanceAmount) || 0);
+    }
+    if (updateData.advanceUtr !== undefined || updateData.utrNumber !== undefined) {
+      order.advanceUtr = (updateData.advanceUtr || updateData.utrNumber || '').trim();
+    }
+    if (updateData.codAmount !== undefined) {
+      order.codAmount = Number(updateData.codAmount);
+    } else if (updateData.advanceAmount !== undefined && order.paymentMethod === 'COD') {
+      order.codAmount = Math.max(0, (order.grandTotal || 0) - (order.advanceAmount || 0));
     }
 
     if (updateData.paymentStatus) {

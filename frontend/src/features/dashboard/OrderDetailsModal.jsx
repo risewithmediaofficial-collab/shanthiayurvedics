@@ -131,6 +131,9 @@ export function OrderDetailsModal({
       items,
       deliveryAddress: addr,
       trackingNumber: tracking,
+      advanceAmount: Number(base.advanceAmount || 0),
+      advanceUtr: base.advanceUtr || '',
+      codAmount: Number(base.codAmount ?? Math.max(0, grandTotal - (base.advanceAmount || 0))),
       paymentMethod: base.paymentMethod || 'COD',
       paymentStatus: base.paymentStatus || (base.paymentMethod === 'ONLINE' ? 'PAID' : 'COD_PENDING')
     };
@@ -471,6 +474,11 @@ export function OrderDetailsModal({
             <div className="bg-slate-50/70 border-t border-slate-200 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="space-y-1 text-slate-500 text-[11px]">
                 <div><strong>Payment Method:</strong> {d.paymentMethod} ({d.paymentStatus})</div>
+                {d.advanceAmount > 0 && (
+                  <div className="text-emerald-700 font-bold">
+                    <strong>Advance Paid:</strong> ₹{d.advanceAmount.toLocaleString()} {d.advanceUtr ? `(UTR: ${d.advanceUtr})` : ''}
+                  </div>
+                )}
                 <div><strong>Packaging:</strong> Corrugated Box + Bubble Guard + Tamper-evident Seal</div>
                 <div><strong>Clinic Biller ID:</strong> 1000058077 • Shanthi Ayurvedas Hosur</div>
               </div>
@@ -493,9 +501,21 @@ export function OrderDetailsModal({
                   </div>
                 )}
                 <div className="flex justify-between text-sm font-black text-slate-900 pt-1.5 border-t border-slate-200">
-                  <span>Grand Total Payable:</span>
+                  <span>Grand Total:</span>
                   <span className="font-mono text-emerald-700 text-base">₹{d.grandTotal.toLocaleString()}</span>
                 </div>
+                {d.advanceAmount > 0 && (
+                  <div className="flex justify-between text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                    <span>Advance Paid:</span>
+                    <span className="font-mono">-₹{d.advanceAmount.toLocaleString()}</span>
+                  </div>
+                )}
+                {d.paymentMethod === 'COD' && (
+                  <div className="flex justify-between text-xs font-bold text-amber-900 bg-amber-50 px-2 py-1 rounded border border-amber-200 mt-1">
+                    <span>Balance COD to Collect:</span>
+                    <span className="font-mono text-sm">₹{(d.codAmount ?? Math.max(0, d.grandTotal - (d.advanceAmount || 0))).toLocaleString()}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

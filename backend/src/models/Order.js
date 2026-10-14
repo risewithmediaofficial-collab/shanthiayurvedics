@@ -123,6 +123,16 @@ const orderSchema = new mongoose.Schema(
       default: 0,
       min: 0
     },
+    advanceAmount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    advanceUtr: {
+      type: String,
+      trim: true,
+      default: ''
+    },
     weight: {
       type: Number,
       default: 0,

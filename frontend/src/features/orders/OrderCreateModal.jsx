@@ -105,6 +105,8 @@ export function OrderCreateModal({
   const [courierName, setCourierName] = useState('India Post'); // 'India Post' | 'The Professional Courier'
   const [paymentMethod, setPaymentMethod] = useState('COD'); // 'COD' | 'ONLINE'
   const [shippingCharge, setShippingCharge] = useState('69');
+  const [advanceAmount, setAdvanceAmount] = useState('');
+  const [advanceUtr, setAdvanceUtr] = useState('');
   const [codAmount, setCodAmount] = useState('');
 
   const handleCourierChange = (newCourier) => {
@@ -269,10 +271,12 @@ export function OrderCreateModal({
   const parsedShippingCharge = isOfficeOrder ? 0 : (Number(shippingCharge) || 0);
   const autoCalculatedTotal = Math.max(0, productsGrossSubtotal - totalDiscountAmount + parsedShippingCharge);
   const finalPayableTotal = offerPrice.trim() !== '' ? Number(offerPrice) : autoCalculatedTotal;
+  const parsedAdvance = Math.max(0, Number(advanceAmount) || 0);
+  const defaultCodToCollect = Math.max(0, finalPayableTotal - parsedAdvance);
   const effectiveCodAmount = isOfficeOrder || courierName === 'The Professional Courier'
     ? 0
     : (paymentMethod === 'COD'
-        ? (codAmount.trim() !== '' ? Number(codAmount) : finalPayableTotal)
+        ? (codAmount.trim() !== '' ? Number(codAmount) : defaultCodToCollect)
         : 0);
 
   // Order Submission Mutation
@@ -314,6 +318,8 @@ export function OrderCreateModal({
             `📦 *Prescription Items:*\n${itemsList}\n\n` +
             `${isOfficeOrder ? '' : `🚚 *Courier Partner:* ${courierName}\n`}` +
             `💰 *Total Amount:* ₹${finalPayableTotal} (${isOfficeOrder ? `Direct Counter Payment (${paymentMethod})` : (courierName === 'The Professional Courier' ? 'Pre-Payment (TPC Online/UPI)' : (paymentMethod === 'COD' ? 'Cash on Delivery' : 'Prepaid Online/UPI'))})\n` +
+            (parsedAdvance > 0 ? `💳 *Advance Paid:* ₹${parsedAdvance}${advanceUtr ? ` (UTR: ${advanceUtr})` : ''}\n` : '') +
+            (!isOfficeOrder && courierName !== 'The Professional Courier' && paymentMethod === 'COD' ? `💵 *COD to Collect at Doorstep:* ₹${effectiveCodAmount}\n` : '') +
             `${isOfficeOrder ? `📍 *Counter Location:* Hosur Main Branch Desk\n\n` : `📍 *Delivery Address:* ${street}, ${village ? village + ', ' : ''}${district}, ${state} - ${pincode}\n\n`}` +
             `📱 Track & view dosage guide on *my.shanthiayurvedas.com*.\n\n` +
             `Thank you for trusting Shanthi Ayurvedas! 🙏`
@@ -367,6 +373,8 @@ export function OrderCreateModal({
       }),
       weight: totalWeightGrams,
       shippingCharge: isOfficeOrder ? 0 : parsedShippingCharge,
+      advanceAmount: parsedAdvance,
+      advanceUtr: advanceUtr.trim(),
       codAmount: isOfficeOrder || courierName === 'The Professional Courier' ? 0 : effectiveCodAmount,
       discountTotal: totalDiscountAmount,
       offerPrice: offerPrice.trim() !== '' ? Number(offerPrice) : undefined,
@@ -1118,10 +1126,10 @@ export function OrderCreateModal({
               )}
             </div>
 
-            {/* 4C. Shipping Charge & COD Amount */}
+            {/* 4C. Shipping Charge, Advance Paid & COD Amount */}
             <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Manual Shipping Charge Input */}
+                {/* 1. Manual Shipping Charge Input */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
                     <span>🚚 Shipping Charge (₹) *</span>
@@ -1154,12 +1162,97 @@ export function OrderCreateModal({
                   </div>
                 </div>
 
-                {/* Manual COD Collect Amount (Only for COD with India Post) */}
+                {/* 2. Advance Amount Paid Input */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <span>💳 Advance Amount Paid (₹)</span>
+                      {parsedAdvance > 0 && (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                          -₹{parsedAdvance} from Total
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">Enter advance</span>
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      type="number"
+                      min="0"
+                      max={finalPayableTotal}
+                      placeholder="0"
+                      value={advanceAmount}
+                      onChange={(e) => {
+                        setAdvanceAmount(e.target.value);
+                        setCodAmount('');
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    {['0', '200', '300', '500'].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => {
+                          setAdvanceAmount(preset === '0' ? '' : preset);
+                          setCodAmount('');
+                        }}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
+                          (preset === '0' && !advanceAmount) || advanceAmount === preset
+                            ? 'bg-emerald-700 text-white border-emerald-700'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {preset === '0' ? '₹0 None' : `₹${preset}`}
+                      </button>
+                    ))}
+                    {finalPayableTotal > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAdvanceAmount(String(finalPayableTotal));
+                          setCodAmount('');
+                        }}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
+                          advanceAmount === String(finalPayableTotal)
+                            ? 'bg-emerald-700 text-white border-emerald-700'
+                            : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                        }`}
+                      >
+                        Full (₹{finalPayableTotal})
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Advance UTR & COD Collect Amount */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+                {/* 3. UTR No / Reference No */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                    <span>🏦 Advance UTR / Transaction No</span>
+                    <span className="text-[10px] text-slate-400 font-normal">UPI / PhonePe / GPay</span>
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="e.g. 428910284918 or UPI Ref"
+                    value={advanceUtr}
+                    onChange={(e) => setAdvanceUtr(e.target.value)}
+                  />
+                  <div className="text-[10px] text-slate-400 mt-1">
+                    {parsedAdvance > 0
+                      ? 'Stored with order for reconciliation & receipt'
+                      : 'Optional transaction UTR if patient sent advance'}
+                  </div>
+                </div>
+
+                {/* 4. Manual COD Collect Amount (Only for COD with India Post) */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
                     <span>💵 COD Collect Amount (₹)</span>
                     <span className="text-[10px] text-slate-400 font-normal">
-                      {courierName === 'The Professional Courier' ? 'Not Applicable' : 'Enter manually'}
+                      {courierName === 'The Professional Courier' ? 'Not Applicable' : 'Auto: Total - Advance'}
                     </span>
                   </label>
                   {courierName !== 'The Professional Courier' && paymentMethod === 'COD' ? (
@@ -1167,21 +1260,26 @@ export function OrderCreateModal({
                       <Input
                         type="number"
                         min="0"
-                        placeholder={`₹${finalPayableTotal} (default)`}
+                        placeholder={`₹${defaultCodToCollect} (default)`}
                         value={codAmount}
                         onChange={(e) => setCodAmount(e.target.value)}
                       />
                       <div className="flex items-center justify-between mt-1.5 text-[10px]">
-                        <span className="text-slate-500">
-                          Collecting: <strong className="text-slate-900 font-mono">₹{effectiveCodAmount}</strong>
+                        <span className="text-slate-600">
+                          Collecting: <strong className="text-slate-900 font-mono text-xs">₹{effectiveCodAmount}</strong>
+                          {parsedAdvance > 0 && (
+                            <span className="text-emerald-700 ml-1">
+                              (₹{finalPayableTotal} - ₹{parsedAdvance} Adv)
+                            </span>
+                          )}
                         </span>
-                        {codAmount.trim() !== '' && codAmount !== String(finalPayableTotal) && (
+                        {codAmount.trim() !== '' && codAmount !== String(defaultCodToCollect) && (
                           <button
                             type="button"
-                            onClick={() => setCodAmount(String(finalPayableTotal))}
+                            onClick={() => setCodAmount('')}
                             className="text-ayur-700 hover:underline font-bold cursor-pointer"
                           >
-                            Sync Total (₹{finalPayableTotal})
+                            Reset to Balance (₹{defaultCodToCollect})
                           </button>
                         )}
                       </div>
@@ -1218,6 +1316,13 @@ export function OrderCreateModal({
                   <span className="text-emerald-400 font-bold">Total Discount: -₹{totalDiscountAmount.toLocaleString()}</span>
                 </>
               )}
+              {parsedAdvance > 0 && (
+                <>
+                  <span>•</span>
+                  <span className="text-amber-300 font-bold">Advance Paid: -₹{parsedAdvance.toLocaleString()}</span>
+                  {advanceUtr && <span className="text-amber-200 font-mono">(UTR: {advanceUtr})</span>}
+                </>
+              )}
               <span>•</span>
               <span className="text-emerald-300 font-mono">Weight: {formattedTotalWeight}</span>
             </div>
@@ -1227,8 +1332,9 @@ export function OrderCreateModal({
               ₹{finalPayableTotal.toLocaleString()}
             </div>
             {!isOfficeOrder && courierName !== 'The Professional Courier' && paymentMethod === 'COD' ? (
-              <div className="text-[10px] text-amber-300 font-bold font-mono">
-                COD: ₹{effectiveCodAmount.toLocaleString()}
+              <div className="text-[11px] text-amber-300 font-bold font-mono">
+                COD to Collect: ₹{effectiveCodAmount.toLocaleString()}
+                {parsedAdvance > 0 && ` (After ₹${parsedAdvance} Adv)`}
               </div>
             ) : !isOfficeOrder && (courierName === 'The Professional Courier' || paymentMethod === 'ONLINE') ? (
               <div className="text-[10px] text-cyan-300 font-bold font-mono">

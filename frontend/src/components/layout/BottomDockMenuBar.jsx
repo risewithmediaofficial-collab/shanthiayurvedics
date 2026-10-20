@@ -244,7 +244,7 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
       color: 'text-rose-600',
       hiddenOnMobile: true,
       isActive: currentPath === '/reports/settlement' || currentPath === '/orders/stuck',
-      onClick: () => navigate('/orders?view=full')
+      onClick: () => navigate('/orders?orderView=full')
     },
     {
       id: 'velocity',

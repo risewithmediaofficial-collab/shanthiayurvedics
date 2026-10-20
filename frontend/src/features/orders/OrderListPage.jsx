@@ -116,7 +116,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [viewMode, setViewModeState] = useState(() => {
-    return searchParams.get('view') === 'full' ? 'full' : 'card';
+    return searchParams.get('orderView') === 'full' ? 'full' : 'card';
   });
   const [selectedCustomerForProfile, setSelectedCustomerForProfile] = useState(null);
 
@@ -125,9 +125,9 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       if (mode === 'full') {
-        next.set('view', 'full');
+        next.set('orderView', 'full');
       } else {
-        next.delete('view');
+        next.delete('orderView');
       }
       return next;
     });

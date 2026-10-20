@@ -16,6 +16,34 @@ import { Button } from '../components/common/Button.jsx';
 import { Input } from '../components/common/Input.jsx';
 import { EmptyState } from '../components/common/EmptyState.jsx';
 import { Table } from '../components/common/Table.jsx';
+import { CustomSelect } from '../components/common/CustomSelect.jsx';
+
+describe('CustomSelect', () => {
+  it('opens a portaled menu and reports the selected option', async () => {
+    const handleChange = vi.fn();
+    render(
+      <CustomSelect
+        value="caller-1"
+        ariaLabel="Assign lead"
+        portal
+        options={[
+          { value: 'caller-1', label: 'Satish Telecaller' },
+          { value: 'caller-2', label: 'Other Telecaller' }
+        ]}
+        onChange={handleChange}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Assign lead' }));
+    const option = screen.getByRole('option', { name: 'Other Telecaller' });
+    expect(document.body).toContainElement(option);
+
+    await userEvent.click(option);
+    expect(handleChange).toHaveBeenCalledWith({
+      target: { value: 'caller-2', name: undefined }
+    });
+  });
+});
 
 describe('Badge component', () => {
   it('renders children correctly', () => {

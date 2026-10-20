@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useId, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Check, Search, X } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 
@@ -36,6 +37,7 @@ export function CustomSelect({
   containerClassName = '',
   triggerClassName = '',
   menuClassName = '',
+  onClick,
   label,
   error,
   helperText,
@@ -47,15 +49,19 @@ export function CustomSelect({
   autoStatusDot = true,
   placement = 'auto',
   dropUp = false,
+  portal = false,
+  ariaLabel,
 }) {
   const [open, setOpen] = useState(false);
   const [detectedDropUp, setDetectedDropUp] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const ref = useRef(null);
+  const menuRef = useRef(null);
   const searchInputRef = useRef(null);
   const generatedId = useId();
   const selectId = id || generatedId;
+  const [portalPosition, setPortalPosition] = useState(null);
 
   // Normalize options to { value, label, dot, badge, icon, disabled }
   const normalizedOptions = useMemo(() => {
@@ -97,7 +103,11 @@ export function CustomSelect({
   // Close on outside click
   useEffect(() => {
     const handleClick = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) {
+      if (
+        ref.current &&
+        !ref.current.contains(e.target) &&
+        !menuRef.current?.contains(e.target)
+      ) {
         setOpen(false);
         setSearchTerm('');
       }
@@ -177,6 +187,45 @@ export function CustomSelect({
     }
   }, [open, placement, dropUp, align]);
 
+  useEffect(() => {
+    if (!portal || !open) {
+      setPortalPosition(null);
+      return undefined;
+    }
+
+    const updatePortalPosition = () => {
+      if (!ref.current) return;
+      const rect = ref.current.getBoundingClientRect();
+      const menuHeight = Math.min(288, Math.max(44, filteredOptions.length * 34 + 12 + (searchable ? 44 : 0)));
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const isTop = dropUp || placement === 'top' || (
+        placement !== 'bottom' && spaceBelow < menuHeight && rect.top > spaceBelow
+      );
+      const width = Math.min(Math.max(rect.width, 180), window.innerWidth - 24);
+      const preferredLeft = align === 'right' ? rect.right - width : rect.left;
+      const left = Math.max(12, Math.min(preferredLeft, window.innerWidth - width - 12));
+
+      setPortalPosition({
+        position: 'fixed',
+        left,
+        width,
+        maxHeight: Math.max(120, window.innerHeight - 24),
+        top: isTop ? undefined : rect.bottom + 6,
+        bottom: isTop ? window.innerHeight - rect.top + 6 : undefined,
+        zIndex: 1000,
+        isTop,
+      });
+    };
+
+    updatePortalPosition();
+    window.addEventListener('resize', updatePortalPosition);
+    document.addEventListener('scroll', updatePortalPosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePortalPosition);
+      document.removeEventListener('scroll', updatePortalPosition, true);
+    };
+  }, [portal, open, filteredOptions.length, searchable, dropUp, placement, align]);
+
   const isTop = dropUp || placement === 'top' || (placement !== 'bottom' && detectedDropUp);
 
   const selected = normalizedOptions.find((o) => o.value === value);
@@ -211,7 +260,10 @@ export function CustomSelect({
         id={selectId}
         type="button"
         disabled={disabled}
-        onClick={() => !disabled && setOpen((prev) => !prev)}
+        onClick={(event) => {
+          onClick?.(event);
+          if (!disabled) setOpen((prev) => !prev);
+        }}
         className={twMerge(
           'relative w-full flex items-center justify-between gap-2 rounded-lg border font-medium text-left',
           'transition-all duration-200 ease-out cursor-pointer',
@@ -228,6 +280,8 @@ export function CustomSelect({
         )}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-label={ariaLabel}
+        aria-controls={`${selectId}-listbox`}
       >
         <div className="flex items-center gap-1.5 truncate flex-1 min-w-0">
           {IconComponent && (
@@ -268,18 +322,22 @@ export function CustomSelect({
       </button>
 
       {/* Dropdown Menu */}
+      {(!portal || (open && portalPosition)) && createPortalIfNeeded(
       <div
+        id={`${selectId}-listbox`}
+        ref={menuRef}
+        style={portal ? portalPosition || { position: 'fixed', top: 0, left: 0 } : undefined}
         className={twMerge(
-          'absolute z-50 py-1.5',
+          portal ? 'fixed z-[1000] py-1.5 animate-fade-in' : 'absolute z-50 py-1.5',
           'bg-white/98 backdrop-blur-md border border-slate-200/90 rounded-xl shadow-xl shadow-slate-900/15 ring-1 ring-slate-950/5',
           'transition-all duration-150 ease-out',
-          isTop ? 'bottom-full mb-1.5 origin-bottom' : 'top-full mt-1.5 origin-top',
+          !portal && (isTop ? 'bottom-full mb-1.5 origin-bottom' : 'top-full mt-1.5 origin-top'),
           minWidth,
           'max-w-[calc(100vw-2.5rem)]',
-          detectedAlign === 'right' ? 'right-0' : 'left-0',
+          !portal && (detectedAlign === 'right' ? 'right-0' : 'left-0'),
           open
             ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
-            : isTop
+            : (portalPosition?.isTop ?? isTop)
             ? 'opacity-0 scale-95 translate-y-1.5 pointer-events-none'
             : 'opacity-0 scale-95 -translate-y-1.5 pointer-events-none',
           menuClassName
@@ -372,7 +430,7 @@ export function CustomSelect({
             })
           )}
         </div>
-      </div>
+      </div>, portal)}
 
       {error && (
         <p role="alert" className="mt-1 text-xs text-rose-600 font-medium">
@@ -386,6 +444,12 @@ export function CustomSelect({
       )}
     </div>
   );
+}
+
+function createPortalIfNeeded(element, portal) {
+  return portal && typeof document !== 'undefined'
+    ? createPortal(element, document.body)
+    : element;
 }
 
 export default CustomSelect;

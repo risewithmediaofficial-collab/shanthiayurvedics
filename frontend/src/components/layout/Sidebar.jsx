@@ -440,14 +440,18 @@ export function Sidebar({ isOpen, onClose }) {
                       const Icon = item.icon;
                       const currentPath = location.pathname;
                       const currentQuery = location.search;
+                      const currentView = new URLSearchParams(currentQuery).get('view');
 
                       const isActive = (() => {
+                        if (item.path === '/dashboard') {
+                          return (currentPath === '/' || currentPath === '/dashboard') && currentView !== 'telecaller';
+                        }
+                        if (item.path === '/dashboard?view=telecaller') {
+                          return currentPath === '/dashboard' && currentView === 'telecaller';
+                        }
                         if (item.path === currentPath + currentQuery) return true;
                         if (item.path === currentPath) return true;
 
-                        if (item.path === '/dashboard') {
-                          return (currentPath === '/' || currentPath === '/dashboard') && !currentQuery.includes('view=telecaller');
-                        }
                         if (item.path === '/orders') {
                           return currentPath === '/orders' || (/^\/orders\/[0-9a-fA-F]{24}$/.test(currentPath));
                         }

@@ -25,6 +25,7 @@ import { Table } from '../../components/common/Table.jsx';
 import { Button } from '../../components/common/Button.jsx';
 import { Input } from '../../components/common/Input.jsx';
 import { Select } from '../../components/common/Select.jsx';
+import { CustomSelect } from '../../components/common/CustomSelect.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Pagination } from '../../components/common/Pagination.jsx';
@@ -435,27 +436,28 @@ export function LeadListPage({ callerId } = {}) {
     {
       header: 'Assigned To',
       cell: (row) => (
-        <div className="text-xs text-slate-600">
+        <div className="w-[150px] text-xs text-slate-600">
           {hasPermission('leads.assign') ? (
-            <select
-              value={row.assignedTo?._id || ''}
+            <CustomSelect
+              value={typeof row.assignedTo === 'string' ? row.assignedTo : row.assignedTo?._id || row.assignedTo?.id || ''}
               onClick={(e) => e.stopPropagation()}
-              onChange={(e) => {
-                if (e.target.value) {
-                  assignLeadMutation.mutate({ leadId: row._id, assignedTo: e.target.value });
+              onChange={(event) => {
+                if (event.target.value) {
+                  assignLeadMutation.mutate({ leadId: row._id, assignedTo: event.target.value });
                 }
               }}
               disabled={assignLeadMutation.isPending}
               aria-label={`Assign ${row.name}`}
-              className="max-w-[150px] text-xs bg-white border border-slate-200 rounded-md px-2 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-ayur-500/20 cursor-pointer"
-            >
-              <option value="">{row.assignedTo?.name || 'Unassigned'}</option>
-              {telecallers.map((telecaller) => (
-                <option key={telecaller._id} value={telecaller._id}>
-                  {telecaller.name}
-                </option>
-              ))}
-            </select>
+              options={telecallers.map((telecaller) => ({
+                value: telecaller._id || telecaller.id,
+                label: telecaller.name
+              }))}
+              placeholder="Unassigned"
+              size="sm"
+              minWidth="min-w-[180px]"
+              portal
+              placement="auto"
+            />
           ) : (
             row.assignedTo?.name || <span className="text-slate-400 italic">Unassigned</span>
           )}

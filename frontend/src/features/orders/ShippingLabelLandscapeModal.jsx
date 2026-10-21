@@ -135,11 +135,13 @@ export function ShippingLabelLandscapeModal({
     };
   };
 
-  // Generate printable standalone HTML (A4 portrait with 3 labels stacked vertically)
+  // Generate printable standalone HTML (A4 portrait with 3 labels stacked vertically with cutting guides)
   const generatePrintHtml = () => {
     const renderedSheets = sheets.map((sheetOrders, sIdx) => {
       const sheetNum = sIdx + 1;
-      const labelsHtml = sheetOrders.map((ord, lIdx) => {
+      const sheetItems = [];
+
+      sheetOrders.forEach((ord, lIdx) => {
         const overallLabelNum = (sIdx * labelsPerSheet) + lIdx + 1;
         const d = getOrderData(ord);
 
@@ -163,7 +165,20 @@ export function ShippingLabelLandscapeModal({
           </tr>
         ` : '');
 
-        return `
+        // Add cut guideline between labels
+        if (lIdx > 0) {
+          sheetItems.push(`
+            <div class="cut-guide">
+              <span class="cut-scissor">✂</span>
+              <span class="cut-dash"></span>
+              <span class="cut-text">CUT HERE · ಇಲ್ಲಿ ಕತ್ತರಿಸಿ</span>
+              <span class="cut-dash"></span>
+              <span class="cut-scissor cut-flip">✂</span>
+            </div>
+          `);
+        }
+
+        sheetItems.push(`
           <div class="label-box">
             <!-- 1. Header Banner -->
             <div class="label-header">
@@ -253,13 +268,26 @@ export function ShippingLabelLandscapeModal({
               EMERGENCY MEDICINE - HANDLE WITH CARE AND DELIVERY IMMEDIATELY
             </div>
           </div>
-        `;
-      }).join('');
+        `);
+      });
+
+      // If fewer than 3 labels on this sheet, also output a cut guideline after the printed label(s)
+      if (sheetOrders.length < 3) {
+        sheetItems.push(`
+          <div class="cut-guide">
+            <span class="cut-scissor">✂</span>
+            <span class="cut-dash"></span>
+            <span class="cut-text">CUT HERE · ಇಲ್ಲಿ ಕತ್ತರಿಸಿ</span>
+            <span class="cut-dash"></span>
+            <span class="cut-scissor cut-flip">✂</span>
+          </div>
+        `);
+      }
 
       return `
         <div class="sheet-page">
-          <div class="labels-grid-3">
-            ${labelsHtml}
+          <div class="labels-container-3">
+            ${sheetItems.join('')}
           </div>
         </div>
       `;
@@ -275,7 +303,7 @@ export function ShippingLabelLandscapeModal({
           * { box-sizing: border-box; margin: 0; padding: 0; }
           @page {
             size: A4 portrait;
-            margin: 6mm 7mm;
+            margin: 5mm 6mm;
           }
           html, body {
             background: #fff;
@@ -291,8 +319,8 @@ export function ShippingLabelLandscapeModal({
             overflow: hidden;
             margin: 0 auto;
             width: 196mm;
-            height: 284mm;
-            max-height: 284mm;
+            height: 285mm;
+            max-height: 285mm;
           }
           .sheet-page:last-child {
             page-break-after: avoid;
@@ -300,17 +328,15 @@ export function ShippingLabelLandscapeModal({
           }
 
           /* 3 Labels Stacked Vertically on A4 Portrait */
-          .labels-grid-3 {
+          .labels-container-3 {
             display: flex;
             flex-direction: column;
-            gap: 3.5mm;
-            align-items: center;
             width: 100%;
           }
           .label-box {
             width: 196mm;
-            height: 90mm;
-            max-height: 90mm;
+            height: 87mm;
+            max-height: 87mm;
             border: 1.5px solid #000;
             box-sizing: border-box;
             display: flex;
@@ -321,6 +347,37 @@ export function ShippingLabelLandscapeModal({
             color: #000;
             line-height: 1.15;
           }
+          .cut-guide {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 196mm;
+            height: 4mm;
+            margin: 1.5mm 0;
+            color: #6b7280;
+            font-size: 7.5px;
+            font-family: monospace;
+          }
+          .cut-dash {
+            flex: 1;
+            border-top: 1px dashed #9ca3af;
+            height: 0;
+          }
+          .cut-text {
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            font-size: 7.5px;
+          }
+          .cut-scissor {
+            font-size: 9px;
+            color: #4b5563;
+          }
+          .cut-flip {
+            transform: scaleX(-1);
+            display: inline-block;
+          }
+
           .label-header {
             background-color: #362115 !important;
             color: #fff !important;
@@ -490,10 +547,10 @@ export function ShippingLabelLandscapeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-700 w-full max-w-5xl rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[96vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-fade-in overflow-hidden">
+      <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[96vh] h-[92vh]">
         {/* Top Purple Toolbar */}
-        <div className="bg-[#4a154b] text-white px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-md border-b border-purple-800">
+        <div className="bg-[#4a154b] text-white px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-md border-b border-purple-800 shrink-0">
           {/* Sheet counter info */}
           <div className="flex items-center gap-2">
             <span className="font-semibold text-xs sm:text-sm tracking-wide text-purple-100">
@@ -506,13 +563,9 @@ export function ShippingLabelLandscapeModal({
             {/* Per Page: Fixed 3 Labels / A4 Sheet */}
             <div className="flex items-center gap-1.5">
               <span className="text-purple-200 font-medium">Per Page:</span>
-              <select
-                value="3"
-                onChange={() => {}}
-                className="bg-purple-950/80 text-white font-bold text-xs px-2.5 py-1 rounded border border-purple-400/40 focus:outline-none cursor-pointer"
-              >
-                <option value="3">3 Labels (A4 Sheet)</option>
-              </select>
+              <span className="bg-purple-950/80 text-white font-bold text-xs px-2.5 py-1 rounded border border-purple-400/40">
+                3 Labels (A4 Sheet)
+              </span>
             </div>
 
             {/* Header Brand Selector (Default: Shanthi Logo) */}
@@ -572,161 +625,175 @@ export function ShippingLabelLandscapeModal({
           </div>
         </div>
 
-        {/* Gray Preview Canvas Area */}
-        <div className="flex-1 bg-slate-300 p-3 sm:p-6 overflow-y-auto flex items-center justify-center min-h-[460px]">
-          {/* White A4 Sheet Container (Standard Portrait 210 x 297) */}
+        {/* Gray Preview Canvas Area (starts from top with padding, no vertical cutoff) */}
+        <div className="flex-1 bg-slate-300 p-2 sm:p-4 overflow-y-auto flex flex-col items-center justify-start min-h-0">
+          {/* White A4 Sheet Container (Standard Portrait 210 x 297, calibrated to display all 3 labels at once) */}
           <div
-            className="bg-white rounded-sm shadow-2xl border border-slate-400 w-full max-w-[680px] p-3 sm:p-4 text-black select-none"
+            className="bg-white rounded-sm shadow-2xl border border-slate-400 w-full max-w-[460px] p-2 sm:p-2.5 text-black select-none my-auto flex flex-col shrink-0"
             style={{
               aspectRatio: '210 / 297',
-              minHeight: '640px'
+              maxHeight: 'min(640px, calc(86vh - 75px))'
             }}
           >
-            {/* 3 Labels Stacked Vertically */}
-            <div className="flex flex-col gap-2.5 sm:gap-3 h-full justify-between">
-              {currentOrdersOnSheet.map((ord, idx) => {
-                const labelNumber = currentSheetIndex * labelsPerSheet + idx + 1;
-                const d = getOrderData(ord);
-                const visibleProducts = d.products.slice(0, 2);
-                const remainingCount = d.products.length - visibleProducts.length;
+            {/* 3 Labels Stacked Vertically with Cutting Guides */}
+            <div className="flex flex-col h-full justify-between gap-1 flex-1 min-h-0">
+              {[0, 1, 2].map((slotIdx) => {
+                const ord = currentOrdersOnSheet[slotIdx];
+                const labelNumber = currentSheetIndex * labelsPerSheet + slotIdx + 1;
+                const slotNum = slotIdx + 1;
 
                 return (
-                  <div
-                    key={ord._id || idx}
-                    className="w-full border-[1.5px] border-black bg-white flex flex-col justify-between text-xs overflow-hidden shadow-xs flex-1 min-h-[160px]"
-                  >
-                    {/* 1. Header Banner */}
-                    <div className="bg-[#362115] text-white px-2 py-1 flex items-center justify-between shrink-0">
-                      <div className="w-8"></div>
-                      <div className="text-center">
-                        {brandStyle === 'SHANTHI' ? (
-                          <div className="text-[11px] sm:text-xs font-black tracking-wider text-white uppercase">
-                            SHANTHI AYURVEDAS
-                          </div>
-                        ) : (
-                          <div className="bg-white rounded px-2 py-0.5 inline-flex items-center justify-center">
-                            <img src="/shanthi_logo.png" alt="Shanthi Ayurvedas" className="h-4 sm:h-5 w-auto object-contain" />
-                          </div>
-                        )}
+                  <React.Fragment key={ord?._id || `slot-${slotIdx}`}>
+                    {/* Cut guideline between slots */}
+                    {slotIdx > 0 && (
+                      <div className="flex items-center gap-1.5 py-0.5 text-neutral-400 select-none shrink-0">
+                        <span className="text-[9px] text-neutral-500">✂</span>
+                        <div className="flex-1 border-t border-dashed border-neutral-300"></div>
+                        <span className="text-[7.5px] font-mono font-bold tracking-wider text-neutral-500 uppercase">
+                          Cut Line · ಇಲ್ಲಿ ಕತ್ತರಿಸಿ
+                        </span>
+                        <div className="flex-1 border-t border-dashed border-neutral-300"></div>
+                        <span className="text-[9px] text-neutral-500 transform scale-x-[-1] inline-block">✂</span>
                       </div>
-                      <div className="text-right text-[7px] sm:text-[7.5px] font-mono leading-tight text-stone-200">
-                        <div className="font-bold">SHEET {currentSheetIndex + 1}/{totalSheets} | LABEL {labelNumber}</div>
-                        <div>{printDateFormatted}</div>
-                      </div>
-                    </div>
+                    )}
 
-                    {/* 2. SPEED POST row */}
-                    <div className="border-b border-black px-2 py-0.5 font-extrabold text-[8px] sm:text-[9px] uppercase leading-tight bg-white shrink-0">
-                      {d.speedPostText}
-                    </div>
+                    {ord ? (
+                      /* Active Order Label Card */
+                      (() => {
+                        const d = getOrderData(ord);
+                        const visibleProducts = d.products.slice(0, 2);
+                        const remainingCount = d.products.length - visibleProducts.length;
 
-                    {/* 3. BILLER ID row */}
-                    <div className="border-b border-black px-2 py-0.5 font-extrabold text-[7.5px] sm:text-[8px] uppercase leading-tight bg-white shrink-0">
-                      {d.carrierSubheaderText}
-                    </div>
-
-                    {/* 4. Help Banner in Kannada & English */}
-                    <div className="bg-[#166534] text-white text-center py-0.5 px-1 font-extrabold text-[8px] sm:text-[9px] border-b border-black leading-tight shrink-0">
-                      Help/ಸಹಾಯ (How to use & Problems/ಬಳಸುವ ವಿಧಾನ ಮತ್ತು ಸಮಸ್ಯೆ): {d.telecallerName} - {d.telecallerMobile}
-                    </div>
-
-                    {/* 5. Middle Two-Column Grid */}
-                    <div className="grid grid-cols-[1.18fr_0.82fr] divide-x divide-black border-b border-black flex-1 min-h-0 bg-white overflow-hidden">
-                      {/* Left Column: Customer details */}
-                      <div className="p-1.5 sm:p-2 flex flex-col justify-between overflow-hidden">
-                        <div>
-                          <div className="flex items-start justify-between gap-1 mb-0.5">
-                            <div className="font-black text-[10.5px] sm:text-[11.5px] uppercase leading-tight text-black line-clamp-1">
-                              {d.customerName}
+                        return (
+                          <div className="w-full border-[1.5px] border-black bg-white flex flex-col justify-between text-xs overflow-hidden shadow-2xs flex-1 min-h-0">
+                            {/* 1. Header Banner */}
+                            <div className="bg-[#362115] text-white px-2 py-0.5 flex items-center justify-between shrink-0">
+                              <div className="w-6"></div>
+                              <div className="text-center">
+                                {brandStyle === 'SHANTHI' ? (
+                                  <div className="text-[10px] sm:text-[11px] font-black tracking-wider text-white uppercase">
+                                    SHANTHI AYURVEDAS
+                                  </div>
+                                ) : (
+                                  <div className="bg-white rounded px-1.5 py-0.2 inline-flex items-center justify-center">
+                                    <img src="/shanthi_logo.png" alt="Shanthi Ayurvedas" className="h-3.5 sm:h-4 w-auto object-contain" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-right text-[6.5px] sm:text-[7px] font-mono leading-tight text-stone-200">
+                                <div className="font-bold">SHEET {currentSheetIndex + 1}/{totalSheets} | LABEL {labelNumber}</div>
+                                <div>{printDateFormatted}</div>
+                              </div>
                             </div>
-                            <div className="border-[1.2px] border-red-600 text-red-600 font-black text-[8.5px] sm:text-[9.5px] px-1 py-0.2 rounded-xs shrink-0">
-                              {d.isCOD ? `COD ₹${d.payableAmount}` : `PREPAID`}
+
+                            {/* 2. SPEED POST row */}
+                            <div className="border-b border-black px-2 py-0.2 font-black text-[7.5px] sm:text-[8px] uppercase leading-tight bg-white shrink-0">
+                              {d.speedPostText}
+                            </div>
+
+                            {/* 3. BILLER ID row */}
+                            <div className="border-b border-black px-2 py-0.2 font-bold text-[7px] sm:text-[7.5px] uppercase leading-tight bg-white shrink-0">
+                              {d.carrierSubheaderText}
+                            </div>
+
+                            {/* 4. Help Banner in Kannada & English */}
+                            <div className="bg-[#166534] text-white text-center py-0.2 px-1 font-bold text-[7.5px] sm:text-[8px] border-b border-black leading-tight shrink-0">
+                              Help/ಸಹಾಯ (How to use & Problems/ಬಳಸುವ ವಿಧಾನ ಮತ್ತು ಸಮಸ್ಯೆ): {d.telecallerName} - {d.telecallerMobile}
+                            </div>
+
+                            {/* 5. Middle Two-Column Grid */}
+                            <div className="grid grid-cols-[1.18fr_0.82fr] divide-x divide-black border-b border-black flex-1 min-h-0 bg-white overflow-hidden">
+                              {/* Left Column: Customer details */}
+                              <div className="p-1 sm:p-1.5 flex flex-col justify-between overflow-hidden">
+                                <div>
+                                  <div className="flex items-start justify-between gap-1 mb-0.2">
+                                    <div className="font-black text-[9.5px] sm:text-[10.5px] uppercase leading-tight text-black line-clamp-1">
+                                      {d.customerName}
+                                    </div>
+                                    <div className="border border-red-600 text-red-600 font-black text-[7.5px] sm:text-[8px] px-1 py-0.2 rounded-xs shrink-0">
+                                      {d.isCOD ? `COD ₹${d.payableAmount}` : `PREPAID`}
+                                    </div>
+                                  </div>
+                                  <div className="font-black text-[8px] sm:text-[8.5px] text-black flex items-center gap-1 my-0.2">
+                                    <span className="text-purple-700">📞</span> {d.mobile} {d.altMobile ? `/ ${d.altMobile}` : ''}
+                                  </div>
+                                  {d.fatherName && (
+                                    <div className="font-bold text-[6.5px] sm:text-[7px] text-neutral-800 uppercase mb-0.2">
+                                      C/O {d.fatherName}
+                                    </div>
+                                  )}
+                                  <div className="font-bold text-[7px] sm:text-[7.5px] uppercase leading-tight text-neutral-900 line-clamp-3">
+                                    {d.formattedAddress}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Right Column: Tracking Box & Table */}
+                              <div className="p-1 flex flex-col gap-0.5 overflow-hidden justify-start">
+                                <div className="border border-dashed border-neutral-400 p-0.2 text-center bg-neutral-50 rounded-xs">
+                                  <div className="text-[6px] sm:text-[6.5px] font-bold text-neutral-500 uppercase tracking-wider">
+                                    ARTICLE NUMBER
+                                  </div>
+                                  <div className="font-mono text-[8.5px] sm:text-[9.5px] font-black tracking-wider text-black">
+                                    {d.tracking}
+                                  </div>
+                                </div>
+
+                                <table className="w-full border-collapse border border-black text-[6.5px] sm:text-[7px] font-bold uppercase">
+                                  <tbody>
+                                    <tr className="border-b border-black">
+                                      <td className="px-1 py-0.2 border-r border-black w-2/5 bg-gray-50 text-gray-700 font-bold">REFER BY</td>
+                                      <td className="px-1 py-0.2 font-black text-black">{d.telecallerName}</td>
+                                    </tr>
+                                    <tr className="border-b border-black">
+                                      <td className="px-1 py-0.2 border-r border-black bg-gray-50 text-gray-700 font-bold">WEIGHT</td>
+                                      <td className="px-1 py-0.2 font-black text-black">{d.weightText} {d.totalPieces} PCS</td>
+                                    </tr>
+                                    {d.advanceAmount > 0 && (
+                                      <tr className="border-b border-black bg-emerald-50/60">
+                                        <td className="px-1 py-0.2 border-r border-black font-bold text-emerald-800">ADVANCE</td>
+                                        <td className="px-1 py-0.2 font-black text-emerald-800">₹{d.advanceAmount} {d.advanceUtr ? `· ${d.advanceUtr}` : ''}</td>
+                                      </tr>
+                                    )}
+                                    {visibleProducts.map((prod, pIdx) => (
+                                      <tr key={pIdx} className={(pIdx !== visibleProducts.length - 1 || remainingCount > 0) ? 'border-b border-black' : ''}>
+                                        <td className="px-1 py-0.2 border-r border-black bg-gray-50 text-gray-700 font-bold">PRODUCT</td>
+                                        <td className="px-1 py-0.2 font-black text-black leading-tight truncate">{prod.name} X{prod.qty}</td>
+                                      </tr>
+                                    ))}
+                                    {remainingCount > 0 && (
+                                      <tr>
+                                        <td className="px-1 py-0.2 border-r border-black bg-gray-50 text-gray-600 font-bold">+ MORE</td>
+                                        <td className="px-1 py-0.2 font-bold text-gray-600">+{remainingCount} MORE</td>
+                                      </tr>
+                                    )}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+
+                            {/* 6. Sender Bottom Details */}
+                            <div className="px-1.5 py-0.2 font-bold text-[6.5px] sm:text-[7px] uppercase leading-tight bg-white text-black shrink-0">
+                              <div>FROM : SHANTHI AYURVEDAS, SHANTHI AYURVEDAS NO15, JAYPEE GATEWAY, ANTHIVADI, HOSUR - 635110</div>
+                              <div>MOBILE : 8884747209 / 8884113629</div>
+                            </div>
+
+                            {/* 7. Bottom Emergency Medicine Banner */}
+                            <div className="bg-[#dc2626] text-white py-0.2 px-1 text-center text-[6.5px] sm:text-[7px] font-black uppercase tracking-wider shrink-0">
+                              EMERGENCY MEDICINE - HANDLE WITH CARE AND DELIVERY IMMEDIATELY
                             </div>
                           </div>
-                          <div className="font-black text-[9px] sm:text-[10px] text-black flex items-center gap-1 my-0.5">
-                            <span className="text-purple-700">📞</span> {d.mobile} {d.altMobile ? `/ ${d.altMobile}` : ''}
-                          </div>
-                          {d.fatherName && (
-                            <div className="font-extrabold text-[7.5px] sm:text-[8px] text-neutral-800 uppercase mb-0.5">
-                              C/O {d.fatherName}
-                            </div>
-                          )}
-                          <div className="font-bold text-[8px] sm:text-[8.5px] uppercase leading-tight text-neutral-900 line-clamp-3">
-                            {d.formattedAddress}
-                          </div>
-                        </div>
+                        );
+                      })()
+                    ) : (
+                      /* Empty slot card */
+                      <div className="w-full flex-1 min-h-0 border-2 border-dashed border-slate-300 rounded-sm bg-slate-50/70 flex flex-col items-center justify-center text-slate-400 text-xs font-semibold gap-0.5 select-none py-1.5">
+                        <span className="text-base">🏷️</span>
+                        <span className="font-bold text-slate-500 text-[10px] sm:text-[11px]">Empty Label Slot ({slotNum}/3)</span>
+                        <span className="text-[8px] sm:text-[9px] text-slate-400 font-normal">Available for next label</span>
                       </div>
-
-                      {/* Right Column: Tracking Box & Table */}
-                      <div className="p-1 sm:p-1.5 flex flex-col gap-1 overflow-hidden justify-start">
-                        <div className="border border-dashed border-neutral-400 p-0.5 text-center bg-neutral-50 rounded-xs">
-                          <div className="text-[6.5px] sm:text-[7px] font-bold text-neutral-500 uppercase tracking-wider">
-                            ARTICLE NUMBER
-                          </div>
-                          <div className="font-mono text-[9.5px] sm:text-[11px] font-black tracking-wider text-black">
-                            {d.tracking}
-                          </div>
-                        </div>
-
-                        <table className="w-full border-collapse border border-black text-[7px] sm:text-[7.5px] font-extrabold uppercase">
-                          <tbody>
-                            <tr className="border-b border-black">
-                              <td className="p-0.5 border-r border-black w-2/5 bg-gray-50 text-gray-700 font-bold">REFER BY</td>
-                              <td className="p-0.5 font-black text-black">{d.telecallerName}</td>
-                            </tr>
-                            <tr className="border-b border-black">
-                              <td className="p-0.5 border-r border-black bg-gray-50 text-gray-700 font-bold">WEIGHT</td>
-                              <td className="p-0.5 font-black text-black">{d.weightText} {d.totalPieces} PCS</td>
-                            </tr>
-                            {d.advanceAmount > 0 && (
-                              <tr className="border-b border-black bg-emerald-50/60">
-                                <td className="p-0.5 border-r border-black font-bold text-emerald-800">ADVANCE</td>
-                                <td className="p-0.5 font-black text-emerald-800">₹${d.advanceAmount} {d.advanceUtr ? `· ${d.advanceUtr}` : ''}</td>
-                              </tr>
-                            )}
-                            {visibleProducts.map((prod, pIdx) => (
-                              <tr key={pIdx} className={(pIdx !== visibleProducts.length - 1 || remainingCount > 0) ? 'border-b border-black' : ''}>
-                                <td className="p-0.5 border-r border-black bg-gray-50 text-gray-700 font-bold">PRODUCT</td>
-                                <td className="p-0.5 font-black text-black leading-tight">{prod.name} X{prod.qty}</td>
-                              </tr>
-                            ))}
-                            {remainingCount > 0 && (
-                              <tr>
-                                <td className="p-0.5 border-r border-black bg-gray-50 text-gray-600 font-bold">+ MORE</td>
-                                <td className="p-0.5 font-bold text-gray-600">+{remainingCount} MORE</td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* 6. Sender Bottom Details */}
-                    <div className="px-1.5 py-0.5 font-extrabold text-[7px] sm:text-[7.5px] uppercase leading-tight bg-white text-black shrink-0">
-                      <div>FROM : SHANTHI AYURVEDAS, SHANTHI AYURVEDAS NO15, JAYPEE GATEWAY, ANTHIVADI, HOSUR - 635110</div>
-                      <div>MOBILE : 8884747209 / 8884113629</div>
-                    </div>
-
-                    {/* 7. Bottom Emergency Medicine Banner */}
-                    <div className="bg-[#dc2626] text-white py-0.5 px-1 text-center text-[7px] sm:text-[7.5px] font-black uppercase tracking-wider shrink-0">
-                      EMERGENCY MEDICINE - HANDLE WITH CARE AND DELIVERY IMMEDIATELY
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Empty slot placeholders if fewer than 3 orders on this sheet */}
-              {Array.from({ length: Math.max(0, 3 - currentOrdersOnSheet.length) }).map((_, emptyIdx) => {
-                const slotNum = currentOrdersOnSheet.length + emptyIdx + 1;
-                return (
-                  <div
-                    key={`empty-slot-${slotNum}`}
-                    className="w-full flex-1 min-h-[140px] border-2 border-dashed border-slate-300 rounded bg-slate-50/60 flex flex-col items-center justify-center text-slate-400 text-xs font-semibold gap-1 select-none"
-                  >
-                    <span className="text-xl">🏷️</span>
-                    <span>Empty Label Slot ({slotNum}/3)</span>
-                    <span className="text-[10px] text-slate-400">Available for next label</span>
-                  </div>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </div>

@@ -7,6 +7,7 @@ import { OrderStatusHistory } from '../models/OrderStatusHistory.js';
 import { Inventory } from '../models/Inventory.js';
 import { Lead } from '../models/Lead.js';
 import { OrderService } from '../services/orderService.js';
+import { Msg91WhatsAppService } from '../services/msg91WhatsAppService.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { NotFoundError } from '../utils/errors.js';
@@ -346,4 +347,27 @@ export const deleteOrder = asyncHandler(async (req, res) => {
   const result = await OrderService.deleteOrder(req.params.id, req.user, req);
   return ApiResponse.success(res, result, 'Order deleted successfully');
 });
+
+export const sendOrderWhatsApp = asyncHandler(async (req, res) => {
+  const order = await Order.findById(req.params.id)
+    .populate('customerId', 'name mobile')
+    .populate('branchId', 'name billerId');
+  if (!order) {
+    return ApiResponse.error(res, 'Order not found', 404);
+  }
+
+  const result = await Msg91WhatsAppService.sendOrderConfirmation(order);
+  if (!result.success) {
+    const errorMsg = result.data?.errors || result.data?.message || result.error || 'Failed to send WhatsApp message via MSG91';
+    return ApiResponse.error(
+      res,
+      typeof errorMsg === 'object' ? JSON.stringify(errorMsg) : String(errorMsg),
+      result.status || 400,
+      result
+    );
+  }
+
+  return ApiResponse.success(res, result.data, 'WhatsApp order confirmation message queued successfully');
+});
+
 

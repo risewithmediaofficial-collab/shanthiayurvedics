@@ -17,7 +17,8 @@ import {
   ShieldCheck,
   Pencil,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  ExternalLink
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
@@ -48,6 +49,10 @@ export function OrderDetailPage() {
   // Print Modals
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   const [isLabelOpen, setIsLabelOpen] = useState(false);
+
+  // MSG91 WhatsApp Trigger
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+  const [whatsAppFeedback, setWhatsAppFeedback] = useState(null);
 
   // Edit & Delete Modals
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -131,6 +136,26 @@ export function OrderDetailPage() {
         `Thank you for trusting Shanthi Ayurvedas authentic holistic care. 🙏`
     );
     window.open(`https://wa.me/91${cleanMobile}?text=${textMsg}`, '_blank');
+  };
+
+  const handleSendMsg91WhatsApp = async () => {
+    setIsSendingWhatsApp(true);
+    setWhatsAppFeedback(null);
+    try {
+      const res = await apiClient.post(`/orders/${id}/send-whatsapp`);
+      setWhatsAppFeedback({
+        type: 'success',
+        message: res.data?.message || 'WhatsApp template queued successfully via MSG91!'
+      });
+    } catch (err) {
+      const errMsg = err.response?.data?.message || err.response?.data?.error || 'Failed to send WhatsApp message via MSG91';
+      setWhatsAppFeedback({
+        type: 'error',
+        message: typeof errMsg === 'object' ? JSON.stringify(errMsg) : String(errMsg)
+      });
+    } finally {
+      setIsSendingWhatsApp(false);
+    }
   };
 
   const renderAvailableTransitions = () => {
@@ -238,16 +263,47 @@ export function OrderDetailPage() {
           </div>
         </div>
 
+        {whatsAppFeedback && (
+          <div
+            className={`w-full p-3 rounded-xl text-xs font-semibold flex items-center justify-between gap-2 shadow-sm ${
+              whatsAppFeedback.type === 'success'
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                : 'bg-rose-50 text-rose-800 border border-rose-200'
+            }`}
+          >
+            <span>{whatsAppFeedback.message}</span>
+            <button
+              onClick={() => setWhatsAppFeedback(null)}
+              className="text-xs font-bold underline opacity-70 hover:opacity-100 cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-2">
-          {/* WhatsApp Notification */}
+          {/* Official MSG91 WhatsApp Template Trigger */}
+          <Button
+            variant="primary"
+            size="sm"
+            icon={MessageSquare}
+            isLoading={isSendingWhatsApp}
+            onClick={handleSendMsg91WhatsApp}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+          >
+            Send WhatsApp (MSG91)
+          </Button>
+
+          {/* Manual WhatsApp Web Fallback */}
           <Button
             variant="secondary"
             size="sm"
-            icon={MessageSquare}
+            icon={ExternalLink}
             onClick={handleShareWhatsApp}
-            className="text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+            title="Open WhatsApp Web chat as manual fallback"
+            className="text-slate-600 hover:bg-slate-100"
           >
-            WhatsApp Patient
+            WhatsApp Web
           </Button>
 
           {/* Tax Invoice */}

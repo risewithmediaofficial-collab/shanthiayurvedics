@@ -15,7 +15,8 @@ import {
   getOrderMetricsSummary,
   getDistinctDistricts,
   updateOrder,
-  deleteOrder
+  deleteOrder,
+  sendOrderWhatsApp
 } from '../controllers/orderController.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
@@ -44,6 +45,7 @@ router.post('/import-excel', requirePermission(PERMISSIONS.ORDERS_CREATE), impor
 // Single Order Operations
 router.post('/', requirePermission(PERMISSIONS.ORDERS_CREATE), createOrder);
 router.get('/:id', requirePermission(PERMISSIONS.ORDERS_VIEW), getOrderById);
+router.post('/:id/send-whatsapp', requirePermission(PERMISSIONS.ORDERS_PROCESS), sendOrderWhatsApp);
 router.patch('/:id/transition', requirePermission(PERMISSIONS.ORDERS_PROCESS), transitionOrderStatus);
 router.patch('/:id', requirePermission(PERMISSIONS.ORDERS_EDIT), updateOrder);
 router.put('/:id', requirePermission(PERMISSIONS.ORDERS_EDIT), updateOrder);

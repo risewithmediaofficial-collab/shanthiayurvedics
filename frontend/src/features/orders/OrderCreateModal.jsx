@@ -300,32 +300,6 @@ export function OrderCreateModal({
       } else {
         onClose();
       }
-
-      // Open WhatsApp directly with patient order confirmation text
-      const cleanMobile = mobile.replace(/\D/g, '').slice(-10);
-      if (cleanMobile.length === 10) {
-        const itemsList = (newOrder.items || [])
-          .map((i) => {
-            const hasDisc = (i.discount || 0) > 0 || (i.discountPercent || 0) > 0;
-            return `• ${i.quantity}x ${i.productName}${hasDisc ? ` (${i.discountPercent ? `${i.discountPercent}% off` : `₹${i.discount} off`})` : ''} - ₹${i.total}`;
-          })
-          .join('\n');
-        const textMsg = encodeURIComponent(
-          `🌿 *Shanthi Ayurvedas ${isOfficeOrder ? 'Office Counter Receipt' : 'Order Confirmation'}*\n\n` +
-            `Hello *${patientName}*,\n` +
-            `Your Ayurvedic prescription order has been successfully ${isOfficeOrder ? 'billed at the counter' : 'placed'}!\n\n` +
-            `📋 *Order ID:* ${newOrder.orderNumber}\n` +
-            `📦 *Prescription Items:*\n${itemsList}\n\n` +
-            `${isOfficeOrder ? '' : `🚚 *Courier Partner:* ${courierName}\n`}` +
-            `💰 *Total Amount:* ₹${finalPayableTotal} (${isOfficeOrder ? `Direct Counter Payment (${paymentMethod})` : (courierName === 'The Professional Courier' ? 'Pre-Payment (TPC Online/UPI)' : (paymentMethod === 'COD' ? 'Cash on Delivery' : 'Prepaid Online/UPI'))})\n` +
-            (parsedAdvance > 0 ? `💳 *Advance Paid:* ₹${parsedAdvance}${advanceUtr ? ` (UTR: ${advanceUtr})` : ''}\n` : '') +
-            (!isOfficeOrder && courierName !== 'The Professional Courier' && paymentMethod === 'COD' ? `💵 *COD to Collect at Doorstep:* ₹${effectiveCodAmount}\n` : '') +
-            `${isOfficeOrder ? `📍 *Counter Location:* Hosur Main Branch Desk\n\n` : `📍 *Delivery Address:* ${street}, ${village ? village + ', ' : ''}${district}, ${state} - ${pincode}\n\n`}` +
-            `📱 Track & view dosage guide on *my.shanthiayurvedas.com*.\n\n` +
-            `Thank you for trusting Shanthi Ayurvedas! 🙏`
-        );
-        window.open(`https://wa.me/91${cleanMobile}?text=${textMsg}`, '_blank');
-      }
     },
     onError: (err) => {
       setFormError(err.response?.data?.message || 'Failed to place order. Check inventory stock.');
@@ -421,11 +395,11 @@ export function OrderCreateModal({
             variant="primary"
             type="submit"
             form="order-create-form"
-            icon={MessageSquare}
+            icon={CheckCircle2}
             isLoading={createOrderMutation.isPending}
             className="w-full sm:w-auto px-5 bg-gradient-to-r from-emerald-700 to-ayur-800 hover:from-emerald-600 hover:to-ayur-700 text-white font-bold shadow-sm text-xs tracking-wide cursor-pointer"
           >
-            Save Order & WhatsApp
+            Save & Place Order
           </Button>
         )}
       </div>
@@ -437,7 +411,7 @@ export function OrderCreateModal({
       isOpen={isOpen}
       onClose={onClose}
       title={isOfficeOrder ? "Office Sale / Counter Bill" : "Create Prescription Order"}
-      subtitle={isOfficeOrder ? "Direct walk-in counter billing with instant stock reservation (₹0 shipping)" : "Atomically reserves herbal stock and triggers WhatsApp dispatch notification"}
+      subtitle={isOfficeOrder ? "Direct walk-in counter billing with instant stock reservation (₹0 shipping)" : "Atomically reserves herbal stock and automatically sends MSG91 WhatsApp order confirmation"}
       maxWidth="max-w-3xl"
       icon="/shanthi_logo.png"
       footer={footerActions}

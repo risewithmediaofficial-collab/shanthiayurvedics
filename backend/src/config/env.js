@@ -35,6 +35,10 @@ const envSchema = z.object({
   WHATSAPP_API_URL: z.string().optional().default('https://graph.facebook.com/v19.0'),
   WHATSAPP_ACCESS_TOKEN: z.string().optional().default(''),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional().default(''),
+  // MSG91 WhatsApp Integration
+  MSG91_AUTHKEY: z.string().optional().default(process.env.MSG91_AUTHKEY || ''),
+  MSG91_WHATSAPP_INTEGRATED_NUMBER: z.string().optional().default('918884747209'),
+  MSG91_WHATSAPP_NAMESPACE: z.string().optional().default('0366c008_69c0_4b6a_aa0b_740b15b04344'),
   // The Professional Couriers (TPC) Integration
   TPC_MODE: z.enum(['mock', 'live']).default('mock'),
   TPC_BASE_URL: z.string().default('https://www.tpcglobe.com'),

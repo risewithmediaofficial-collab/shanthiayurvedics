@@ -14,6 +14,8 @@ import { withTransaction } from '../utils/transactionHelper.js';
 import { ORDER_STATUS } from '../constants/orderStates.js';
 import { NotFoundError, AppError } from '../utils/errors.js';
 import { emitToBranch, emitToUser } from '../sockets/index.js';
+import { Msg91WhatsAppService } from './msg91WhatsAppService.js';
+import { logger } from '../config/logger.js';
 
 export class OrderService {
   /**
@@ -300,6 +302,13 @@ export class OrderService {
 
       return newOrder;
     });
+
+    // Trigger WhatsApp Order Confirmation asynchronously via MSG91
+    Msg91WhatsAppService.sendOrderConfirmation(createdOrder).catch((err) => {
+      logger.warn({ err: err?.message, orderNumber: createdOrder?.orderNumber }, 'Failed to send WhatsApp order confirmation');
+    });
+
+    return createdOrder;
   }
 
   /**

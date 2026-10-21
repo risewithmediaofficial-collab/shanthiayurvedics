@@ -11,6 +11,7 @@ export function ShippingLabelLandscapeModal({
   // Fixed standard layout: 3 Labels per A4 Sheet (Portrait)
   const [currentPage, setCurrentPage] = useState(0);
   const [brandStyle, setBrandStyle] = useState('LOGO'); // Default: LOGO (Shanthi Logo) | SHANTHI (Shanthi Text)
+  const [copiesPerOrder, setCopiesPerOrder] = useState(3); // Default: 3 Bills per order (fills all 3 slots on A4 sheet)
   const iframeRef = useRef(null);
 
   const safeOrders = useMemo(() => {
@@ -20,16 +21,29 @@ export function ShippingLabelLandscapeModal({
 
   const labelsPerSheet = 3;
 
+  // Expand orders based on copies per order (e.g. 3 bills per order fills the 3 slots on A4)
+  const expandedOrders = useMemo(() => {
+    if (safeOrders.length === 0) return [];
+    if (copiesPerOrder === 1) return safeOrders;
+    const result = [];
+    safeOrders.forEach((ord) => {
+      for (let c = 0; c < copiesPerOrder; c++) {
+        result.push(ord);
+      }
+    });
+    return result;
+  }, [safeOrders, copiesPerOrder]);
+
   // Group orders into sheets of 3 labels each on standard A4 portrait sheet
   const sheets = useMemo(() => {
-    if (safeOrders.length === 0) return [];
+    if (expandedOrders.length === 0) return [];
     const count = labelsPerSheet;
     const result = [];
-    for (let i = 0; i < safeOrders.length; i += count) {
-      result.push(safeOrders.slice(i, i + count));
+    for (let i = 0; i < expandedOrders.length; i += count) {
+      result.push(expandedOrders.slice(i, i + count));
     }
     return result;
-  }, [safeOrders]);
+  }, [expandedOrders]);
 
   const totalSheets = sheets.length || 1;
   const currentSheetIndex = Math.min(currentPage, totalSheets - 1);
@@ -187,7 +201,7 @@ export function ShippingLabelLandscapeModal({
                 ${brandHeaderHtml}
               </div>
               <div class="sheet-meta">
-                <div style="font-weight: 800;">SHEET ${sheetNum} / ${totalSheets} | LABEL ${overallLabelNum}</div>
+                <div style="font-weight: 800;">SHEET ${sheetNum} / ${totalSheets} | BILL ${overallLabelNum}</div>
                 <div>${printDateFormatted}</div>
               </div>
             </div>
@@ -298,7 +312,7 @@ export function ShippingLabelLandscapeModal({
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Shipping Labels (${safeOrders.length}) — Shanthi Ayurvedas</title>
+        <title>Shipping Bills (${expandedOrders.length}) — Shanthi Ayurvedas</title>
         <style>
           * { box-sizing: border-box; margin: 0; padding: 0; }
           @page {
@@ -554,17 +568,34 @@ export function ShippingLabelLandscapeModal({
           {/* Sheet counter info */}
           <div className="flex items-center gap-2">
             <span className="font-semibold text-xs sm:text-sm tracking-wide text-purple-100">
-              Sheet {currentSheetIndex + 1} of {totalSheets} ({safeOrders.length} {safeOrders.length === 1 ? 'label' : 'labels'})
+              Sheet {currentSheetIndex + 1} of {totalSheets} ({expandedOrders.length} {expandedOrders.length === 1 ? 'bill' : 'bills'})
             </span>
           </div>
 
-          {/* Controls: Layout Indicator & Shanthi Brand Toggle & Navigation */}
+          {/* Controls: Copies Selector & Layout Indicator & Shanthi Brand Toggle & Navigation */}
           <div className="flex items-center flex-wrap gap-2 sm:gap-3 text-xs">
-            {/* Per Page: Fixed 3 Labels / A4 Sheet */}
+            {/* Copies Selector: Default 3 Bills (fills standard A4 sheet) */}
             <div className="flex items-center gap-1.5">
+              <span className="text-purple-200 font-medium">Copies:</span>
+              <select
+                value={copiesPerOrder}
+                onChange={(e) => {
+                  setCopiesPerOrder(Number(e.target.value));
+                  setCurrentPage(0);
+                }}
+                className="bg-purple-950/80 text-white font-bold text-xs px-2 py-1 rounded border border-purple-400/40 focus:outline-none cursor-pointer"
+              >
+                <option value={3}>3 Bills (Fill Sheet)</option>
+                <option value={1}>1 Bill (1 Copy)</option>
+                <option value={2}>2 Bills (2 Copies)</option>
+              </select>
+            </div>
+
+            {/* Per Page: Fixed 3 Labels / A4 Sheet */}
+            <div className="flex items-center gap-1.5 hidden sm:flex">
               <span className="text-purple-200 font-medium">Per Page:</span>
               <span className="bg-purple-950/80 text-white font-bold text-xs px-2.5 py-1 rounded border border-purple-400/40">
-                3 Labels (A4 Sheet)
+                3 Bills (A4 Sheet)
               </span>
             </div>
 
@@ -643,7 +674,7 @@ export function ShippingLabelLandscapeModal({
                 const slotNum = slotIdx + 1;
 
                 return (
-                  <React.Fragment key={ord?._id || `slot-${slotIdx}`}>
+                  <React.Fragment key={ord?._id ? `${ord._id}-slot-${slotIdx}` : `slot-${slotIdx}`}>
                     {/* Cut guideline between slots */}
                     {slotIdx > 0 && (
                       <div className="flex items-center gap-1.5 py-0.5 text-neutral-400 select-none shrink-0">
@@ -681,7 +712,7 @@ export function ShippingLabelLandscapeModal({
                                 )}
                               </div>
                               <div className="text-right text-[6.5px] sm:text-[7px] font-mono leading-tight text-stone-200">
-                                <div className="font-bold">SHEET {currentSheetIndex + 1}/{totalSheets} | LABEL {labelNumber}</div>
+                                <div className="font-bold">SHEET {currentSheetIndex + 1}/{totalSheets} | BILL {labelNumber}</div>
                                 <div>{printDateFormatted}</div>
                               </div>
                             </div>

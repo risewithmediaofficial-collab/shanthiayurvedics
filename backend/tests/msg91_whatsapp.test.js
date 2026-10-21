@@ -46,13 +46,16 @@ describe('Msg91WhatsAppService', () => {
 
     it('should handle dry run gracefully when MSG91_AUTHKEY is not configured', async () => {
       const origAuth = env.MSG91_AUTHKEY;
+      const origProcAuth = process.env.MSG91_AUTHKEY;
       env.MSG91_AUTHKEY = '';
+      process.env.MSG91_AUTHKEY = '';
 
       const res = await Msg91WhatsAppService.sendOrderConfirmation(mockOrder);
       expect(res.success).toBe(false);
       expect(res.dryRun).toBe(true);
 
       env.MSG91_AUTHKEY = origAuth;
+      process.env.MSG91_AUTHKEY = origProcAuth;
     });
 
     it('should format payload correctly and invoke fetch when MSG91_AUTHKEY is present', async () => {

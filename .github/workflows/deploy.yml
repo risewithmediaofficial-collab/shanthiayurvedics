@@ -91,6 +91,21 @@ jobs:
             sed -i 's|localhost:27017|mongodb:27017|g' .env 2>/dev/null || true
             sed -i 's|replace_with_a_long_url_safe_random_password|SecureAdminPassword123|g' .env 2>/dev/null || true
 
+            # Ensure MSG91 WhatsApp configuration in .env
+            if grep -q "^MSG91_AUTHKEY=" .env; then
+              sed -i 's/^MSG91_AUTHKEY=.*/MSG91_AUTHKEY=522920AfQjLRoczqn6ad86913P1/' .env
+            else
+              echo "MSG91_AUTHKEY=522920AfQjLRoczqn6ad86913P1" >> .env
+            fi
+
+            if ! grep -q "^MSG91_WHATSAPP_INTEGRATED_NUMBER=" .env; then
+              echo "MSG91_WHATSAPP_INTEGRATED_NUMBER=918884747209" >> .env
+            fi
+
+            if ! grep -q "^MSG91_WHATSAPP_NAMESPACE=" .env; then
+              echo "MSG91_WHATSAPP_NAMESPACE=0366c008_69c0_4b6a_aa0b_740b15b04344" >> .env
+            fi
+
             # 6. Stop and remove conflicting legacy containers and clear ports 8087 and 89
             echo "🛑 Stopping and cleaning up any existing conflicting containers..."
             docker stop shanthi_frontend shanthi_backend shanthi_mongodb 2>/dev/null || true

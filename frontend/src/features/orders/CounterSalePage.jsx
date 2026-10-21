@@ -28,10 +28,7 @@ import { PrintableInvoiceModal } from './PrintableInvoiceModal.jsx';
 
 export function CounterSalePage() {
   const { user } = useAuth();
-  if (user?.role === 'TELECALLER') {
-    return <Navigate to="/dashboard?view=telecaller" replace />;
-  }
-
+  const isTelecaller = user?.role === 'TELECALLER';
   const queryClient = useQueryClient();
   const { selectedBranchId, branches } = useBranch();
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
@@ -48,7 +45,8 @@ export function CounterSalePage() {
     queryFn: async () => {
       const res = await apiClient.get('/orders', { params: { limit: 25 } });
       return res.data;
-    }
+    },
+    enabled: !isTelecaller
   });
 
   const orders = Array.isArray(ordersResponse?.data) ? ordersResponse?.data : [];
@@ -93,6 +91,10 @@ export function CounterSalePage() {
       setDeleteError(err.response?.data?.message || 'Failed to delete order');
     }
   });
+
+  if (isTelecaller) {
+    return <Navigate to="/dashboard?view=telecaller" replace />;
+  }
 
   const handleOpenEdit = (ord) => {
     setSelectedOrderForEdit(ord);

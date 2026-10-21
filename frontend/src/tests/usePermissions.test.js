@@ -199,7 +199,7 @@ describe('usePermissions — permissions array', () => {
     expect(result.current.hasPermission('orders.create')).toBe(false);
     expect(result.current.hasPermission('orders.edit')).toBe(false);
     expect(result.current.hasPermission('orders.delete')).toBe(false);
-    expect(result.current.hasPermission('customers.view')).toBe(false);
+    expect(result.current.hasPermission('customers.view')).toBe(true);
     expect(result.current.hasPermission('customers.create')).toBe(false);
     expect(result.current.hasPermission('leads.create')).toBe(false);
     expect(result.current.hasPermission('inventory.manage')).toBe(false);

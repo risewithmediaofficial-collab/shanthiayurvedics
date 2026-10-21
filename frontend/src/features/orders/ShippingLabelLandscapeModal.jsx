@@ -8,11 +8,7 @@ export function ShippingLabelLandscapeModal({
   orders = [],
   title = 'Shipping Labels'
 }) {
-  // Layout mode: '2-landscape' (Default: 2 labels side by side in 16:9 rectangle shape)
-  // '2-portrait' (2 labels stacked on A4 portrait)
-  // '4' (4 labels 2x2 grid on A4 landscape)
-  // '1' (Single 16:9 label)
-  const [layout, setLayout] = useState('2-landscape');
+  // Fixed standard layout: 3 Labels per A4 Sheet (Portrait)
   const [currentPage, setCurrentPage] = useState(0);
   const [brandStyle, setBrandStyle] = useState('LOGO'); // Default: LOGO (Shanthi Logo) | SHANTHI (Shanthi Text)
   const iframeRef = useRef(null);
@@ -22,13 +18,9 @@ export function ShippingLabelLandscapeModal({
     return Array.isArray(orders) ? orders.filter(Boolean) : [orders];
   }, [orders]);
 
-  const labelsPerSheet = useMemo(() => {
-    if (layout === '4') return 4;
-    if (layout === '1') return 1;
-    return 2;
-  }, [layout]);
+  const labelsPerSheet = 3;
 
-  // Group orders into sheets based on layout
+  // Group orders into sheets of 3 labels each on standard A4 portrait sheet
   const sheets = useMemo(() => {
     if (safeOrders.length === 0) return [];
     const count = labelsPerSheet;
@@ -37,7 +29,7 @@ export function ShippingLabelLandscapeModal({
       result.push(safeOrders.slice(i, i + count));
     }
     return result;
-  }, [safeOrders, labelsPerSheet]);
+  }, [safeOrders]);
 
   const totalSheets = sheets.length || 1;
   const currentSheetIndex = Math.min(currentPage, totalSheets - 1);
@@ -143,10 +135,8 @@ export function ShippingLabelLandscapeModal({
     };
   };
 
-  // Generate printable standalone HTML
+  // Generate printable standalone HTML (A4 portrait with 3 labels stacked vertically)
   const generatePrintHtml = () => {
-    const isPortrait = layout === '2-portrait';
-
     const renderedSheets = sheets.map((sheetOrders, sIdx) => {
       const sheetNum = sIdx + 1;
       const labelsHtml = sheetOrders.map((ord, lIdx) => {
@@ -163,13 +153,13 @@ export function ShippingLabelLandscapeModal({
 
         const productRowsHtml = visibleProducts.map((prod, idx) => `
           <tr style="border-bottom: ${(idx !== visibleProducts.length - 1 || remainingCount > 0) ? '1px solid #000' : 'none'};">
-            <td style="padding: 2px 4px; border-right: 1px solid #000; width: 34%; background: #f9fafb; font-weight: 800; font-size: 8px;">PRODUCT</td>
-            <td style="padding: 2px 4px; font-weight: 900; font-size: 8px; line-height: 1.15;">${prod.name} X${prod.qty}</td>
+            <td style="padding: 1.5px 4px; border-right: 1px solid #000; width: 34%; background: #f9fafb; font-weight: 800; font-size: 7.5px;">PRODUCT</td>
+            <td style="padding: 1.5px 4px; font-weight: 900; font-size: 8px; line-height: 1.15;">${prod.name} X${prod.qty}</td>
           </tr>
         `).join('') + (remainingCount > 0 ? `
           <tr>
-            <td style="padding: 1.5px 4px; border-right: 1px solid #000; background: #f9fafb; font-weight: 800; font-size: 7.5px;">+ MORE</td>
-            <td style="padding: 1.5px 4px; font-weight: 800; font-size: 7.5px; color: #4b5563;">+ ${remainingCount} MORE ITEM${remainingCount > 1 ? 'S' : ''}</td>
+            <td style="padding: 1px 4px; border-right: 1px solid #000; background: #f9fafb; font-weight: 800; font-size: 7px;">+ MORE</td>
+            <td style="padding: 1px 4px; font-weight: 800; font-size: 7px; color: #4b5563;">+ ${remainingCount} MORE ITEM${remainingCount > 1 ? 'S' : ''}</td>
           </tr>
         ` : '');
 
@@ -193,7 +183,7 @@ export function ShippingLabelLandscapeModal({
             </div>
 
             <!-- 3. BILLER ID row -->
-            <div class="sub-row" style="font-size: 8.5px; padding: 2px 6px;">
+            <div class="sub-row" style="font-size: 8px; padding: 1.5px 6px;">
               ${d.carrierSubheaderText}
             </div>
 
@@ -211,11 +201,11 @@ export function ShippingLabelLandscapeModal({
                     <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 4px; margin-bottom: 2px;">
                       <div class="cust-name">${d.customerName}</div>
                       <div class="cod-badge">
-                        ${d.isCOD ? `COD ${d.payableAmount}` : `PREPAID`}
+                        ${d.isCOD ? `COD ₹${d.payableAmount}` : `PREPAID`}
                       </div>
                     </div>
                     <div class="cust-phone">
-                      <span style="font-size: 11px;">📞</span> ${d.mobile} ${d.altMobile ? `/ ${d.altMobile}` : ''}
+                      <span style="font-size: 9.5px;">📞</span> ${d.mobile} ${d.altMobile ? `/ ${d.altMobile}` : ''}
                     </div>
                     ${d.fatherName ? `<div style="font-size: 8px; font-weight: 800; text-transform: uppercase; margin-bottom: 2px;">C/O ${d.fatherName}</div>` : ''}
                     <div class="cust-address">${d.formattedAddress}</div>
@@ -233,17 +223,17 @@ export function ShippingLabelLandscapeModal({
                 <table class="details-table">
                   <tbody>
                     <tr style="border-bottom: 1px solid #000;">
-                      <td style="padding: 2px 4px; border-right: 1px solid #000; width: 34%; background: #f9fafb; font-weight: 800; font-size: 8px;">REFER BY</td>
-                      <td style="padding: 2px 4px; font-weight: 900; font-size: 8.5px;">${d.telecallerName}</td>
+                      <td style="padding: 1.5px 4px; border-right: 1px solid #000; width: 34%; background: #f9fafb; font-weight: 800; font-size: 7.5px;">REFER BY</td>
+                      <td style="padding: 1.5px 4px; font-weight: 900; font-size: 8px;">${d.telecallerName}</td>
                     </tr>
                     <tr style="border-bottom: 1px solid #000;">
-                      <td style="padding: 2px 4px; border-right: 1px solid #000; background: #f9fafb; font-weight: 800; font-size: 8px;">WEIGHT</td>
-                      <td style="padding: 2px 4px; font-weight: 900; font-size: 8.5px;">${d.weightText} ${d.totalPieces} PCS</td>
+                      <td style="padding: 1.5px 4px; border-right: 1px solid #000; background: #f9fafb; font-weight: 800; font-size: 7.5px;">WEIGHT</td>
+                      <td style="padding: 1.5px 4px; font-weight: 900; font-size: 8px;">${d.weightText} ${d.totalPieces} PCS</td>
                     </tr>
                     ${d.advanceAmount > 0 ? `
                       <tr style="border-bottom: 1px solid #000; background: #f0fdf4;">
-                        <td style="padding: 2px 4px; border-right: 1px solid #000; font-weight: 800; font-size: 8px; color: #166534;">ADVANCE</td>
-                        <td style="padding: 2px 4px; font-weight: 900; font-size: 8.5px; color: #166534;">₹${d.advanceAmount} ${d.advanceUtr ? `· UTR: ${d.advanceUtr}` : ''}</td>
+                        <td style="padding: 1.5px 4px; border-right: 1px solid #000; font-weight: 800; font-size: 7.5px; color: #166534;">ADVANCE</td>
+                        <td style="padding: 1.5px 4px; font-weight: 900; font-size: 8px; color: #166534;">₹${d.advanceAmount} ${d.advanceUtr ? `· UTR: ${d.advanceUtr}` : ''}</td>
                       </tr>
                     ` : ''}
                     ${productRowsHtml}
@@ -266,16 +256,10 @@ export function ShippingLabelLandscapeModal({
         `;
       }).join('');
 
-      let gridClass = 'labels-grid-2-landscape';
-      if (layout === '2-portrait') gridClass = 'labels-grid-2-portrait';
-      else if (layout === '4') gridClass = 'labels-grid-4';
-      else if (layout === '1') gridClass = 'labels-grid-1';
-
       return `
-        <div class="sheet-page ${isPortrait ? 'sheet-portrait' : 'sheet-landscape'}">
-          <div class="${gridClass}">
+        <div class="sheet-page">
+          <div class="labels-grid-3">
             ${labelsHtml}
-            ${((layout === '2-landscape' || layout === '2-portrait') && sheetOrders.length === 1) ? '<div class="empty-slot"></div>' : ''}
           </div>
         </div>
       `;
@@ -286,12 +270,12 @@ export function ShippingLabelLandscapeModal({
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Shipping Labels (${safeOrders.length}) — Shanthi Ayurvedas 16:9</title>
+        <title>Shipping Labels (${safeOrders.length}) — Shanthi Ayurvedas</title>
         <style>
           * { box-sizing: border-box; margin: 0; padding: 0; }
           @page {
-            size: ${isPortrait ? 'A4 portrait' : 'A4 landscape'};
-            margin: ${isPortrait ? '8mm' : '6mm'};
+            size: A4 portrait;
+            margin: 6mm 7mm;
           }
           html, body {
             background: #fff;
@@ -306,86 +290,27 @@ export function ShippingLabelLandscapeModal({
             box-sizing: border-box;
             overflow: hidden;
             margin: 0 auto;
-          }
-          .sheet-page.sheet-landscape {
-            width: 285mm;
-            height: 198mm;
-            max-height: 198mm;
-          }
-          .sheet-page.sheet-portrait {
-            width: 194mm;
-            height: 281mm;
-            max-height: 281mm;
+            width: 196mm;
+            height: 284mm;
+            max-height: 284mm;
           }
           .sheet-page:last-child {
             page-break-after: avoid;
             break-after: avoid;
           }
 
-          /* 16:9 Ratio Labels Grid Layouts */
-          .labels-grid-2-landscape {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6mm;
-            align-items: start;
-          }
-          .labels-grid-2-landscape .label-box,
-          .labels-grid-2-landscape .empty-slot {
-            width: 138mm;
-            height: 77.6mm;
-            max-height: 77.6mm;
-            aspect-ratio: 16 / 9;
-          }
-
-          .labels-grid-2-portrait {
+          /* 3 Labels Stacked Vertically on A4 Portrait */
+          .labels-grid-3 {
             display: flex;
             flex-direction: column;
-            gap: 14mm;
+            gap: 3.5mm;
             align-items: center;
+            width: 100%;
           }
-          .labels-grid-2-portrait .label-box,
-          .labels-grid-2-portrait .empty-slot {
-            width: 194mm;
-            height: 109.1mm;
-            max-height: 109.1mm;
-            aspect-ratio: 16 / 9;
-          }
-
-          .labels-grid-4 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-template-rows: 1fr 1fr;
-            gap: 4mm 6mm;
-            align-items: start;
-          }
-          .labels-grid-4 .label-box {
-            width: 138mm;
-            height: 77.6mm;
-            max-height: 77.6mm;
-            aspect-ratio: 16 / 9;
-          }
-
-          .labels-grid-1 {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-          }
-          .labels-grid-1 .label-box {
-            width: 240mm;
-            height: 135mm;
-            max-height: 135mm;
-            aspect-ratio: 16 / 9;
-          }
-
-          .empty-slot {
-            background: transparent;
-            border: 1px dashed #d1d5db;
-            box-sizing: border-box;
-          }
-
-          /* Exact 16:9 Rectangle Shipping Label */
           .label-box {
+            width: 196mm;
+            height: 90mm;
+            max-height: 90mm;
             border: 1.5px solid #000;
             box-sizing: border-box;
             display: flex;
@@ -395,12 +320,11 @@ export function ShippingLabelLandscapeModal({
             overflow: hidden;
             color: #000;
             line-height: 1.15;
-            aspect-ratio: 16 / 9;
           }
           .label-header {
             background-color: #362115 !important;
             color: #fff !important;
-            padding: 3px 6px;
+            padding: 2.5px 6px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -414,23 +338,23 @@ export function ShippingLabelLandscapeModal({
           }
           .sub-row {
             border-bottom: 1px solid #000;
-            padding: 2.5px 6px;
-            font-size: 9px;
+            padding: 2px 6px;
+            font-size: 8.5px;
             font-weight: 800;
             text-transform: uppercase;
-            line-height: 1.2;
+            line-height: 1.15;
             background: #fff;
           }
           .help-banner {
             background-color: #166534 !important;
             color: #ffffff !important;
             text-align: center;
-            padding: 2.5px 5px;
-            font-size: 9px;
+            padding: 2px 5px;
+            font-size: 8.5px;
             font-weight: 800;
             border-bottom: 1px solid #000;
             letter-spacing: 0.1px;
-            line-height: 1.2;
+            line-height: 1.15;
           }
           .main-grid {
             display: grid;
@@ -442,13 +366,13 @@ export function ShippingLabelLandscapeModal({
           }
           .col-left {
             border-right: 1px solid #000;
-            padding: 4px 6px;
+            padding: 3px 6px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
           }
           .cust-name {
-            font-size: 11.5px;
+            font-size: 11px;
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 0.2px;
@@ -458,37 +382,37 @@ export function ShippingLabelLandscapeModal({
             border: 1.2px solid #dc2626;
             color: #dc2626;
             font-weight: 900;
-            font-size: 10px;
+            font-size: 9.5px;
             padding: 0.5px 4px;
             border-radius: 2px;
             white-space: nowrap;
           }
           .cust-phone {
-            font-size: 10px;
+            font-size: 9.5px;
             font-weight: 900;
             color: #000;
-            margin: 2px 0;
+            margin: 1.5px 0;
             display: flex;
             align-items: center;
             gap: 2px;
           }
           .cust-address {
-            font-size: 8.5px;
+            font-size: 8px;
             font-weight: 800;
             text-transform: uppercase;
-            line-height: 1.25;
+            line-height: 1.2;
             color: #111;
           }
           .col-right {
-            padding: 3px 5px;
+            padding: 2.5px 5px;
             display: flex;
             flex-direction: column;
-            gap: 3px;
+            gap: 2.5px;
             justify-content: flex-start;
           }
           .article-box {
             border: 1px dashed #737373;
-            padding: 2.5px 3px;
+            padding: 2px 3px;
             text-align: center;
             background: #fafafa;
           }
@@ -500,7 +424,7 @@ export function ShippingLabelLandscapeModal({
           }
           .art-code {
             font-family: monospace;
-            font-size: 10.5px;
+            font-size: 10px;
             font-weight: 900;
             letter-spacing: 0.8px;
             margin-top: 0.5px;
@@ -509,24 +433,24 @@ export function ShippingLabelLandscapeModal({
             width: 100%;
             border-collapse: collapse;
             border: 1px solid #000;
-            font-size: 8px;
+            font-size: 7.5px;
             font-weight: 800;
             text-transform: uppercase;
           }
           .footer-sender {
-            padding: 2.5px 6px;
-            font-size: 8px;
+            padding: 2px 6px;
+            font-size: 7.5px;
             font-weight: 800;
             text-transform: uppercase;
-            line-height: 1.2;
+            line-height: 1.15;
             background: #fff;
           }
           .emergency-banner {
             background-color: #dc2626 !important;
             color: #ffffff !important;
             text-align: center;
-            padding: 2px 4px;
-            font-size: 7.5px;
+            padding: 1.5px 4px;
+            font-size: 7px;
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 0.4px;
@@ -567,7 +491,7 @@ export function ShippingLabelLandscapeModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-700 w-full max-w-6xl rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[96vh]">
+      <div className="bg-slate-900 border border-slate-700 w-full max-w-5xl rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[96vh]">
         {/* Top Purple Toolbar */}
         <div className="bg-[#4a154b] text-white px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-md border-b border-purple-800">
           {/* Sheet counter info */}
@@ -577,27 +501,21 @@ export function ShippingLabelLandscapeModal({
             </span>
           </div>
 
-          {/* Controls: Layout Selector & Shanthi Brand Toggle & Navigation */}
+          {/* Controls: Layout Indicator & Shanthi Brand Toggle & Navigation */}
           <div className="flex items-center flex-wrap gap-2 sm:gap-3 text-xs">
-            {/* Per Page / Layout Dropdown */}
+            {/* Per Page: Fixed 3 Labels / A4 Sheet */}
             <div className="flex items-center gap-1.5">
               <span className="text-purple-200 font-medium">Per Page:</span>
               <select
-                value={layout}
-                onChange={(e) => {
-                  setLayout(e.target.value);
-                  setCurrentPage(0);
-                }}
-                className="bg-purple-950/80 text-white font-bold text-xs px-2.5 py-1 rounded border border-purple-400/40 focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer"
+                value="3"
+                onChange={() => {}}
+                className="bg-purple-950/80 text-white font-bold text-xs px-2.5 py-1 rounded border border-purple-400/40 focus:outline-none cursor-pointer"
               >
-                <option value="2-landscape">2 Labels (Landscape)</option>
-                <option value="2-portrait">2 Labels (Portrait Stacked)</option>
-                <option value="4">4 Labels (2x2 Grid)</option>
-                <option value="1">1 Label (Single 16:9)</option>
+                <option value="3">3 Labels (A4 Sheet)</option>
               </select>
             </div>
 
-            {/* Header Brand Selector (Default: Shanthi Logo, No AyurOne Mart) */}
+            {/* Header Brand Selector (Default: Shanthi Logo) */}
             <div className="flex items-center gap-1.5 hidden md:flex">
               <span className="text-purple-200 font-medium">Header:</span>
               <select
@@ -656,26 +574,16 @@ export function ShippingLabelLandscapeModal({
 
         {/* Gray Preview Canvas Area */}
         <div className="flex-1 bg-slate-300 p-3 sm:p-6 overflow-y-auto flex items-center justify-center min-h-[460px]">
-          {/* White Sheet Container (Adapts ratio to Landscape or Portrait) */}
+          {/* White A4 Sheet Container (Standard Portrait 210 x 297) */}
           <div
-            className="bg-white rounded-sm shadow-2xl border border-slate-400 w-full max-w-[940px] p-3 sm:p-4 text-black select-none"
+            className="bg-white rounded-sm shadow-2xl border border-slate-400 w-full max-w-[680px] p-3 sm:p-4 text-black select-none"
             style={{
-              aspectRatio: layout === '2-portrait' ? '210 / 297' : '297 / 210',
-              minHeight: layout === '2-portrait' ? '540px' : '440px'
+              aspectRatio: '210 / 297',
+              minHeight: '640px'
             }}
           >
-            {/* Grid Container matching selected layout */}
-            <div
-              className={`items-start ${
-                layout === '2-landscape'
-                  ? 'grid grid-cols-2 gap-3 sm:gap-4'
-                  : layout === '2-portrait'
-                  ? 'flex flex-col gap-4 sm:gap-6 max-w-[560px] mx-auto py-2'
-                  : layout === '4'
-                  ? 'grid grid-cols-2 grid-rows-2 gap-2 sm:gap-3'
-                  : 'flex items-center justify-center max-w-[620px] mx-auto py-2'
-              }`}
-            >
+            {/* 3 Labels Stacked Vertically */}
+            <div className="flex flex-col gap-2.5 sm:gap-3 h-full justify-between">
               {currentOrdersOnSheet.map((ord, idx) => {
                 const labelNumber = currentSheetIndex * labelsPerSheet + idx + 1;
                 const d = getOrderData(ord);
@@ -685,7 +593,7 @@ export function ShippingLabelLandscapeModal({
                 return (
                   <div
                     key={ord._id || idx}
-                    className="w-full aspect-[16/9] border-[1.5px] border-black bg-white flex flex-col justify-between text-xs overflow-hidden shadow-xs"
+                    className="w-full border-[1.5px] border-black bg-white flex flex-col justify-between text-xs overflow-hidden shadow-xs flex-1 min-h-[160px]"
                   >
                     {/* 1. Header Banner */}
                     <div className="bg-[#362115] text-white px-2 py-1 flex items-center justify-between shrink-0">
@@ -713,12 +621,12 @@ export function ShippingLabelLandscapeModal({
                     </div>
 
                     {/* 3. BILLER ID row */}
-                    <div className="border-b border-black px-2 py-0.5 font-extrabold text-[7.5px] sm:text-[8.5px] uppercase leading-tight bg-white shrink-0">
+                    <div className="border-b border-black px-2 py-0.5 font-extrabold text-[7.5px] sm:text-[8px] uppercase leading-tight bg-white shrink-0">
                       {d.carrierSubheaderText}
                     </div>
 
                     {/* 4. Help Banner in Kannada & English */}
-                    <div className="bg-[#166534] text-white text-center py-0.5 px-1 font-extrabold text-[8.5px] sm:text-[9.5px] border-b border-black leading-tight shrink-0">
+                    <div className="bg-[#166534] text-white text-center py-0.5 px-1 font-extrabold text-[8px] sm:text-[9px] border-b border-black leading-tight shrink-0">
                       Help/ಸಹಾಯ (How to use & Problems/ಬಳಸುವ ವಿಧಾನ ಮತ್ತು ಸಮಸ್ಯೆ): {d.telecallerName} - {d.telecallerMobile}
                     </div>
 
@@ -728,14 +636,14 @@ export function ShippingLabelLandscapeModal({
                       <div className="p-1.5 sm:p-2 flex flex-col justify-between overflow-hidden">
                         <div>
                           <div className="flex items-start justify-between gap-1 mb-0.5">
-                            <div className="font-black text-[10.5px] sm:text-[12px] uppercase leading-tight text-black line-clamp-1">
+                            <div className="font-black text-[10.5px] sm:text-[11.5px] uppercase leading-tight text-black line-clamp-1">
                               {d.customerName}
                             </div>
-                            <div className="border-[1.2px] border-red-600 text-red-600 font-black text-[9px] sm:text-[10px] px-1 py-0.2 rounded-xs shrink-0">
-                              {d.isCOD ? `COD ${d.payableAmount}` : `PREPAID`}
+                            <div className="border-[1.2px] border-red-600 text-red-600 font-black text-[8.5px] sm:text-[9.5px] px-1 py-0.2 rounded-xs shrink-0">
+                              {d.isCOD ? `COD ₹${d.payableAmount}` : `PREPAID`}
                             </div>
                           </div>
-                          <div className="font-black text-[9.5px] sm:text-[10.5px] text-black flex items-center gap-1 my-0.5">
+                          <div className="font-black text-[9px] sm:text-[10px] text-black flex items-center gap-1 my-0.5">
                             <span className="text-purple-700">📞</span> {d.mobile} {d.altMobile ? `/ ${d.altMobile}` : ''}
                           </div>
                           {d.fatherName && (
@@ -743,7 +651,7 @@ export function ShippingLabelLandscapeModal({
                               C/O {d.fatherName}
                             </div>
                           )}
-                          <div className="font-bold text-[8px] sm:text-[9px] uppercase leading-tight text-neutral-900 line-clamp-3">
+                          <div className="font-bold text-[8px] sm:text-[8.5px] uppercase leading-tight text-neutral-900 line-clamp-3">
                             {d.formattedAddress}
                           </div>
                         </div>
@@ -755,12 +663,12 @@ export function ShippingLabelLandscapeModal({
                           <div className="text-[6.5px] sm:text-[7px] font-bold text-neutral-500 uppercase tracking-wider">
                             ARTICLE NUMBER
                           </div>
-                          <div className="font-mono text-[10px] sm:text-[11.5px] font-black tracking-wider text-black">
+                          <div className="font-mono text-[9.5px] sm:text-[11px] font-black tracking-wider text-black">
                             {d.tracking}
                           </div>
                         </div>
 
-                        <table className="w-full border-collapse border border-black text-[7px] sm:text-[8px] font-extrabold uppercase">
+                        <table className="w-full border-collapse border border-black text-[7px] sm:text-[7.5px] font-extrabold uppercase">
                           <tbody>
                             <tr className="border-b border-black">
                               <td className="p-0.5 border-r border-black w-2/5 bg-gray-50 text-gray-700 font-bold">REFER BY</td>
@@ -773,7 +681,7 @@ export function ShippingLabelLandscapeModal({
                             {d.advanceAmount > 0 && (
                               <tr className="border-b border-black bg-emerald-50/60">
                                 <td className="p-0.5 border-r border-black font-bold text-emerald-800">ADVANCE</td>
-                                <td className="p-0.5 font-black text-emerald-800">₹{d.advanceAmount} {d.advanceUtr ? `· ${d.advanceUtr}` : ''}</td>
+                                <td className="p-0.5 font-black text-emerald-800">₹${d.advanceAmount} {d.advanceUtr ? `· ${d.advanceUtr}` : ''}</td>
                               </tr>
                             )}
                             {visibleProducts.map((prod, pIdx) => (
@@ -794,7 +702,7 @@ export function ShippingLabelLandscapeModal({
                     </div>
 
                     {/* 6. Sender Bottom Details */}
-                    <div className="px-1.5 py-0.5 font-extrabold text-[7px] sm:text-[8px] uppercase leading-tight bg-white text-black shrink-0">
+                    <div className="px-1.5 py-0.5 font-extrabold text-[7px] sm:text-[7.5px] uppercase leading-tight bg-white text-black shrink-0">
                       <div>FROM : SHANTHI AYURVEDAS, SHANTHI AYURVEDAS NO15, JAYPEE GATEWAY, ANTHIVADI, HOSUR - 635110</div>
                       <div>MOBILE : 8884747209 / 8884113629</div>
                     </div>
@@ -807,13 +715,20 @@ export function ShippingLabelLandscapeModal({
                 );
               })}
 
-              {/* If 2 labels layout and only 1 label on this sheet, render clean 16:9 empty slot */}
-              {(layout === '2-landscape' || layout === '2-portrait') && currentOrdersOnSheet.length === 1 && (
-                <div className="w-full aspect-[16/9] border border-dashed border-slate-300 rounded bg-slate-50/50 flex flex-col items-center justify-center text-slate-400 text-xs font-semibold gap-1">
-                  <span className="text-base">🏷️</span>
-                  <span>Empty 16:9 Label Slot</span>
-                </div>
-              )}
+              {/* Empty slot placeholders if fewer than 3 orders on this sheet */}
+              {Array.from({ length: Math.max(0, 3 - currentOrdersOnSheet.length) }).map((_, emptyIdx) => {
+                const slotNum = currentOrdersOnSheet.length + emptyIdx + 1;
+                return (
+                  <div
+                    key={`empty-slot-${slotNum}`}
+                    className="w-full flex-1 min-h-[140px] border-2 border-dashed border-slate-300 rounded bg-slate-50/60 flex flex-col items-center justify-center text-slate-400 text-xs font-semibold gap-1 select-none"
+                  >
+                    <span className="text-xl">🏷️</span>
+                    <span>Empty Label Slot ({slotNum}/3)</span>
+                    <span className="text-[10px] text-slate-400">Available for next label</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

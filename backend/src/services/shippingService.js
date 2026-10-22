@@ -15,8 +15,12 @@ export class ShippingService {
    */
   static async getShipmentForOrder(orderId) {
     const shipment = await Shipment.findOne({ orderId })
-      .populate('branchId', 'name code')
-      .populate('orderId', 'orderNumber grandTotal status paymentStatus paymentMethod deliveryAddress patientDetails')
+      .populate('branchId', 'name code address city state pincode phone')
+      .populate({
+        path: 'orderId',
+        select: 'orderNumber grandTotal status paymentStatus paymentMethod deliveryAddress patientDetails customerId createdAt',
+        populate: { path: 'customerId', select: 'name mobile email' }
+      })
       .lean();
 
     if (!shipment) return null;
@@ -211,7 +215,12 @@ export class ShippingService {
    */
   static async getTrackingTimeline(awbNumber) {
     const shipment = await Shipment.findOne({ awbNumber })
-      .populate('branchId', 'name code')
+      .populate('branchId', 'name code address city state pincode phone')
+      .populate({
+        path: 'orderId',
+        select: 'orderNumber grandTotal status paymentStatus paymentMethod deliveryAddress patientDetails customerId createdAt',
+        populate: { path: 'customerId', select: 'name mobile email' }
+      })
       .lean();
 
     if (!shipment) throw new NotFoundError('Shipment AWB');

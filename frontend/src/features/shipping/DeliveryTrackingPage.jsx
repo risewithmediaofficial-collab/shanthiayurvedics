@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Truck, MapPin, CheckCircle2, Upload, FileSpreadsheet,
   FileText, X, AlertTriangle, ChevronDown, ChevronUp, RefreshCw,
-  FileCheck, PackageCheck, Package, RotateCcw, AlertCircle, Clock
+  FileCheck, PackageCheck, Package, RotateCcw, AlertCircle, Clock,
+  Building2, User, Phone
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { Table } from '../../components/common/Table.jsx';
@@ -654,7 +655,7 @@ export function DeliveryTrackingPage() {
           onClose={() => setSelectedShipmentAwb(null)}
           title={`Live Tracking — ${selectedShipmentAwb}`}
           subtitle={`Carrier: ${trackingDetails?.shipment?.courierName || 'Logistics Partner'}`}
-          maxWidth="max-w-md"
+          maxWidth="max-w-xl"
           icon="🚚"
           footer={
             <Button variant="secondary" onClick={() => setSelectedShipmentAwb(null)}>
@@ -665,32 +666,124 @@ export function DeliveryTrackingPage() {
           {isTrackingLoading ? (
             <div className="py-8 text-center text-xs text-slate-500">Connecting to carrier network...</div>
           ) : (
-            <div className="space-y-4">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500">Current Status:</span>
+            <div className="space-y-3.5">
+              {/* Status Header */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-500 font-medium">Current Status:</span>
                   {getStatusBadge(trackingDetails?.shipment?.trackingStatus)}
                 </div>
+                {trackingDetails?.shipment?.bookingDate && (
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    Booked: {new Date(trackingDetails.shipment.bookingDate).toLocaleDateString('en-IN')}
+                  </span>
+                )}
               </div>
 
-              <div className="space-y-3 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                {(trackingDetails?.events || []).map((ev, idx) => (
-                  <div key={idx} className="flex items-start gap-3 relative pl-1 text-xs">
-                    <div className="w-5 h-5 rounded-full bg-ayur-100 text-ayur-800 flex items-center justify-center shrink-0 z-10">
-                      <CheckCircle2 className="w-3 h-3" />
-                    </div>
-                    <div>
-                      <div className="font-bold text-slate-900">{ev.activity}</div>
-                      <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3 text-slate-400" /> {ev.location}
+              {/* Origin & Delivery Details */}
+              {(() => {
+                const s = trackingDetails?.shipment;
+                const o = s?.orderId;
+                const originBranch = s?.branchId?.name || 'Hosur Main Hub';
+                const originCity = s?.branchId?.city || 'Hosur';
+                const originCode = s?.branchId?.code || 'HSR';
+                const recipientName = o?.patientDetails?.patientName || o?.customerId?.name || 'Customer';
+                const recipientPhone = o?.patientDetails?.mobile || o?.customerId?.mobile || '';
+                const addr = o?.deliveryAddress || {};
+                const fullAddress = [addr.street, addr.landmark, addr.city, addr.state, addr.pincode ? `PIN: ${addr.pincode}` : ''].filter(Boolean).join(', ');
+
+                return (
+                  <div className="p-3 bg-slate-50/90 rounded-xl border border-slate-200 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Origin (Where ordered from) */}
+                      <div className="flex items-start gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
+                          <Building2 className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                            Ordered From (Origin Hub)
+                          </div>
+                          <div className="font-bold text-slate-800 mt-0.5 truncate">
+                            {originBranch}
+                          </div>
+                          <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span>{originCity} ({originCode})</span>
+                          </div>
+                          {o?.orderNumber && (
+                            <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+                              Ref: {o.orderNumber}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">
-                        {new Date(ev.timestamp).toLocaleString()}
+
+                      {/* Delivery Details */}
+                      <div className="flex items-start gap-2.5 border-t sm:border-t-0 sm:border-l border-slate-200 pt-2.5 sm:pt-0 sm:pl-3">
+                        <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center shrink-0 mt-0.5">
+                          <MapPin className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 flex items-center justify-between gap-1">
+                            <span>Delivery Destination</span>
+                            {o?.paymentMethod && (
+                              <span className="font-mono font-semibold text-slate-600">{o.paymentMethod}</span>
+                            )}
+                          </div>
+                          <div className="font-bold text-slate-800 mt-0.5 flex items-center gap-1.5">
+                            <span className="truncate">{recipientName}</span>
+                            {recipientPhone && (
+                              <span className="text-[11px] font-mono font-normal text-slate-500 shrink-0">
+                                ({recipientPhone})
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-600 mt-0.5 line-clamp-2 leading-relaxed">
+                            {fullAddress || `${addr.city || 'City'}, ${addr.state || ''} ${addr.pincode || ''}`.trim() || 'Address on file'}
+                          </div>
+                          {o?.grandTotal !== undefined && (
+                            <div className="text-[10px] text-slate-500 mt-0.5">
+                              Order Total: <strong className="text-slate-800">₹{Number(o.grandTotal).toLocaleString('en-IN')}</strong>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                ))}
+                );
+              })()}
+
+              {/* Real-time Tracking Events Header */}
+              <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5 pt-1">
+                <Clock className="w-3.5 h-3.5 text-indigo-600" /> Real-time Tracking Events
               </div>
+
+              {/* Tracking Timeline */}
+              {(trackingDetails?.events || []).length > 0 ? (
+                <div className="space-y-3 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                  {(trackingDetails?.events || []).map((ev, idx) => (
+                    <div key={idx} className="flex items-start gap-3 relative pl-1 text-xs">
+                      <div className="w-5 h-5 rounded-full bg-ayur-100 text-ayur-800 flex items-center justify-center shrink-0 z-10">
+                        <CheckCircle2 className="w-3 h-3" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-slate-900">{ev.activity}</div>
+                        <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 text-slate-400" /> {ev.location}
+                        </div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">
+                          {new Date(ev.timestamp).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-4 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-slate-200">
+                  No tracking events recorded yet.
+                </div>
+              )}
             </div>
           )}
         </Modal>

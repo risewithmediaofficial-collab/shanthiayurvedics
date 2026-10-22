@@ -16,7 +16,11 @@ import {
   Clock,
   Layers,
   ShieldCheck,
-  Send
+  Send,
+  Building2,
+  User,
+  Phone,
+  ArrowRight
 } from 'lucide-react';
 import apiClient from '../../../api/apiClient.js';
 import { Card } from '../../../components/common/Card.jsx';
@@ -290,6 +294,66 @@ export function TPCShippingCard({ order }) {
                 </span>
               </div>
             </div>
+
+            {/* Origin & Delivery Route Details */}
+            {(() => {
+              const originBranch = order?.branchId?.name || shipment?.branchId?.name || 'Shanthi Ayurvedas Hosur Main Hub';
+              const originCity = order?.branchId?.city || shipment?.branchId?.city || 'Hosur';
+              const originCode = order?.branchId?.code || shipment?.branchId?.code || 'HSR';
+              const recipientName = order?.patientDetails?.patientName || order?.customerId?.name || shipment?.orderId?.patientDetails?.patientName || shipment?.orderId?.customerId?.name || 'Customer';
+              const recipientPhone = order?.patientDetails?.mobile || order?.customerId?.mobile || shipment?.orderId?.patientDetails?.mobile || shipment?.orderId?.customerId?.mobile || '';
+              const addr = order?.deliveryAddress || shipment?.orderId?.deliveryAddress || {};
+              const fullAddress = [addr.street, addr.landmark, addr.city, addr.state, addr.pincode ? `PIN: ${addr.pincode}` : ''].filter(Boolean).join(', ');
+
+              return (
+                <div className="p-3 bg-slate-50/90 rounded-xl border border-slate-200/90 text-xs">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 relative">
+                    {/* Origin / Ordered From */}
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
+                        <Building2 className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                          Ordered From (Origin Hub)
+                        </div>
+                        <div className="font-bold text-slate-800 mt-0.5 truncate">
+                          {originBranch}
+                        </div>
+                        <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span>{originCity} ({originCode}) · Ref: {order?.orderNumber || shipment?.orderId?.orderNumber || '—'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Delivery Destination */}
+                    <div className="flex items-start gap-2.5 border-t md:border-t-0 md:border-l border-slate-200/80 pt-2.5 md:pt-0 md:pl-3">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center shrink-0 mt-0.5">
+                        <MapPin className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 flex items-center justify-between gap-1">
+                          <span>Delivery Details (Destination)</span>
+                          <span className="font-semibold text-slate-600 font-mono">{order?.paymentMethod || shipment?.orderId?.paymentMethod || 'PREPAID'}</span>
+                        </div>
+                        <div className="font-bold text-slate-800 mt-0.5 flex items-center gap-2">
+                          <span className="truncate">{recipientName}</span>
+                          {recipientPhone && (
+                            <span className="text-[11px] font-mono font-normal text-slate-500 shrink-0">
+                              ({recipientPhone})
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-600 mt-0.5 line-clamp-2 leading-relaxed">
+                          {fullAddress || `${addr.city || 'City'}, ${addr.state || ''} ${addr.pincode || ''}`.trim() || 'Address on file'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Shipment Specifications */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">

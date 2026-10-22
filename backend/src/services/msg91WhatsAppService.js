@@ -150,6 +150,129 @@ export class Msg91WhatsAppService {
       return { success: false, error: err?.message };
     }
   }
+
+  /**
+   * Send WhatsApp Order Dispatched notification (with tracking number) via MSG91
+   */
+  static async sendOrderDispatched(order) {
+    try {
+      if (!order) return { success: false, reason: 'NO_ORDER' };
+
+      const pat = order.patientDetails || {};
+      const addr = order.deliveryAddress || {};
+      const rawMobile = pat.mobile || addr.phone || order.customerId?.mobile || pat.alternateMobile || addr.alternatePhone;
+      const formattedPhone = this.formatWhatsAppNumber(rawMobile);
+
+      if (!formattedPhone) {
+        logger.warn({ orderNumber: order.orderNumber, rawMobile }, 'MSG91 WhatsApp: Invalid customer mobile number for dispatch');
+        return { success: false, reason: 'INVALID_PHONE' };
+      }
+
+      const trackingNumber = String(order.trackingNumber || '').trim();
+      if (!trackingNumber) {
+        logger.warn({ orderNumber: order.orderNumber }, 'MSG91 WhatsApp: Cannot send dispatch without tracking number');
+        return { success: false, reason: 'NO_TRACKING_NUMBER' };
+      }
+
+      const patientName = (pat.patientName || order.customerId?.name || 'Valued Patient').toUpperCase();
+      const orderNumber = String(order.orderNumber || '');
+      const courierName = String(order.courierName || 'India Post').trim();
+
+      // Payable amount
+      const isCOD = (order.paymentMethod || 'COD') === 'COD';
+      const advanceAmount = Number(order.advanceAmount || 0);
+      const payableAmount = Math.round(Number(
+        isCOD
+          ? (order.codAmount !== undefined && order.codAmount !== null && order.codAmount !== '' ? order.codAmount : Math.max(0, (order.grandTotal || 0) - advanceAmount))
+          : 0
+      ) || 0);
+
+      const authKey = env.MSG91_AUTHKEY || process.env.MSG91_AUTHKEY;
+      if (!authKey) {
+        logger.info(
+          { orderNumber, phone: formattedPhone, patientName, trackingNumber },
+          'MSG91_AUTHKEY not configured in .env. WhatsApp dispatch notification logged in dry-run mode.'
+        );
+        return { success: false, reason: 'AUTHKEY_NOT_CONFIGURED', dryRun: true };
+      }
+
+      const integratedNumber = env.MSG91_WHATSAPP_INTEGRATED_NUMBER || '918884747209';
+      const namespace = env.MSG91_WHATSAPP_NAMESPACE || '0366c008_69c0_4b6a_aa0b_740b15b04344';
+      const templateName = env.MSG91_WHATSAPP_DISPATCH_TEMPLATE_NAME || 'shanthi_order_dispatched';
+
+      const payload = {
+        integrated_number: integratedNumber,
+        content_type: 'template',
+        payload: {
+          messaging_product: 'whatsapp',
+          type: 'template',
+          template: {
+            name: templateName,
+            language: {
+              code: 'en',
+              policy: 'deterministic'
+            },
+            namespace: namespace,
+            to_and_components: [
+              {
+                to: [formattedPhone],
+                components: {
+                  body_1: {
+                    type: 'text',
+                    value: patientName
+                  },
+                  body_2: {
+                    type: 'text',
+                    value: orderNumber
+                  },
+                  body_3: {
+                    type: 'text',
+                    value: courierName
+                  },
+                  body_4: {
+                    type: 'text',
+                    value: trackingNumber
+                  },
+                  body_5: {
+                    type: 'text',
+                    value: isCOD ? String(payableAmount) : '0 (Prepaid)'
+                  }
+                }
+              }
+            ]
+          }
+        }
+      };
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const res = await fetch('https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'authkey': authKey
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        logger.warn({ status: res.status, data, orderNumber }, 'MSG91 WhatsApp Dispatch API returned error response');
+        return { success: false, status: res.status, data };
+      }
+
+      logger.info({ orderNumber, phone: formattedPhone, trackingNumber, data }, 'MSG91 WhatsApp order dispatched notification sent successfully');
+      return { success: true, data };
+    } catch (err) {
+      logger.error({ err: err?.message, orderId: order?._id, orderNumber: order?.orderNumber }, 'Error sending MSG91 WhatsApp order dispatched notification');
+      return { success: false, error: err?.message };
+    }
+  }
 }
 
 export default Msg91WhatsAppService;

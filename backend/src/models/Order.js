@@ -230,6 +230,14 @@ const orderSchema = new mongoose.Schema(
       enum: ['NOT_SENT', 'SENT', 'FAILED'],
       default: 'NOT_SENT'
     },
+    whatsappDispatchSentAt: {
+      type: Date
+    },
+    whatsappDispatchStatus: {
+      type: String,
+      enum: ['NOT_SENT', 'SENT', 'FAILED'],
+      default: 'NOT_SENT'
+    },
     statusHistory: [orderStatusHistoryItemSchema]
   },
   {

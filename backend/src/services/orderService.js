@@ -424,6 +424,25 @@ export class OrderService {
       });
     }
 
+    // Automatically send WhatsApp Order Dispatched notification when marked as DISPATCHED with tracking number
+    if (targetStatus === ORDER_STATUS.DISPATCHED && order.trackingNumber && !order.whatsappDispatchSentAt) {
+      Msg91WhatsAppService.sendOrderDispatched(order).then(async (res) => {
+        if (res?.success) {
+          await Order.findByIdAndUpdate(order._id, {
+            whatsappDispatchSentAt: new Date(),
+            whatsappDispatchStatus: 'SENT'
+          });
+          logger.info({ orderNumber: order.orderNumber, trackingNumber: order.trackingNumber }, 'Automated WhatsApp dispatch notification sent on status DISPATCHED');
+        } else {
+          await Order.findByIdAndUpdate(order._id, {
+            whatsappDispatchStatus: 'FAILED'
+          });
+        }
+      }).catch((err) => {
+        logger.warn({ err: err?.message, orderNumber: order.orderNumber }, 'Automated WhatsApp dispatch notification failed on status DISPATCHED');
+      });
+    }
+
     return order;
   }
 
@@ -539,6 +558,25 @@ export class OrderService {
     order.markModified('deliveryAddress');
 
     await order.save();
+
+    // Automatically trigger WhatsApp Dispatched notification when barcode/tracking number is scanned and order is dispatched
+    if (order.status === ORDER_STATUS.DISPATCHED && order.trackingNumber && !order.whatsappDispatchSentAt) {
+      Msg91WhatsAppService.sendOrderDispatched(order).then(async (res) => {
+        if (res?.success) {
+          await Order.findByIdAndUpdate(order._id, {
+            whatsappDispatchSentAt: new Date(),
+            whatsappDispatchStatus: 'SENT'
+          });
+          logger.info({ orderNumber: order.orderNumber, trackingNumber: order.trackingNumber }, 'Automated WhatsApp dispatch notification sent on barcode scan');
+        } else {
+          await Order.findByIdAndUpdate(order._id, {
+            whatsappDispatchStatus: 'FAILED'
+          });
+        }
+      }).catch((err) => {
+        logger.warn({ err: err?.message, orderNumber: order.orderNumber }, 'Automated WhatsApp dispatch notification failed on scan');
+      });
+    }
 
     await AuditService.log({
       userId: user.id || user._id,

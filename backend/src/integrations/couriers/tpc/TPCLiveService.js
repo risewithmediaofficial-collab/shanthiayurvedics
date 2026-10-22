@@ -84,7 +84,13 @@ export class TPCLiveService extends TPCServiceInterface {
       try {
         data = JSON.parse(text);
       } catch {
-        data = text;
+        try {
+          // TPC web services occasionally return unescaped newlines in JSON strings
+          const sanitized = text.replace(/[\r\n]+/g, ' ');
+          data = JSON.parse(sanitized);
+        } catch {
+          data = text;
+        }
       }
 
       if (!response.ok) {
@@ -122,15 +128,27 @@ export class TPCLiveService extends TPCServiceInterface {
 
     if (Array.isArray(data) && data.length > 0) {
       const item = data[0];
-      isServiceable = Boolean(item.Serviceable || item.City || item.Pincode || item.Station || item.Status !== 'Not Serviceable');
-      hubName = item.City || item.Station || item.Area || '';
-      state = item.State || '';
+      if (item.Message && item.Message.toLowerCase().includes('not available')) {
+        isServiceable = false;
+        hubName = '';
+      } else {
+        isServiceable = Boolean(
+          item.Serviceable ||
+          item.PARCEL_DELIVERY === 'YES' ||
+          item.DOC_DELIVERY === 'YES' ||
+          item.ACTIVE === 'Y' ||
+          item.STATION_CODE ||
+          item.City
+        );
+        hubName = item.AREANAME ? `${item.AREANAME} (${item.STATION_CODE || ''})` : (item.STATION_CODE || item.City || item.Station || '');
+        state = item.State || '';
+      }
     } else if (data && typeof data === 'object') {
       isServiceable = !data.error && data.status !== 'Not Serviceable' && data.status !== 'failed';
       hubName = data.City || data.Station || data.city || '';
     } else if (typeof data === 'string') {
-      isServiceable = !data.toLowerCase().includes('not serviceable') && !data.toLowerCase().includes('invalid');
-      hubName = data;
+      isServiceable = !data.toLowerCase().includes('not serviceable') && !data.toLowerCase().includes('not available') && !data.toLowerCase().includes('invalid');
+      hubName = isServiceable ? data : '';
     }
 
     return {
@@ -356,16 +374,30 @@ export class TPCLiveService extends TPCServiceInterface {
 
   /**
    * Real-time Track & Trace
-   * Endpoint: GET /TPCWebService/tracktracejsonnew.ashx?podno={awb}&client={client}&tpcpwd={pwd}
+   * Endpoint: GET /tpcwebservice/tracktracejson.ashx?client={client}&podno={awb}&tpcpwd={pwd}
    */
   async getTracking({ awbNumber }) {
     this._requireCredentials();
     const data = await this._request(
-      `/TPCWebService/tracktracejsonnew.ashx?podno=${encodeURIComponent(awbNumber)}&client=${encodeURIComponent(this.clientId)}&tpcpwd=${encodeURIComponent(this.password)}`
+      `/tpcwebservice/tracktracejson.ashx?client=${encodeURIComponent(this.clientId)}&podno=${encodeURIComponent(awbNumber)}&tpcpwd=${encodeURIComponent(this.password)}`
     );
 
-    if (data?.error === '1' || data?.error_description || data?.message?.error === '1') {
-      const desc = data?.error_description || data?.message?.description || 'No tracking information found';
+    const firstItem = Array.isArray(data) ? data[0] : data;
+    const respData = firstItem?.['Response Data'] || firstItem;
+    const msgObj = respData?.message || respData;
+
+    if (
+      msgObj?.error === '1' ||
+      msgObj?.error === 1 ||
+      msgObj?.error_description ||
+      data?.error === '1' ||
+      data?.error_description
+    ) {
+      const desc =
+        msgObj?.description ||
+        msgObj?.error_description ||
+        data?.error_description ||
+        'No tracking information found';
       return {
         awbNumber,
         status: SHIPPING_STATUS.SHIPMENT_CREATED,
@@ -382,36 +414,48 @@ export class TPCLiveService extends TPCServiceInterface {
     let isDelivered = false;
 
     for (const item of rawList) {
+      if (item?.['Response Data']?.message?.error) continue;
+
       const activity = item.Activity || item.Remarks || '';
       const actLower = activity.toLowerCase();
+      const remarks = (item.Remarks || '').toUpperCase();
       let status = SHIPPING_STATUS.IN_TRANSIT;
 
-      if (actLower.includes('delivered')) {
+      if (actLower.includes('delivered') || remarks === 'DE') {
         status = SHIPPING_STATUS.DELIVERED;
         currentStatus = SHIPPING_STATUS.DELIVERED;
         isDelivered = true;
-      } else if (actLower.includes('out for delivery')) {
+      } else if (actLower.includes('out for delivery') || remarks === 'OD') {
         status = SHIPPING_STATUS.OUT_FOR_DELIVERY;
         if (currentStatus !== SHIPPING_STATUS.DELIVERED) currentStatus = SHIPPING_STATUS.OUT_FOR_DELIVERY;
-      } else if (actLower.includes('picked') || actLower.includes('despatched') || actLower.includes('outbound')) {
+      } else if (
+        actLower.includes('picked') ||
+        actLower.includes('despatched') ||
+        actLower.includes('dispatched') ||
+        actLower.includes('outbound') ||
+        actLower.includes('forwarding')
+      ) {
         status = SHIPPING_STATUS.PICKED_UP;
         if (currentStatus === SHIPPING_STATUS.SHIPMENT_CREATED) currentStatus = SHIPPING_STATUS.IN_TRANSIT;
       } else if (actLower.includes('booking completed')) {
         status = SHIPPING_STATUS.SHIPMENT_CREATED;
       }
 
-      // Date format from TPC: DD/MM/YYYY and HH:MM
       let eventDate = new Date();
-      const dateStr = item.T_Date || item.Date;
-      const timeStr = item.T_Time || item.Time;
+      const dateStr = item.Date || item.T_Date;
       if (dateStr) {
-        const parts = dateStr.split('/');
-        if (parts.length === 3) {
-          const d = parseInt(parts[0], 10);
-          const m = parseInt(parts[1], 10) - 1;
-          const y = parseInt(parts[2], 10);
-          const [hh, mm] = (timeStr || '00:00').split(':').map((n) => parseInt(n, 10));
-          eventDate = new Date(y, m, d, hh || 0, mm || 0);
+        const parsed = new Date(dateStr);
+        if (!isNaN(parsed.getTime())) {
+          eventDate = parsed;
+        } else {
+          const parts = dateStr.split('/');
+          if (parts.length === 3) {
+            const d = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10) - 1;
+            const y = parseInt(parts[2], 10);
+            const [hh, mm] = (item.T_Time || item.Time || '00:00').split(':').map((n) => parseInt(n, 10));
+            eventDate = new Date(y, m, d, hh || 0, mm || 0);
+          }
         }
       }
 

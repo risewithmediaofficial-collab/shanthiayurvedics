@@ -106,6 +106,39 @@ jobs:
               echo "MSG91_WHATSAPP_NAMESPACE=0366c008_69c0_4b6a_aa0b_740b15b04344" >> .env
             fi
 
+            # Ensure TPC live integration configuration in .env
+            if grep -q "^TPC_MODE=" .env; then
+              sed -i 's/^TPC_MODE=.*/TPC_MODE=live/' .env
+            else
+              echo "TPC_MODE=live" >> .env
+            fi
+
+            if grep -q "^TPC_CLIENT_ID=" .env; then
+              sed -i 's/^TPC_CLIENT_ID=.*/TPC_CLIENT_ID=HRDNHBS0025/' .env
+            else
+              echo "TPC_CLIENT_ID=HRDNHBS0025" >> .env
+            fi
+
+            if grep -q "^TPC_PASSWORD=" .env; then
+              sed -i 's/^TPC_PASSWORD=.*/TPC_PASSWORD=NHB2023/' .env
+            else
+              echo "TPC_PASSWORD=NHB2023" >> .env
+            fi
+
+            if grep -q "^TPC_SENDER_CODE=" .env; then
+              sed -i 's/^TPC_SENDER_CODE=.*/TPC_SENDER_CODE=HRDNHBS0025/' .env
+            else
+              echo "TPC_SENDER_CODE=HRDNHBS0025" >> .env
+            fi
+
+            if ! grep -q "^TPC_BASE_URL=" .env; then
+              echo "TPC_BASE_URL=https://www.tpcglobe.com" >> .env
+            fi
+
+            if ! grep -q "^TPC_COD_ENABLED=" .env; then
+              echo "TPC_COD_ENABLED=false" >> .env
+            fi
+
             # 6. Stop and remove conflicting legacy containers and clear ports 8087 and 89
             echo "🛑 Stopping and cleaning up any existing conflicting containers..."
             docker stop shanthi_frontend shanthi_backend shanthi_mongodb 2>/dev/null || true

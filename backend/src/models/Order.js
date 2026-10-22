@@ -222,6 +222,14 @@ const orderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
     },
+    whatsappConfirmationSentAt: {
+      type: Date
+    },
+    whatsappConfirmationStatus: {
+      type: String,
+      enum: ['NOT_SENT', 'SENT', 'FAILED'],
+      default: 'NOT_SENT'
+    },
     statusHistory: [orderStatusHistoryItemSchema]
   },
   {

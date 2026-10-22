@@ -168,8 +168,10 @@ export function OrderDetailPage() {
               size="sm"
               icon={CheckCircle2}
               onClick={() => handleOpenTransition('CONFIRMED')}
+              className="bg-emerald-700 hover:bg-emerald-800 text-white"
             >
-              Confirm Order
+              <span>Confirm Order</span>
+              <span className="text-[10px] font-normal opacity-90 hidden sm:inline">• Sends WhatsApp</span>
             </Button>
             <Button
               variant="danger"
@@ -282,17 +284,29 @@ export function OrderDetailPage() {
         )}
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Official MSG91 WhatsApp Template Trigger */}
-          <Button
-            variant="primary"
-            size="sm"
-            icon={MessageSquare}
-            isLoading={isSendingWhatsApp}
-            onClick={handleSendMsg91WhatsApp}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-          >
-            Send WhatsApp (MSG91)
-          </Button>
+          {/* Automatic WhatsApp Status Badge */}
+          {order.whatsappConfirmationSentAt ? (
+            <div className="px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-1.5 shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <span>✓ WhatsApp Sent ({new Date(order.whatsappConfirmationSentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})</span>
+            </div>
+          ) : order.status === 'CONFIRMED' || order.status === 'PROCESSING' || order.status === 'READY_FOR_PACKING' || order.status === 'PACKED' || order.status === 'DISPATCHED' ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={MessageSquare}
+              isLoading={isSendingWhatsApp}
+              onClick={handleSendMsg91WhatsApp}
+              title="Resend WhatsApp confirmation template"
+              className="border-slate-200 hover:border-emerald-300 text-slate-700 text-xs font-semibold"
+            >
+              Resend WhatsApp
+            </Button>
+          ) : (
+            <span className="text-[11px] text-slate-500 font-medium hidden sm:inline-flex items-center gap-1 bg-slate-50 border border-slate-200 px-2 py-1 rounded-md">
+              <span>💬</span> WhatsApp auto-sends when Confirmed
+            </span>
+          )}
 
           {/* Manual WhatsApp Web Fallback */}
           <Button
@@ -301,7 +315,7 @@ export function OrderDetailPage() {
             icon={ExternalLink}
             onClick={handleShareWhatsApp}
             title="Open WhatsApp Web chat as manual fallback"
-            className="text-slate-600 hover:bg-slate-100"
+            className="text-slate-600 hover:bg-slate-100 text-xs font-semibold"
           >
             WhatsApp Web
           </Button>

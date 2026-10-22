@@ -23,7 +23,7 @@ export class Msg91WhatsAppService {
 
       const pat = order.patientDetails || {};
       const addr = order.deliveryAddress || {};
-      const rawMobile = pat.mobile || addr.phone || order.customerId?.mobile;
+      const rawMobile = pat.mobile || addr.phone || order.customerId?.mobile || pat.alternateMobile || addr.alternatePhone;
       const formattedPhone = this.formatWhatsAppNumber(rawMobile);
 
       if (!formattedPhone) {
@@ -80,7 +80,7 @@ export class Msg91WhatsAppService {
           messaging_product: 'whatsapp',
           type: 'template',
           template: {
-            name: 'shanthi_order_confirmed',
+            name: env.MSG91_WHATSAPP_TEMPLATE_NAME || 'shanthi_order_confirmed',
             language: {
               code: 'en',
               policy: 'deterministic'

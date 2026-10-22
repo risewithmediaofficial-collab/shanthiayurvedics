@@ -1527,6 +1527,12 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
               <p className="text-[11px] text-slate-400 text-center">
                 from <span className="font-bold text-slate-600">{STATUS_META[statusChangeConfirm.currentStatus]?.label || statusChangeConfirm.currentStatus}</span>
               </p>
+              {statusChangeConfirm.newStatus === 'CONFIRMED' && (
+                <div className="flex items-center gap-1.5 p-2 rounded-lg bg-emerald-50/70 border border-emerald-200/60 text-emerald-800 text-[11px] font-medium">
+                  <span>💬</span>
+                  <span>Customer will automatically receive a WhatsApp confirmation.</span>
+                </div>
+              )}
             </div>
             <div className="flex items-center justify-end gap-2 pt-1">
               <button

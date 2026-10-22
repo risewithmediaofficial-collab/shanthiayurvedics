@@ -367,6 +367,10 @@ export const sendOrderWhatsApp = asyncHandler(async (req, res) => {
     );
   }
 
+  order.whatsappConfirmationSentAt = new Date();
+  order.whatsappConfirmationStatus = 'SENT';
+  await order.save();
+
   return ApiResponse.success(res, result.data, 'WhatsApp order confirmation message queued successfully');
 });
 

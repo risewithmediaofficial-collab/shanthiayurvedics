@@ -39,6 +39,7 @@ const envSchema = z.object({
   MSG91_AUTHKEY: z.string().optional().default(process.env.MSG91_AUTHKEY || ''),
   MSG91_WHATSAPP_INTEGRATED_NUMBER: z.string().optional().default('918884747209'),
   MSG91_WHATSAPP_NAMESPACE: z.string().optional().default('0366c008_69c0_4b6a_aa0b_740b15b04344'),
+  MSG91_WHATSAPP_TEMPLATE_NAME: z.string().optional().default(process.env.MSG91_WHATSAPP_TEMPLATE_NAME || 'shanthi_order_confirmed'),
   // The Professional Couriers (TPC) Integration
   TPC_MODE: z.enum(['mock', 'live']).default('mock'),
   TPC_BASE_URL: z.string().default('https://www.tpcglobe.com'),

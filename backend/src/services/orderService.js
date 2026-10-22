@@ -405,6 +405,25 @@ export class OrderService {
       req
     });
 
+    // Automatically send WhatsApp Order Confirmation when marked as CONFIRMED
+    if (targetStatus === ORDER_STATUS.CONFIRMED && previousStatus !== ORDER_STATUS.CONFIRMED) {
+      Msg91WhatsAppService.sendOrderConfirmation(order).then(async (res) => {
+        if (res?.success) {
+          await Order.findByIdAndUpdate(order._id, {
+            whatsappConfirmationSentAt: new Date(),
+            whatsappConfirmationStatus: 'SENT'
+          });
+          logger.info({ orderNumber: order.orderNumber }, 'Automated WhatsApp confirmation sent on status CONFIRMED');
+        } else {
+          await Order.findByIdAndUpdate(order._id, {
+            whatsappConfirmationStatus: 'FAILED'
+          });
+        }
+      }).catch((err) => {
+        logger.warn({ err: err?.message, orderNumber: order.orderNumber }, 'Automated WhatsApp confirmation failed on status CONFIRMED');
+      });
+    }
+
     return order;
   }
 
@@ -676,6 +695,18 @@ export class OrderService {
             changedBy: user.id || user._id,
             timestamp: now,
             notes: 'Bulk verified and confirmed'
+          });
+
+          // Automatically send WhatsApp confirmation on bulk confirm
+          Msg91WhatsAppService.sendOrderConfirmation(order).then(async (res) => {
+            if (res?.success) {
+              await Order.findByIdAndUpdate(order._id, {
+                whatsappConfirmationSentAt: new Date(),
+                whatsappConfirmationStatus: 'SENT'
+              });
+            }
+          }).catch((err) => {
+            logger.warn({ err: err?.message, orderNumber: order.orderNumber }, 'Automated WhatsApp confirmation failed on bulk confirm');
           });
         }
 

@@ -76,6 +76,21 @@ export function ShippingLabelLandscapeModal({
     ].filter(Boolean);
     const formattedAddress = addressParts.join(', ').toUpperCase();
 
+    // Language detection based on delivery state
+    const stateNorm = (addr.state || '').toLowerCase();
+    const isTamilNadu = stateNorm.includes('tamil');
+    const isKarnataka = stateNorm.includes('karnataka');
+
+    // Help banner language: Tamil for TN, Kannada for Karnataka, English-only for others
+    let helpBannerText;
+    if (isTamilNadu) {
+      helpBannerText = `உதவி (பயன்படுத்துவது எப்படி & பிரச்சனைகள்)`;
+    } else if (isKarnataka) {
+      helpBannerText = `Help/ಸಹಾಯ (How to use & Problems/ಬಳಸುವ ವಿಧಾನ ಮತ್ತು ಸಮಸ್ಯೆ)`;
+    } else {
+      helpBannerText = `Help (How to use & Problems/Contact us)`;
+    }
+
     const isCOD = (order.paymentMethod || 'COD') === 'COD';
     const advanceAmount = Number(order.advanceAmount || 0);
     const advanceUtr = order.advanceUtr || '';
@@ -145,7 +160,8 @@ export function ShippingLabelLandscapeModal({
       telecallerMobile,
       advanceAmount,
       advanceUtr,
-      products
+      products,
+      helpBannerText
     };
   };
 
@@ -216,9 +232,9 @@ export function ShippingLabelLandscapeModal({
               ${d.carrierSubheaderText}
             </div>
 
-            <!-- 4. Kannada & English Help Banner -->
+            <!-- 4. Language-aware Help Banner -->
             <div class="help-banner">
-              Help/ಸಹಾಯ (How to use & Problems/ಬಳಸುವ ವಿಧಾನ ಮತ್ತು ಸಮಸ್ಯೆ): ${d.telecallerName} - ${d.telecallerMobile}
+              ${d.helpBannerText}: ${d.telecallerName} - ${d.telecallerMobile}
             </div>
 
             <!-- 5. Two-Column Grid -->
@@ -230,7 +246,7 @@ export function ShippingLabelLandscapeModal({
                     <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 4px; margin-bottom: 2px;">
                       <div class="cust-name">${d.customerName}</div>
                       <div class="cod-badge">
-                        ${d.isCOD ? `COD ₹${d.payableAmount}` : `PREPAID`}
+                        ${d.isCOD ? `COD <strong style="font-size:11px;">₹${d.payableAmount}</strong>` : `PREPAID`}
                       </div>
                     </div>
                     <div class="cust-phone">
@@ -727,9 +743,9 @@ export function ShippingLabelLandscapeModal({
                               {d.carrierSubheaderText}
                             </div>
 
-                            {/* 4. Help Banner in Kannada & English */}
-                            <div className="bg-[#166534] text-white text-center py-0.2 px-1 font-bold text-[7.5px] sm:text-[8px] border-b border-black leading-tight shrink-0">
-                              Help/ಸಹಾಯ (How to use & Problems/ಬಳಸುವ ವಿಧಾನ ಮತ್ತು ಸಮಸ್ಯೆ): {d.telecallerName} - {d.telecallerMobile}
+                            {/* 4. Language-aware Help Banner */}
+                            <div className="bg-[#166534] text-white text-center py-0.5 px-1 font-bold text-[7.5px] sm:text-[8px] border-b border-black leading-tight shrink-0">
+                              {d.helpBannerText}: {d.telecallerName} - {d.telecallerMobile}
                             </div>
 
                             {/* 5. Middle Two-Column Grid */}
@@ -738,11 +754,11 @@ export function ShippingLabelLandscapeModal({
                               <div className="p-1 sm:p-1.5 flex flex-col justify-between overflow-hidden">
                                 <div>
                                   <div className="flex items-start justify-between gap-1 mb-0.2">
-                                    <div className="font-black text-[9.5px] sm:text-[10.5px] uppercase leading-tight text-black line-clamp-1">
+                                    <div className="font-black text-[9.5px] sm:text-[10.5px] uppercase leading-tight text-black">
                                       {d.customerName}
                                     </div>
-                                    <div className="border border-red-600 text-red-600 font-black text-[7.5px] sm:text-[8px] px-1 py-0.2 rounded-xs shrink-0">
-                                      {d.isCOD ? `COD ₹${d.payableAmount}` : `PREPAID`}
+                                    <div className="border border-red-600 text-red-600 font-black text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded-xs shrink-0">
+                                      {d.isCOD ? <><span>COD </span><strong style={{fontWeight:'900',fontSize:'10px'}}>₹{d.payableAmount}</strong></> : 'PREPAID'}
                                     </div>
                                   </div>
                                   <div className="font-black text-[8px] sm:text-[8.5px] text-black flex items-center gap-1 my-0.2">
@@ -753,7 +769,7 @@ export function ShippingLabelLandscapeModal({
                                       C/O {d.fatherName}
                                     </div>
                                   )}
-                                  <div className="font-bold text-[7px] sm:text-[7.5px] uppercase leading-tight text-neutral-900 line-clamp-3">
+                                  <div className="font-bold text-[7px] sm:text-[7.5px] uppercase leading-tight text-neutral-900">
                                     {d.formattedAddress}
                                   </div>
                                 </div>

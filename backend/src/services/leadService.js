@@ -205,7 +205,7 @@ export class LeadService {
       lead.status = LEAD_STATUS.NOT_INTERESTED;
     } else if (callStatus === 'INVALID_NUMBER' || callStatus === 'WRONG_NUMBER') {
       lead.status = LEAD_STATUS.INVALID;
-    } else if (callStatus === 'NO_ANSWER' || callStatus === 'BUSY' || callStatus === 'SWITCHED_OFF') {
+    } else if (callStatus === 'NO_ANSWER' || callStatus === 'BUSY' || callStatus === 'SWITCHED_OFF' || callStatus === 'RINGING_NOT_RESPONDING') {
       lead.status = LEAD_STATUS.CONTACTED;
     } else if (nextFollowUpAt || callStatus === 'CALL_LATER' || callStatus === 'CONNECTED_CALLBACK_REQUESTED') {
       lead.status = LEAD_STATUS.FOLLOW_UP;

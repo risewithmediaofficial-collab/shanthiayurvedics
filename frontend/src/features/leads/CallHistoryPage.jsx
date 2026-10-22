@@ -47,9 +47,11 @@ export function CallHistoryPage({ callerId } = {}) {
         return <Badge variant="warning">Callback</Badge>;
       case 'CONNECTED_NOT_INTERESTED':
         return <Badge variant="neutral">Not Interested</Badge>;
+      case 'RINGING_NOT_RESPONDING':
+        return <Badge variant="danger">Ringing not responding</Badge>;
       case 'NO_ANSWER':
       case 'BUSY':
-        return <Badge variant="danger">{outcome}</Badge>;
+        return <Badge variant="danger">{outcome === 'NO_ANSWER' ? 'No Answer / Ringing' : outcome}</Badge>;
       default:
         return <Badge variant="neutral">{outcome}</Badge>;
     }

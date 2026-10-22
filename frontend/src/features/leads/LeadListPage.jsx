@@ -994,8 +994,19 @@ export function LeadListPage({ callerId } = {}) {
             <Select
               label="Call Outcome / Disposition *"
               value={callData.outcome}
-              onChange={(e) => setCallData({ ...callData, outcome: e.target.value })}
+              onChange={(e) => {
+                const val = e.target.value;
+                setCallData((prev) => ({
+                  ...prev,
+                  outcome: val,
+                  notes:
+                    (val === 'RINGING_NOT_RESPONDING' || val === 'NO_ANSWER') && !prev.notes?.trim()
+                      ? 'Ringing not responding'
+                      : prev.notes
+                }));
+              }}
               options={[
+                { value: 'RINGING_NOT_RESPONDING', label: 'Ringing not responding' },
                 { value: 'CONNECTED_INTERESTED', label: 'Connected — Highly Interested' },
                 { value: 'CONNECTED_CALLBACK_REQUESTED', label: 'Connected — Asked to Call Back' },
                 { value: 'CONNECTED_NOT_INTERESTED', label: 'Connected — Not Interested' },
@@ -1006,13 +1017,39 @@ export function LeadListPage({ callerId } = {}) {
               ]}
             />
 
-            <Input
-              label="Conversation Notes"
-              value={callData.notes}
-              onChange={(e) => setCallData({ ...callData, notes: e.target.value })}
-              placeholder="Customer discussed joint pain, recommended Sandhi Taila..."
-              required
-            />
+            <div>
+              <Input
+                label="Conversation Notes *"
+                value={callData.notes}
+                onChange={(e) => setCallData({ ...callData, notes: e.target.value })}
+                placeholder="Customer discussed joint pain, recommended Sandhi Taila..."
+                required
+              />
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                {[
+                  { text: 'Ringing not responding', outcome: 'RINGING_NOT_RESPONDING' },
+                  { text: 'Asked to call back', outcome: 'CONNECTED_CALLBACK_REQUESTED' },
+                  { text: 'Line busy', outcome: 'BUSY' },
+                  { text: 'Switched off', outcome: 'SWITCHED_OFF' },
+                  { text: 'Interested in medicines', outcome: 'CONNECTED_INTERESTED' }
+                ].map((chip) => (
+                  <button
+                    key={chip.text}
+                    type="button"
+                    onClick={() => {
+                      setCallData((prev) => ({
+                        ...prev,
+                        outcome: chip.outcome || prev.outcome,
+                        notes: prev.notes?.trim() ? `${prev.notes} • ${chip.text}` : chip.text
+                      }));
+                    }}
+                    className="px-2 py-0.5 rounded-md bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 text-slate-600 text-[10px] font-medium border border-slate-200 transition-colors cursor-pointer"
+                  >
+                    + {chip.text}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div className="pt-2 border-t border-slate-100">
               <label className="text-xs font-semibold text-slate-700 block mb-1">

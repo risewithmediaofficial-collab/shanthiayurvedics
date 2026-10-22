@@ -223,6 +223,9 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
   const [forceRevertChecked, setForceRevertChecked] = useState(false);
   const [assignVerifierId, setAssignVerifierId] = useState('');
 
+  // Status Change Confirmation Dialog State
+  const [statusChangeConfirm, setStatusChangeConfirm] = useState(null); // { orderId, newStatus, orderNumber, currentStatus }
+
   // Modals State
   const [createModalOpen, setCreateModalOpen] = useState(searchParams.get('new') === 'true');
   const [excelImportOpen, setExcelImportOpen] = useState(false);
@@ -1278,8 +1281,8 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                       </div>
                     )}
                     {order.paymentMethod === 'COD' && order.advanceAmount > 0 && (
-                      <div className="text-[10px] text-amber-800 font-bold font-mono">
-                        COD: ₹{(order.codAmount ?? Math.max(0, (order.grandTotal || 0) - order.advanceAmount)).toLocaleString()}
+                      <div className="text-[11px] text-amber-900 font-black font-mono bg-amber-50 px-1.5 py-0.5 rounded border border-amber-300 mt-0.5">
+                        💵 COD: <strong>₹{(order.codAmount ?? Math.max(0, (order.grandTotal || 0) - order.advanceAmount)).toLocaleString()}</strong>
                       </div>
                     )}
                     <div className="flex items-center justify-end gap-1 mt-1">
@@ -1294,18 +1297,27 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                 </div>
 
                 {/* Row 3: Items & Address Line */}
-                <div className="space-y-1 text-xs text-slate-600 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
-                    <span className="font-semibold text-slate-800 truncate">{itemsSummary}</span>
-                  </div>
-                  <div className="flex items-start gap-1.5 text-slate-500 text-[11px] min-w-0">
-                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <span className="truncate">
-                      {addr.street ? `${addr.street}, ` : ''}{addr.landmark ? `${addr.landmark}, ` : ''}{addr.city || 'Hosur'}{addr.district ? `, ${addr.district}` : ''} - {addr.pincode || '635109'}
-                    </span>
-                  </div>
-                </div>
+                {(() => {
+                  const isTamilNadu = (addr.state || '').toLowerCase().includes('tamil');
+                  const itemLabel = isTamilNadu ? 'பொருட்கள்' : 'Items';
+                  const addressLabel = isTamilNadu ? 'முகவரி' : 'Address';
+                  return (
+                    <div className="space-y-1 text-xs text-slate-600 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
+                        <span className="text-[10px] font-bold text-emerald-700 shrink-0">{itemLabel}:</span>
+                        <span className="font-semibold text-slate-800 truncate text-xs">{itemsSummary}</span>
+                      </div>
+                      <div className="flex items-start gap-1.5 text-slate-500 text-[11px] min-w-0">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                        <span className="text-[10px] font-bold text-slate-500 shrink-0">{addressLabel}:</span>
+                        <span className="truncate">
+                          {addr.street ? `${addr.street}, ` : ''}{addr.landmark ? `${addr.landmark}, ` : ''}{addr.city || 'Hosur'}{addr.district ? `, ${addr.district}` : ''} - {addr.pincode || '635109'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Row 4: Tracking, Inline Status Changer & Quick Actions */}
                 <div className="pt-2 border-t border-slate-100 flex flex-col xs:flex-row items-stretch xs:items-center justify-between gap-2 text-xs">
@@ -1321,9 +1333,13 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                         value={order.status}
                         disabled={singleTransitionMutation.isPending}
                         onChange={(e) => {
-                          singleTransitionMutation.mutate({
+                          const newStatus = e.target.value;
+                          if (newStatus === order.status) return;
+                          setStatusChangeConfirm({
                             orderId: order._id,
-                            status: e.target.value,
+                            newStatus,
+                            orderNumber: order.orderNumber,
+                            currentStatus: order.status,
                             forceRevert: isOwner || isManager || isDistributor
                           });
                         }}
@@ -1486,6 +1502,57 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
           onClose={() => setSelectedOrderForLabel(null)}
           order={selectedOrderForLabel}
         />
+      )}
+
+      {/* 8B. Status Change Confirmation Dialog */}
+      {statusChangeConfirm && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-900 text-base leading-tight">Change Order Status?</h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">#{statusChangeConfirm.orderNumber}</p>
+              </div>
+            </div>
+            <div className="bg-slate-50 rounded-xl p-3 space-y-2 border border-slate-200">
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Do you want to change order status to
+              </p>
+              <p className="text-sm font-black text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-center tracking-wide">
+                {STATUS_META[statusChangeConfirm.newStatus]?.label || statusChangeConfirm.newStatus}
+              </p>
+              <p className="text-[11px] text-slate-400 text-center">
+                from <span className="font-bold text-slate-600">{STATUS_META[statusChangeConfirm.currentStatus]?.label || statusChangeConfirm.currentStatus}</span>
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setStatusChangeConfirm(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  singleTransitionMutation.mutate({
+                    orderId: statusChangeConfirm.orderId,
+                    status: statusChangeConfirm.newStatus,
+                    forceRevert: statusChangeConfirm.forceRevert
+                  });
+                  setStatusChangeConfirm(null);
+                }}
+                className="px-5 py-2 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors cursor-pointer shadow-sm"
+              >
+                ✓ Yes, Change Status
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 9. Delete Confirmation Modal */}

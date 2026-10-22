@@ -460,10 +460,16 @@ export class OrderService {
       if (updateData[key] !== undefined && (!Number.isFinite(Number(updateData[key])) || Number(updateData[key]) < 0)) throw new AppError('Order amounts must be non-negative numbers', 400);
     }
     const oldValue = order.toObject();
+    if (updateData.trackingNumber !== undefined) {
+      order.trackingNumber = updateData.trackingNumber;
+    }
+    if (updateData.courierName !== undefined) {
+      order.courierName = updateData.courierName;
+    }
     if (updateData.status && updateData.status !== order.status) {
       order = await this.transitionStatus(orderId, updateData.status, { changedBy: user, notes: updateData.notes, req });
     }
-    for (const key of ['courierName', 'shippingDate', 'boxDimensions', 'weightGrams']) {
+    for (const key of ['shippingDate', 'boxDimensions', 'weightGrams']) {
       if (updateData[key] !== undefined) order[key] = updateData[key];
     }
 

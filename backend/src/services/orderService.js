@@ -290,6 +290,13 @@ export class OrderService {
         orderNumber: newOrder.orderNumber,
         grandTotal
       });
+      emitToBranch(branchId.toString(), 'order:created', {
+        orderId: newOrder._id,
+        orderNumber: newOrder.orderNumber,
+        branchId: newOrder.branchId,
+        status: newOrder.status,
+        grandTotal
+      });
 
       await AuditService.log({
         userId: user.id || user._id,
@@ -391,8 +398,15 @@ export class OrderService {
     emitToBranch(order.branchId.toString(), 'order:status_changed', {
       orderId: order._id,
       orderNumber: order.orderNumber,
+      branchId: order.branchId,
       fromStatus: previousStatus,
       toStatus: targetStatus
+    });
+    emitToBranch(order.branchId.toString(), 'order:updated', {
+      orderId: order._id,
+      orderNumber: order.orderNumber,
+      branchId: order.branchId,
+      status: targetStatus
     });
 
     await AuditService.log({
@@ -584,6 +598,13 @@ export class OrderService {
 
     await order.save();
 
+    emitToBranch(order.branchId.toString(), 'order:updated', {
+      orderId: order._id,
+      orderNumber: order.orderNumber,
+      branchId: order.branchId,
+      status: order.status
+    });
+
     // Automatically trigger WhatsApp Dispatched notification when barcode/tracking number is scanned and order is dispatched
     if (order.status === ORDER_STATUS.DISPATCHED && order.trackingNumber && !order.whatsappDispatchSentAt) {
       Msg91WhatsAppService.sendOrderDispatched(order).then(async (res) => {
@@ -700,6 +721,14 @@ export class OrderService {
       }
     }
 
+    if (successful.length > 0) {
+      emitToBranch(changedBy?.branchId?.toString?.() || null, 'order:bulk_status_changed', {
+        orderIds: successful.map((s) => s.orderId),
+        newStatus: targetStatus,
+        count: successful.length
+      });
+    }
+
     return {
       total: orderIds.length,
       successCount: successful.length,
@@ -730,6 +759,18 @@ export class OrderService {
       newValue: { orderIds, telecallerId, modifiedCount: result.modifiedCount },
       req
     });
+
+    emitToBranch(user?.branchId?.toString?.() || null, 'order:bulk_assigned', {
+      orderIds: orders.map((o) => o._id),
+      telecallerId,
+      count: result.modifiedCount
+    });
+    if (telecallerId) {
+      emitToUser(telecallerId.toString(), 'order:assigned', {
+        orderIds: orders.map((o) => o._id),
+        count: result.modifiedCount
+      });
+    }
 
     return { updatedCount: result.modifiedCount };
   }
@@ -789,6 +830,13 @@ export class OrderService {
       newValue: { orderIds: successful, verifiedCount: successful.length },
       req
     });
+
+    if (successful.length > 0) {
+      emitToBranch(user?.branchId?.toString?.() || null, 'order:bulk_verified', {
+        orderIds: successful,
+        count: successful.length
+      });
+    }
 
     return { verifiedCount: successful.length, orderIds: successful };
   }

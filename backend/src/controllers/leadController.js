@@ -10,6 +10,7 @@ import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { NotFoundError } from '../utils/errors.js';
 import { ROLES } from '../constants/roles.js';
+import { emitToBranch } from '../sockets/index.js';
 
 export const getLeads = asyncHandler(async (req, res) => {
   const { page, limit } = pagination(req.query);
@@ -238,6 +239,12 @@ export const updateLead = asyncHandler(async (req, res) => {
   Object.assign(lead, updates);
   await lead.save();
 
+  emitToBranch(lead.branchId.toString(), 'lead:updated', {
+    leadId: lead._id,
+    branchId: lead.branchId,
+    status: lead.status
+  });
+
   await AuditService.log({ userId: req.user.id, branchId: lead.branchId, action: 'LEAD_UPDATED', module: 'leads', resourceType: 'Lead', resourceId: lead._id, oldValue, newValue: lead.toObject(), req });
   return ApiResponse.success(res, lead, 'Lead updated successfully');
 });
@@ -251,6 +258,12 @@ export const deleteLead = asyncHandler(async (req, res) => {
   // Retain append-only call and assignment history for the audit trail.
   await AuditService.log({ userId: req.user.id, branchId: lead.branchId, action: 'LEAD_DELETED', module: 'leads', resourceType: 'Lead', resourceId: lead._id, oldValue: lead.toObject(), req });
   await Lead.findByIdAndDelete(req.params.id);
+
+  emitToBranch(lead.branchId.toString(), 'lead:deleted', {
+    leadId: req.params.id,
+    branchId: lead.branchId
+  });
+
   return ApiResponse.success(res, { id: req.params.id, name: lead.name }, 'Lead deleted successfully');
 });
 

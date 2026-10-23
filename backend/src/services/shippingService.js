@@ -8,6 +8,7 @@ import { SHIPPING_STATUS, COURIER_PROVIDERS } from '../constants/shippingStates.
 import { NotFoundError, AppError } from '../utils/errors.js';
 import { AuditService } from './auditService.js';
 import { advanceOrderToDelivered } from './deliveryTransition.js';
+import { emitToBranch } from '../sockets/index.js';
 
 export class ShippingService {
   /**
@@ -181,6 +182,13 @@ export class ShippingService {
       req
     });
 
+    emitToBranch(order.branchId?._id?.toString?.() || order.branchId?.toString?.(), 'shipment:created', {
+      shipmentId: shipment._id,
+      awbNumber: shipment.awbNumber,
+      orderId: order._id,
+      carrier: provider.name
+    });
+
     return shipment;
   }
 
@@ -264,6 +272,12 @@ export class ShippingService {
     }
     await shipment.save();
 
+    emitToBranch(shipment.branchId?.toString?.() || null, 'shipment:status_changed', {
+      shipmentId: shipment._id,
+      awbNumber,
+      status
+    });
+
     const event = new TrackingEvent({
       shipmentId: shipment._id,
       awbNumber,
@@ -314,6 +328,12 @@ export class ShippingService {
           await advanceOrderToDelivered(shipment.orderId, actor, req);
         }
         await shipment.save();
+
+        emitToBranch(shipment.branchId?.toString?.() || null, 'shipment:status_changed', {
+          shipmentId: shipment._id,
+          awbNumber: shipment.awbNumber,
+          status: shipment.trackingStatus
+        });
       }
     }
 
@@ -356,6 +376,11 @@ export class ShippingService {
       reason
     };
     await shipment.save();
+
+    emitToBranch(shipment.branchId?.toString?.() || null, 'shipment:cancelled', {
+      shipmentId: shipment._id,
+      awbNumber: shipment.awbNumber
+    });
 
     await TrackingEvent.create({
       shipmentId: shipment._id,

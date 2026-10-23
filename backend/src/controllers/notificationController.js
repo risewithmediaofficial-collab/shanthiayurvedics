@@ -28,6 +28,7 @@ export const getNotifications = asyncHandler(async (req, res) => {
 
 export const markRead = asyncHandler(async (req, res) => {
   await Notification.findByIdAndUpdate(req.params.id, { isRead: true, readAt: new Date() });
+  emitToUser(req.user.id.toString(), 'notification:read', { notificationId: req.params.id });
   return ApiResponse.success(res, null, 'Notification marked as read');
 });
 
@@ -36,6 +37,7 @@ export const markAllRead = asyncHandler(async (req, res) => {
     { $or: [{ userId: req.user.id }, { branchId: req.user.branchId }], isRead: false },
     { isRead: true, readAt: new Date() }
   );
+  emitToUser(req.user.id.toString(), 'notification:all_read', {});
   return ApiResponse.success(res, null, 'All notifications marked as read');
 });
 

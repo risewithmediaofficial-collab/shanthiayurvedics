@@ -10,6 +10,7 @@ import { RTO_REASONS, RTO_CONDITION } from '../constants/shippingStates.js';
 import { MOVEMENT_TYPES, MOVEMENT_REASONS } from '../constants/stockStates.js';
 import { NotFoundError, AppError } from '../utils/errors.js';
 import { AuditService } from './auditService.js';
+import { emitToBranch } from '../sockets/index.js';
 
 export class RTOService {
   /**
@@ -45,6 +46,13 @@ export class RTOService {
     });
     await rtoRecord.save();
 
+    emitToBranch(order.branchId.toString(), 'rto:created', {
+      rtoId: rtoRecord._id,
+      orderId: order._id,
+      branchId: order.branchId,
+      status: rtoRecord.status
+    });
+
     await AuditService.log({
       userId: user.id || user._id,
       branchId: order.branchId,
@@ -70,6 +78,11 @@ export class RTOService {
     rto.receivedAt = new Date();
     rto.receivedBy = user.id || user._id;
     await rto.save();
+
+    emitToBranch(rto.branchId?.toString?.() || null, 'rto:received', {
+      rtoId: rto._id,
+      status: rto.status
+    });
 
     return rto;
   }
@@ -166,6 +179,15 @@ export class RTOService {
 
     rto.restockedItems = restockedList;
     await rto.save();
+
+    emitToBranch(order.branchId?.toString?.() || null, 'rto:verified', {
+      rtoId: rto._id,
+      condition: rto.condition,
+      status: rto.status
+    });
+    emitToBranch(order.branchId?.toString?.() || null, 'inventory:updated', {
+      branchId: order.branchId
+    });
 
     await AuditService.log({
       userId: user.id || user._id,

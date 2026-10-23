@@ -4,6 +4,7 @@ import { NotFoundError } from '../utils/errors.js';
 import { FOLLOWUP_STATUS } from '../constants/leadStates.js';
 import { AuditService } from './auditService.js';
 import { businessDateBoundaries } from '../utils/businessTime.js';
+import { emitToBranch, emitToUser } from '../sockets/index.js';
 
 export class FollowupService {
   /**
@@ -104,6 +105,20 @@ export class FollowupService {
     followup.completedAt = new Date();
     followup.completionNotes = completionNotes;
     await followup.save();
+
+    emitToBranch(followup.branchId.toString(), 'followup:completed', {
+      followupId: followup._id,
+      branchId: followup.branchId,
+      status: followup.status,
+      telecallerId: followup.telecallerId
+    });
+    if (followup.telecallerId) {
+      emitToUser(followup.telecallerId.toString(), 'followup:completed', {
+        followupId: followup._id,
+        branchId: followup.branchId,
+        status: followup.status
+      });
+    }
 
     await AuditService.log({
       userId: user.id,

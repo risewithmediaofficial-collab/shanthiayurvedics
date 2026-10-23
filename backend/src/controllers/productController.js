@@ -6,6 +6,7 @@ import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { NotFoundError, ConflictError } from '../utils/errors.js';
 import { AuditService } from '../services/auditService.js';
+import { emitToAll } from '../sockets/index.js';
 
 export const getProducts = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
@@ -153,6 +154,7 @@ export const createProduct = asyncHandler(async (req, res) => {
       .catch(() => {});
   }
 
+  emitToAll('product:created', { productId: product._id });
   return ApiResponse.created(res, product, 'Product created successfully');
 });
 
@@ -183,6 +185,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
   const oldValue = product.toObject();
   Object.assign(product, req.body);
   await product.save();
+  emitToAll('product:updated', { productId: product._id });
 
   // If category changed, ensure it exists in ProductCategory
   if (req.body.category) {
@@ -236,6 +239,7 @@ export const deleteProduct = asyncHandler(async (req, res) => {
     req
   });
 
+  emitToAll('product:deleted', { productId: product._id });
   return ApiResponse.success(res, null, 'Product and its stock removed successfully');
 });
 
@@ -315,6 +319,7 @@ export const createCategory = asyncHandler(async (req, res) => {
     req
   });
 
+  emitToAll('product:category_created', { category: newCategory });
   return ApiResponse.created(res, newCategory, 'Category created successfully');
 });
 

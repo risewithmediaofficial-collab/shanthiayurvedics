@@ -10,7 +10,7 @@ import { NotFoundError, AppError } from '../utils/errors.js';
 import { AuditService } from './auditService.js';
 import { Notification } from '../models/Notification.js';
 import { sendPushToUser } from './pushService.js';
-import { emitToUser } from '../sockets/index.js';
+import { emitToUser, emitToBranch } from '../sockets/index.js';
 import { LEAD_SOURCES, LEAD_STATUS, CALL_STATUS, FOLLOWUP_STATUS } from '../constants/leadStates.js';
 
 export class LeadService {
@@ -118,6 +118,13 @@ export class LeadService {
     });
 
     await newLead.save();
+
+    emitToBranch(newLead.branchId.toString(), 'lead:created', {
+      leadId: newLead._id,
+      branchId: newLead.branchId,
+      status: newLead.status,
+      assignedTo: newLead.assignedTo
+    });
 
     // If assigned, log assignment record, persist DB Notification, and deliver via Socket + Web Push
     if (newLead.assignedTo) {
@@ -240,6 +247,18 @@ export class LeadService {
 
     await lead.save();
 
+    emitToBranch(lead.branchId.toString(), 'call:logged', {
+      callId: callLog._id,
+      leadId: lead._id,
+      branchId: lead.branchId,
+      callStatus
+    });
+    emitToBranch(lead.branchId.toString(), 'lead:updated', {
+      leadId: lead._id,
+      branchId: lead.branchId,
+      status: lead.status
+    });
+
     // 3. Create follow-up task if date provided
     if (nextFollowUpAt) {
       const scheduledDate = new Date(nextFollowUpAt);
@@ -252,6 +271,13 @@ export class LeadService {
         notes: `Call Follow-up: ${notes}`,
         status: FOLLOWUP_STATUS.PENDING,
         isNotificationSent: false
+      });
+
+      emitToBranch(lead.branchId.toString(), 'followup:created', {
+        followupId: newFollowup._id,
+        leadId: lead._id,
+        branchId: lead.branchId,
+        telecallerId: telecallerUser.id
       });
 
       // Immediate in-app notification for the telecaller
@@ -349,6 +375,11 @@ export class LeadService {
       reassigned: true
     });
     emitToUser(newTelecallerId.toString(), 'notification:new', notif);
+    emitToBranch(lead.branchId.toString(), 'lead:updated', {
+      leadId: lead._id,
+      branchId: lead.branchId,
+      assignedTo: newTelecallerId
+    });
 
     await sendPushToUser(newTelecallerId.toString(), {
       title: '🎯 Lead Assigned to You',
@@ -391,6 +422,13 @@ export class LeadService {
       } catch (err) {
         failed.push({ id, message: err.message });
       }
+    }
+    if (updated.length > 0) {
+      emitToBranch(managerUser?.branchId?.toString?.() || null, 'lead:bulk_assigned', {
+        leadIds: updated,
+        assignedTo: newTelecallerId,
+        count: updated.length
+      });
     }
     return { assignedCount: updated.length, failedCount: failed.length, failed, leadIds: updated };
   }

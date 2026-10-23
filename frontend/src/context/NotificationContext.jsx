@@ -136,11 +136,27 @@ export function NotificationProvider({ children }) {
       });
     });
 
+    socket.on('notification:read', (data) => {
+      if (data?.notificationId) {
+        setNotifications((prev) =>
+          prev.map((n) => (n._id === data.notificationId ? { ...n, isRead: true } : n))
+        );
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+    });
+
+    socket.on('notification:all_read', () => {
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    });
+
     return () => {
       socket.off('notification:new', handleNewNotification);
       socket.off('lead:assigned');
       socket.off('followup:due');
       socket.off('reorder:due');
+      socket.off('notification:read');
+      socket.off('notification:all_read');
     };
   }, [isAuthenticated]);
 

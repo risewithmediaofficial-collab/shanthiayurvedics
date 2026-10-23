@@ -18,7 +18,8 @@ import {
   Pencil,
   AlertTriangle,
   ExternalLink,
-  Send
+  Send,
+  Trash2
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';

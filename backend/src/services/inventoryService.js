@@ -8,6 +8,7 @@ import { Branch } from '../models/Branch.js';
 import { MOVEMENT_TYPES, MOVEMENT_REASONS, TRANSFER_STATUS } from '../constants/stockStates.js';
 import { AppError, NotFoundError } from '../utils/errors.js';
 import { AuditService } from './auditService.js';
+import { emitToBranch } from '../sockets/index.js';
 
 export class InventoryService {
   /**
@@ -119,6 +120,18 @@ export class InventoryService {
     });
     await movement.save(session ? { session } : undefined);
 
+    emitToBranch(resolvedBranchId.toString(), 'inventory:updated', {
+      productId,
+      branchId: resolvedBranchId,
+      newAvailable: inv.availableQuantity
+    });
+    emitToBranch(resolvedBranchId.toString(), 'stock:movement', {
+      productId,
+      branchId: resolvedBranchId,
+      type: MOVEMENT_TYPES.IN,
+      quantity
+    });
+
     await AuditService.log({
       userId: user?.id || user?._id,
       branchId: resolvedBranchId,
@@ -177,6 +190,18 @@ export class InventoryService {
       timestamp: new Date()
     });
     await movement.save(session ? { session } : undefined);
+
+    emitToBranch(resolvedBranchId.toString(), 'inventory:updated', {
+      productId,
+      branchId: resolvedBranchId,
+      newAvailable: inv.availableQuantity
+    });
+    emitToBranch(resolvedBranchId.toString(), 'stock:movement', {
+      productId,
+      branchId: resolvedBranchId,
+      type: MOVEMENT_TYPES.OUT,
+      quantity
+    });
 
     return { inventory: inv, movement };
   }
@@ -307,6 +332,18 @@ export class InventoryService {
     });
     await movement.save();
 
+    emitToBranch(resolvedBranchId.toString(), 'inventory:updated', {
+      productId,
+      branchId: resolvedBranchId,
+      newAvailable
+    });
+    emitToBranch(resolvedBranchId.toString(), 'stock:movement', {
+      productId,
+      branchId: resolvedBranchId,
+      type: MOVEMENT_TYPES.ADJUSTMENT,
+      quantity: Math.abs(difference)
+    });
+
     await AuditService.log({
       userId: performedBy,
       branchId: resolvedBranchId,
@@ -353,6 +390,19 @@ export class InventoryService {
       notes
     });
     await transfer.save();
+
+    emitToBranch(fromBranchId.toString(), 'stock:transfer_created', {
+      transferId: transfer._id,
+      transferNumber,
+      fromBranchId,
+      toBranchId
+    });
+    emitToBranch(toBranchId.toString(), 'stock:transfer_created', {
+      transferId: transfer._id,
+      transferNumber,
+      fromBranchId,
+      toBranchId
+    });
 
     await AuditService.log({
       userId: user.id,
@@ -410,6 +460,18 @@ export class InventoryService {
     if (notes) transfer.notes = notes;
     await transfer.save();
 
+    emitToBranch(transfer.fromBranchId.toString(), 'stock:transfer_dispatched', {
+      transferId: transfer._id,
+      transferNumber: transfer.transferNumber
+    });
+    emitToBranch(transfer.toBranchId.toString(), 'stock:transfer_dispatched', {
+      transferId: transfer._id,
+      transferNumber: transfer.transferNumber
+    });
+    emitToBranch(transfer.fromBranchId.toString(), 'inventory:updated', {
+      branchId: transfer.fromBranchId
+    });
+
     return transfer;
   }
 
@@ -449,6 +511,18 @@ export class InventoryService {
     transfer.status = TRANSFER_STATUS.RECEIVED;
     transfer.receivedBy = user.id;
     await transfer.save();
+
+    emitToBranch(transfer.fromBranchId.toString(), 'stock:transfer_received', {
+      transferId: transfer._id,
+      transferNumber: transfer.transferNumber
+    });
+    emitToBranch(transfer.toBranchId.toString(), 'stock:transfer_received', {
+      transferId: transfer._id,
+      transferNumber: transfer.transferNumber
+    });
+    emitToBranch(transfer.toBranchId.toString(), 'inventory:updated', {
+      branchId: transfer.toBranchId
+    });
 
     return transfer;
   }

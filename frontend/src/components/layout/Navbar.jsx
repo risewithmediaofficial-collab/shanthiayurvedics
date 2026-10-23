@@ -5,7 +5,7 @@ import { NotificationBell } from './NotificationBell.jsx';
 import { UserMenu } from './UserMenu.jsx';
 import { AccountSwitcherPill } from './AccountSwitcher.jsx';
 import { ViewPanelMenu } from './ViewPanelMenu.jsx';
-
+import { RealtimeStatusBadge } from '../../context/RealtimeSyncContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 
 export function Navbar({ onMenuToggle }) {
@@ -61,6 +61,7 @@ export function Navbar({ onMenuToggle }) {
           <BranchSelector align="right" />
         </div>
 
+        <RealtimeStatusBadge className="hidden md:inline-flex" />
         <NotificationBell />
         <div className="hidden sm:block w-px h-5 bg-slate-200" />
         <UserMenu />

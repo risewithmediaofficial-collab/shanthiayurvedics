@@ -5,6 +5,7 @@ import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { NotFoundError } from '../utils/errors.js';
 import { ROLES } from '../constants/roles.js';
+import { emitToBranch } from '../sockets/index.js';
 
 export const getCustomers = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
@@ -83,6 +84,7 @@ export const getCustomerById = asyncHandler(async (req, res) => {
 export const convertLead = asyncHandler(async (req, res) => {
   const { leadId } = req.params;
   const customer = await CustomerService.convertLeadToCustomer(leadId, req.body, req.user, req);
+  emitToBranch(customer.branchId?.toString?.() || null, 'customer:created', { customerId: customer._id });
   return ApiResponse.created(res, customer, 'Lead converted to customer successfully');
 });
 
@@ -114,6 +116,7 @@ export const updateCustomer = asyncHandler(async (req, res) => {
   if (addresses && Array.isArray(addresses)) customer.addresses = addresses;
 
   await customer.save();
+  emitToBranch(customer.branchId?.toString?.() || null, 'customer:updated', { customerId: customer._id });
   return ApiResponse.success(res, customer, 'Customer updated successfully');
 });
 
@@ -124,6 +127,7 @@ export const deleteCustomer = asyncHandler(async (req, res) => {
   }
 
   await Customer.findByIdAndDelete(req.params.id);
+  emitToBranch(customer.branchId?.toString?.() || null, 'customer:deleted', { customerId: req.params.id });
   return ApiResponse.success(res, null, 'Customer deleted successfully');
 });
 

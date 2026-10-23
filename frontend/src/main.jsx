@@ -7,6 +7,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { BranchProvider } from "./context/BranchContext.jsx";
 import { NotificationProvider } from "./context/NotificationContext.jsx";
+import { RealtimeSyncProvider } from "./context/RealtimeSyncContext.jsx";
 import muiTheme from "./theme/muiTheme.js";
 import App from "./App.jsx";
 import { queryClient } from "./api/queryClient.js";
@@ -23,8 +24,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <AuthProvider>
             <BranchProvider>
               <NotificationProvider>
-                <ErrorBoundary><App /></ErrorBoundary>
-                <AppFeedback />
+                <RealtimeSyncProvider>
+                  <ErrorBoundary><App /></ErrorBoundary>
+                  <AppFeedback />
+                </RealtimeSyncProvider>
               </NotificationProvider>
             </BranchProvider>
           </AuthProvider>

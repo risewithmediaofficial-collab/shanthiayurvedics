@@ -2,6 +2,7 @@ import { ReportService } from '../services/reportService.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AuditService } from '../services/auditService.js';
+import { emitToBranch } from '../sockets/index.js';
 
 export const getSalesReport = asyncHandler(async (req, res) => {
   const branchId = req.branchScope.isGlobal ? req.query.branchId : req.branchScope.branchId;
@@ -73,12 +74,27 @@ export const createWithdrawalRequest = asyncHandler(async (req, res) => {
 
   await AuditService.log({ userId: req.user.id, branchId, action: 'WITHDRAWAL_REQUESTED', module: 'reports', resourceType: 'WithdrawalRequest', resourceId: result.id, newValue: { amount: result.amount, status: result.status, payoutMode: result.payoutMode }, req });
 
+  emitToBranch(branchId?.toString?.() || null, 'withdrawal:created', {
+    withdrawalId: result.id,
+    branchId,
+    amount: result.amount,
+    status: result.status
+  });
+
   return ApiResponse.success(res, result, 'Withdrawal request submitted successfully', 201);
 });
 
 export const settleWithdrawalRequest = asyncHandler(async (req, res) => {
   const result = await ReportService.settleWithdrawalRequest({ id: req.params.id, status: req.body.status, referenceNo: req.body.referenceNo, processedBy: req.user.id });
   await AuditService.log({ userId: req.user.id, branchId: result.branchId, action: `WITHDRAWAL_${result.status}`, module: 'reports', resourceType: 'WithdrawalRequest', resourceId: result.id, newValue: { amount: result.amount, status: result.status, referenceNo: result.referenceNo }, req });
+
+  emitToBranch(result.branchId?.toString?.() || null, 'withdrawal:settled', {
+    withdrawalId: result.id,
+    branchId: result.branchId,
+    status: result.status,
+    referenceNo: result.referenceNo
+  });
+
   return ApiResponse.success(res, result, 'Withdrawal request updated');
 });
 

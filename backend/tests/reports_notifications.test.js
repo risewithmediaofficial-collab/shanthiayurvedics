@@ -94,4 +94,46 @@ describe("Notifications Module Integration Tests", () => {
     const res = await request(app).post("/api/notifications/read-all").set("Authorization", `Bearer ${ownerToken}`);
     expect([200, 204]).toContain(res.status);
   });
+
+  it("should return VAPID public key via GET /api/notifications/vapid-public-key", async () => {
+    const res = await request(app).get("/api/notifications/vapid-public-key");
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty("publicKey");
+    expect(res.body.data.domain).toBe("shanthiayurvedas.com");
+  });
+
+  it("should register push subscription via POST /api/notifications/subscribe", async () => {
+    const sub = {
+      endpoint: "https://fcm.googleapis.com/fcm/send/sample-integration-test-endpoint",
+      keys: {
+        p256dh: "BMm45B3...test",
+        auth: "authKey123"
+      }
+    };
+    const res = await request(app)
+      .post("/api/notifications/subscribe")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ subscription: sub });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  it("should unsubscribe push subscription via POST /api/notifications/unsubscribe", async () => {
+    const res = await request(app)
+      .post("/api/notifications/unsubscribe")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ endpoint: "https://fcm.googleapis.com/fcm/send/sample-integration-test-endpoint" });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  it("should dispatch test push alert via POST /api/notifications/test-push", async () => {
+    const res = await request(app)
+      .post("/api/notifications/test-push")
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
 });
+

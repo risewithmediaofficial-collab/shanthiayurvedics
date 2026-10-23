@@ -2,6 +2,14 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import apiClient from '../api/apiClient.js';
 import { getSocket } from '../api/socketClient.js';
 import { useAuth } from './AuthContext.jsx';
+import {
+  isWebPushSupported,
+  getPushSubscriptionStatus,
+  subscribeToWebPush,
+  unsubscribeFromWebPush,
+  reconcilePushSubscription,
+  triggerTestPush
+} from '../utils/webPush.js';
 
 const NotificationContext = createContext(null);
 
@@ -11,11 +19,34 @@ export function NotificationProvider({ children }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Web Push status tracking
+  const [pushStatus, setPushStatus] = useState({
+    isSupported: isWebPushSupported(),
+    permission: typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported',
+    isSubscribed: false,
+    isSubscribing: false
+  });
+
+  const checkPushStatus = useCallback(async () => {
+    if (!isWebPushSupported()) return;
+    try {
+      const status = await getPushSubscriptionStatus();
+      setPushStatus((prev) => ({
+        ...prev,
+        isSupported: status.isSupported,
+        permission: status.permission,
+        isSubscribed: status.isSubscribed
+      }));
+    } catch (_err) {
+      // Non-blocking
+    }
+  }, []);
+
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
       setIsLoading(true);
-      const res = await apiClient.get('/notifications?limit=20');
+      const res = await apiClient.get('/notifications?limit=25');
       if (res.data?.success) {
         const notifList = Array.isArray(res.data.data) ? res.data.data : [];
         setNotifications(notifList);
@@ -34,11 +65,30 @@ export function NotificationProvider({ children }) {
   useEffect(() => {
     if (isAuthenticated) {
       fetchNotifications();
+      checkPushStatus();
+      // Silently reconcile push subscription in the background
+      reconcilePushSubscription().then(() => checkPushStatus());
     } else {
       setNotifications([]);
       setUnreadCount(0);
     }
-  }, [isAuthenticated, fetchNotifications]);
+  }, [isAuthenticated, fetchNotifications, checkPushStatus]);
+
+  // Listen to Service Worker message broadcast (e.g. incoming push when tab is open)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+
+    const handleSwMessage = (event) => {
+      if (event.data?.type === 'PUSH_NOTIFICATION_RECEIVED') {
+        fetchNotifications();
+      }
+    };
+
+    navigator.serviceWorker.addEventListener('message', handleSwMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleSwMessage);
+    };
+  }, [fetchNotifications]);
 
   // Listen to Socket.IO real-time notification events
   useEffect(() => {
@@ -55,8 +105,8 @@ export function NotificationProvider({ children }) {
     socket.on('notification:new', handleNewNotification);
     socket.on('lead:assigned', (data) => {
       handleNewNotification({
-        _id: Date.now().toString(),
-        title: 'New Lead Assigned',
+        _id: `lead-${Date.now()}`,
+        title: '🎯 New Lead Assigned',
         message: `Lead ${data.name || ''} has been assigned to you.`,
         type: 'LEAD_ASSIGNED',
         isRead: false,
@@ -66,10 +116,21 @@ export function NotificationProvider({ children }) {
 
     socket.on('followup:due', (data) => {
       handleNewNotification({
-        _id: Date.now().toString(),
-        title: 'Follow-up Due',
+        _id: `followup-${Date.now()}`,
+        title: '⏰ Follow-up Due',
         message: `Follow-up with ${data.customerName || 'customer'} is due now.`,
         type: 'FOLLOW_UP_DUE',
+        isRead: false,
+        createdAt: new Date().toISOString()
+      });
+    });
+
+    socket.on('reorder:due', (data) => {
+      handleNewNotification({
+        _id: `reorder-${Date.now()}`,
+        title: `🔄 Reorder Reminder: ${data.patientName || 'Customer'}`,
+        message: `Treatment course completion approaching for ${data.patientName || 'patient'} (${data.mobile || ''}). Call to book repeat course.`,
+        type: 'REORDER_DUE',
         isRead: false,
         createdAt: new Date().toISOString()
       });
@@ -79,6 +140,7 @@ export function NotificationProvider({ children }) {
       socket.off('notification:new', handleNewNotification);
       socket.off('lead:assigned');
       socket.off('followup:due');
+      socket.off('reorder:due');
     };
   }, [isAuthenticated]);
 
@@ -104,6 +166,41 @@ export function NotificationProvider({ children }) {
     }
   };
 
+  /**
+   * Request permission and subscribe to Web Push
+   */
+  const enablePushNotifications = async () => {
+    setPushStatus((prev) => ({ ...prev, isSubscribing: true }));
+    try {
+      const res = await subscribeToWebPush();
+      await checkPushStatus();
+      return res;
+    } finally {
+      setPushStatus((prev) => ({ ...prev, isSubscribing: false }));
+    }
+  };
+
+  /**
+   * Unsubscribe from Web Push
+   */
+  const disablePushNotifications = async () => {
+    setPushStatus((prev) => ({ ...prev, isSubscribing: true }));
+    try {
+      const res = await unsubscribeFromWebPush();
+      await checkPushStatus();
+      return res;
+    } finally {
+      setPushStatus((prev) => ({ ...prev, isSubscribing: false }));
+    }
+  };
+
+  /**
+   * Send test push notification
+   */
+  const testPushNotification = async () => {
+    return await triggerTestPush();
+  };
+
   return (
     <NotificationContext.Provider
       value={{
@@ -112,7 +209,12 @@ export function NotificationProvider({ children }) {
         isLoading,
         markAsRead,
         markAllAsRead,
-        refreshNotifications: fetchNotifications
+        refreshNotifications: fetchNotifications,
+        pushStatus,
+        enablePushNotifications,
+        disablePushNotifications,
+        testPushNotification,
+        checkPushStatus
       }}
     >
       {children}

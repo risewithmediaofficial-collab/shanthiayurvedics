@@ -33,3 +33,24 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </BrowserRouter>
   </React.StrictMode>
 );
+
+// Register Web Push Service Worker reliably
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  const registerSw = () => {
+    navigator.serviceWorker
+      .register('/sw.js', { scope: '/' })
+      .then((reg) => {
+        console.log('✅ Web Push Service Worker registered with scope:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('⚠️ Web Push Service Worker registration failed:', err);
+      });
+  };
+
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    registerSw();
+  } else {
+    window.addEventListener('load', registerSw);
+  }
+}
+

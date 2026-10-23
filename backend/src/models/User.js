@@ -95,12 +95,30 @@ const userSchema = new mongoose.Schema(
     passwordResetExpires: {
       type: Date,
       select: false
-    }
+    },
+    // Multi-device Web Push subscriptions array (RFC 8292 VAPID)
+    pushSubscriptions: [
+      {
+        endpoint: { type: String, required: true },
+        expirationTime: { type: Number, default: null },
+        keys: {
+          p256dh: { type: String, required: true },
+          auth: { type: String, required: true }
+        },
+        userAgent: { type: String, default: '' },
+        createdAt: { type: Date, default: Date.now },
+        lastUsedAt: { type: Date },
+        lastStatus: { type: String, default: 'active' }
+      }
+    ]
   },
   {
     timestamps: true
   }
 );
+
+userSchema.index({ 'pushSubscriptions.endpoint': 1 });
+
 
 // Hash password with Argon2id
 userSchema.statics.hashPassword = async function (plainPassword) {

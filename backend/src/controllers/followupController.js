@@ -48,13 +48,17 @@ export const updateFollowup = asyncHandler(async (req, res) => {
   }
 
   const { scheduledAt, notes, priority } = req.body;
-  if (scheduledAt) followup.scheduledAt = new Date(scheduledAt);
+  if (scheduledAt) {
+    followup.scheduledAt = new Date(scheduledAt);
+    followup.isNotificationSent = false;
+  }
   if (notes !== undefined) followup.notes = notes;
   if (priority) followup.priority = priority;
 
   await followup.save();
   return ApiResponse.success(res, followup, 'Follow-up rescheduled/updated successfully');
 });
+
 
 export const deleteFollowup = asyncHandler(async (req, res) => {
   const { FollowUp } = await import('../models/FollowUp.js');

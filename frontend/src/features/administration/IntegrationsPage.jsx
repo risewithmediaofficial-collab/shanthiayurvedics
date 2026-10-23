@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Share2, MessageSquare, Mail, Truck, CheckCircle2, Shield, Key } from 'lucide-react';
+import { Share2, MessageSquare, Mail, Truck, CheckCircle2, Shield, Key, BellRing } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { Card } from '../../components/common/Card.jsx';
 import { Button } from '../../components/common/Button.jsx';
 import { Input } from '../../components/common/Input.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
+import { NotificationTestingPage } from './NotificationTestingPage.jsx';
 
 export function IntegrationsPage() {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState('integrations');
   const [selectedCourier, setSelectedCourier] = useState('INDIA_POST');
   const [apiKey, setApiKey] = useState('');
   const [apiEndpoint, setApiEndpoint] = useState('https://api.indiapost.gov.in/v1');
@@ -31,12 +33,49 @@ export function IntegrationsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900 tracking-tight">External Integrations & Webhooks</h2>
-        <p className="text-xs text-slate-500">
-          Connect Meta Lead Ads, WhatsApp Cloud API, SMTP email servers, and courier logistics APIs
-        </p>
+      {/* Tab Navigation Switcher */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+        <button
+          type="button"
+          onClick={() => setActiveTab('integrations')}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            activeTab === 'integrations'
+              ? 'bg-emerald-700 text-white shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Share2 className="w-4 h-4" />
+          External Integrations & Webhooks
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('push')}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            activeTab === 'push'
+              ? 'bg-emerald-700 text-white shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <BellRing className="w-4 h-4" />
+          Web Push Notifications Testing Hub
+          <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-800">
+            TEST TAB
+          </span>
+        </button>
       </div>
+
+      {activeTab === 'push' ? (
+        <NotificationTestingPage />
+      ) : (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">External Integrations & Webhooks</h2>
+            <p className="text-xs text-slate-500">
+              Connect Meta Lead Ads, WhatsApp Cloud API, SMTP email servers, and courier logistics APIs
+            </p>
+          </div>
+
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Meta Lead Ads */}
@@ -155,8 +194,11 @@ export function IntegrationsPage() {
           </Button>
         </form>
       </Card>
+        </div>
+      )}
     </div>
   );
 }
+
 
 export default IntegrationsPage;

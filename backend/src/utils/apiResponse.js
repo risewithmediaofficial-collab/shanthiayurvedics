@@ -31,6 +31,22 @@ export class ApiResponse {
     });
   }
 
+  static badRequest(res, message = 'Bad request', errors = null) {
+    return this.error(res, message, 400, errors);
+  }
+
+  static unauthorized(res, message = 'Unauthorized', errors = null) {
+    return this.error(res, message, 401, errors);
+  }
+
+  static forbidden(res, message = 'Forbidden', errors = null) {
+    return this.error(res, message, 403, errors);
+  }
+
+  static notFound(res, message = 'Resource not found', errors = null) {
+    return this.error(res, message, 404, errors);
+  }
+
   static error(res, message = 'An error occurred', statusCode = 500, errors = null) {
     return res.status(statusCode).json({
       success: false,

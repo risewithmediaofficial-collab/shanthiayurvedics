@@ -33,7 +33,9 @@ const BranchManagementPage = lazy(() => import('./features/administration/Branch
 const UserManagementPage = lazy(() => import('./features/administration/UserManagementPage.jsx'));
 const RolesManagementPage = lazy(() => import('./features/administration/RolesManagementPage.jsx'));
 const IntegrationsPage = lazy(() => import('./features/administration/IntegrationsPage.jsx'));
+const NotificationTestingPage = lazy(() => import('./features/administration/NotificationTestingPage.jsx'));
 const AuditLogViewerPage = lazy(() => import('./features/administration/AuditLogViewerPage.jsx'));
+
 
 // Protected Route Guard
 function ProtectedRoute({ children }) {
@@ -130,8 +132,11 @@ export function App() {
         <Route path="/admin/users" element={<Allowed permission={routePermissions['/admin/users']}><UserManagementPage /></Allowed>} />
         <Route path="/admin/roles" element={<Allowed permission={routePermissions['/admin/roles']}><RolesManagementPage /></Allowed>} />
         <Route path="/admin/integrations" element={<Allowed permission={routePermissions['/admin/integrations']}><IntegrationsPage /></Allowed>} />
+        <Route path="/admin/notifications-test" element={<NotificationTestingPage />} />
+        <Route path="/notifications-test" element={<NotificationTestingPage />} />
         <Route path="/admin/audit" element={<Allowed permission={routePermissions['/admin/audit']}><AuditLogViewerPage /></Allowed>} />
       </Route>
+
       {/* Dedicated Standalone Scan Tracker View (Full-Screen Shanthi Ayurvedas Logistics Mode) */}
       <Route
         path="/scan-tracker"

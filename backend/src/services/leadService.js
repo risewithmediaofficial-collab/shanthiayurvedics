@@ -8,6 +8,8 @@ import { FollowUp } from '../models/FollowUp.js';
 import { User } from '../models/User.js';
 import { NotFoundError, AppError } from '../utils/errors.js';
 import { AuditService } from './auditService.js';
+import { Notification } from '../models/Notification.js';
+import { sendPushToUser } from './pushService.js';
 import { emitToUser } from '../sockets/index.js';
 import { LEAD_SOURCES, LEAD_STATUS, CALL_STATUS, FOLLOWUP_STATUS } from '../constants/leadStates.js';
 
@@ -117,8 +119,9 @@ export class LeadService {
 
     await newLead.save();
 
-    // If assigned, log assignment record and emit socket event
+    // If assigned, log assignment record, persist DB Notification, and deliver via Socket + Web Push
     if (newLead.assignedTo) {
+      const assignedUserId = newLead.assignedTo.toString();
       await LeadAssignment.create({
         leadId: newLead._id,
         assignedTo: newLead.assignedTo,
@@ -127,12 +130,36 @@ export class LeadService {
         reason: 'Initial Assignment'
       });
 
-      emitToUser(newLead.assignedTo.toString(), 'lead:assigned', {
+      const notif = await Notification.create({
+        userId: newLead.assignedTo,
+        branchId: newLead.branchId,
+        title: '🎯 New Lead Assigned',
+        message: `Lead ${newLead.name} (${newLead.mobile}) has been assigned to you.`,
+        type: 'LEAD_ASSIGNED',
+        data: {
+          leadId: newLead._id,
+          name: newLead.name,
+          mobile: newLead.mobile
+        }
+      });
+
+      emitToUser(assignedUserId, 'lead:assigned', {
         leadId: newLead._id,
         name: newLead.name,
         mobile: newLead.mobile
       });
+      emitToUser(assignedUserId, 'notification:new', notif);
+
+      await sendPushToUser(assignedUserId, {
+        title: '🎯 New Lead Assigned',
+        body: `Lead "${newLead.name}" (${newLead.mobile}) is assigned to you. Click to open and call now.`,
+        link: `/leads?search=${encodeURIComponent(newLead.mobile || newLead.name)}`,
+        eventId: `lead-assigned-${newLead._id}`,
+        tag: `lead-assigned-${newLead._id}`
+      }).catch(() => {});
+
     }
+
 
     await AuditService.log({
       userId: creatorUser.id,
@@ -215,16 +242,46 @@ export class LeadService {
 
     // 3. Create follow-up task if date provided
     if (nextFollowUpAt) {
-      await FollowUp.create({
+      const scheduledDate = new Date(nextFollowUpAt);
+      const newFollowup = await FollowUp.create({
         leadId: lead._id,
         telecallerId: telecallerUser.id,
         branchId: lead.branchId,
-        scheduledAt: new Date(nextFollowUpAt),
+        scheduledAt: scheduledDate,
         priority,
         notes: `Call Follow-up: ${notes}`,
-        status: FOLLOWUP_STATUS.PENDING
+        status: FOLLOWUP_STATUS.PENDING,
+        isNotificationSent: false
       });
+
+      // Immediate in-app notification for the telecaller
+      const notif = await Notification.create({
+        userId: telecallerUser.id,
+        branchId: lead.branchId,
+        title: `📅 Refollow-up Scheduled: ${lead.name}`,
+        message: `Follow-up set for ${scheduledDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}. Note: ${notes}`,
+        type: 'FOLLOW_UP_SCHEDULED',
+        data: {
+          leadId: lead._id,
+          followupId: newFollowup._id,
+          leadName: lead.name,
+          mobile: lead.mobile,
+          scheduledAt: scheduledDate
+        }
+      });
+      emitToUser(telecallerUser.id.toString(), 'notification:new', notif);
+
+      // Web Push confirmation of scheduled refollow-up
+      await sendPushToUser(telecallerUser.id.toString(), {
+        title: `📅 Refollow-up Noted: ${lead.name}`,
+        body: `Follow-up scheduled for ${scheduledDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} (${notes}).`,
+        link: '/followups',
+        eventId: `followup-sched-${newFollowup._id}`,
+        tag: `followup-${newFollowup._id}`
+      }).catch(() => {});
     }
+
+
 
     await AuditService.log({
       userId: telecallerUser.id,
@@ -272,11 +329,36 @@ export class LeadService {
       reason: reason || 'Manager Reassignment'
     });
 
+    const notif = await Notification.create({
+      userId: newTelecallerId,
+      branchId: lead.branchId,
+      title: '🎯 Lead Assigned to You',
+      message: `Lead ${lead.name} (${lead.mobile}) has been assigned to you (${reason || 'Manager Assignment'}).`,
+      type: 'LEAD_ASSIGNED',
+      data: {
+        leadId: lead._id,
+        name: lead.name,
+        mobile: lead.mobile,
+        reason
+      }
+    });
+
     emitToUser(newTelecallerId.toString(), 'lead:assigned', {
       leadId: lead._id,
       name: lead.name,
       reassigned: true
     });
+    emitToUser(newTelecallerId.toString(), 'notification:new', notif);
+
+    await sendPushToUser(newTelecallerId.toString(), {
+      title: '🎯 Lead Assigned to You',
+      body: `Lead "${lead.name}" (${lead.mobile}) has been assigned to you. Click to open and call now.`,
+      link: `/leads?search=${encodeURIComponent(lead.mobile || lead.name)}`,
+      eventId: `lead-assigned-${lead._id}`,
+      tag: `lead-assigned-${lead._id}`
+    }).catch(() => {});
+
+
 
     await AuditService.log({
       userId: managerUser.id,

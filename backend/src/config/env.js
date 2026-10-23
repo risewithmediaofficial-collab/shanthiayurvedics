@@ -55,8 +55,12 @@ const envSchema = z.object({
   TPC_SENDER_EMAIL: z.string().optional().default('orders@shanthiayurvedas.com'),
   TPC_SENDER_GSTIN: z.string().optional().default('33AAAAA0000A1Z5'),
   TPC_COD_ENABLED: z.preprocess((v) => v === 'true' || v === true, z.boolean()).default(false),
-  TPC_TRACKING_SYNC_ENABLED: z.preprocess((v) => v === undefined || v === 'true' || v === true, z.boolean()).default(true),
-  TPC_TIMEOUT_MS: z.coerce.number().int().default(10000)
+  TPC_TIMEOUT_MS: z.coerce.number().int().default(10000),
+  // Web Push (VAPID RFC 8292) Configuration
+  VAPID_PUBLIC_KEY: z.string().default(process.env.VAPID_PUBLIC_KEY || 'BLKpMYozLXrlu9rzCmhQPzK35uE7iw6TyhFmwMDDHYgT2GItwbAHUa78YpstoL-gomz8-9KvDHsIEHWFdNiIdis'),
+  VAPID_PRIVATE_KEY: z.string().default(process.env.VAPID_PRIVATE_KEY || '_qDI_uo6dhIOXh8yWIgy8rahQGsrSDAukFf8sSbEzqM'),
+  VAPID_EMAIL: z.string().default(process.env.VAPID_EMAIL || 'mailto:admin@shanthiayurvedas.com'),
+  PUSH_NOTIFICATION_DOMAIN: z.string().default(process.env.PUSH_NOTIFICATION_DOMAIN || 'shanthiayurvedas.com')
 });
 
 const parseEnv = () => {

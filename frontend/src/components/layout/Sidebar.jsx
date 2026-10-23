@@ -23,7 +23,9 @@ import PhoneInTalkRounded from '@mui/icons-material/PhoneInTalkRounded';
 import CloseRounded from '@mui/icons-material/CloseRounded';
 import LocalPharmacyRounded from '@mui/icons-material/LocalPharmacyRounded';
 import ContactPhoneRounded from '@mui/icons-material/ContactPhoneRounded';
+import NotificationsActiveRounded from '@mui/icons-material/NotificationsActiveRounded';
 import { useQuery } from '@tanstack/react-query';
+
 
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
@@ -133,10 +135,19 @@ export function Sidebar({ isOpen, onClose }) {
             icon: ContactPhoneRounded,
             path: '/customers',
             show: true
+          },
+          {
+            label: 'PUSH NOTIFICATIONS TEST',
+            icon: NotificationsActiveRounded,
+            path: '/admin/notifications-test',
+            badge: 'TEST',
+            badgeVariant: 'primary',
+            show: true
           }
         ]
       }
     ];
+
   } else if (isDistributor) {
     navSections = [
       {
@@ -346,6 +357,20 @@ export function Sidebar({ isOpen, onClose }) {
             show: isOwner || hasPermission('roles.manage')
           },
           {
+            label: 'External Integrations',
+            icon: LayersRounded,
+            path: '/admin/integrations',
+            show: isOwner || hasPermission('integrations.manage')
+          },
+          {
+            label: 'Web Push Testing Tab',
+            icon: NotificationsActiveRounded,
+            path: '/admin/notifications-test',
+            badge: 'TEST',
+            badgeVariant: 'primary',
+            show: true
+          },
+          {
             label: 'Audit Log Viewer',
             icon: SecurityRounded,
             path: '/admin/audit',
@@ -354,6 +379,7 @@ export function Sidebar({ isOpen, onClose }) {
         ]
       }
     ];
+
   }
 
   const roleTitle = isOwner

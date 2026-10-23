@@ -32,8 +32,7 @@ const gracefulShutdown = async (signal, exitCode = 0) => {
   }
 };
 
-import cron from 'node-cron';
-import { ReorderService } from './services/reorderService.js';
+import { NotificationSchedulerService } from './services/notificationSchedulerService.js';
 
 const startServer = async () => {
   app.locals.isReady = false;
@@ -45,16 +44,14 @@ const startServer = async () => {
     app.locals.isReady = true;
     logger.info({ port: env.PORT }, 'CRM API ready and database connected');
 
-    // Initial check and recurring cron for 15-day reorder notifications
-    ReorderService.checkAndCreateReorderNotifications().catch((err) => logger.warn({ err }, 'Initial reorder check error'));
-    cron.schedule('0 */2 * * *', () => {
-      ReorderService.checkAndCreateReorderNotifications().catch((err) => logger.warn({ err }, 'Cron reorder check error'));
-    });
+    // Initialize 1-hour recurring notification dispatcher for due followups & reorders
+    NotificationSchedulerService.initScheduler();
   } catch (err) {
     logger.error({ err }, 'Server initialization failed');
     await gracefulShutdown('STARTUP_FAILURE', 1);
   }
 };
+
 server.on('error', (err) => {
   logger.error({ err }, 'HTTP server error');
   void gracefulShutdown('SERVER_ERROR', 1);

@@ -164,41 +164,41 @@ const StatCard = ({
           onClick();
         }
       } : undefined}
-      className={`group relative bg-white rounded-2xl border border-slate-200/90 shadow-2xs transition-all duration-200 p-4 space-y-3 ${
+      className={`group relative bg-white rounded-2xl border border-slate-200/90 shadow-2xs transition-all duration-200 p-2.5 xs:p-3 sm:p-4 space-y-2 sm:space-y-3 min-w-0 ${
         isClickable
           ? `cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 ${borderHoverClasses[color] || 'hover:border-slate-400'}`
           : 'hover:shadow-xs'
       }`}
     >
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 truncate">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">{label}</span>
+        <div className="flex items-center gap-1.5 truncate min-w-0">
+          <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate">{label}</span>
           {badge && (
-            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md border tracking-wider uppercase ${badgeClasses[color] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+            <span className={`text-[8.5px] sm:text-[9px] font-extrabold px-1.5 py-0.5 rounded-md border tracking-wider uppercase ${badgeClasses[color] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
               {badge}
             </span>
           )}
         </div>
-        <div className={`${iconClasses[color] || 'icon-box-emerald'} group-hover:scale-105 transition-transform duration-200`}>
+        <div className={`${iconClasses[color] || 'icon-box-emerald'} group-hover:scale-105 transition-transform duration-200 shrink-0`}>
           <Icon sx={{ fontSize: 18 }} />
         </div>
       </div>
 
       <div>
-        <div className="text-2xl font-black text-slate-900 font-mono tracking-tight leading-none">{value}</div>
-        {sub && <p className="text-xs text-slate-500 font-medium mt-1.5">{sub}</p>}
+        <div className="text-xl sm:text-2xl font-black text-slate-900 font-mono tracking-tight leading-none truncate">{value}</div>
+        {sub && <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1 sm:mt-1.5 truncate">{sub}</p>}
       </div>
 
       <SimpleProgressBar value={effectiveProgress} max={100} size="sm" color={colorKey[color] || 'emerald'} showPercentage={false} />
 
       {/* Button Action Row */}
       {isClickable && (
-        <div className="pt-1 flex items-center justify-between gap-1.5 border-t border-slate-100">
+        <div className="pt-1 flex items-center justify-between gap-1.5 border-t border-slate-100 min-w-0">
           <div
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all duration-150 shadow-2xs ${actionBtnClasses[color] || 'bg-slate-50 text-slate-700'}`}
+            className={`inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold border transition-all duration-150 shadow-2xs truncate ${actionBtnClasses[color] || 'bg-slate-50 text-slate-700'}`}
           >
-            <span>{actionLabel || `Open ${label}`}</span>
-            <ArrowRight sx={{ fontSize: 14 }} className="group-hover:translate-x-0.5 transition-transform duration-150" />
+            <span className="truncate">{actionLabel || `Open ${label}`}</span>
+            <ArrowRight sx={{ fontSize: 13 }} className="group-hover:translate-x-0.5 transition-transform duration-150 shrink-0" />
           </div>
 
           {onOpenNewTab && (
@@ -598,7 +598,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
       </div>
 
       {/* 2. Top Summary KPI Ribbon (Interactive Action Buttons matching Shanthi Ayurvedas) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 xs:gap-3 sm:gap-4">
         <StatCard
           testId="kpi-card-month-revenue"
           label="Month Revenue"
@@ -650,15 +650,15 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
       </div>
 
       {/* 3. Main Navigation Sub-Nav Strip (10 Tabs matching Shanthi Ayurvedas) */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto px-2.5 sm:px-4 pt-2.5 sm:pt-3 border-b border-slate-200/80 scrollbar-none bg-slate-50/60">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden w-full max-w-full">
+        <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto px-2 sm:px-4 pt-2 sm:pt-3 border-b border-slate-200/80 scrollbar-none bg-slate-50/60 crm-table-wrap w-full max-w-full">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               id={tab.testId}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`px-2.5 sm:px-3.5 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold rounded-t-xl transition-all whitespace-nowrap border-b-2 -mb-px flex items-center gap-1 sm:gap-1.5 cursor-pointer ${
+              className={`px-2.5 sm:px-3.5 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold rounded-t-xl transition-all whitespace-nowrap border-b-2 -mb-px flex items-center gap-1 sm:gap-1.5 cursor-pointer min-h-[38px] ${
                 activeTab === tab.id
                   ? 'border-emerald-600 text-emerald-800 bg-white shadow-2xs font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100/70'

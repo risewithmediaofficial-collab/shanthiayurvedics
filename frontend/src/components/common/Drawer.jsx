@@ -34,22 +34,22 @@ export function Drawer({
       <div className={clsx('fixed inset-y-0 flex max-w-full', position === 'right' ? 'right-0' : 'left-0')}>
         <div ref={panelRef} tabIndex={-1} className={twMerge('w-screen h-full bg-white shadow-2xl flex flex-col border-l border-slate-200 animate-slide-in-right', size)}>
           {/* Header with generous top padding away from URL tab and clean text alignment */}
-          <div className="px-6 sm:px-7 pt-7 sm:pt-8 pb-4.5 sm:pb-5 border-b border-slate-100 flex items-start justify-between bg-white shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-            <div className="flex items-start gap-3.5 min-w-0 pr-3">
+          <div className="px-4 sm:px-7 pt-4 sm:pt-8 pb-3.5 sm:pb-5 border-b border-slate-100 flex items-start justify-between bg-white shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+            <div className="flex items-start gap-2.5 sm:gap-3.5 min-w-0 pr-2 sm:pr-3">
               {icon && (
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 shrink-0 mt-0.5 shadow-xs">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 shrink-0 mt-0.5 shadow-xs">
                   {icon}
                 </div>
               )}
               <div className="min-w-0">
-                {title && <h3 id={titleId} className="text-lg font-bold text-slate-900 tracking-tight leading-snug">{title}</h3>}
-                {subtitle && <p className="text-xs text-slate-500 mt-1 font-medium leading-normal">{subtitle}</p>}
+                {title && <h3 id={titleId} className="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-snug">{title}</h3>}
+                {subtitle && <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1 font-medium leading-normal">{subtitle}</p>}
               </div>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl p-2 -mr-1 -mt-0.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none cursor-pointer shrink-0"
+              className="rounded-xl p-1.5 sm:p-2 -mr-1 -mt-0.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none cursor-pointer shrink-0 touch-target flex items-center justify-center"
               aria-label="Close drawer"
             >
               <CloseRounded sx={{ fontSize: 20 }} />
@@ -57,11 +57,11 @@ export function Drawer({
           </div>
 
           {/* Body */}
-          <div className="relative flex-1 overflow-y-auto p-6 sm:p-7 space-y-4">{children}</div>
+          <div className="relative flex-1 overflow-y-auto p-3.5 sm:p-7 space-y-3.5 sm:space-y-4">{children}</div>
 
-          {/* Footer */}
+          {/* Footer with safe-area offset */}
           {footer && (
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/80 shrink-0 flex justify-end gap-3">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-100 bg-slate-50/80 shrink-0 flex items-center justify-end flex-wrap sm:flex-nowrap gap-2 sm:gap-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-4">
               {footer}
             </div>
           )}

@@ -426,7 +426,7 @@ export function OrderDetailsModal({
             </div>
 
             {/* Products Table */}
-            <div className={`overflow-x-auto scrollbar-thin ${(d.items?.length || 0) > 10 ? 'max-h-[380px] overflow-y-auto relative' : ''}`}>
+            <div className={`crm-table-wrap w-full max-w-full overflow-x-auto scrollbar-thin ${(d.items?.length || 0) > 10 ? 'max-h-[380px] overflow-y-auto relative' : ''}`}>
               <table className="w-full min-w-[540px] text-xs text-left">
                 <thead className={(d.items?.length || 0) > 10 ? 'sticky top-0 z-10 bg-white/95 backdrop-blur-xs shadow-2xs border-b border-slate-200' : 'bg-slate-50/50 border-b border-slate-100 text-slate-500 uppercase tracking-wider font-semibold text-[10px]'}>
                   <tr>
@@ -580,11 +580,11 @@ export function OrderDetailsModal({
           </div>
 
           {/* Footer Close Bar */}
-          <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-3 border-t border-slate-200">
             <div className="text-[11px] text-slate-500">
               Order ID: <strong className="font-mono text-slate-800">{d.orderNumber}</strong> • Shanthi Ayurvedas CRM
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center justify-end gap-2 flex-wrap">
               <Button variant="secondary" onClick={onClose}>
                 Close
               </Button>

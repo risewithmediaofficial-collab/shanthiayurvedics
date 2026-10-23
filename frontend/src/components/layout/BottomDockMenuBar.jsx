@@ -114,7 +114,7 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
                 key={item.id}
                 type="button"
                 onClick={item.onClick}
-                className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all cursor-pointer relative group w-full ${
+                className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all cursor-pointer relative group w-full min-h-[44px] touch-manipulation ${
                   isActive ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-900 font-medium'
                 }`}
               >
@@ -196,7 +196,7 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
                 key={item.id}
                 type="button"
                 onClick={item.onClick}
-                className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all cursor-pointer relative group w-full ${
+                className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all cursor-pointer relative group w-full min-h-[44px] touch-manipulation ${
                   isActive ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-900 font-medium'
                 }`}
               >
@@ -321,7 +321,7 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
               key={item.id}
               type="button"
               onClick={item.onClick}
-              className={`${item.hiddenOnMobile ? 'hidden sm:flex' : 'flex'} flex-col items-center justify-center py-1.5 px-0.5 sm:px-1 rounded-xl transition-all cursor-pointer relative group w-full ${
+              className={`${item.hiddenOnMobile ? 'hidden sm:flex' : 'flex'} flex-col items-center justify-center py-1 px-0.5 sm:px-1 rounded-xl transition-all cursor-pointer relative group w-full min-h-[44px] touch-manipulation ${
                 isActive ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-900 font-medium'
               }`}
             >

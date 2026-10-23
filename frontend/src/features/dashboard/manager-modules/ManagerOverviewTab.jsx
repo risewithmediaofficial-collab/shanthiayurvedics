@@ -612,7 +612,7 @@ export function ManagerOverviewTab({ onSelectTab, onSwitchToTelecaller }) {
               No recent orders found.
             </div>
           ) : (
-            <div className={`overflow-x-auto ${recentOrders.length > 10 ? 'max-h-[380px] overflow-y-auto scrollbar-thin relative' : ''}`}>
+            <div className={`crm-table-wrap w-full max-w-full overflow-x-auto ${recentOrders.length > 10 ? 'max-h-[380px] overflow-y-auto scrollbar-thin relative' : ''}`}>
               <table className="w-full min-w-[480px] text-left text-xs">
                 <thead className={recentOrders.length > 10 ? 'sticky top-0 z-10 bg-white/95 backdrop-blur-xs border-b border-slate-200 shadow-2xs' : ''}>
                   <tr className="border-b border-slate-100 text-slate-400 font-medium uppercase tracking-wider text-[10px]">

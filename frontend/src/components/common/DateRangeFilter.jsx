@@ -90,7 +90,7 @@ export function DateRangeFilter({
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-xs max-w-full w-full sm:w-auto">
       {/* Quick Filter Preset Pills */}
-      <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200/90 overflow-x-auto scrollbar-none max-w-full w-full sm:w-auto">
+      <div className="crm-table-wrap flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200/90 overflow-x-auto scrollbar-none max-w-full w-full sm:w-auto">
         {[
           { key: 'ALL', label: 'All Time' },
           { key: 'TODAY', label: 'Today' },
@@ -104,7 +104,7 @@ export function DateRangeFilter({
               key={preset.key}
               type="button"
               onClick={() => handleSelectPreset(preset.key)}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 min-h-[32px] sm:min-h-0 touch-manipulation ${
                 isActive
                   ? 'bg-white text-emerald-800 shadow-2xs font-bold border border-emerald-200/60'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'

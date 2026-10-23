@@ -743,7 +743,7 @@ export function CustomerListPage({ callerId, hideHeader = false }) {
           {activeTab === 'all' && (
             <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
               {/* Date Presets Filter */}
-              <div className="overflow-x-auto scrollbar-none max-w-full">
+              <div className="crm-table-wrap overflow-x-auto scrollbar-none max-w-full">
                 <DateRangeFilter
                   startDate={startDate}
                   endDate={endDate}

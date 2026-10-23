@@ -259,12 +259,12 @@ export function ExcelImportModal({ isOpen, onClose, onImportSuccess, telecallers
     >
       <div className="space-y-4">
         {/* Navigation Tabs */}
-        <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-          <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-200 pb-2">
+          <div className="flex gap-2 flex-wrap">
             <button
               type="button"
               onClick={() => setActiveTab('upload')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation min-h-[36px] ${
                 activeTab === 'upload'
                   ? 'bg-ayur-700 text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100'
@@ -275,7 +275,7 @@ export function ExcelImportModal({ isOpen, onClose, onImportSuccess, telecallers
             <button
               type="button"
               onClick={() => setActiveTab('manual')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation min-h-[36px] ${
                 activeTab === 'manual'
                   ? 'bg-ayur-700 text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100'
@@ -288,7 +288,7 @@ export function ExcelImportModal({ isOpen, onClose, onImportSuccess, telecallers
           <button
             type="button"
             onClick={handleDownloadSample}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors touch-manipulation min-h-[36px] w-full sm:w-auto"
           >
             <Download className="w-3.5 h-3.5" />
             Download Sample Template (.xlsx)
@@ -365,7 +365,7 @@ export function ExcelImportModal({ isOpen, onClose, onImportSuccess, telecallers
                   </button>
                 </div>
 
-                <div className="max-h-60 overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl scrollbar-thin">
+                <div className="crm-table-wrap w-full max-w-full max-h-60 overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl scrollbar-thin">
                   <table className="w-full min-w-[620px] text-[11px] text-left">
                     <thead className="bg-slate-100 text-slate-700 uppercase tracking-wider font-semibold sticky top-0">
                       <tr>
@@ -436,7 +436,7 @@ export function ExcelImportModal({ isOpen, onClose, onImportSuccess, telecallers
               <span className="text-xs text-slate-500">{manualRows.length} order(s) entered</span>
             </div>
 
-            <div className="max-h-72 overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl scrollbar-thin">
+            <div className="crm-table-wrap w-full max-w-full max-h-72 overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl scrollbar-thin">
               <table className="w-full min-w-[760px] text-xs text-left">
                 <thead className="bg-slate-100 text-slate-700 uppercase tracking-wider font-semibold sticky top-0">
                   <tr>

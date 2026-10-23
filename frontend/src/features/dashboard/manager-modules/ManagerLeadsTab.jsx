@@ -359,32 +359,34 @@ export function ManagerLeadsTab() {
         </div>
 
         {/* Quick Status Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-slate-100">
-          {[
-            { id: 'ALL', label: 'All Leads' },
-            { id: 'NEW', label: 'New' },
-            { id: 'CONTACTED', label: 'Contacted' },
-            { id: 'INTERESTED', label: 'Interested' },
-            { id: 'ORDER_PLACED', label: 'Order Placed' },
-            { id: 'CALLBACK_REQUESTED', label: 'Callback' },
-            { id: 'JUNK', label: 'Junk / Closed' }
-          ].map((statusPill) => {
-            const isActive = selectedStatusFilter === statusPill.id;
-            return (
-              <button
-                key={statusPill.id}
-                type="button"
-                onClick={() => setSelectedStatusFilter(statusPill.id)}
-                className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-emerald-600 text-white shadow-xs font-bold'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {statusPill.label}
-              </button>
-            );
-          })}
+        <div className="crm-table-wrap w-full max-w-full overflow-x-auto pb-1 pt-3 border-t border-slate-100">
+          <div className="flex items-center gap-1.5 min-w-max">
+            {[
+              { id: 'ALL', label: 'All Leads' },
+              { id: 'NEW', label: 'New' },
+              { id: 'CONTACTED', label: 'Contacted' },
+              { id: 'INTERESTED', label: 'Interested' },
+              { id: 'ORDER_PLACED', label: 'Order Placed' },
+              { id: 'CALLBACK_REQUESTED', label: 'Callback' },
+              { id: 'JUNK', label: 'Junk / Closed' }
+            ].map((statusPill) => {
+              const isActive = selectedStatusFilter === statusPill.id;
+              return (
+                <button
+                  key={statusPill.id}
+                  type="button"
+                  onClick={() => setSelectedStatusFilter(statusPill.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer touch-manipulation min-h-[34px] ${
+                    isActive
+                      ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {statusPill.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Filter Controls Bar */}

@@ -118,9 +118,9 @@ export function CallHistoryPage({ callerId } = {}) {
                   setSelectedLeadId(leadIdVal);
                 }}
                 title="View Full Lead Details & Logs"
-                className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                className="p-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors flex items-center justify-center min-h-[36px] min-w-[36px] cursor-pointer touch-manipulation"
               >
-                <Eye className="w-3.5 h-3.5" />
+                <Eye className="w-4 h-4" />
               </button>
             )}
             <button
@@ -130,18 +130,18 @@ export function CallHistoryPage({ callerId } = {}) {
                 handleOpenWhatsApp(row);
               }}
               title="WhatsApp Follow-up"
-              className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+              className="p-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors flex items-center justify-center min-h-[36px] min-w-[36px] cursor-pointer touch-manipulation"
             >
-              <MessageSquare className="w-3.5 h-3.5" />
+              <MessageSquare className="w-4 h-4" />
             </button>
             {mobile && (
               <a
                 href={`tel:${mobile}`}
                 onClick={(e) => e.stopPropagation()}
                 title="Call"
-                className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center gap-1"
+                className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center justify-center min-h-[36px] min-w-[36px] touch-manipulation"
               >
-                <Phone className="w-3.5 h-3.5" />
+                <Phone className="w-4 h-4" />
               </a>
             )}
           </div>

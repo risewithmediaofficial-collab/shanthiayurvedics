@@ -257,56 +257,58 @@ export function CustomerProfileModal({
           </div>
 
           {/* Tabs Navigation */}
-          <div className="px-5 pt-3 border-b border-slate-200 bg-white flex items-center justify-between gap-2 shrink-0">
-            <div className="flex items-center gap-1">
+          <div className="crm-table-wrap w-full max-w-full overflow-x-auto border-b border-slate-200 bg-white px-3 sm:px-5 pt-3 shrink-0">
+            <div className="flex items-center justify-between gap-3 min-w-max">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('orders')}
+                  className={`px-3.5 py-2 font-bold text-xs rounded-t-lg transition-colors border-b-2 flex items-center gap-1.5 cursor-pointer touch-manipulation min-h-[36px] ${
+                    activeTab === 'orders'
+                      ? 'border-emerald-600 text-emerald-800 bg-emerald-50/40'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  <span>All Orders ({orders.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('addresses')}
+                  className={`px-3.5 py-2 font-bold text-xs rounded-t-lg transition-colors border-b-2 flex items-center gap-1.5 cursor-pointer touch-manipulation min-h-[36px] ${
+                    activeTab === 'addresses'
+                      ? 'border-emerald-600 text-emerald-800 bg-emerald-50/40'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Saved Addresses ({customer.addresses?.length || 0})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('activity')}
+                  className={`px-3.5 py-2 font-bold text-xs rounded-t-lg transition-colors border-b-2 flex items-center gap-1.5 cursor-pointer touch-manipulation min-h-[36px] ${
+                    activeTab === 'activity'
+                      ? 'border-emerald-600 text-emerald-800 bg-emerald-50/40'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Consultations & Notes ({calls.length + followups.length})</span>
+                </button>
+              </div>
+
               <button
                 type="button"
-                onClick={() => setActiveTab('orders')}
-                className={`px-3.5 py-2 font-bold text-xs rounded-t-lg transition-colors border-b-2 flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === 'orders'
-                    ? 'border-emerald-600 text-emerald-800 bg-emerald-50/40'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
+                onClick={() => handleTriggerRepeatOrder()}
+                className="mb-1 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-xs flex items-center gap-1 transition-colors cursor-pointer touch-manipulation min-h-[36px]"
               >
                 <ShoppingBag className="w-3.5 h-3.5" />
-                <span>All Orders ({orders.length})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('addresses')}
-                className={`px-3.5 py-2 font-bold text-xs rounded-t-lg transition-colors border-b-2 flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === 'addresses'
-                    ? 'border-emerald-600 text-emerald-800 bg-emerald-50/40'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <MapPin className="w-3.5 h-3.5" />
-                <span>Saved Addresses ({customer.addresses?.length || 0})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('activity')}
-                className={`px-3.5 py-2 font-bold text-xs rounded-t-lg transition-colors border-b-2 flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === 'activity'
-                    ? 'border-emerald-600 text-emerald-800 bg-emerald-50/40'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <Clock className="w-3.5 h-3.5" />
-                <span>Consultations & Notes ({calls.length + followups.length})</span>
+                <span>+ New Order</span>
               </button>
             </div>
-
-            <button
-              type="button"
-              onClick={() => handleTriggerRepeatOrder()}
-              className="mb-1 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-xs flex items-center gap-1 transition-colors cursor-pointer"
-            >
-              <ShoppingBag className="w-3.5 h-3.5" />
-              <span>+ New Order</span>
-            </button>
           </div>
 
           {/* Modal Body / Tab Content */}

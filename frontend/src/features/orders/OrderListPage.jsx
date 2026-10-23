@@ -741,7 +741,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
       )}
 
       {/* 4. Action Buttons Ribbon */}
-      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1.5 scrollbar-none sm:flex-wrap">
+      <div className="crm-table-wrap flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1.5 scrollbar-none sm:flex-wrap">
         <button
           type="button"
           onClick={() => setViewMode('full')}
@@ -946,7 +946,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
       )}
 
       {/* 6B. Quick Status Filter Ribbon */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none touch-pan-x">
+      <div className="crm-table-wrap flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none touch-pan-x">
         {[
           { key: '', label: 'All Orders', count: metrics.totalOrders ?? meta.total },
           { key: 'NEW', label: 'New', count: metrics.newOrdersCount },

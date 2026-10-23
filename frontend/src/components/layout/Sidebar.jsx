@@ -406,13 +406,13 @@ export function Sidebar({ isOpen, onClose }) {
         }`}
       >
         {/* Brand Header with generous top padding away from URL tab */}
-        <div className="px-5 pt-6 sm:pt-7 pb-4 sm:pb-5 border-b border-slate-100 flex items-start justify-between bg-white shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-          <div className="min-w-0 flex-1 pr-2 space-y-2">
+        <div className="px-4 sm:px-5 pt-4 sm:pt-7 pb-3 sm:pb-5 border-b border-slate-100 flex items-start justify-between bg-white shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+          <div className="min-w-0 flex-1 pr-2 space-y-1.5">
             <div className="flex items-center">
               <img
                 src="/shanthi_logo.png"
                 alt="Shanthi Ayurvedas"
-                className="h-20 sm:h-24 w-auto max-w-[200px] object-contain object-left drop-shadow-xs"
+                className="h-14 sm:h-20 w-auto max-w-[180px] object-contain object-left drop-shadow-xs"
               />
             </div>
             <p className="text-[11px] text-emerald-700 font-bold tracking-wider uppercase truncate">
@@ -423,7 +423,7 @@ export function Sidebar({ isOpen, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl p-2 -mr-1 -mt-0.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none cursor-pointer lg:hidden shrink-0"
+            className="rounded-xl p-2 -mr-1 -mt-0.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none cursor-pointer lg:hidden shrink-0 touch-target flex items-center justify-center"
             aria-label="Close sidebar"
           >
             <CloseRounded sx={{ fontSize: 20 }} />

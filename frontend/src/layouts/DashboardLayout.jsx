@@ -49,9 +49,9 @@ export function DashboardLayout() {
           id="main-content"
           tabIndex={-1}
           ref={mainScrollRef}
-          className="flex-1 overflow-y-auto overflow-x-hidden p-2.5 sm:p-4 md:p-6 scrollbar-thin"
+          className="flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-4 md:p-6 scrollbar-thin"
         >
-          <div className="max-w-7xl mx-auto space-y-3.5 sm:space-y-4 pb-20 sm:pb-24">
+          <div className="max-w-7xl mx-auto space-y-3 sm:space-y-4 pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))] sm:pb-24 min-w-0 w-full">
             {/* Top Navigation Trail / Breadcrumbs for easy access */}
             <Breadcrumbs />
 

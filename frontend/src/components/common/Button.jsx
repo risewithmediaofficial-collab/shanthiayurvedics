@@ -15,7 +15,7 @@ export function Button({
   type = 'button',
   ...props
 }) {
-  const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed select-none cursor-pointer';
+  const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed select-none cursor-pointer touch-manipulation min-h-[36px] sm:min-h-0';
 
   const variants = {
     primary: 'text-white bg-ayur-700 hover:bg-ayur-800 active:bg-ayur-900 shadow-sm focus:ring-ayur-500/30',

@@ -230,14 +230,14 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 xs:gap-2.5 sm:gap-3">
           {[
             ['Assigned leads', 'leads', Users],
             ["Today's follow-ups", 'today', CalendarClock],
             ['Overdue follow-ups', 'overdue', PhoneCall],
             ['Orders', 'orders', ShoppingBag],
             ['15-Day Reorders Due', 'reordersDue', RotateCcw]
-          ].map(([label, key, Icon]) => (
+          ].map(([label, key, Icon], idx) => (
             <div
               key={key}
               onClick={() => {
@@ -246,17 +246,19 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
                 else if (key === 'today' || key === 'overdue') setActiveTab('followups');
                 else if (key === 'orders') setActiveTab('orders');
               }}
-              className={`rounded-xl border bg-white p-3 sm:p-4 shadow-sm cursor-pointer transition-all hover:scale-101 ${
+              className={`rounded-xl border bg-white p-2.5 sm:p-4 shadow-sm cursor-pointer transition-all hover:scale-101 min-w-0 ${
+                idx === 4 ? 'col-span-2 sm:col-span-1' : ''
+              } ${
                 key === 'reordersDue' && (summary?.reordersDue || 0) > 0
                   ? 'border-amber-300 bg-amber-50/40 ring-1 ring-amber-300'
                   : 'border-slate-200 hover:border-slate-300'
               }`}
             >
-              <div className="flex justify-between gap-1.5">
-                <p className="text-[11px] sm:text-xs font-bold text-slate-600 uppercase tracking-wide truncate">{label}</p>
-                <Icon size={16} className={key === 'overdue' ? 'text-amber-600 shrink-0' : key === 'reordersDue' ? 'text-amber-700 shrink-0' : 'text-emerald-700 shrink-0'} />
+              <div className="flex justify-between items-start gap-1">
+                <p className="text-[10.5px] sm:text-xs font-bold text-slate-600 uppercase tracking-wide truncate">{label}</p>
+                <Icon size={15} className={key === 'overdue' ? 'text-amber-600 shrink-0' : key === 'reordersDue' ? 'text-amber-700 shrink-0' : 'text-emerald-700 shrink-0'} />
               </div>
-              <p className={`mt-2 text-2xl sm:text-3xl font-black tabular-nums ${key === 'reordersDue' ? 'text-amber-900' : 'text-slate-900'}`}>
+              <p className={`mt-1.5 sm:mt-2 text-xl sm:text-3xl font-black tabular-nums ${key === 'reordersDue' ? 'text-amber-900' : 'text-slate-900'}`}>
                 {isLoading ? '…' : summary?.[key] ?? 0}
               </p>
             </div>
@@ -265,20 +267,20 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
       )}
 
       {/* Tab Navigation */}
-      <nav aria-label="Telecaller modules" className="flex gap-1 overflow-x-auto scrollbar-none rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xs whitespace-nowrap">
+      <nav aria-label="Telecaller modules" className="flex gap-1 overflow-x-auto scrollbar-none rounded-xl border border-slate-200 bg-white p-1 sm:p-1.5 shadow-2xs whitespace-nowrap crm-table-wrap">
         {tabs.map(({ id, title, icon: Icon }) => (
           <button
             type="button"
             key={id}
             aria-current={activeTab === id ? 'page' : undefined}
             onClick={() => setActiveTab(id)}
-            className={`flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-bold shrink-0 sm:flex-1 transition-all cursor-pointer ${
+            className={`flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap rounded-lg px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs font-bold shrink-0 sm:flex-1 transition-all cursor-pointer min-h-[38px] ${
               activeTab === id
                 ? 'bg-emerald-700 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
             }`}
           >
-            <Icon size={16} />
+            <Icon size={15} />
             <span>{title}</span>
           </button>
         ))}

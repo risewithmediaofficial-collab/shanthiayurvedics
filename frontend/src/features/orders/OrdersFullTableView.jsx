@@ -356,7 +356,7 @@ export function OrdersFullTableView({
       </div>
 
       {/* ── 2. Six Metric Cards Grid (matching Image 2) ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 xs:gap-2.5 sm:gap-3">
         {/* 1. New */}
         <div
           onClick={() => {
@@ -998,7 +998,7 @@ export function OrdersFullTableView({
       </div>
 
       {/* ── 9. Comprehensive Data Table ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-sm scrollbar-thin touch-pan-x">
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-sm scrollbar-thin touch-pan-x crm-table-wrap w-full max-w-full">
         <table className="w-full min-w-[980px] text-xs text-left">
           <thead className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur-xs text-slate-700 uppercase tracking-wider font-semibold border-b shadow-2xs select-none">
             <tr>

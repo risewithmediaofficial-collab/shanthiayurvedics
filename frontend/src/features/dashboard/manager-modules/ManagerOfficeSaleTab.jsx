@@ -646,7 +646,7 @@ export function ManagerOfficeSaleTab() {
                     key={m.id}
                     type="button"
                     onClick={() => setPaymentMethod(m.id)}
-                    className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                    className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer touch-manipulation min-h-[38px] flex items-center justify-center ${
                       paymentMethod === m.id
                         ? 'bg-emerald-800 text-white shadow-xs'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'

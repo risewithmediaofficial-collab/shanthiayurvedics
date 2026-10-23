@@ -684,7 +684,7 @@ export function LeadListPage({ callerId } = {}) {
         </div>
 
         {/* Row 2: Filters - scrollable on mobile */}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
+        <div className="crm-table-wrap flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
           {/* Date to Date Filter */}
           <DateRangeFilter
             startDate={startDate}
@@ -781,7 +781,7 @@ export function LeadListPage({ callerId } = {}) {
       </div>
 
       {/* Table - horizontally scrollable on mobile */}
-      <div className="overflow-x-auto rounded-2xl">
+      <div className="crm-table-wrap w-full max-w-full overflow-x-auto rounded-2xl">
         <Table
           columns={columns}
           data={leads}

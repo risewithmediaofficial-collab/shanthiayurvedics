@@ -242,11 +242,11 @@ export function CounterSalePage() {
                       ₹{ord.grandTotal?.toLocaleString()}
                     </span>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <button
                         type="button"
                         onClick={() => handleOpenEdit(ord)}
-                        className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                        className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer touch-manipulation min-h-[36px]"
                         title="Edit Counter Receipt"
                       >
                         <Pencil className="w-3.5 h-3.5" />
@@ -256,7 +256,7 @@ export function CounterSalePage() {
                       <button
                         type="button"
                         onClick={() => setSelectedOrderForInvoice(ord)}
-                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer touch-manipulation min-h-[36px]"
                         title="Print Tax Invoice"
                       >
                         <Printer className="w-3.5 h-3.5" />
@@ -269,7 +269,7 @@ export function CounterSalePage() {
                           setSelectedOrderForDelete(ord);
                           setDeleteError('');
                         }}
-                        className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                        className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer touch-manipulation min-h-[36px]"
                         title="Delete Counter Receipt"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

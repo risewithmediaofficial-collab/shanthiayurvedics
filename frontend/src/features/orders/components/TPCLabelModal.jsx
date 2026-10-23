@@ -28,7 +28,7 @@ export function TPCLabelModal({ isOpen, onClose, labelData, awbNumber }) {
     >
       <div className="space-y-4">
         {/* Banner */}
-        <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
           <div className="flex items-center gap-2">
             <span
               className={`px-2 py-0.5 rounded text-[10px] font-bold ${

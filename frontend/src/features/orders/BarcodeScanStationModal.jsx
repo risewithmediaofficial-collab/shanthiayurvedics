@@ -165,57 +165,59 @@ export function BarcodeScanStationModal({ isOpen, onClose, onOrderUpdated }) {
     >
       <div className="space-y-4 text-xs">
         {/* Top Controls & Sound Toggle */}
-        <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
-          <div className="flex items-center gap-1.5">
+        <div className="crm-table-wrap w-full max-w-full overflow-x-auto pb-1 border-b border-slate-200">
+          <div className="flex items-center justify-between min-w-max gap-3 pb-2.5">
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setActiveTab('scan')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation min-h-[36px] ${
+                  activeTab === 'scan' ? 'bg-ayur-700 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                📦 Scan Barcodes
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('export')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation min-h-[36px] ${
+                  activeTab === 'export' ? 'bg-ayur-700 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                📮 Export / Dispatch
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('delivered')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation min-h-[36px] ${
+                  activeTab === 'delivered' ? 'bg-ayur-700 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                ✅ Delivered
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('rto')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation min-h-[36px] ${
+                  activeTab === 'rto' ? 'bg-ayur-700 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                ↩️ RTO Return
+              </button>
+            </div>
+
             <button
               type="button"
-              onClick={() => setActiveTab('scan')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                activeTab === 'scan' ? 'bg-ayur-700 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className={`p-1.5 rounded-lg border text-xs flex items-center gap-1 touch-manipulation min-h-[36px] ${
+                soundEnabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 text-slate-400'
               }`}
+              title="Toggle Scan Beep Sound"
             >
-              📦 Scan Barcodes
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('export')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                activeTab === 'export' ? 'bg-ayur-700 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              📮 Export / Dispatch
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('delivered')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                activeTab === 'delivered' ? 'bg-ayur-700 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              ✅ Delivered
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('rto')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                activeTab === 'rto' ? 'bg-ayur-700 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              ↩️ RTO Return
+              {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+              <span className="font-semibold">{soundEnabled ? 'Sound On' : 'Muted'}</span>
             </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className={`p-1.5 rounded-lg border text-xs flex items-center gap-1 ${
-              soundEnabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 text-slate-400'
-            }`}
-            title="Toggle Scan Beep Sound"
-          >
-            {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline font-semibold">{soundEnabled ? 'Sound On' : 'Muted'}</span>
-          </button>
         </div>
 
         {/* Barcode Scanner Input Bar */}

@@ -380,7 +380,7 @@ export function InventoryLedgerPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto scrollbar-none whitespace-nowrap">
+      <div className="crm-table-wrap flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto scrollbar-none whitespace-nowrap">
         <button
           onClick={() => { setActiveTab('CURRENT'); setPage(1); setSortBy('productName'); }}
           className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition-all ${
@@ -472,7 +472,7 @@ export function InventoryLedgerPage() {
       </div>
 
       {/* Table with horizontal scroll on mobile */}
-      <div className="overflow-x-auto -mx-0 rounded-2xl">
+      <div className="crm-table-wrap w-full max-w-full overflow-x-auto -mx-0 rounded-2xl">
         <Table
           columns={activeTab === 'CURRENT' ? invColumns : movColumns}
           data={activeTab === 'CURRENT' ? inventory : movements}

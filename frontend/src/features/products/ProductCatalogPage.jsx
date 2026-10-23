@@ -440,7 +440,7 @@ export function ProductCatalogPage() {
                 type="button"
                 onClick={() => openManageStock(row)}
                 title="Manage & Adjust Stock for this product"
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold transition-all shadow-2xs cursor-pointer shrink-0"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold transition-all shadow-2xs cursor-pointer shrink-0 touch-manipulation min-h-[36px]"
               >
                 <Boxes className="w-3.5 h-3.5 text-emerald-700" />
                 <span>Manage Stock</span>
@@ -453,7 +453,7 @@ export function ProductCatalogPage() {
                 type="button"
                 onClick={() => editProductMutation.mutate({ id: row._id, data: { isActive: row.isActive === false } })}
                 title={row.isActive !== false ? 'Click to mark as Inactive' : 'Click to mark as Active'}
-                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer select-none shadow-2xs shrink-0 ${
+                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer select-none shadow-2xs shrink-0 touch-manipulation min-h-[36px] ${
                   row.isActive !== false
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
                     : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
@@ -486,7 +486,7 @@ export function ProductCatalogPage() {
                   setEditModalOpen(true);
                 }}
                 title="Edit Product"
-                className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center cursor-pointer shrink-0"
+                className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center justify-center min-h-[36px] min-w-[36px] cursor-pointer shrink-0 touch-manipulation"
               >
                 <Pencil className="w-3.5 h-3.5" />
               </button>
@@ -501,7 +501,7 @@ export function ProductCatalogPage() {
                   setDeleteModalOpen(true);
                 }}
                 title="Delete Product"
-                className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors flex items-center cursor-pointer shrink-0"
+                className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors flex items-center justify-center min-h-[36px] min-w-[36px] cursor-pointer shrink-0 touch-manipulation"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>

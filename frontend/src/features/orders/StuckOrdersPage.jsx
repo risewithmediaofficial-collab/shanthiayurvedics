@@ -157,7 +157,7 @@ export function StuckOrdersPage() {
           />
         </div>
 
-        <div className="w-56">
+        <div className="w-full sm:w-56">
           <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}

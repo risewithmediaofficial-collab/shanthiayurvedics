@@ -39,12 +39,12 @@ export function PrintableInvoiceModal({ isOpen, onClose, order, autoPrint = fals
         {/* Printable Area */}
         <div id="printable-tax-invoice" className="border border-slate-300 rounded-xl p-6 bg-white space-y-4 print:border-none print:p-0">
           {/* Header */}
-          <div className="flex justify-between items-start border-b border-slate-200 pb-4">
-            <div className="flex items-start gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-3 border-b border-slate-200 pb-4">
+            <div className="flex items-start gap-3 sm:gap-4">
               <img
                 src="/shanthi_logo.png"
                 alt="Shanthi Ayurvedas"
-                className="h-14 w-auto max-w-[170px] object-contain shrink-0"
+                className="h-12 sm:h-14 w-auto max-w-[140px] sm:max-w-[170px] object-contain shrink-0"
               />
               <div className="pt-0.5">
                 <p className="text-xs font-semibold text-slate-700">Authentic Herbal Wellness & Telemedicine</p>
@@ -52,7 +52,7 @@ export function PrintableInvoiceModal({ isOpen, onClose, order, autoPrint = fals
                 <p className="text-[11px] text-slate-500 font-mono">GSTIN: 33AAAAA0000A1Z5 | Biller ID: 1000058077</p>
               </div>
             </div>
-            <div className="text-right">
+            <div className="text-left sm:text-right w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
               <div className="text-sm font-black text-slate-900 uppercase font-mono">TAX INVOICE</div>
               <div className="text-xs font-mono font-bold text-slate-700 mt-0.5">{order.orderNumber}</div>
               <div className="text-[11px] text-slate-500 mt-1">Date: {new Date(order.createdAt).toLocaleDateString()}</div>
@@ -61,7 +61,7 @@ export function PrintableInvoiceModal({ isOpen, onClose, order, autoPrint = fals
           </div>
 
           {/* Patient Details & Delivery */}
-          <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-3 rounded-lg border border-slate-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs bg-slate-50 p-3 rounded-lg border border-slate-200">
             <div>
               <div className="font-bold text-slate-900 uppercase text-[10px] tracking-wider mb-1">Patient Details (Billed To):</div>
               <div className="font-semibold text-slate-800">{patientName}</div>
@@ -93,7 +93,7 @@ export function PrintableInvoiceModal({ isOpen, onClose, order, autoPrint = fals
           </div>
 
           {/* Items Table */}
-          <div className="overflow-x-auto scrollbar-thin">
+          <div className="crm-table-wrap w-full max-w-full overflow-x-auto scrollbar-thin">
             <table className="w-full min-w-[500px] text-xs text-left">
               <thead className="bg-slate-100 text-slate-700 font-bold border-y border-slate-200">
                 <tr>

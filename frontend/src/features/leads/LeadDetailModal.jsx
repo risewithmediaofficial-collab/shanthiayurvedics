@@ -261,7 +261,7 @@ export function LeadDetailModal({
                   type="button"
                   onClick={handleOpenWhatsApp}
                   title="Chat on WhatsApp"
-                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer touch-manipulation min-h-[36px]"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
                   <span>WhatsApp</span>
@@ -272,7 +272,7 @@ export function LeadDetailModal({
                   <a
                     href={`tel:${lead.mobile}`}
                     title="Direct Phone Call"
-                    className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer touch-manipulation min-h-[36px]"
                   >
                     <Phone className="w-3.5 h-3.5" />
                     <span>Call</span>
@@ -288,7 +288,7 @@ export function LeadDetailModal({
                       onOpenOrder(lead);
                     }}
                     title="Place Prescription Order"
-                    className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer touch-manipulation min-h-[36px]"
                   >
                     <ShoppingBag className="w-3.5 h-3.5" />
                     <span>Order</span>
@@ -301,7 +301,7 @@ export function LeadDetailModal({
                     type="button"
                     onClick={() => onOpenEdit(lead)}
                     title="Edit Contact Details"
-                    className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs transition-colors cursor-pointer"
+                    className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs transition-colors cursor-pointer touch-manipulation min-h-[36px] min-w-[36px] flex items-center justify-center"
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
@@ -357,59 +357,61 @@ export function LeadDetailModal({
           )}
 
           {/* Navigation Tabs */}
-          <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto scrollbar-none whitespace-nowrap">
-            <button
-              type="button"
-              onClick={() => setActiveTab('calls')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
-                activeTab === 'calls'
-                  ? 'bg-emerald-700 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
-            >
-              <PhoneCall className="w-3.5 h-3.5" />
-              <span>Call History & Logs</span>
-              <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  activeTab === 'calls' ? 'bg-emerald-800 text-white' : 'bg-slate-200 text-slate-700'
+          <div className="crm-table-wrap w-full max-w-full overflow-x-auto pb-1 border-b border-slate-200">
+            <div className="flex items-center gap-2 min-w-max pb-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab('calls')}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 touch-manipulation min-h-[36px] ${
+                  activeTab === 'calls'
+                    ? 'bg-emerald-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
-                {calls.length}
-              </span>
-            </button>
+                <PhoneCall className="w-3.5 h-3.5" />
+                <span>Call History & Logs</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    activeTab === 'calls' ? 'bg-emerald-800 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}
+                >
+                  {calls.length}
+                </span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('profile')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
-                activeTab === 'profile'
-                  ? 'bg-emerald-700 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
-            >
-              <Info className="w-3.5 h-3.5" />
-              <span>Patient Profile & Notes</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('assignments')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
-                activeTab === 'assignments'
-                  ? 'bg-emerald-700 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
-            >
-              <History className="w-3.5 h-3.5" />
-              <span>Assignment Trail</span>
-              <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  activeTab === 'assignments' ? 'bg-emerald-800 text-white' : 'bg-slate-200 text-slate-700'
+              <button
+                type="button"
+                onClick={() => setActiveTab('profile')}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 touch-manipulation min-h-[36px] ${
+                  activeTab === 'profile'
+                    ? 'bg-emerald-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
-                {assignments.length}
-              </span>
-            </button>
+                <Info className="w-3.5 h-3.5" />
+                <span>Patient Profile & Notes</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('assignments')}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 touch-manipulation min-h-[36px] ${
+                  activeTab === 'assignments'
+                    ? 'bg-emerald-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                <History className="w-3.5 h-3.5" />
+                <span>Assignment Trail</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    activeTab === 'assignments' ? 'bg-emerald-800 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}
+                >
+                  {assignments.length}
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* TAB 1: CALL HISTORY & LOGS */}

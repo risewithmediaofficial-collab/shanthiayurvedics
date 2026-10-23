@@ -18,6 +18,6 @@ export default defineConfig({
     css: false,
     include: ['src/tests/**/*.{test,spec}.{js,jsx,ts,tsx}'],
     testTimeout: 15000,
-    pool: 'threads'
+    pool: 'forks'
   }
 });

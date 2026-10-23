@@ -729,7 +729,7 @@ export function ScanTrackerPage() {
       {/* ─────────────────────────────────────────────────────────────
           NAVIGATION TABS RIBBON (Scan Barcodes | Export | RTO | Delivered | Re-Export)
       ───────────────────────────────────────────────────────────── */}
-      <nav className="w-full bg-white border-b border-slate-200 px-3 sm:px-6 flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none shadow-2xs shrink-0 whitespace-nowrap">
+      <nav className="w-full bg-white border-b border-slate-200 px-2.5 sm:px-6 flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none shadow-2xs shrink-0 whitespace-nowrap crm-table-wrap">
         <button
           type="button"
           onClick={() => setActiveTab('SCAN')}

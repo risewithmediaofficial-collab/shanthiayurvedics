@@ -324,13 +324,13 @@ export function NotificationTestingPage() {
                 />
               </div>
 
-              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
-                <span>Notification payload links to: <code className="text-emerald-700 font-mono">/leads?search={leadPhone}</code></span>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <span className="break-all sm:break-normal">Notification payload links to: <code className="text-emerald-700 font-mono">/leads?search={leadPhone}</code></span>
                 <Button
                   variant="primary"
                   onClick={handleSimulateLeadAssign}
                   disabled={actionLoading}
-                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 text-xs py-1.5"
+                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1.5 text-xs py-2 sm:py-1.5 min-h-[36px] touch-manipulation w-full sm:w-auto shrink-0"
                 >
                   <PersonAddRounded sx={{ fontSize: 16 }} />
                   Simulate Lead Assign
@@ -367,13 +367,13 @@ export function NotificationTestingPage() {
                 placeholder="Call notes..."
               />
 
-              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <span>Priority: <span className="font-bold text-amber-700">HIGH</span> • Links to: <code className="text-emerald-700 font-mono">/followups</code></span>
                 <Button
                   variant="primary"
                   onClick={handleSimulateFollowupDue}
                   disabled={actionLoading}
-                  className="bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-1.5 text-xs py-1.5"
+                  className="bg-amber-600 hover:bg-amber-700 text-white flex items-center justify-center gap-1.5 text-xs py-2 sm:py-1.5 min-h-[36px] touch-manipulation w-full sm:w-auto shrink-0"
                 >
                   <AccessTimeRounded sx={{ fontSize: 16 }} />
                   Simulate Follow-up Due
@@ -403,13 +403,13 @@ export function NotificationTestingPage() {
                 />
               </div>
 
-              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <span>Course: <span className="font-bold text-slate-800">15-Day Treatment (Finishes in 3 days)</span> • Daily Cap: <span className="font-bold text-slate-800">3x Daily</span></span>
                 <Button
                   variant="primary"
                   onClick={handleSimulateReorderDue}
                   disabled={actionLoading}
-                  className="bg-emerald-700 hover:bg-emerald-800 text-white flex items-center gap-1.5 text-xs py-1.5"
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white flex items-center justify-center gap-1.5 text-xs py-2 sm:py-1.5 min-h-[36px] touch-manipulation w-full sm:w-auto shrink-0"
                 >
                   <AutorenewRounded sx={{ fontSize: 16 }} />
                   Simulate 3-Day Reorder
@@ -423,7 +423,7 @@ export function NotificationTestingPage() {
             title="Trigger 4: Force 1-Hour Scheduled Notification Cycle"
             subtitle="Execute the hourly automated background cron job immediately without waiting 1 hour"
           >
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
               <div>
                 <p className="text-xs text-slate-600">
                   Scans all pending follow-ups due right now, checks orders nearing 15-day completion, and dispatches simultaneously.
@@ -436,7 +436,7 @@ export function NotificationTestingPage() {
                 variant="primary"
                 onClick={handleTriggerCycle}
                 disabled={actionLoading}
-                className="shrink-0 bg-purple-700 hover:bg-purple-800 text-white flex items-center gap-1.5"
+                className="shrink-0 bg-purple-700 hover:bg-purple-800 text-white flex items-center justify-center gap-1.5 min-h-[40px] touch-manipulation w-full sm:w-auto"
               >
                 <SpeedRounded sx={{ fontSize: 16 }} />
                 Execute Hourly Cycle

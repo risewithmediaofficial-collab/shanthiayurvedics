@@ -336,35 +336,39 @@ export function FollowUpListPage({ callerId } = {}) {
       </div>
 
       {/* Tabs */}
-      <div className="bento-card p-2.5 flex items-center gap-2 overflow-x-auto">
+      <div className="bento-card p-2.5 crm-table-wrap flex items-center gap-2 overflow-x-auto scrollbar-none">
         <button
+          type="button"
           onClick={() => setActiveTab('TODAY')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            activeTab === 'TODAY' ? 'bg-ayur-800 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 min-h-[36px] sm:min-h-0 touch-manipulation cursor-pointer ${
+            activeTab === 'TODAY' ? 'bg-ayur-800 text-white shadow-sm font-bold' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           Today's Scheduled
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('OVERDUE')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            activeTab === 'OVERDUE' ? 'bg-rose-700 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 min-h-[36px] sm:min-h-0 touch-manipulation cursor-pointer ${
+            activeTab === 'OVERDUE' ? 'bg-rose-700 text-white shadow-sm font-bold' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           🚨 Overdue
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('UPCOMING')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            activeTab === 'UPCOMING' ? 'bg-ayur-800 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 min-h-[36px] sm:min-h-0 touch-manipulation cursor-pointer ${
+            activeTab === 'UPCOMING' ? 'bg-ayur-800 text-white shadow-sm font-bold' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           Upcoming (7 Days)
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('COMPLETED')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            activeTab === 'COMPLETED' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 min-h-[36px] sm:min-h-0 touch-manipulation cursor-pointer ${
+            activeTab === 'COMPLETED' ? 'bg-slate-800 text-white shadow-sm font-bold' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           Completed

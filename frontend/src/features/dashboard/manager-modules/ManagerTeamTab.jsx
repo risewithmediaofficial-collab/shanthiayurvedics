@@ -455,7 +455,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
       ) : viewMode === 'table' ? (
         /* ================= 1. TABLE VIEW (DEFAULT) ================= */
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
-          <div className={`overflow-x-auto scrollbar-thin ${filteredTeam.length > 10 ? 'max-h-[560px] overflow-y-auto relative' : ''}`}>
+          <div className={`crm-table-wrap w-full max-w-full overflow-x-auto scrollbar-thin ${filteredTeam.length > 10 ? 'max-h-[560px] overflow-y-auto relative' : ''}`}>
             <table className="w-full min-w-[850px] text-left text-xs">
               <thead className={`bg-slate-50/95 text-slate-500 uppercase tracking-wider border-b border-slate-200 select-none ${filteredTeam.length > 10 ? 'sticky top-0 z-10 backdrop-blur-xs shadow-2xs' : ''}`}>
                 <tr>

@@ -179,7 +179,7 @@ export function ExcelExportModal({
           <label className="font-bold text-slate-700 uppercase tracking-wider block mb-2">
             2. Choose File Format
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               type="button"
               onClick={() => setExportFormat('excel')}

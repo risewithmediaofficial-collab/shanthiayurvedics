@@ -58,7 +58,7 @@ export function SimpleTrendChart({
   }
 
   return (
-    <div style={{ height, width: '100%' }} className={className}>
+    <div style={{ height, width: '100%' }} className={`min-w-0 max-w-full ${className}`}>
       <ResponsiveContainer width="100%" height="100%">
         {type === 'bar' ? (
           <BarChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>

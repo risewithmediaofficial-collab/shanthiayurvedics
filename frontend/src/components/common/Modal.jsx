@@ -80,10 +80,10 @@ export function Modal({
       >
         {/* Sticky Header with generous top padding away from URL tab */}
         {(title || showClose) && (
-          <div className="shrink-0 px-4 sm:px-7 pt-4 sm:pt-8 pb-3.5 sm:pb-5 border-b border-slate-100 bg-white flex items-start justify-between shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+          <div className="shrink-0 px-3.5 sm:px-7 pt-4 sm:pt-8 pb-3 sm:pb-5 border-b border-slate-100 bg-white flex items-start justify-between shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
             <div className="flex items-start gap-2.5 sm:gap-3.5 min-w-0 pr-2 sm:pr-3">
               {icon && (
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-ayur-50 border border-ayur-100 flex items-center justify-center text-base sm:text-lg shrink-0 mt-0.5 shadow-xs overflow-hidden">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-ayur-50 border border-ayur-100 flex items-center justify-center text-sm sm:text-lg shrink-0 mt-0.5 shadow-xs overflow-hidden">
                   {typeof icon === 'string' && (icon.startsWith('/') || icon.endsWith('.png') || icon.endsWith('.svg')) ? (
                     <img src={icon} alt="Logo" className="w-full h-full object-contain p-1" />
                   ) : (
@@ -108,7 +108,7 @@ export function Modal({
                 type="button"
                 onClick={onClose}
                 aria-label="Close"
-                className="shrink-0 p-1.5 sm:p-2 -mr-1 -mt-0.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none cursor-pointer"
+                className="shrink-0 p-1.5 sm:p-2 -mr-1 -mt-0.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none cursor-pointer touch-target flex items-center justify-center"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -117,13 +117,13 @@ export function Modal({
         )}
 
         {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-4 sm:space-y-5 bg-white scrollbar-thin">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3.5 sm:space-y-5 bg-white scrollbar-thin">
           {children}
         </div>
 
-        {/* Sticky Footer */}
+        {/* Sticky Footer with safe-area offset */}
         {footer && (
-          <div className="shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-100 bg-slate-50/80 flex items-center justify-end flex-wrap sm:flex-nowrap gap-2 sm:gap-3">
+          <div className="shrink-0 px-3.5 sm:px-6 py-2.5 sm:py-4 border-t border-slate-100 bg-slate-50/80 flex items-center justify-end flex-wrap sm:flex-nowrap gap-2 sm:gap-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-4">
             {footer}
           </div>
         )}

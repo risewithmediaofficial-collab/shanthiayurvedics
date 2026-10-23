@@ -249,7 +249,7 @@ export function Breadcrumbs() {
 
         {/* Current Active Page */}
         <span
-          className="font-bold text-slate-900 truncate max-w-[180px] sm:max-w-[320px] md:max-w-none"
+          className="font-bold text-slate-900 truncate max-w-[130px] xs:max-w-[180px] sm:max-w-[320px] md:max-w-none"
           aria-current="page"
         >
           {dynamicTitle || config.title}

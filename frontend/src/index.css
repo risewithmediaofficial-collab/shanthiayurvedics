@@ -29,14 +29,30 @@ button:disabled { cursor: not-allowed; }
   /* Smooth touch momentum scrolling on mobile */
   .overflow-x-auto, .overflow-y-auto, [class*="overflow-x-"], [class*="overflow-y-"] {
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
   }
 
   /* Make tables horizontally scrollable on mobile */
   .crm-table-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    max-width: 100%;
   }
 }
+
+/* Accessible touch targets (minimum 44x44px hit area on interactive controls) */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Text and data wrapping utilities to prevent layout blowout */
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;

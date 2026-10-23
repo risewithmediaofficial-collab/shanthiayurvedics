@@ -33,8 +33,8 @@ export function Table({
     : 'min-w-full';
 
   return (
-    <div className={twMerge('w-full overflow-hidden bg-white rounded-2xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_6px_16px_rgba(0,0,0,0.02)] flex flex-col', className)}>
-      <div className={twMerge('overflow-x-auto overflow-y-auto relative scrollbar-thin', shouldInlineScroll && maxHeight)}>
+    <div className={twMerge('w-full max-w-full overflow-hidden bg-white rounded-2xl border border-slate-200/90 shadow-[0_1px_3px_rgba(0,0,0,0.03),0_6px_16px_rgba(0,0,0,0.02)] flex flex-col', className)}>
+      <div className={twMerge('crm-table-wrap overflow-x-auto overflow-y-auto relative scrollbar-thin w-full max-w-full', shouldInlineScroll && maxHeight)}>
         <table aria-busy={isLoading} className={twMerge('crm-table w-full text-left border-collapse', effectiveMinWidth)}>
           <thead className={twMerge('bg-slate-50/90 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider', shouldInlineScroll && 'sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs shadow-2xs')}>
             <tr>

@@ -265,7 +265,7 @@ export function CustomSelect({
           if (!disabled) setOpen((prev) => !prev);
         }}
         className={twMerge(
-          'relative w-full flex items-center justify-between gap-2 rounded-lg border font-medium text-left',
+          'relative w-full flex items-center justify-between gap-1.5 rounded-lg border font-medium text-left min-w-0 max-w-full',
           'transition-all duration-200 ease-out cursor-pointer',
           'focus:outline-none focus:ring-2 focus:ring-emerald-500/20',
           sizeClasses,
@@ -333,7 +333,7 @@ export function CustomSelect({
           'transition-all duration-150 ease-out',
           !portal && (isTop ? 'bottom-full mb-1.5 origin-bottom' : 'top-full mt-1.5 origin-top'),
           minWidth,
-          'max-w-[calc(100vw-2.5rem)]',
+          'max-w-[calc(100vw-1.5rem)] sm:max-w-md',
           !portal && (detectedAlign === 'right' ? 'right-0' : 'left-0'),
           open
             ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'

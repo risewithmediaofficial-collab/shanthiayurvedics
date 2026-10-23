@@ -16,9 +16,9 @@ import {
   Tag,
   ShieldCheck,
   Pencil,
-  Trash2,
   AlertTriangle,
-  ExternalLink
+  ExternalLink,
+  Send
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
@@ -52,6 +52,7 @@ export function OrderDetailPage() {
 
   // MSG91 WhatsApp Trigger
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+  const [isSendingDispatchWhatsApp, setIsSendingDispatchWhatsApp] = useState(false);
   const [whatsAppFeedback, setWhatsAppFeedback] = useState(null);
 
   // Edit & Delete Modals
@@ -147,6 +148,7 @@ export function OrderDetailPage() {
         type: 'success',
         message: res.data?.message || 'WhatsApp template queued successfully via MSG91!'
       });
+      queryClient.invalidateQueries({ queryKey: ['order', id] });
     } catch (err) {
       const errMsg = err.response?.data?.message || err.response?.data?.error || 'Failed to send WhatsApp message via MSG91';
       setWhatsAppFeedback({
@@ -155,6 +157,27 @@ export function OrderDetailPage() {
       });
     } finally {
       setIsSendingWhatsApp(false);
+    }
+  };
+
+  const handleSendMsg91DispatchWhatsApp = async () => {
+    setIsSendingDispatchWhatsApp(true);
+    setWhatsAppFeedback(null);
+    try {
+      const res = await apiClient.post(`/orders/${id}/send-dispatch-whatsapp`);
+      setWhatsAppFeedback({
+        type: 'success',
+        message: res.data?.message || 'WhatsApp dispatch notification queued successfully via MSG91!'
+      });
+      queryClient.invalidateQueries({ queryKey: ['order', id] });
+    } catch (err) {
+      const errMsg = err.response?.data?.message || err.response?.data?.error || 'Failed to send WhatsApp dispatch notification via MSG91';
+      setWhatsAppFeedback({
+        type: 'error',
+        message: typeof errMsg === 'object' ? JSON.stringify(errMsg) : String(errMsg)
+      });
+    } finally {
+      setIsSendingDispatchWhatsApp(false);
     }
   };
 
@@ -236,6 +259,50 @@ export function OrderDetailPage() {
             >
               Dispatch Parcel
             </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              icon={XCircle}
+              onClick={() => handleOpenTransition('CANCELLED')}
+            >
+              Cancel Order
+            </Button>
+          </div>
+        );
+      case 'READY_FOR_DISPATCH':
+        return (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              icon={Send}
+              onClick={() => handleOpenTransition('DISPATCHED')}
+              className="bg-sky-700 hover:bg-sky-800 text-white"
+            >
+              <span>Mark as Dispatched</span>
+              <span className="text-[10px] font-normal opacity-90 hidden sm:inline">• Sends WhatsApp Dispatch</span>
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              icon={XCircle}
+              onClick={() => handleOpenTransition('CANCELLED')}
+            >
+              Cancel Order
+            </Button>
+          </div>
+        );
+      case 'DISPATCHED':
+        return (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Truck}
+              onClick={() => handleOpenTransition('IN_TRANSIT')}
+            >
+              Mark In Transit
+            </Button>
           </div>
         );
       default:
@@ -284,13 +351,13 @@ export function OrderDetailPage() {
         )}
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Automatic WhatsApp Status Badge */}
+          {/* WhatsApp Order Confirmation Status */}
           {order.whatsappConfirmationSentAt ? (
             <div className="px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-1.5 shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-              <span>✓ WhatsApp Sent ({new Date(order.whatsappConfirmationSentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})</span>
+              <span>✓ Confirmed WA ({new Date(order.whatsappConfirmationSentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})</span>
             </div>
-          ) : order.status === 'CONFIRMED' || order.status === 'PROCESSING' || order.status === 'READY_FOR_PACKING' || order.status === 'PACKED' || order.status === 'DISPATCHED' ? (
+          ) : order.status === 'CONFIRMED' || order.status === 'PROCESSING' || order.status === 'READY_FOR_PACKING' || order.status === 'PACKED' || order.status === 'READY_FOR_DISPATCH' || order.status === 'DISPATCHED' ? (
             <Button
               variant="secondary"
               size="sm"
@@ -300,13 +367,33 @@ export function OrderDetailPage() {
               title="Resend WhatsApp confirmation template"
               className="border-slate-200 hover:border-emerald-300 text-slate-700 text-xs font-semibold"
             >
-              Resend WhatsApp
+              Resend Confirm WA
             </Button>
           ) : (
             <span className="text-[11px] text-slate-500 font-medium hidden sm:inline-flex items-center gap-1 bg-slate-50 border border-slate-200 px-2 py-1 rounded-md">
               <span>💬</span> WhatsApp auto-sends when Confirmed
             </span>
           )}
+
+          {/* WhatsApp Order Dispatch Notification Status */}
+          {order.whatsappDispatchSentAt ? (
+            <div className="px-3 py-1.5 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 text-xs font-semibold flex items-center gap-1.5 shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
+              <span>✓ Dispatched WA ({new Date(order.whatsappDispatchSentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})</span>
+            </div>
+          ) : order.status === 'DISPATCHED' || order.status === 'IN_TRANSIT' || order.status === 'OUT_FOR_DELIVERY' || order.status === 'DELIVERED' ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Send}
+              isLoading={isSendingDispatchWhatsApp}
+              onClick={handleSendMsg91DispatchWhatsApp}
+              title="Send or resend WhatsApp dispatch & tracking notification"
+              className="border-sky-300 hover:bg-sky-50 text-sky-800 text-xs font-semibold"
+            >
+              {order.whatsappDispatchStatus === 'FAILED' ? 'Retry Dispatch WA' : 'Send Dispatch WA'}
+            </Button>
+          ) : null}
 
           {/* Manual WhatsApp Web Fallback */}
           <Button

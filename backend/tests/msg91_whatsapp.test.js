@@ -150,6 +150,32 @@ describe('Msg91WhatsAppService', () => {
       env.MSG91_AUTHKEY = origAuth;
     });
 
+    it('should format prepaid dispatch payload with 0 (Prepaid)', async () => {
+      const origAuth = env.MSG91_AUTHKEY;
+      env.MSG91_AUTHKEY = 'test_auth_key_123';
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ type: 'success', message: 'Dispatch message queued successfully' })
+      });
+      global.fetch = mockFetch;
+
+      const res = await Msg91WhatsAppService.sendOrderDispatched({
+        ...mockDispatchedOrder,
+        paymentMethod: 'ONLINE',
+        codAmount: 0
+      });
+      expect(res.success).toBe(true);
+
+      const [url, options] = mockFetch.mock.calls[0];
+      const parsedBody = JSON.parse(options.body);
+      const components = parsedBody.payload.template.to_and_components[0].components;
+      expect(components.body_5.value).toBe('0 (Prepaid)');
+
+      env.MSG91_AUTHKEY = origAuth;
+    });
+
     it('should fail cleanly if order has no tracking number', async () => {
       const res = await Msg91WhatsAppService.sendOrderDispatched({
         ...mockDispatchedOrder,
@@ -160,3 +186,4 @@ describe('Msg91WhatsAppService', () => {
     });
   });
 });
+

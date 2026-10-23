@@ -12,6 +12,8 @@ import { StateMachineService } from './stateMachineService.js';
 import { AuditService } from './auditService.js';
 import { withTransaction } from '../utils/transactionHelper.js';
 import { ORDER_STATUS } from '../constants/orderStates.js';
+import { SHIPPING_STATUS } from '../constants/shippingStates.js';
+import { Shipment } from '../models/Shipment.js';
 import { NotFoundError, AppError } from '../utils/errors.js';
 import { emitToBranch, emitToUser } from '../sockets/index.js';
 import { Msg91WhatsAppService } from './msg91WhatsAppService.js';
@@ -425,22 +427,39 @@ export class OrderService {
     }
 
     // Automatically send WhatsApp Order Dispatched notification when marked as DISPATCHED with tracking number
-    if (targetStatus === ORDER_STATUS.DISPATCHED && order.trackingNumber && !order.whatsappDispatchSentAt) {
-      Msg91WhatsAppService.sendOrderDispatched(order).then(async (res) => {
-        if (res?.success) {
-          await Order.findByIdAndUpdate(order._id, {
-            whatsappDispatchSentAt: new Date(),
-            whatsappDispatchStatus: 'SENT'
-          });
-          logger.info({ orderNumber: order.orderNumber, trackingNumber: order.trackingNumber }, 'Automated WhatsApp dispatch notification sent on status DISPATCHED');
-        } else {
-          await Order.findByIdAndUpdate(order._id, {
-            whatsappDispatchStatus: 'FAILED'
-          });
+    if (targetStatus === ORDER_STATUS.DISPATCHED && !order.whatsappDispatchSentAt) {
+      if (!order.trackingNumber) {
+        const activeShipment = await Shipment.findOne({
+          orderId: order._id,
+          trackingStatus: { $ne: SHIPPING_STATUS.CANCELLED }
+        }).sort({ createdAt: -1 });
+        if (activeShipment) {
+          order.trackingNumber = activeShipment.awbNumber;
+          order.courierName = activeShipment.courierName || order.courierName;
+          await order.save();
         }
-      }).catch((err) => {
-        logger.warn({ err: err?.message, orderNumber: order.orderNumber }, 'Automated WhatsApp dispatch notification failed on status DISPATCHED');
-      });
+      }
+
+      if (order.trackingNumber) {
+        Msg91WhatsAppService.sendOrderDispatched(order).then(async (res) => {
+          if (res?.success) {
+            await Order.findByIdAndUpdate(order._id, {
+              whatsappDispatchSentAt: new Date(),
+              whatsappDispatchStatus: 'SENT'
+            });
+            logger.info({ orderNumber: order.orderNumber, trackingNumber: order.trackingNumber }, 'Automated WhatsApp dispatch notification sent on status DISPATCHED');
+          } else {
+            await Order.findByIdAndUpdate(order._id, {
+              whatsappDispatchStatus: 'FAILED'
+            });
+            logger.warn({ res, orderNumber: order.orderNumber }, 'Automated WhatsApp dispatch notification failed on status DISPATCHED');
+          }
+        }).catch((err) => {
+          logger.warn({ err: err?.message, orderNumber: order.orderNumber }, 'Automated WhatsApp dispatch notification failed on status DISPATCHED');
+        });
+      } else {
+        logger.warn({ orderNumber: order.orderNumber }, 'WhatsApp dispatch notification skipped: No tracking number found for order');
+      }
     }
 
     return order;

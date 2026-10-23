@@ -158,6 +158,10 @@ export class ShippingService {
       timestamp: new Date()
     });
 
+    order.trackingNumber = shipment.awbNumber;
+    order.courierName = provider.name;
+    await order.save();
+
     if (order.status === ORDER_STATUS.PACKED) {
       await OrderService.transitionStatus(order._id, ORDER_STATUS.READY_FOR_DISPATCH, {
         changedBy: user,
@@ -187,6 +191,14 @@ export class ShippingService {
     const shipment = await Shipment.findById(shipmentId);
     if (!shipment) throw new NotFoundError('Shipment');
     if (shipment.trackingStatus === SHIPPING_STATUS.PICKED_UP) return shipment;
+
+    // Ensure order has trackingNumber & courierName before transitioning to DISPATCHED
+    const order = await Order.findById(shipment.orderId);
+    if (order) {
+      if (!order.trackingNumber) order.trackingNumber = shipment.awbNumber;
+      if (!order.courierName) order.courierName = shipment.courierName;
+      await order.save();
+    }
 
     await OrderService.transitionStatus(shipment.orderId, ORDER_STATUS.DISPATCHED, {
       changedBy: user,

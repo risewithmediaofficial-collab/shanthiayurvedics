@@ -6,6 +6,8 @@ import { Order } from '../models/Order.js';
 import { OrderStatusHistory } from '../models/OrderStatusHistory.js';
 import { Inventory } from '../models/Inventory.js';
 import { Lead } from '../models/Lead.js';
+import { Shipment } from '../models/Shipment.js';
+import { SHIPPING_STATUS } from '../constants/shippingStates.js';
 import { OrderService } from '../services/orderService.js';
 import { Msg91WhatsAppService } from '../services/msg91WhatsAppService.js';
 import { ApiResponse } from '../utils/apiResponse.js';
@@ -373,5 +375,55 @@ export const sendOrderWhatsApp = asyncHandler(async (req, res) => {
 
   return ApiResponse.success(res, result.data, 'WhatsApp order confirmation message queued successfully');
 });
+
+export const sendOrderDispatchWhatsApp = asyncHandler(async (req, res) => {
+  const order = await Order.findById(req.params.id)
+    .populate('customerId', 'name mobile')
+    .populate('branchId', 'name billerId');
+  if (!order) {
+    return ApiResponse.error(res, 'Order not found', 404);
+  }
+
+  // If trackingNumber is not set on order, look up active Shipment
+  if (!order.trackingNumber) {
+    const activeShipment = await Shipment.findOne({
+      orderId: order._id,
+      trackingStatus: { $ne: SHIPPING_STATUS.CANCELLED }
+    }).sort({ createdAt: -1 });
+    if (activeShipment) {
+      order.trackingNumber = activeShipment.awbNumber;
+      order.courierName = activeShipment.courierName || order.courierName;
+      await order.save();
+    }
+  }
+
+  if (!order.trackingNumber) {
+    return ApiResponse.error(
+      res,
+      'Cannot send dispatch notification: Tracking number / Courier AWB has not been generated for this order yet.',
+      400
+    );
+  }
+
+  const result = await Msg91WhatsAppService.sendOrderDispatched(order);
+  if (!result.success) {
+    const errorMsg = result.data?.errors || result.data?.message || result.error || result.reason || 'Failed to send WhatsApp dispatch message via MSG91';
+    order.whatsappDispatchStatus = 'FAILED';
+    await order.save();
+    return ApiResponse.error(
+      res,
+      typeof errorMsg === 'object' ? JSON.stringify(errorMsg) : String(errorMsg),
+      result.status || 400,
+      result
+    );
+  }
+
+  order.whatsappDispatchSentAt = new Date();
+  order.whatsappDispatchStatus = 'SENT';
+  await order.save();
+
+  return ApiResponse.success(res, result.data, 'WhatsApp order dispatch notification message queued successfully via MSG91');
+});
+
 
 

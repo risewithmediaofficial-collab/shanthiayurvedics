@@ -140,5 +140,48 @@ describe("Orders Module Integration Tests", () => {
       .set("Authorization", `Bearer ${managerToken}`);
     expect(getRes.status).toBe(404);
   });
+
+  it("should reject dispatch WhatsApp if tracking number is missing", async () => {
+    const res = await request(app)
+      .post(`/api/orders/${orderId}/send-dispatch-whatsapp`)
+      .set("Authorization", `Bearer ${managerToken}`);
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/tracking number/i);
+  });
+
+  it("should send dispatch WhatsApp successfully when tracking number is present and fetch resolves", async () => {
+    // Add tracking number with India Post (compatible with COD orders)
+    await request(app)
+      .patch(`/api/orders/${orderId}`)
+      .set("Authorization", `Bearer ${telecallerToken}`)
+      .send({ trackingNumber: "EM022996331IN", courierName: "India Post" });
+
+    const origAuth = process.env.MSG91_AUTHKEY;
+    process.env.MSG91_AUTHKEY = "test_key_123";
+
+    const origFetch = global.fetch;
+    global.fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ type: "success", message: "Dispatch queued" })
+    });
+
+    const res = await request(app)
+      .post(`/api/orders/${orderId}/send-dispatch-whatsapp`)
+      .set("Authorization", `Bearer ${managerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.message).toMatch(/dispatch/i);
+
+    // Verify order was marked SENT
+    const checkRes = await request(app)
+      .get(`/api/orders/${orderId}`)
+      .set("Authorization", `Bearer ${managerToken}`);
+    expect(checkRes.body.data.whatsappDispatchStatus).toBe("SENT");
+    expect(checkRes.body.data.whatsappDispatchSentAt).toBeDefined();
+
+    global.fetch = origFetch;
+    process.env.MSG91_AUTHKEY = origAuth;
+  });
 });
 

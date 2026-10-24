@@ -12,6 +12,7 @@ import { Notification } from '../models/Notification.js';
 import { sendPushToUser } from './pushService.js';
 import { emitToUser, emitToBranch } from '../sockets/index.js';
 import { LEAD_SOURCES, LEAD_STATUS, CALL_STATUS, FOLLOWUP_STATUS } from '../constants/leadStates.js';
+import { parseBusinessDateTime } from '../utils/businessTime.js';
 
 export class LeadService {
   /**
@@ -204,12 +205,15 @@ export class LeadService {
     const callStatus = CALL_STATUS[rawCallStatus] || rawCallStatus;
     const notes = callData.notes || 'Call logged';
     const callDurationSeconds = Number(callData.callDurationSeconds ?? callData.durationSeconds ?? 0);
-    const nextFollowUpAt = callData.nextFollowUpAt || callData.nextFollowUpDate || null;
+    const rawNextFollowUp = callData.nextFollowUpAt || callData.nextFollowUpDate || null;
+    const nextFollowUpAt = rawNextFollowUp ? parseBusinessDateTime(rawNextFollowUp) : null;
     const priority = callData.priority || 'MEDIUM';
     const updateLeadStatus = callData.updateLeadStatus;
 
     if (!Object.values(CALL_STATUS).includes(callStatus)) throw new AppError('Select a valid call outcome', 400);
-    if (nextFollowUpAt && Number.isNaN(new Date(nextFollowUpAt).getTime())) throw new AppError('Enter a valid follow-up date', 400);
+    if (rawNextFollowUp && (!nextFollowUpAt || Number.isNaN(nextFollowUpAt.getTime()))) {
+      throw new AppError('Enter a valid follow-up date', 400);
+    }
     if (!Number.isFinite(callDurationSeconds) || callDurationSeconds < 0) throw new AppError('Enter a valid call duration', 400);
     // 1. Create append-only call history record
     const callLog = new CallHistory({
@@ -221,7 +225,7 @@ export class LeadService {
       callDurationSeconds,
       callStartedAt: callData.callStartedAt || new Date(Date.now() - callDurationSeconds * 1000),
       callEndedAt: new Date(),
-      nextFollowUpAt: nextFollowUpAt ? new Date(nextFollowUpAt) : null,
+      nextFollowUpAt: nextFollowUpAt || null,
       priority
     });
     await callLog.save();
@@ -229,7 +233,7 @@ export class LeadService {
     // 2. Update lead timestamps and status
     lead.lastContactedAt = new Date();
     if (nextFollowUpAt) {
-      lead.nextFollowUpAt = new Date(nextFollowUpAt);
+      lead.nextFollowUpAt = nextFollowUpAt;
     }
     if (updateLeadStatus) {
       lead.status = updateLeadStatus;
@@ -261,7 +265,7 @@ export class LeadService {
 
     // 3. Create follow-up task if date provided
     if (nextFollowUpAt) {
-      const scheduledDate = new Date(nextFollowUpAt);
+      const scheduledDate = nextFollowUpAt;
       const newFollowup = await FollowUp.create({
         leadId: lead._id,
         telecallerId: telecallerUser.id,
@@ -280,12 +284,22 @@ export class LeadService {
         telecallerId: telecallerUser.id
       });
 
+      const formattedFollowUpStr = scheduledDate.toLocaleDateString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+
       // Immediate in-app notification for the telecaller
       const notif = await Notification.create({
         userId: telecallerUser.id,
         branchId: lead.branchId,
         title: `📅 Refollow-up Scheduled: ${lead.name}`,
-        message: `Follow-up set for ${scheduledDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}. Note: ${notes}`,
+        message: `Follow-up set for ${formattedFollowUpStr}. Note: ${notes}`,
         type: 'FOLLOW_UP_SCHEDULED',
         data: {
           leadId: lead._id,
@@ -300,7 +314,7 @@ export class LeadService {
       // Web Push confirmation of scheduled refollow-up
       await sendPushToUser(telecallerUser.id.toString(), {
         title: `📅 Refollow-up Noted: ${lead.name}`,
-        body: `Follow-up scheduled for ${scheduledDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} (${notes}).`,
+        body: `Follow-up scheduled for ${formattedFollowUpStr} (${notes}).`,
         link: '/followups',
         eventId: `followup-sched-${newFollowup._id}`,
         tag: `followup-${newFollowup._id}`

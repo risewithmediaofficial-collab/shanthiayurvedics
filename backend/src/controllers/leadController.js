@@ -11,6 +11,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { NotFoundError } from '../utils/errors.js';
 import { ROLES } from '../constants/roles.js';
 import { emitToBranch } from '../sockets/index.js';
+import { parseBusinessDateTime } from '../utils/businessTime.js';
 
 export const getLeads = asyncHandler(async (req, res) => {
   const { page, limit } = pagination(req.query);
@@ -232,6 +233,9 @@ export const updateLead = asyncHandler(async (req, res) => {
   const oldValue = lead.toObject();
   if (!updates.branchId) {
     delete updates.branchId;
+  }
+  if (updates.nextFollowUpAt) {
+    updates.nextFollowUpAt = parseBusinessDateTime(updates.nextFollowUpAt);
   }
   // Remove undefined fields
   Object.keys(updates).forEach((k) => updates[k] === undefined && delete updates[k]);

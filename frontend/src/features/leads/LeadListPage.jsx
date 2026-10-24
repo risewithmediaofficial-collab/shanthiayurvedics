@@ -37,6 +37,7 @@ import { DateRangeFilter } from '../../components/common/DateRangeFilter.jsx';
 import { ExportButton } from '../../components/common/ExportButton.jsx';
 import { SortDropdown } from '../../components/common/SortDropdown.jsx';
 import { LeadDetailModal } from './LeadDetailModal.jsx';
+import { localDateTimeToIso } from '../../utils/dateUtils.js';
 
 const LEAD_SORT_OPTIONS = [
   { value: 'createdAt', label: '📅 Created Date' },
@@ -978,7 +979,7 @@ export function LeadListPage({ callerId } = {}) {
                   notes: callData.notes.trim(),
                   callDurationSeconds: Number(callData.durationSeconds) || 0,
                   durationSeconds: Number(callData.durationSeconds) || 0,
-                  nextFollowUpAt: callData.nextFollowUpDate || undefined
+                  nextFollowUpAt: localDateTimeToIso(callData.nextFollowUpDate)
                 }
               });
             }}

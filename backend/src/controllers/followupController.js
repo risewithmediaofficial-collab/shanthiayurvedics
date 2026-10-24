@@ -3,6 +3,7 @@ import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ROLES } from '../constants/roles.js';
 import { pagination } from '../utils/queryHelpers.js';
+import { parseBusinessDateTime } from '../utils/businessTime.js';
 
 export const getFollowups = asyncHandler(async (req, res) => {
   const { page, limit, isExport } = pagination(req.query);
@@ -49,7 +50,7 @@ export const updateFollowup = asyncHandler(async (req, res) => {
 
   const { scheduledAt, notes, priority } = req.body;
   if (scheduledAt) {
-    followup.scheduledAt = new Date(scheduledAt);
+    followup.scheduledAt = parseBusinessDateTime(scheduledAt);
     followup.isNotificationSent = false;
   }
   if (notes !== undefined) followup.notes = notes;

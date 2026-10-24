@@ -31,6 +31,7 @@ import { Badge } from '../../components/common/Badge.jsx';
 import { Spinner } from '../../components/common/Spinner.jsx';
 import { Input } from '../../components/common/Input.jsx';
 import { Select } from '../../components/common/Select.jsx';
+import { localDateTimeToIso, formatFollowUpDateTime } from '../../utils/dateUtils.js';
 
 export function LeadDetailModal({
   isOpen,
@@ -136,7 +137,7 @@ export function LeadDetailModal({
       notes: callData.notes.trim(),
       callDurationSeconds: Number(callData.durationSeconds) || 0,
       durationSeconds: Number(callData.durationSeconds) || 0,
-      nextFollowUpAt: callData.nextFollowUpDate || undefined,
+      nextFollowUpAt: localDateTimeToIso(callData.nextFollowUpDate),
       priority: callData.priority
     });
   };
@@ -207,12 +208,7 @@ export function LeadDetailModal({
   };
 
   const formatFollowUpTime = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '';
-    const datePart = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
-    const timePart = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-    return `${datePart}, ${timePart}`;
+    return formatFollowUpDateTime(dateString);
   };
 
   if (!isOpen) return null;

@@ -1,5 +1,5 @@
 import { useBranch } from '../../context/BranchContext.jsx';
-import { toLocalDateTimeInput } from '../../utils/dateUtils.js';
+import { toLocalDateTimeInput, localDateTimeToIso, formatFollowUpDateTime } from '../../utils/dateUtils.js';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -168,7 +168,7 @@ export function FollowUpListPage({ callerId } = {}) {
         <div className="flex items-center gap-2">
           <CalendarClock className="w-4 h-4 text-ayur-600" />
           <span className="font-semibold text-slate-900 text-xs">
-            {new Date(row.scheduledAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}, {new Date(row.scheduledAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+            {formatFollowUpDateTime(row.scheduledAt)}
           </span>
         </div>
       )
@@ -441,7 +441,7 @@ export function FollowUpListPage({ callerId } = {}) {
               updateMutation.mutate({
                 id: selectedFollowUp._id,
                 data: {
-                  scheduledAt: editFormData.scheduledAt ? new Date(editFormData.scheduledAt).toISOString() : undefined,
+                  scheduledAt: localDateTimeToIso(editFormData.scheduledAt),
                   notes: editFormData.notes
                 }
               });

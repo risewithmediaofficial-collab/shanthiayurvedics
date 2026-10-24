@@ -271,12 +271,31 @@ export function DeliveryTrackingPage() {
   const [endDate, setEndDate] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [selectedShipmentAwb, setSelectedShipmentAwb] = useState(null);
+  const [syncFeedback, setSyncFeedback] = useState(null);
 
   // Import modal state
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [courier, setCourier] = useState('AUTO');
   const [importResult, setImportResult] = useState(null);
+
+  // Manual sync active shipments mutation
+  const syncActiveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiClient.post('/shipping/sync-active');
+      return res.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      setSyncFeedback(data?.message || 'Active shipments synchronized successfully');
+      setTimeout(() => setSyncFeedback(null), 6000);
+    },
+    onError: (err) => {
+      setSyncFeedback(err.response?.data?.message || 'Sync failed. Please check network/credentials.');
+      setTimeout(() => setSyncFeedback(null), 6000);
+    }
+  });
 
   // ── Queries ────────────────────────────────────────────────────────────────
 
@@ -497,6 +516,16 @@ export function DeliveryTrackingPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-center shrink-0 w-full sm:w-auto justify-start sm:justify-end">
+          <Button
+            variant="secondary"
+            onClick={() => syncActiveMutation.mutate()}
+            isLoading={syncActiveMutation.isPending}
+            className="flex items-center gap-2 shrink-0 shadow-xs font-semibold text-xs border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+            title="Automatically poll live tracking for all in-transit TPC parcels"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncActiveMutation.isPending ? 'animate-spin text-emerald-700' : 'text-emerald-600'}`} />
+            <span>Sync Active TPC Parcels</span>
+          </Button>
           <ExportButton
             onExport={handleExportShipments}
             isLoading={isExporting}
@@ -512,6 +541,22 @@ export function DeliveryTrackingPage() {
           </Button>
         </div>
       </div>
+
+      {syncFeedback && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-medium text-emerald-900 flex items-center justify-between shadow-2xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{syncFeedback}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSyncFeedback(null)}
+            className="text-emerald-600 hover:text-emerald-900 ml-4 font-semibold"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* KPI Metric Overview Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">

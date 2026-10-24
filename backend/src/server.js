@@ -33,6 +33,7 @@ const gracefulShutdown = async (signal, exitCode = 0) => {
 };
 
 import { NotificationSchedulerService } from './services/notificationSchedulerService.js';
+import { CourierTrackingSyncService } from './services/courierTrackingSyncService.js';
 
 const startServer = async () => {
   app.locals.isReady = false;
@@ -46,6 +47,9 @@ const startServer = async () => {
 
     // Initialize 1-hour recurring notification dispatcher for due followups & reorders
     NotificationSchedulerService.initScheduler();
+
+    // Initialize automated TPC courier tracking background sync
+    CourierTrackingSyncService.initScheduler();
   } catch (err) {
     logger.error({ err }, 'Server initialization failed');
     await gracefulShutdown('STARTUP_FAILURE', 1);

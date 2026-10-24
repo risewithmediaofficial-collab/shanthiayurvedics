@@ -3,6 +3,7 @@ import { Shipment } from '../models/Shipment.js';
 import { CourierFactory } from '../integrations/couriers/CourierFactory.js';
 import { TPCServiceFactory } from '../integrations/couriers/tpc/TPCServiceFactory.js';
 import { processImportFile } from '../services/courierImportService.js';
+import { CourierTrackingSyncService } from '../services/courierTrackingSyncService.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { recordScope } from '../utils/recordScope.js';
@@ -149,4 +150,13 @@ export const getShippingLabel = asyncHandler(async (req, res) => {
 export const getCourierConfig = asyncHandler(async (req, res) => {
   const config = TPCServiceFactory.getConfigSummary();
   return ApiResponse.success(res, config, 'Courier configuration retrieved');
+});
+
+export const syncAllActiveShipments = asyncHandler(async (req, res) => {
+  const summary = await CourierTrackingSyncService.syncActiveShipments(req.user, req);
+  return ApiResponse.success(
+    res,
+    summary,
+    `Active courier tracking sync complete. Checked: ${summary.totalChecked}, Newly Delivered: ${summary.deliveredCount}`
+  );
 });

@@ -363,10 +363,29 @@ export class TPCMockService extends TPCServiceInterface {
       }
     ];
 
+    const isMockDelivered = Boolean(
+      awbNumber && (
+        awbNumber.toUpperCase().includes('DEL') ||
+        awbNumber.toUpperCase().endsWith('D')
+      )
+    );
+
+    if (isMockDelivered) {
+      events.push({
+        status: SHIPPING_STATUS.DELIVERED,
+        location: 'Destination Delivery Station',
+        activity: 'Consignment successfully delivered to consignee. Proof of Delivery (POD) signed.',
+        timestamp: now,
+        rawData: { Type: 'Delivered', City: 'Destination Station', Remarks: 'DE' }
+      });
+    }
+
+    const currentStatus = isMockDelivered ? SHIPPING_STATUS.DELIVERED : SHIPPING_STATUS.OUT_FOR_DELIVERY;
+
     return {
       awbNumber,
-      status: SHIPPING_STATUS.OUT_FOR_DELIVERY,
-      isDelivered: false,
+      status: currentStatus,
+      isDelivered: isMockDelivered,
       events,
       isMock: true,
       message: 'Active mock tracking progression retrieved'

@@ -5,6 +5,7 @@ import { TPCServiceFactory } from '../src/integrations/couriers/tpc/TPCServiceFa
 import { ProfessionalCourierProvider } from '../src/integrations/couriers/ProfessionalCourierProvider.js';
 import { CourierFactory } from '../src/integrations/couriers/CourierFactory.js';
 import { COURIER_PROVIDERS } from '../src/constants/shippingStates.js';
+import { CourierTrackingSyncService } from '../src/services/courierTrackingSyncService.js';
 
 describe('TPC Courier Integration Tests', () => {
   it('TPCMockService should correctly verify serviceable PIN codes', async () => {
@@ -142,5 +143,19 @@ describe('TPC Courier Integration Tests', () => {
     expect(['mock', 'live']).toContain(summary.mode);
     expect(typeof summary.isMock).toBe('boolean');
     expect(typeof summary.hasCredentials).toBe('boolean');
+  });
+
+  it('TPCMockService should simulate DELIVERED when AWB contains DEL', async () => {
+    const mockService = new TPCMockService();
+    const tracking = await mockService.getTracking({ awbNumber: 'TPC998877DEL' });
+    expect(tracking.status).toBe('DELIVERED');
+    expect(tracking.isDelivered).toBe(true);
+    expect(tracking.events.some((e) => e.status === 'DELIVERED')).toBe(true);
+  });
+
+  it('CourierTrackingSyncService should have syncActiveShipments and initScheduler functions', () => {
+    expect(typeof CourierTrackingSyncService.syncActiveShipments).toBe('function');
+    expect(typeof CourierTrackingSyncService.initScheduler).toBe('function');
+    expect(typeof CourierTrackingSyncService.getSystemActor).toBe('function');
   });
 });

@@ -14,7 +14,8 @@ import {
   syncTracking,
   cancelShipment,
   getShippingLabel,
-  getCourierConfig
+  getCourierConfig,
+  syncAllActiveShipments
 } from '../controllers/shippingController.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
@@ -67,6 +68,7 @@ router.post('/shipments/:id/sync-tracking', requirePermission(PERMISSIONS.SHIPPI
 router.post('/shipments/:id/cancel', requirePermission(PERMISSIONS.SHIPPING_MANAGE), cancelShipment);
 router.get('/shipments/:id/label', requirePermission(PERMISSIONS.SHIPPING_VIEW), getShippingLabel);
 router.post('/track/:awbNumber/events', requirePermission(PERMISSIONS.SHIPPING_MANAGE), addTrackingEvent);
+router.post('/sync-active', requirePermission(PERMISSIONS.SHIPPING_MANAGE), syncAllActiveShipments);
 router.post('/import-status', requirePermission(PERMISSIONS.SHIPPING_MANAGE), importUpload.single('file'), importCourierStatus);
 
 export default router;

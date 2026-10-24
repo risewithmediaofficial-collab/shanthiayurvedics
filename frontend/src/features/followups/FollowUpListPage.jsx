@@ -168,7 +168,7 @@ export function FollowUpListPage({ callerId } = {}) {
         <div className="flex items-center gap-2">
           <CalendarClock className="w-4 h-4 text-ayur-600" />
           <span className="font-semibold text-slate-900 text-xs">
-            {new Date(row.scheduledAt).toLocaleDateString()} {new Date(row.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {new Date(row.scheduledAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}, {new Date(row.scheduledAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
           </span>
         </div>
       )

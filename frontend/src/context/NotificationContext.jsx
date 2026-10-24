@@ -66,8 +66,38 @@ export function NotificationProvider({ children }) {
     if (isAuthenticated) {
       fetchNotifications();
       checkPushStatus();
-      // Silently reconcile push subscription in the background
-      reconcilePushSubscription().then(() => checkPushStatus());
+
+      // Seamless auto-subscribe if permission is already granted
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        subscribeToWebPush().then(() => checkPushStatus()).catch(() => {});
+      } else if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+        // Automatically request notification permission on user's first interaction
+        const handleAutoPermission = async () => {
+          try {
+            const perm = await Notification.requestPermission();
+            if (perm === 'granted') {
+              await subscribeToWebPush();
+              await checkPushStatus();
+            }
+          } catch (_e) {}
+        };
+        window.addEventListener('click', handleAutoPermission, { once: true });
+        window.addEventListener('touchend', handleAutoPermission, { once: true });
+      }
+
+      // Reconcile and subscribe in background
+      reconcilePushSubscription().then(() => checkPushStatus()).catch(() => {});
+
+      // Listen for permission changes (e.g. user allowed notifications from browser site settings)
+      if (typeof navigator !== 'undefined' && 'permissions' in navigator && navigator.permissions?.query) {
+        navigator.permissions.query({ name: 'notifications' }).then((status) => {
+          status.onchange = () => {
+            if (status.state === 'granted') {
+              subscribeToWebPush().then(() => checkPushStatus()).catch(() => {});
+            }
+          };
+        }).catch(() => {});
+      }
     } else {
       setNotifications([]);
       setUnreadCount(0);

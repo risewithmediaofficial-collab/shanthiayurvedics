@@ -158,7 +158,7 @@ export const createOrder = asyncHandler(async (req, res) => {
 });
 
 export const transitionOrderStatus = asyncHandler(async (req, res) => {
-  const { status, notes, cancellationReason, forceRevert } = req.body;
+  const { status, notes, cancellationReason, forceRevert, trackingNumber, courierName } = req.body;
   const isManagerOrAbove = [ROLES.OWNER, ROLES.MANAGER, ROLES.DISTRIBUTOR].includes(req.user.role);
 
   const order = await OrderService.transitionStatus(req.params.id, status, {
@@ -166,6 +166,8 @@ export const transitionOrderStatus = asyncHandler(async (req, res) => {
     notes,
     cancellationReason,
     forceRevert: Boolean(forceRevert && isManagerOrAbove),
+    trackingNumber,
+    courierName,
     req
   });
   return ApiResponse.success(res, order, `Order transitioned to ${status}`);

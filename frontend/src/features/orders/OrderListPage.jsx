@@ -1186,9 +1186,15 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
             return (
               <div
                 key={order._id}
-                className={`bg-white rounded-2xl border transition-all p-3 sm:p-4 shadow-xs space-y-2.5 ${
-                  isSelected ? 'border-emerald-600 bg-emerald-50/10 ring-1 ring-emerald-500' : 'border-slate-200 hover:border-slate-300'
+                onClick={(e) => {
+                  if (!e.target.closest('button, a, input, select, [role="button"]')) {
+                    navigate(`/orders/${order._id}`);
+                  }
+                }}
+                className={`bg-white rounded-2xl border transition-all p-3 sm:p-4 shadow-xs space-y-2.5 cursor-pointer hover:border-emerald-400 hover:shadow-md ${
+                  isSelected ? 'border-emerald-600 bg-emerald-50/10 ring-1 ring-emerald-500' : 'border-slate-200'
                 }`}
+                title="Click order to open details"
               >
                 {/* Row 1: Checkbox, Order ID & Timestamp */}
                 <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 text-xs">

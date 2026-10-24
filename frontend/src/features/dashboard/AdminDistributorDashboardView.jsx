@@ -516,10 +516,6 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                 <MapPin sx={{ fontSize: 13 }} className="text-slate-400" />
                 {activeBranch.address?.city || 'Krishnagiri'}, {activeBranch.address?.state || 'Tamil Nadu'}
               </span>
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200/80 px-2.5 py-1 rounded-full font-mono">
-                <Phone sx={{ fontSize: 13 }} className="text-slate-400" />
-                {activeBranch.phone || '+91 96299 85341'}
-              </span>
               <span className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-full">
                 Biller ID: {activeBranch.billerId || '1000058077'}
               </span>

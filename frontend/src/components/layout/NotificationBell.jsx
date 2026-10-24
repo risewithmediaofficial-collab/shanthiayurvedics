@@ -116,99 +116,20 @@ export function NotificationBell() {
         }
       >
         <div className="space-y-3">
-          {/* Web Push Configuration Banner */}
-          <div className="p-3.5 rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/60 to-slate-50 text-slate-800 shadow-2xs">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className={`p-1.5 rounded-lg ${pushStatus.isSubscribed ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
-                  <NotificationsActiveRounded sx={{ fontSize: 18 }} />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                    Web Push Alerts (RFC 8292)
-                    {pushStatus.isSubscribed && (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 text-emerald-800">
-                        ACTIVE
-                      </span>
-                    )}
-                  </h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    {pushStatus.isSubscribed
-                      ? 'Instant native OS banners for lead assignment, due follow-ups & reorders.'
-                      : 'Get alerts on this device even when CRM tabs are closed.'}
-                  </p>
-                </div>
-              </div>
+          {/* iOS Safari Guidance Note */}
+          {isIOSWithoutPWA && (
+            <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] flex items-center gap-2">
+              <PhoneIphoneRounded sx={{ fontSize: 16 }} />
+              <span>To receive push alerts on iPhone, tap <strong>Share</strong> then <strong>Add to Home Screen</strong>.</span>
             </div>
+          )}
 
-            {/* iOS Safari Guidance Note */}
-            {isIOSWithoutPWA && (
-              <div className="mt-2.5 p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] flex items-center gap-2">
-                <PhoneIphoneRounded sx={{ fontSize: 16 }} />
-                <span>On iPhone Safari, tap <strong>Share</strong> then <strong>Add to Home Screen</strong> to receive push notifications.</span>
-              </div>
-            )}
-
-            {/* Permission Denied Message */}
-            {pushStatus.permission === 'denied' && (
-              <p className="mt-2 text-[11px] text-rose-600 font-medium">
-                ⚠️ Notifications are blocked in your browser settings. Please allow notifications for this site to receive push alerts.
-              </p>
-            )}
-
-            {/* Feedback Message */}
-            {testResult && (
-              <p className={`mt-2 text-[11px] font-medium ${testResult.error ? 'text-rose-600' : 'text-emerald-700'}`}>
-                {testResult.error || testResult.success}
-              </p>
-            )}
-
-            {/* Action Buttons */}
-            <div className="mt-2.5 flex items-center gap-2 pt-2 border-t border-slate-200/60">
-              {!pushStatus.isSubscribed ? (
-                <button
-                  type="button"
-                  disabled={pushActionLoading || pushStatus.permission === 'denied'}
-                  onClick={handleEnablePush}
-                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  <NotificationsActiveRounded sx={{ fontSize: 15 }} />
-                  {pushActionLoading ? 'Connecting...' : 'Enable Web Push'}
-                </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    disabled={pushActionLoading}
-                    onClick={handleTestPush}
-                    className="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1"
-                  >
-                    <SendRounded sx={{ fontSize: 13 }} />
-                    {pushActionLoading ? 'Sending...' : 'Send Test Alert'}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={pushActionLoading}
-                    onClick={handleDisablePush}
-                    className="px-2 py-1 text-slate-400 hover:text-rose-600 text-[11px] font-medium transition-colors cursor-pointer"
-                  >
-                    Disable
-                  </button>
-                </>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsOpen(false);
-                  navigate('/admin/notifications-test');
-                }}
-                className="ml-auto px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-lg border border-emerald-200 transition-colors flex items-center gap-1 cursor-pointer"
-                title="Open comprehensive Notification Testing Tab"
-              >
-                🛠️ Testing Tab
-              </button>
+          {/* Unobtrusive Permission Denied Alert */}
+          {pushStatus.permission === 'denied' && (
+            <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-medium">
+              ⚠️ Notifications are blocked in browser settings. Please allow notifications in site settings to receive instant alerts.
             </div>
-          </div>
+          )}
 
 
           {/* Notifications List */}

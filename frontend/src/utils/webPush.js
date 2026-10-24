@@ -86,11 +86,19 @@ export async function getPushSubscriptionStatus() {
  */
 export async function subscribeToWebPush(options = {}) {
   if (!isWebPushSupported()) {
-    throw new Error('Web Push notifications are not supported by this browser.');
+    return { success: false, reason: 'Web Push notifications are not supported by this browser.' };
   }
 
-  // 1. Request Notification Permission
-  const permission = await Notification.requestPermission();
+  // 1. Check or request Notification Permission
+  let permission = Notification.permission;
+  if (permission === 'default' && options.prompt) {
+    try {
+      permission = await Notification.requestPermission();
+    } catch (_e) {
+      permission = Notification.permission;
+    }
+  }
+
   if (permission !== 'granted') {
     return {
       success: false,
@@ -138,9 +146,15 @@ export async function subscribeToWebPush(options = {}) {
   }
 
   // 4. Send subscription JSON to backend
-  await apiClient.post('/notifications/subscribe', {
-    subscription: subscription.toJSON()
-  });
+  if (subscription) {
+    await apiClient.post('/notifications/subscribe', {
+      subscription: subscription.toJSON(),
+      deviceInfo: {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform
+      }
+    });
+  }
 
   return {
     success: true,

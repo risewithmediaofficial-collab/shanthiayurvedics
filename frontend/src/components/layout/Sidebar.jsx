@@ -135,14 +135,6 @@ export function Sidebar({ isOpen, onClose }) {
             icon: ContactPhoneRounded,
             path: '/customers',
             show: true
-          },
-          {
-            label: 'PUSH NOTIFICATIONS TEST',
-            icon: NotificationsActiveRounded,
-            path: '/admin/notifications-test',
-            badge: 'TEST',
-            badgeVariant: 'primary',
-            show: true
           }
         ]
       }
@@ -361,14 +353,6 @@ export function Sidebar({ isOpen, onClose }) {
             icon: LayersRounded,
             path: '/admin/integrations',
             show: isOwner || hasPermission('integrations.manage')
-          },
-          {
-            label: 'Web Push Testing Tab',
-            icon: NotificationsActiveRounded,
-            path: '/admin/notifications-test',
-            badge: 'TEST',
-            badgeVariant: 'primary',
-            show: true
           },
           {
             label: 'Audit Log Viewer',

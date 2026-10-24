@@ -323,7 +323,7 @@ export class OrderService {
   /**
    * Strict Order State Transition Service (with optional forceRevert manager override)
    */
-  static async transitionStatus(orderId, targetStatus, { changedBy, notes, cancellationReason, forceRevert = false, req } = {}) {
+  static async transitionStatus(orderId, targetStatus, { changedBy, notes, cancellationReason, forceRevert = false, trackingNumber, courierName, req } = {}) {
     const order = await Order.findById(orderId);
     if (!order) {
       throw new NotFoundError('Order');
@@ -335,7 +335,9 @@ export class OrderService {
     if (previousStatus === targetStatus) return order;
 
     // Validate state machine rule unless forceRevert is explicitly granted
-    StateMachineService.validateOrderTransition(previousStatus, targetStatus);
+    if (!forceRevert) {
+      StateMachineService.validateOrderTransition(previousStatus, targetStatus);
+    }
 
     // Move reserved units out of the outstanding queue exactly once on dispatch.
     if (targetStatus === ORDER_STATUS.DISPATCHED) {
@@ -371,8 +373,14 @@ export class OrderService {
       }
     }
 
-    // Apply status update
+    // Apply status update & tracking details
     order.status = targetStatus;
+    if (trackingNumber) {
+      order.trackingNumber = trackingNumber.trim();
+    }
+    if (courierName) {
+      order.courierName = courierName.trim();
+    }
     const transitionNote = notes || (forceRevert ? `Force revert / Manager override to ${targetStatus}` : `Transitioned to ${targetStatus}`);
     order.statusHistory.push({
       fromStatus: previousStatus,

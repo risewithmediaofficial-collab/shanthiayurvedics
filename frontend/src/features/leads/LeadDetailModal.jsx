@@ -206,6 +206,15 @@ export function LeadDetailModal({
     return date.toLocaleDateString('en-GB');
   };
 
+  const formatFollowUpTime = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    const datePart = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    const timePart = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return `${datePart}, ${timePart}`;
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -335,7 +344,7 @@ export function LeadDetailModal({
                 <span className="font-semibold text-amber-300 truncate block flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5" />
                   {lead.nextFollowUpAt
-                    ? new Date(lead.nextFollowUpAt).toLocaleDateString('en-GB')
+                    ? formatFollowUpTime(lead.nextFollowUpAt)
                     : 'None Scheduled'}
                 </span>
               </div>
@@ -678,12 +687,7 @@ export function LeadDetailModal({
                               <CalendarClock className="w-3.5 h-3.5" />
                               <span>Scheduled Follow-Up:</span>
                               <span className="font-bold">
-                                {new Date(call.nextFollowUpAt).toLocaleString('en-GB', {
-                                  day: '2-digit',
-                                  month: 'short',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
+                                {formatFollowUpTime(call.nextFollowUpAt)}
                               </span>
                             </div>
                           )}

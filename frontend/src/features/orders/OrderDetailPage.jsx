@@ -35,17 +35,35 @@ import { PrintableShippingLabelModal } from './PrintableShippingLabelModal.jsx';
 import { CustomerProfileModal } from '../customers/CustomerProfileModal.jsx';
 import { TPCShippingCard } from './components/TPCShippingCard.jsx';
 
+const ALL_STATUS_OPTIONS = [
+  { value: 'NEW', label: 'New' },
+  { value: 'CONFIRMED', label: 'Confirmed' },
+  { value: 'PROCESSING', label: 'Processing' },
+  { value: 'READY_FOR_PACKING', label: 'Ready for Packing' },
+  { value: 'PACKED', label: 'Packed' },
+  { value: 'READY_FOR_DISPATCH', label: 'Ready to Dispatch' },
+  { value: 'DISPATCHED', label: 'Shipped / Dispatched' },
+  { value: 'IN_TRANSIT', label: 'In Transit' },
+  { value: 'OUT_FOR_DELIVERY', label: 'Out for Delivery' },
+  { value: 'DELIVERED', label: 'Delivered' },
+  { value: 'DELIVERY_FAILED', label: 'Delivery Failed' },
+  { value: 'RTO', label: 'RTO Return' },
+  { value: 'CANCELLED', label: 'Cancelled' }
+];
+
 export function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isOwner, isManager, isDistributor } = usePermissions();
   const [isCustomerProfileOpen, setIsCustomerProfileOpen] = useState(false);
 
   const [transitionModalOpen, setTransitionModalOpen] = useState(false);
   const [targetStatus, setTargetStatus] = useState('');
   const [transitionNotes, setTransitionNotes] = useState('');
   const [cancellationReason, setCancellationReason] = useState('');
+  const [dispatchTrackingNumber, setDispatchTrackingNumber] = useState('');
+  const [dispatchCourierName, setDispatchCourierName] = useState('India Post');
 
   // Print Modals
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
@@ -120,6 +138,10 @@ export function OrderDetailPage() {
 
   const handleOpenTransition = (status) => {
     setTargetStatus(status);
+    if (status === 'DISPATCHED') {
+      setDispatchTrackingNumber(order?.trackingNumber || '');
+      setDispatchCourierName(order?.courierName || 'India Post');
+    }
     setTransitionModalOpen(true);
   };
 
@@ -186,7 +208,7 @@ export function OrderDetailPage() {
     switch (order.status) {
       case 'NEW':
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="primary"
               size="sm"
@@ -196,6 +218,16 @@ export function OrderDetailPage() {
             >
               <span>Confirm Order</span>
               <span className="text-[10px] font-normal opacity-90 hidden sm:inline">• Sends WhatsApp</span>
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              icon={Send}
+              onClick={() => handleOpenTransition('DISPATCHED')}
+              className="bg-sky-700 hover:bg-sky-800 text-white font-bold"
+            >
+              <span>Direct Dispatch</span>
+              <span className="text-[10px] font-normal opacity-90 hidden sm:inline">• Without Packing</span>
             </Button>
             <Button
               variant="danger"
@@ -209,14 +241,24 @@ export function OrderDetailPage() {
         );
       case 'CONFIRMED':
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="primary"
+              size="sm"
+              icon={Send}
+              onClick={() => handleOpenTransition('DISPATCHED')}
+              className="bg-sky-700 hover:bg-sky-800 text-white font-bold"
+            >
+              <span>Dispatch Order</span>
+              <span className="text-[10px] font-normal opacity-90 hidden sm:inline">• Without Packing</span>
+            </Button>
+            <Button
+              variant="secondary"
               size="sm"
               icon={Package}
               onClick={() => handleOpenTransition('PROCESSING')}
             >
-              Send to Processing Bay
+              Send to Processing
             </Button>
             <Button
               variant="danger"
@@ -230,14 +272,24 @@ export function OrderDetailPage() {
         );
       case 'PROCESSING':
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="primary"
               size="sm"
-              icon={Package}
-              onClick={() => navigate(`/operations/packing`)}
+              icon={Send}
+              onClick={() => handleOpenTransition('DISPATCHED')}
+              className="bg-sky-700 hover:bg-sky-800 text-white font-bold"
             >
-              Go to Packing Station
+              <span>Dispatch Order</span>
+              <span className="text-[10px] font-normal opacity-90 hidden sm:inline">• Without Packing</span>
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Package}
+              onClick={() => handleOpenTransition('READY_FOR_PACKING')}
+            >
+              Send to Packing
             </Button>
             <Button
               variant="danger"
@@ -249,16 +301,18 @@ export function OrderDetailPage() {
             </Button>
           </div>
         );
+      case 'READY_FOR_PACKING':
       case 'PACKED':
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="primary"
               size="sm"
-              icon={Truck}
-              onClick={() => navigate(`/operations/dispatch`)}
+              icon={Send}
+              onClick={() => handleOpenTransition('DISPATCHED')}
+              className="bg-sky-700 hover:bg-sky-800 text-white font-bold"
             >
-              Dispatch Parcel
+              <span>Dispatch Order</span>
             </Button>
             <Button
               variant="danger"
@@ -272,13 +326,13 @@ export function OrderDetailPage() {
         );
       case 'READY_FOR_DISPATCH':
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="primary"
               size="sm"
               icon={Send}
               onClick={() => handleOpenTransition('DISPATCHED')}
-              className="bg-sky-700 hover:bg-sky-800 text-white"
+              className="bg-sky-700 hover:bg-sky-800 text-white font-bold"
             >
               <span>Mark as Dispatched</span>
               <span className="text-[10px] font-normal opacity-90 hidden sm:inline">• Sends WhatsApp Dispatch</span>
@@ -295,7 +349,7 @@ export function OrderDetailPage() {
         );
       case 'DISPATCHED':
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="secondary"
               size="sm"
@@ -303,6 +357,38 @@ export function OrderDetailPage() {
               onClick={() => handleOpenTransition('IN_TRANSIT')}
             >
               Mark In Transit
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              icon={CheckCircle2}
+              onClick={() => handleOpenTransition('DELIVERED')}
+              className="bg-emerald-700 hover:bg-emerald-800 text-white"
+            >
+              Mark Delivered
+            </Button>
+          </div>
+        );
+      case 'IN_TRANSIT':
+      case 'OUT_FOR_DELIVERY':
+        return (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="primary"
+              size="sm"
+              icon={CheckCircle2}
+              onClick={() => handleOpenTransition('DELIVERED')}
+              className="bg-emerald-700 hover:bg-emerald-800 text-white"
+            >
+              Mark Delivered
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              icon={XCircle}
+              onClick={() => handleOpenTransition('DELIVERY_FAILED')}
+            >
+              Delivery Failed / RTO
             </Button>
           </div>
         );
@@ -323,12 +409,30 @@ export function OrderDetailPage() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-slate-900 font-mono">{order.orderNumber}</h2>
-              <Badge variant="primary">{order.status}</Badge>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-mono tracking-tight">#{order.orderNumber}</h2>
+              <div className="flex items-center gap-1.5">
+                <select
+                  id="order-detail-status-select"
+                  value={order.status}
+                  disabled={transitionMutation.isPending}
+                  onChange={(e) => {
+                    const newStatus = e.target.value;
+                    if (newStatus === order.status) return;
+                    handleOpenTransition(newStatus);
+                  }}
+                  className="text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-800 shadow-2xs hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer transition-all"
+                >
+                  {ALL_STATUS_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label} {opt.value === order.status ? '✓ (Current)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Placed on {new Date(order.createdAt).toLocaleString()} • Branch: {order.branchId?.name}
+            <p className="text-xs text-slate-500 mt-1">
+              Placed on {new Date(order.createdAt).toLocaleString()} • Branch: {order.branchId?.name || 'Hosur'}
             </p>
           </div>
         </div>
@@ -664,7 +768,10 @@ export function OrderDetailPage() {
             transitionMutation.mutate({
               status: targetStatus,
               notes: transitionNotes,
-              cancellationReason: targetStatus === 'CANCELLED' ? cancellationReason : undefined
+              cancellationReason: targetStatus === 'CANCELLED' ? cancellationReason : undefined,
+              trackingNumber: targetStatus === 'DISPATCHED' ? (dispatchTrackingNumber?.trim() || undefined) : undefined,
+              courierName: targetStatus === 'DISPATCHED' ? dispatchCourierName : undefined,
+              forceRevert: Boolean(isOwner || isManager || isDistributor)
             });
           }}
           className="space-y-3.5"
@@ -679,8 +786,37 @@ export function OrderDetailPage() {
             />
           )}
 
+          {targetStatus === 'DISPATCHED' && (
+            <div className="space-y-3 p-3.5 bg-sky-50/70 rounded-xl border border-sky-200/80">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-sky-900">
+                <Send className="w-3.5 h-3.5 text-sky-700" />
+                <span>Moving Directly to Dispatched (Without Packing)</span>
+              </div>
+              <p className="text-[11px] text-sky-700 leading-snug">
+                Reserved inventory will be deducted automatically. If a tracking number is entered, the WhatsApp dispatch notification will be triggered.
+              </p>
+              <Input
+                label="Tracking / AWB Number (Optional)"
+                placeholder="e.g. SP123456789IN or TPC88765"
+                value={dispatchTrackingNumber}
+                onChange={(e) => setDispatchTrackingNumber(e.target.value)}
+              />
+              <Select
+                label="Courier Partner"
+                value={dispatchCourierName}
+                onChange={(e) => setDispatchCourierName(e.target.value)}
+                options={[
+                  { value: 'India Post', label: 'India Post Speed Post' },
+                  { value: 'The Professional Courier', label: 'The Professional Courier (TPC)' },
+                  { value: 'ST Courier', label: 'ST Courier' },
+                  { value: 'Direct Handover / Office', label: 'Direct Handover / Office' }
+                ]}
+              />
+            </div>
+          )}
+
           <Input
-            label="Internal Notes"
+            label="Internal Notes (Optional)"
             placeholder="Operational notes regarding this status change..."
             value={transitionNotes}
             onChange={(e) => setTransitionNotes(e.target.value)}

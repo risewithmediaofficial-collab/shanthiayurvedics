@@ -1043,9 +1043,15 @@ export function OrdersFullTableView({
                 return (
                   <tr
                     key={row._id}
-                    className={`hover:bg-slate-50 transition-colors ${
+                    onClick={(e) => {
+                      if (!e.target.closest('button, a, input, select, [role="button"]')) {
+                        navigate(`/orders/${row._id}`);
+                      }
+                    }}
+                    className={`cursor-pointer hover:bg-emerald-50/40 transition-colors ${
                       isSelected ? 'bg-emerald-50/20' : ''
                     } ${isDuplicate ? 'bg-amber-50/20' : ''}`}
+                    title="Click row to open Order Details"
                   >
                     <td className="p-3">
                       <input

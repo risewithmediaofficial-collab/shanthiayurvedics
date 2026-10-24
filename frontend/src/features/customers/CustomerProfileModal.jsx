@@ -582,7 +582,7 @@ export function CustomerProfileModal({
                               {fu.status} • {fu.telecallerId?.name || 'Staff'}
                             </span>
                             <span className="text-[10px] text-slate-400 font-mono">
-                              {new Date(fu.scheduledAt).toLocaleString()}
+                              {new Date(fu.scheduledAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}, {new Date(fu.scheduledAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
                             </span>
                           </div>
                           {fu.notes && <p className="text-slate-600">{fu.notes}</p>}

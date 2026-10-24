@@ -3,6 +3,8 @@ import {
   getNotifications,
   markRead,
   markAllRead,
+  deleteNotification,
+  clearAllNotifications,
   getVapidPublicKey,
   subscribePush,
   unsubscribePush,
@@ -26,6 +28,9 @@ router.use(authenticate);
 router.get('/', getNotifications);
 router.patch('/:id/read', markRead);
 router.post('/read-all', markAllRead);
+router.delete('/:id', deleteNotification);
+router.delete('/', clearAllNotifications);
+router.post('/clear-all', clearAllNotifications);
 
 // Web Push endpoints
 router.post('/subscribe', subscribePush);

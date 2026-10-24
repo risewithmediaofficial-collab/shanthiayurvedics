@@ -135,5 +135,45 @@ describe("Notifications Module Integration Tests", () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
   });
+
+  it("should delete an individual notification via DELETE /api/notifications/:id", async () => {
+    const createRes = await request(app)
+      .post("/api/notifications/simulate-lead-assign")
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(createRes.status).toBe(200);
+
+    const listRes = await request(app)
+      .get("/api/notifications")
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(listRes.body.data.length).toBeGreaterThan(0);
+    const targetId = listRes.body.data[0]._id;
+
+    const deleteRes = await request(app)
+      .delete(`/api/notifications/${targetId}`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(deleteRes.status).toBe(200);
+    expect(deleteRes.body.success).toBe(true);
+  });
+
+  it("should clear all notifications via POST /api/notifications/clear-all", async () => {
+    // Generate a couple notifications
+    await request(app)
+      .post("/api/notifications/simulate-lead-assign")
+      .set("Authorization", `Bearer ${ownerToken}`);
+    await request(app)
+      .post("/api/notifications/simulate-followup-due")
+      .set("Authorization", `Bearer ${ownerToken}`);
+
+    const clearRes = await request(app)
+      .post("/api/notifications/clear-all")
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(clearRes.status).toBe(200);
+    expect(clearRes.body.success).toBe(true);
+
+    const afterList = await request(app)
+      .get("/api/notifications")
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(afterList.body.data.length).toBe(0);
+  });
 });
 

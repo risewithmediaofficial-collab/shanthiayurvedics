@@ -41,6 +41,27 @@ export const markAllRead = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, null, 'All notifications marked as read');
 });
 
+export const deleteNotification = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const notif = await Notification.findOneAndDelete({
+    _id: id,
+    $or: [{ userId: req.user.id }, { branchId: req.user.branchId }]
+  });
+  if (!notif) {
+    await Notification.findByIdAndDelete(id);
+  }
+  emitToUser(req.user.id.toString(), 'notification:deleted', { notificationId: id });
+  return ApiResponse.success(res, null, 'Notification cleared');
+});
+
+export const clearAllNotifications = asyncHandler(async (req, res) => {
+  await Notification.deleteMany({
+    $or: [{ userId: req.user.id }, { branchId: req.user.branchId }]
+  });
+  emitToUser(req.user.id.toString(), 'notification:all_cleared', {});
+  return ApiResponse.success(res, null, 'All notifications cleared');
+});
+
 /**
  * Get VAPID Public Key for client PushManager subscription
  */

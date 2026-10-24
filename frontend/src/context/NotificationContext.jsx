@@ -180,6 +180,23 @@ export function NotificationProvider({ children }) {
       setUnreadCount(0);
     });
 
+    socket.on('notification:deleted', (data) => {
+      if (data?.notificationId) {
+        setNotifications((prev) => {
+          const target = prev.find((n) => (n._id || n.id) === data.notificationId);
+          if (target && !target.isRead) {
+            setUnreadCount((c) => Math.max(0, c - 1));
+          }
+          return prev.filter((n) => (n._id || n.id) !== data.notificationId);
+        });
+      }
+    });
+
+    socket.on('notification:all_cleared', () => {
+      setNotifications([]);
+      setUnreadCount(0);
+    });
+
     return () => {
       socket.off('notification:new', handleNewNotification);
       socket.off('lead:assigned');
@@ -187,6 +204,8 @@ export function NotificationProvider({ children }) {
       socket.off('reorder:due');
       socket.off('notification:read');
       socket.off('notification:all_read');
+      socket.off('notification:deleted');
+      socket.off('notification:all_cleared');
     };
   }, [isAuthenticated]);
 
@@ -209,6 +228,31 @@ export function NotificationProvider({ children }) {
       setUnreadCount(0);
     } catch (e) {
       console.warn('Failed to mark all notifications read:', e);
+    }
+  };
+
+  const clearNotification = async (id) => {
+    try {
+      setNotifications((prev) => {
+        const target = prev.find((n) => (n._id || n.id) === id);
+        if (target && !target.isRead) {
+          setUnreadCount((c) => Math.max(0, c - 1));
+        }
+        return prev.filter((n) => (n._id || n.id) !== id);
+      });
+      await apiClient.delete(`/notifications/${id}`);
+    } catch (e) {
+      console.warn('Failed to clear notification:', e);
+    }
+  };
+
+  const clearAllNotifications = async () => {
+    try {
+      setNotifications([]);
+      setUnreadCount(0);
+      await apiClient.post('/notifications/clear-all');
+    } catch (e) {
+      console.warn('Failed to clear all notifications:', e);
     }
   };
 
@@ -255,6 +299,8 @@ export function NotificationProvider({ children }) {
         isLoading,
         markAsRead,
         markAllAsRead,
+        clearNotification,
+        clearAllNotifications,
         refreshNotifications: fetchNotifications,
         pushStatus,
         enablePushNotifications,

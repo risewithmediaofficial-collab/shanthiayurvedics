@@ -224,6 +224,9 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
   const [assignVerifierId, setAssignVerifierId] = useState('');
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
 
+  // Status Change Confirmation Dialog State
+  const [statusChangeConfirm, setStatusChangeConfirm] = useState(null); // { orderId, newStatus, orderNumber, currentStatus, forceRevert }
+
   // Modals State
   const [createModalOpen, setCreateModalOpen] = useState(searchParams.get('new') === 'true');
   const [excelImportOpen, setExcelImportOpen] = useState(false);
@@ -1387,9 +1390,11 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                             showToast(`⚠️ Cannot transition order #${order.orderNumber} to ${newStatus} without generating an AWB number. Please generate an AWB first.`);
                             return;
                           }
-                          singleTransitionMutation.mutate({
+                          setStatusChangeConfirm({
                             orderId: order._id,
-                            status: newStatus,
+                            newStatus,
+                            orderNumber: order.orderNumber,
+                            currentStatus: order.status,
                             forceRevert: Boolean(isOwner || isManager || isDistributor)
                           });
                         }}

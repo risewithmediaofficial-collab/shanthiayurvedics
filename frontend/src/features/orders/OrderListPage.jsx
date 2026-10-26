@@ -222,9 +222,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
   const [bulkStatusToApply, setBulkStatusToApply] = useState('');
   const [forceRevertChecked, setForceRevertChecked] = useState(false);
   const [assignVerifierId, setAssignVerifierId] = useState('');
-
-  // Status Change Confirmation Dialog State
-  const [statusChangeConfirm, setStatusChangeConfirm] = useState(null); // { orderId, newStatus, orderNumber, currentStatus }
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
 
   // Modals State
   const [createModalOpen, setCreateModalOpen] = useState(searchParams.get('new') === 'true');
@@ -440,6 +438,26 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
     }
   });
 
+  // Bulk Delete Orders Mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (orderIds) =>
+      apiClient.post('/orders/bulk-delete', {
+        orderIds,
+        force: Boolean(isOwner || isManager)
+      }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      refetchOrders();
+      refetchMetrics();
+      setSelectedOrderIds([]);
+      setIsBulkDeleteModalOpen(false);
+      showToast(`✓ Successfully deleted ${res.data?.data?.deletedCount ?? selectedOrderIds.length} orders and released stock`);
+    },
+    onError: (err) => {
+      showToast(`⚠️ ${err?.response?.data?.message || 'Failed to bulk delete orders'}`);
+    }
+  });
+
   // Update Order Mutation
   const updateOrderMutation = useMutation({
     mutationFn: ({ orderId, payload }) => apiClient.patch(`/orders/${orderId}`, payload),
@@ -506,6 +524,16 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
       showToast('⚠️ Please select at least one order using the checkboxes below');
       return;
     }
+    const postDispatchStates = ['DISPATCHED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_FAILED', 'RTO'];
+    if (postDispatchStates.includes(bulkStatusToApply)) {
+      const ordersWithoutAwb = (orders || []).filter(
+        (o) => selectedOrderIds.includes(o._id) && (!o.trackingNumber || o.trackingNumber.trim() === '' || o.trackingNumber.toUpperCase() === 'PENDING')
+      );
+      if (ordersWithoutAwb.length > 0) {
+        showToast(`⚠️ Cannot transition to ${bulkStatusToApply}: ${ordersWithoutAwb.length} order(s) do not have an AWB number. Please generate AWB numbers first.`);
+        return;
+      }
+    }
     bulkStatusMutation.mutate({
       orderIds: selectedOrderIds,
       status: bulkStatusToApply,
@@ -563,6 +591,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
           onSelectLabel={(order) => setSelectedOrderForLabel(order)}
           onSelectEdit={(order) => handleOpenEditOrder(order)}
           onSelectDelete={(order) => setSelectedOrderForDelete(order)}
+          onOpenBulkDelete={() => setIsBulkDeleteModalOpen(true)}
           onSelectCustomerProfile={(cust) => setSelectedCustomerForProfile(cust)}
           selectedOrderIds={selectedOrderIds}
           onToggleSelectOrder={handleToggleSelectOrder}
@@ -917,6 +946,17 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold shrink-0"
             >
               🖨️ Labels ({selectedOrderIds.length})
+            </Button>
+
+            <Button
+              size="sm"
+              variant="danger"
+              disabled={selectedOrderIds.length === 0}
+              onClick={() => setIsBulkDeleteModalOpen(true)}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold shrink-0 flex items-center gap-1.5"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete ({selectedOrderIds.length})</span>
             </Button>
           </div>
         </div>
@@ -1340,13 +1380,17 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                         disabled={singleTransitionMutation.isPending}
                         onChange={(e) => {
                           const newStatus = e.target.value;
-                          if (newStatus === order.status) return;
-                          setStatusChangeConfirm({
+                          if (!newStatus || newStatus === order.status) return;
+                          const postDispatchStates = ['DISPATCHED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_FAILED', 'RTO'];
+                          const hasOrderAwb = Boolean(order.trackingNumber && order.trackingNumber.trim() !== '' && order.trackingNumber.toUpperCase() !== 'PENDING');
+                          if (postDispatchStates.includes(newStatus) && !hasOrderAwb) {
+                            showToast(`⚠️ Cannot transition order #${order.orderNumber} to ${newStatus} without generating an AWB number. Please generate an AWB first.`);
+                            return;
+                          }
+                          singleTransitionMutation.mutate({
                             orderId: order._id,
-                            newStatus,
-                            orderNumber: order.orderNumber,
-                            currentStatus: order.status,
-                            forceRevert: isOwner || isManager || isDistributor
+                            status: newStatus,
+                            forceRevert: Boolean(isOwner || isManager || isDistributor)
                           });
                         }}
                         size="xs"
@@ -1591,6 +1635,40 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                 className="bg-red-600 hover:bg-red-700 text-white font-bold"
               >
                 Delete Order
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 9b. Bulk Delete Confirmation Modal */}
+      {isBulkDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-xl border">
+            <div className="flex items-center gap-3 text-rose-600">
+              <AlertTriangle className="w-6 h-6" />
+              <h3 className="font-bold text-slate-900 text-sm">Delete Selected Orders</h3>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Are you sure you want to delete <strong className="text-slate-900">{selectedOrderIds.length}</strong> selected orders? Reserved inventory items will be automatically returned to branch stock.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={bulkDeleteMutation.isPending}
+                onClick={() => setIsBulkDeleteModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="danger"
+                isLoading={bulkDeleteMutation.isPending}
+                onClick={() => bulkDeleteMutation.mutate(selectedOrderIds)}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
+              >
+                Delete {selectedOrderIds.length} Orders
               </Button>
             </div>
           </div>

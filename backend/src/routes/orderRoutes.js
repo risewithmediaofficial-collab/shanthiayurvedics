@@ -16,6 +16,7 @@ import {
   getDistinctDistricts,
   updateOrder,
   deleteOrder,
+  bulkDeleteOrders,
   sendOrderWhatsApp,
   sendOrderDispatchWhatsApp
 } from '../controllers/orderController.js';
@@ -40,6 +41,8 @@ router.get('/export', requirePermission(PERMISSIONS.ORDERS_VIEW), exportOrders);
 router.patch('/bulk-status', requirePermission(PERMISSIONS.ORDERS_PROCESS), bulkTransitionOrders);
 router.patch('/bulk-assign', requirePermission(PERMISSIONS.ORDERS_PROCESS), bulkAssignVerification);
 router.patch('/bulk-verify', requirePermission(PERMISSIONS.ORDERS_PROCESS), bulkVerifyOrders);
+router.post('/bulk-delete', requirePermission(PERMISSIONS.ORDERS_DELETE), bulkDeleteOrders);
+router.delete('/bulk-delete', requirePermission(PERMISSIONS.ORDERS_DELETE), bulkDeleteOrders);
 router.post('/auto-dispatch', requirePermission(PERMISSIONS.ORDERS_PROCESS), autoDispatchOrders);
 router.post('/import-excel', requirePermission(PERMISSIONS.ORDERS_CREATE), importExcelOrders);
 

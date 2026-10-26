@@ -183,5 +183,81 @@ describe("Orders Module Integration Tests", () => {
     global.fetch = origFetch;
     process.env.MSG91_AUTHKEY = origAuth;
   });
+
+  it("should strictly reject transition to DISPATCHED if no AWB number is generated", async () => {
+    // Create an order without AWB
+    const orderRes = await request(app).post("/api/orders").set("Authorization", `Bearer ${telecallerToken}`).send({
+      customerId: customer._id.toString(),
+      branchId: branch._id.toString(),
+      items: [{ productId: product._id.toString(), batchId: batch._id.toString(), quantity: 1, unitPrice: 299 }],
+      paymentMethod: "COD"
+    });
+    const freshOrderId = orderRes.body.data._id;
+
+    // Attempt transition to DISPATCHED with no tracking number
+    const failRes = await request(app)
+      .patch(`/api/orders/${freshOrderId}/transition`)
+      .set("Authorization", `Bearer ${managerToken}`)
+      .send({ status: ORDER_STATUS.DISPATCHED });
+
+    expect(failRes.status).toBe(400);
+    expect(failRes.body.message).toMatch(/AWB \/ Tracking number/i);
+  });
+
+  it("should allow transition to DISPATCHED when valid AWB number is provided", async () => {
+    const orderRes = await request(app).post("/api/orders").set("Authorization", `Bearer ${telecallerToken}`).send({
+      customerId: customer._id.toString(),
+      branchId: branch._id.toString(),
+      items: [{ productId: product._id.toString(), batchId: batch._id.toString(), quantity: 1, unitPrice: 299 }],
+      paymentMethod: "COD"
+    });
+    const freshOrderId = orderRes.body.data._id;
+
+    const passRes = await request(app)
+      .patch(`/api/orders/${freshOrderId}/transition`)
+      .set("Authorization", `Bearer ${managerToken}`)
+      .send({
+        status: ORDER_STATUS.DISPATCHED,
+        trackingNumber: "TPC8891001",
+        courierName: "The Professional Courier (TPC)"
+      });
+
+    expect(passRes.status).toBe(200);
+    expect(passRes.body.data.status).toBe(ORDER_STATUS.DISPATCHED);
+    expect(passRes.body.data.trackingNumber).toBe("TPC8891001");
+  });
+
+  it("should bulk delete orders via POST /api/orders/bulk-delete", async () => {
+    // Create two orders to delete
+    const o1 = await request(app).post("/api/orders").set("Authorization", `Bearer ${telecallerToken}`).send({
+      customerId: customer._id.toString(),
+      branchId: branch._id.toString(),
+      items: [{ productId: product._id.toString(), batchId: batch._id.toString(), quantity: 1, unitPrice: 299 }],
+      paymentMethod: "COD"
+    });
+    const o2 = await request(app).post("/api/orders").set("Authorization", `Bearer ${telecallerToken}`).send({
+      customerId: customer._id.toString(),
+      branchId: branch._id.toString(),
+      items: [{ productId: product._id.toString(), batchId: batch._id.toString(), quantity: 1, unitPrice: 299 }],
+      paymentMethod: "COD"
+    });
+
+    const ids = [o1.body.data._id, o2.body.data._id];
+
+    const bulkDelRes = await request(app)
+      .post("/api/orders/bulk-delete")
+      .set("Authorization", `Bearer ${managerToken}`)
+      .send({ orderIds: ids });
+
+    expect(bulkDelRes.status).toBe(200);
+    expect(bulkDelRes.body.success).toBe(true);
+    expect(bulkDelRes.body.data.deletedCount).toBe(2);
+
+    // Verify both orders are deleted
+    const check1 = await request(app).get(`/api/orders/${ids[0]}`).set("Authorization", `Bearer ${managerToken}`);
+    const check2 = await request(app).get(`/api/orders/${ids[1]}`).set("Authorization", `Bearer ${managerToken}`);
+    expect(check1.status).toBe(404);
+    expect(check2.status).toBe(404);
+  });
 });
 

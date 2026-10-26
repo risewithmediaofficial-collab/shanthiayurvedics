@@ -116,6 +116,7 @@ export function OrdersFullTableView({
   onSelectLabel,
   onSelectEdit,
   onSelectDelete,
+  onOpenBulkDelete,
   onSelectCustomerProfile,
   selectedOrderIds = [],
   onToggleSelectOrder,
@@ -315,6 +316,16 @@ export function OrdersFullTableView({
   const handleBulkUpdateStatus = () => {
     if (!bulkStatusToApply) return;
     if (selectedOrderIds.length === 0) return;
+    const postDispatchStates = ['DISPATCHED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_FAILED', 'RTO'];
+    if (postDispatchStates.includes(bulkStatusToApply)) {
+      const ordersWithoutAwb = (orders || []).filter(
+        (o) => selectedOrderIds.includes(o._id) && (!o.trackingNumber || o.trackingNumber.trim() === '' || o.trackingNumber.toUpperCase() === 'PENDING')
+      );
+      if (ordersWithoutAwb.length > 0) {
+        alert(`⚠️ Cannot transition to '${bulkStatusToApply}': ${ordersWithoutAwb.length} selected order(s) do not have an AWB / Tracking number generated. Please generate AWB numbers first.`);
+        return;
+      }
+    }
     bulkStatusMutation.mutate({
       orderIds: selectedOrderIds,
       status: bulkStatusToApply,
@@ -944,7 +955,24 @@ export function OrdersFullTableView({
             <button
               type="button"
               disabled={selectedOrderIds.length === 0}
+              onClick={onOpenBulkDelete}
+              className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete ({selectedOrderIds.length})</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={selectedOrderIds.length === 0}
               onClick={() => {
+                const ordersWithoutAwb = (orders || []).filter(
+                  (o) => selectedOrderIds.includes(o._id) && (!o.trackingNumber || o.trackingNumber.trim() === '' || o.trackingNumber.toUpperCase() === 'PENDING')
+                );
+                if (ordersWithoutAwb.length > 0) {
+                  alert(`⚠️ Cannot dispatch: ${ordersWithoutAwb.length} selected order(s) do not have an AWB / Tracking number generated. Please generate AWB numbers first.`);
+                  return;
+                }
                 bulkStatusMutation &&
                   bulkStatusMutation.mutate({
                     orderIds: selectedOrderIds,
@@ -1165,10 +1193,18 @@ export function OrdersFullTableView({
                         <select
                           value={row.status}
                           onChange={(e) => {
+                            const newStatus = e.target.value;
+                            if (!newStatus || newStatus === row.status) return;
+                            const postDispatchStates = ['DISPATCHED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_FAILED', 'RTO'];
+                            const hasRowAwb = Boolean(row.trackingNumber && row.trackingNumber.trim() !== '' && row.trackingNumber.toUpperCase() !== 'PENDING');
+                            if (postDispatchStates.includes(newStatus) && !hasRowAwb) {
+                              alert(`⚠️ Cannot transition order #${row.orderNumber} to '${newStatus}': An AWB / Tracking number has not been generated for this order yet. Please generate an AWB number first.`);
+                              return;
+                            }
                             singleTransitionMutation &&
                               singleTransitionMutation.mutate({
                                 orderId: row._id,
-                                status: e.target.value,
+                                status: newStatus,
                                 forceRevert: true
                               });
                           }}

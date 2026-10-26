@@ -136,11 +136,24 @@ export function OrderDetailPage() {
   const patientMobile = order.patientDetails?.mobile || order.customerId?.mobile || '';
   const patientName = order.patientDetails?.patientName || order.customerId?.name || 'Customer';
 
+  const hasAwb = Boolean(
+    order?.trackingNumber &&
+    order?.trackingNumber.trim() !== '' &&
+    order?.trackingNumber.toUpperCase() !== 'PENDING'
+  );
+
   const handleOpenTransition = (status) => {
+    // STRICT ENFORCEMENT: Without an AWB number, do not allow transitioning to post-dispatch states
+    const postDispatchStates = ['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_FAILED', 'RTO'];
+    if (postDispatchStates.includes(status) && !hasAwb) {
+      alert(`⚠️ Cannot transition order to '${status}': An AWB / Tracking number has not been generated for this order yet. Please generate an AWB number before dispatch.`);
+      return;
+    }
+
     setTargetStatus(status);
     if (status === 'DISPATCHED') {
       setDispatchTrackingNumber(order?.trackingNumber || '');
-      setDispatchCourierName(order?.courierName || 'India Post');
+      setDispatchCourierName(order?.courierName || 'The Professional Courier (TPC)');
     }
     setTransitionModalOpen(true);
   };
@@ -419,6 +432,11 @@ export function OrderDetailPage() {
                   onChange={(e) => {
                     const newStatus = e.target.value;
                     if (newStatus === order.status) return;
+                    const postDispatchStates = ['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_FAILED', 'RTO'];
+                    if (postDispatchStates.includes(newStatus) && !hasAwb) {
+                      alert(`⚠️ Cannot transition order to '${newStatus}': An AWB / Tracking number has not been generated for this order yet. Please generate an AWB number first.`);
+                      return;
+                    }
                     handleOpenTransition(newStatus);
                   }}
                   className="text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-800 shadow-2xs hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer transition-all"
@@ -759,18 +777,26 @@ export function OrderDetailPage() {
       <Modal
         isOpen={transitionModalOpen}
         onClose={() => setTransitionModalOpen(false)}
-        title={`Transition Order to ${targetStatus}`}
+        title={
+          targetStatus === 'DISPATCHED' && hasAwb
+            ? 'Confirm Order Dispatch'
+            : `Transition Order to ${targetStatus}`
+        }
         maxWidth="max-w-md"
       >
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            if (targetStatus === 'DISPATCHED' && !hasAwb && !dispatchTrackingNumber?.trim()) {
+              alert('Please enter or generate an AWB / Tracking number before dispatching.');
+              return;
+            }
             transitionMutation.mutate({
               status: targetStatus,
               notes: transitionNotes,
               cancellationReason: targetStatus === 'CANCELLED' ? cancellationReason : undefined,
-              trackingNumber: targetStatus === 'DISPATCHED' ? (dispatchTrackingNumber?.trim() || undefined) : undefined,
-              courierName: targetStatus === 'DISPATCHED' ? dispatchCourierName : undefined,
+              trackingNumber: targetStatus === 'DISPATCHED' ? (hasAwb ? order.trackingNumber : dispatchTrackingNumber?.trim()) : undefined,
+              courierName: targetStatus === 'DISPATCHED' ? (hasAwb ? (order.courierName || 'The Professional Courier (TPC)') : dispatchCourierName) : undefined,
               forceRevert: Boolean(isOwner || isManager || isDistributor)
             });
           }}
@@ -787,32 +813,56 @@ export function OrderDetailPage() {
           )}
 
           {targetStatus === 'DISPATCHED' && (
-            <div className="space-y-3 p-3.5 bg-sky-50/70 rounded-xl border border-sky-200/80">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-sky-900">
-                <Send className="w-3.5 h-3.5 text-sky-700" />
-                <span>Moving Directly to Dispatched (Without Packing)</span>
+            hasAwb ? (
+              <div className="p-3.5 bg-emerald-50/90 rounded-xl border border-emerald-200/90 space-y-2.5">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-900">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Shipment already created with {order.courierName || 'The Professional Courier (TPC)'}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs bg-white/90 p-2.5 rounded-lg border border-emerald-100 shadow-2xs">
+                  <div>
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold">Courier Partner</span>
+                    <div className="font-bold text-slate-800">{order.courierName || 'The Professional Courier (TPC)'}</div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 uppercase font-semibold">Allocated AWB</span>
+                    <div className="font-mono font-bold text-emerald-700">{order.trackingNumber}</div>
+                  </div>
+                </div>
+                <p className="text-[11px] text-emerald-700 leading-snug">
+                  Courier and tracking number are already linked. Confirming will deduct reserved stock and trigger the WhatsApp dispatch update.
+                </p>
               </div>
-              <p className="text-[11px] text-sky-700 leading-snug">
-                Reserved inventory will be deducted automatically. If a tracking number is entered, the WhatsApp dispatch notification will be triggered.
-              </p>
-              <Input
-                label="Tracking / AWB Number (Optional)"
-                placeholder="e.g. SP123456789IN or TPC88765"
-                value={dispatchTrackingNumber}
-                onChange={(e) => setDispatchTrackingNumber(e.target.value)}
-              />
-              <Select
-                label="Courier Partner"
-                value={dispatchCourierName}
-                onChange={(e) => setDispatchCourierName(e.target.value)}
-                options={[
-                  { value: 'India Post', label: 'India Post Speed Post' },
-                  { value: 'The Professional Courier', label: 'The Professional Courier (TPC)' },
-                  { value: 'ST Courier', label: 'ST Courier' },
-                  { value: 'Direct Handover / Office', label: 'Direct Handover / Office' }
-                ]}
-              />
-            </div>
+            ) : (
+              <div className="space-y-3 p-3.5 bg-amber-50/80 rounded-xl border border-amber-200/80">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>AWB Number Required for Dispatch</span>
+                </div>
+                <p className="text-[11px] text-amber-700 leading-snug">
+                  An AWB / Tracking number must be generated or assigned before dispatching this order.
+                </p>
+                <Input
+                  label="Tracking / AWB Number *"
+                  required
+                  placeholder="e.g. TPC88765 or SP123456789IN"
+                  value={dispatchTrackingNumber}
+                  onChange={(e) => setDispatchTrackingNumber(e.target.value)}
+                />
+                <Select
+                  label="Courier Partner *"
+                  required
+                  value={dispatchCourierName}
+                  onChange={(e) => setDispatchCourierName(e.target.value)}
+                  options={[
+                    { value: 'The Professional Courier (TPC)', label: 'The Professional Courier (TPC)' },
+                    { value: 'India Post', label: 'India Post Speed Post' },
+                    { value: 'ST Courier', label: 'ST Courier' },
+                    { value: 'Direct Handover / Office', label: 'Direct Handover / Office' }
+                  ]}
+                />
+              </div>
+            )
           )}
 
           <Input

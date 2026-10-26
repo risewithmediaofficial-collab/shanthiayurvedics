@@ -339,6 +339,17 @@ export class OrderService {
       StateMachineService.validateOrderTransition(previousStatus, targetStatus);
     }
 
+    // STRICT ENFORCEMENT: Without generating an AWB / Tracking number, do NOT allow transition to DISPATCHED or any status after dispatch
+    if (StateMachineService.isDispatchedOrBeyond(targetStatus)) {
+      const effectiveAwb = (trackingNumber || order.trackingNumber || '').trim();
+      if (!effectiveAwb || effectiveAwb.toUpperCase() === 'PENDING') {
+        throw new AppError(
+          `Cannot transition order to '${targetStatus}' without generating an AWB / Tracking number. Please generate an AWB number first.`,
+          400
+        );
+      }
+    }
+
     // Move reserved units out of the outstanding queue exactly once on dispatch.
     if (targetStatus === ORDER_STATUS.DISPATCHED) {
       for (const item of order.items) {
@@ -650,7 +661,7 @@ export class OrderService {
   /**
    * Delete Order and Cleanly Release Stock
    */
-  static async deleteOrder(orderId, user, req) {
+  static async deleteOrder(orderId, user, req, { force = false } = {}) {
     const order = await Order.findById(orderId);
     if (!order) {
       throw new NotFoundError('Order');
@@ -658,7 +669,8 @@ export class OrderService {
 
     assertRecordAccess(order, user, req, 'telecallerId', 'Order');
     const isCounterSale = order.orderChannel === 'COUNTER_SALE' || order.notes?.includes('Office') || order.notes?.includes('Counter');
-    if (StateMachineService.isDispatchedOrBeyond(order.status) && !isCounterSale) {
+    const isOwnerOrManager = user?.role === 'OWNER' || user?.role === 'MANAGER';
+    if (StateMachineService.isDispatchedOrBeyond(order.status) && !isCounterSale && !isOwnerOrManager && !force) {
       throw new AppError('Dispatched orders must be retained. Use the returns workflow.', 409);
     }
 
@@ -687,6 +699,10 @@ export class OrderService {
       }
     }
 
+    // Clean up associated shipment & tracking records to avoid orphan documents
+    await Shipment.deleteMany({ orderId: orderId });
+    await OrderStatusHistory.deleteMany({ orderId: orderId });
+
     await Order.findByIdAndDelete(orderId);
 
     await AuditService.log({
@@ -706,6 +722,34 @@ export class OrderService {
     });
 
     return { message: 'Order deleted successfully' };
+  }
+
+  /**
+   * Bulk delete orders and release reserved stock
+   */
+  static async bulkDeleteOrders(orderIds = [], user, req, { force = false } = {}) {
+    if (!Array.isArray(orderIds) || orderIds.length === 0) {
+      throw new AppError('No order IDs provided for bulk deletion', 400);
+    }
+
+    const successful = [];
+    const failed = [];
+
+    for (const id of orderIds) {
+      try {
+        await this.deleteOrder(id, user, req, { force });
+        successful.push(id);
+      } catch (err) {
+        failed.push({ id, reason: err.message || 'Deletion failed' });
+      }
+    }
+
+    return {
+      deletedCount: successful.length,
+      failedCount: failed.length,
+      deletedIds: successful,
+      failed
+    };
   }
 
   /**

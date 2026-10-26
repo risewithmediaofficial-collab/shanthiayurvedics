@@ -352,6 +352,16 @@ export const deleteOrder = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, result, 'Order deleted successfully');
 });
 
+export const bulkDeleteOrders = asyncHandler(async (req, res) => {
+  const { orderIds = [], force = false } = req.body;
+  const result = await OrderService.bulkDeleteOrders(orderIds, req.user, req, { force });
+  return ApiResponse.success(
+    res,
+    result,
+    `Successfully deleted ${result.deletedCount} orders (${result.failedCount} failed)`
+  );
+});
+
 export const sendOrderWhatsApp = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id)
     .populate('customerId', 'name mobile')

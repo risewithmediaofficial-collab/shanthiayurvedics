@@ -17,11 +17,13 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 export function BottomDockMenuBar({ onOpenAddOrder }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { isOwner, isManager, isDistributor, isTelecaller, hasPermission } = usePermissions();
+  const { user } = useAuth();
 
   const currentPath = location.pathname;
 
@@ -36,6 +38,7 @@ export function BottomDockMenuBar({ onOpenAddOrder }) {
         return {};
       }
     },
+    enabled: Boolean(user),
     refetchInterval: 30000
   });
 

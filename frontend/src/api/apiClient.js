@@ -26,7 +26,7 @@ apiClient.interceptors.request.use(
 
       // 2. Attach Active Branch scope
       const activeBranch = typeof window !== 'undefined' ? sessionStorage.getItem('active_branch_id') : null;
-      if (activeBranch && activeBranch !== 'ALL' && activeBranch !== 'undefined' && activeBranch !== 'null') {
+      if (activeBranch && activeBranch !== 'ALL' && activeBranch !== 'MAIN' && activeBranch !== 'undefined' && activeBranch !== 'null') {
         config.headers = config.headers || {};
         config.headers['x-branch-id'] = activeBranch;
       }

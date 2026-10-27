@@ -94,9 +94,12 @@ export function BranchProvider({ children }) {
       }
     } else {
       // MANAGER, DISTRIBUTOR, TELECALLER: Strictly locked to their assigned branch!
-      const targetBranch = availableBranches[0] ? String(availableBranches[0]._id || availableBranches[0].id) : '';
-      setSelectedBranchId(targetBranch);
-      try { sessionStorage.setItem('active_branch_id', targetBranch); } catch {}
+      const firstBranch = availableBranches[0];
+      const targetBranch = (firstBranch && firstBranch._id !== 'MAIN') ? String(firstBranch._id || firstBranch.id) : '';
+      if (targetBranch) {
+        setSelectedBranchId(targetBranch);
+        try { sessionStorage.setItem('active_branch_id', targetBranch); } catch {}
+      }
     }
   }, [user, availableBranches]);
 

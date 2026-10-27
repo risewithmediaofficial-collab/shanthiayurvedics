@@ -4,6 +4,11 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ROLES } from '../constants/roles.js';
 
 export const getDashboardData = asyncHandler(async (req, res) => {
+  // If user has no branch assigned, return empty data gracefully
+  if (req.branchScope?.unassigned) {
+    return ApiResponse.success(res, { unassigned: true }, 'No branch assigned yet');
+  }
+
   const branchId = req.branchScope.isGlobal ? (req.query.branchId || 'ALL') : req.branchScope.branchId;
 
   if (req.user.role === ROLES.OWNER) {
@@ -26,5 +31,5 @@ export const getDashboardData = asyncHandler(async (req, res) => {
     return ApiResponse.success(res, data, 'Telecaller dashboard retrieved');
   }
 
-  return ApiResponse.error(res, 'This role does not have a dashboard', 403);
+  return ApiResponse.success(res, {}, 'No dashboard configured for this role');
 });

@@ -285,6 +285,17 @@ export const exportOrders = asyncHandler(async (req, res) => {
 });
 
 export const getOrderMetricsSummary = asyncHandler(async (req, res) => {
+  // If user has no branch assigned, return zero metrics instead of erroring
+  if (req.branchScope?.unassigned) {
+    return ApiResponse.success(res, {
+      totalOrders: 0, todayRev: 0, todayOrdersCount: 0, shippedCount: 0,
+      packedCount: 0, toVerifyCount: 0, inQueueCount: 0, lowStockCount: 0,
+      totalRevenue: 0, totalLeads: 0, deliveredOrdersCount: 0, newOrdersCount: 0,
+      confirmedOrdersCount: 0, processingCount: 0, rtoOrdersCount: 0,
+      cancelledCount: 0, stuckOrdersCount: 0
+    }, 'Order metrics summary retrieved');
+  }
+
   const branchId = (!req.branchScope.isGlobal && req.branchScope.branchId)
     ? req.branchScope.branchId
     : null;

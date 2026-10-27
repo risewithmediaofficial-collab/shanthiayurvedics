@@ -42,16 +42,13 @@ export const requireBranchScope = (req, res, next) => {
 
     // Managers are strictly scoped to their assigned branch(es) and can NEVER have global scope
     if (assignedIds.length === 0) {
-      req.branchScope = { branchId: null, allowedBranchIds: [], isGlobal: false };
+      req.branchScope = { branchId: null, allowedBranchIds: [], isGlobal: false, unassigned: true };
       return next();
     }
 
-    if (isExplicitBranch) {
-      if (assignedIds.includes(requestedBranch)) {
-        req.branchScope = { branchId: requestedBranch, allowedBranchIds: assignedIds, isGlobal: false };
-      } else {
-        return next(new ForbiddenError('Unauthorized branch access attempt. You are restricted to your assigned branch.'));
-      }
+    // If explicit branch requested is within assigned branches, use it; otherwise safely default to their primary assigned branch
+    if (isExplicitBranch && assignedIds.includes(requestedBranch)) {
+      req.branchScope = { branchId: requestedBranch, allowedBranchIds: assignedIds, isGlobal: false };
     } else {
       req.branchScope = { branchId: assignedIds[0], allowedBranchIds: assignedIds, isGlobal: false };
     }
@@ -66,14 +63,12 @@ export const requireBranchScope = (req, res, next) => {
       : null;
 
   if (!primaryBranchId) {
-    return next(new ForbiddenError('User has no authorized branch assigned'));
+    // Allow requests through with an unassigned scope so read queries return empty datasets instead of throwing 403
+    req.branchScope = { branchId: null, allowedBranchIds: [], isGlobal: false, unassigned: true };
+    return next();
   }
 
-  // If frontend passed an explicit branch, it must match the user's single assigned branch
-  if (isExplicitBranch && requestedBranch !== primaryBranchId) {
-    return next(new ForbiddenError('Unauthorized branch access attempt. You are restricted to your assigned branch.'));
-  }
-
+  // Staff are strictly confined to their primary branch. Clamping guarantees security without throwing 403 on stale client headers.
   req.branchScope = {
     branchId: primaryBranchId,
     allowedBranchIds: [primaryBranchId],

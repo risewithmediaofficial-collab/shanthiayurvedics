@@ -34,6 +34,14 @@ export class InventoryService {
       resolvedBranchId = defaultBranch?._id;
     }
 
+    if (resolvedBranchId) {
+      const exists = await Branch.exists({ _id: resolvedBranchId });
+      if (!exists) {
+        const defaultBranch = (await Branch.findOne({ isActive: true })) || (await Branch.findOne());
+        resolvedBranchId = defaultBranch?._id;
+      }
+    }
+
     // 2. Resolve batchId (optional, null if batches are not tracked)
     let resolvedBatchId = batchId || null;
 
@@ -81,20 +89,30 @@ export class InventoryService {
   /**
    * Stock In (Physical stock addition from purchase or production)
    */
-  static async stockIn({ productId, batchId, branchId, quantity, reason = MOVEMENT_REASONS.PURCHASE, notes, user, req, session = null }) {
+  static async stockIn({ inventoryId, productId, batchId, branchId, quantity, reason = MOVEMENT_REASONS.PURCHASE, notes, user, req, session = null }) {
     if (quantity <= 0) {
       throw new AppError('Quantity must be greater than zero', 400);
     }
 
+    let inv = null;
+    if (inventoryId) {
+      inv = await Inventory.findById(inventoryId).session(session || undefined);
+    }
+
     const { resolvedBranchId, resolvedBatchId } = await this.resolveBatchAndBranch({
-      productId,
-      batchId,
-      branchId,
+      productId: inv ? inv.productId : productId,
+      batchId: inv?.batchId || batchId,
+      branchId: inv?.branchId || branchId,
       user,
       req
     });
 
-    const inv = await this.getOrCreateInventory(productId, resolvedBatchId, resolvedBranchId, session);
+    if (!inv) {
+      inv = await this.getOrCreateInventory(productId, resolvedBatchId, resolvedBranchId, session);
+    } else if (!inv.branchId) {
+      inv.branchId = resolvedBranchId;
+    }
+
     const previousAvailable = inv.availableQuantity;
     inv.availableQuantity += quantity;
     await inv.save(session ? { session } : undefined);
@@ -149,20 +167,30 @@ export class InventoryService {
   /**
    * Stock Out (Controlled reduction)
    */
-  static async stockOut({ productId, batchId, branchId, quantity, reason = MOVEMENT_REASONS.MANUAL_ADJUSTMENT, notes, user, req, session = null }) {
+  static async stockOut({ inventoryId, productId, batchId, branchId, quantity, reason = MOVEMENT_REASONS.MANUAL_ADJUSTMENT, notes, user, req, session = null }) {
     if (quantity <= 0) {
       throw new AppError('Quantity must be greater than zero', 400);
     }
 
+    let inv = null;
+    if (inventoryId) {
+      inv = await Inventory.findById(inventoryId).session(session || undefined);
+    }
+
     const { resolvedBranchId, resolvedBatchId } = await this.resolveBatchAndBranch({
-      productId,
-      batchId,
-      branchId,
+      productId: inv ? inv.productId : productId,
+      batchId: inv?.batchId || batchId,
+      branchId: inv?.branchId || branchId,
       user,
       req
     });
 
-    const inv = await this.getOrCreateInventory(productId, resolvedBatchId, resolvedBranchId, session);
+    if (!inv) {
+      inv = await this.getOrCreateInventory(productId, resolvedBatchId, resolvedBranchId, session);
+    } else if (!inv.branchId) {
+      inv.branchId = resolvedBranchId;
+    }
+
     if (inv.availableQuantity < quantity) {
       throw new AppError(`Insufficient stock. Available: ${inv.availableQuantity}, Requested: ${quantity}`, 400);
     }
@@ -282,16 +310,30 @@ export class InventoryService {
   /**
    * Manual Stock Adjustment
    */
-  static async adjustStock({ productId, batchId, branchId, newAvailable, reason, notes, user, req }) {
+  static async adjustStock({ inventoryId, productId, batchId, branchId, newAvailable, reason, notes, user, req }) {
+    if (typeof newAvailable !== 'number' || isNaN(newAvailable) || newAvailable < 0) {
+      throw new AppError('New available stock count must be a non-negative number', 400);
+    }
+
+    let inv = null;
+    if (inventoryId) {
+      inv = await Inventory.findById(inventoryId);
+    }
+
     const { resolvedBranchId, resolvedBatchId } = await this.resolveBatchAndBranch({
-      productId,
-      batchId,
-      branchId,
+      productId: inv ? inv.productId : productId,
+      batchId: inv?.batchId || batchId,
+      branchId: inv?.branchId || branchId,
       user,
       req
     });
 
-    const inv = await this.getOrCreateInventory(productId, resolvedBatchId, resolvedBranchId);
+    if (!inv) {
+      inv = await this.getOrCreateInventory(productId, resolvedBatchId, resolvedBranchId);
+    } else if (!inv.branchId) {
+      inv.branchId = resolvedBranchId;
+    }
+
     const previousAvailable = inv.availableQuantity;
     const difference = newAvailable - previousAvailable;
 

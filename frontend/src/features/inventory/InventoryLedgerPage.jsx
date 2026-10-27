@@ -43,17 +43,20 @@ export function InventoryLedgerPage() {
   const [sortBy, setSortBy] = useState('productName');
   const [sortOrder, setSortOrder] = useState('asc');
 
-  // Modals
-  const [stockInModalOpen, setStockInModalOpen] = useState(false);
-  const [stockOutModalOpen, setStockOutModalOpen] = useState(false);
-  const [adjustModalOpen, setAdjustModalOpen] = useState(false);
+  // Unified Stock Modal
+  const [stockModalOpen, setStockModalOpen] = useState(false);
+  const [stockModalMode, setStockModalMode] = useState('IN'); // 'IN' | 'ADJUST' | 'OUT'
   const [deleteStockModalOpen, setDeleteStockModalOpen] = useState(false);
   const [stockItemToDelete, setStockItemToDelete] = useState(null);
   const [actionMsg, setActionMsg] = useState('');
 
   const [formData, setFormData] = useState({
+    inventoryId: '',
     productId: '',
+    productName: '',
+    productSku: '',
     branchId: '',
+    currentAvailable: 0,
     quantity: '',
     reason: 'PURCHASE',
     notes: '',
@@ -159,42 +162,32 @@ export function InventoryLedgerPage() {
     }
   };
 
-  const stockInMutation = useMutation({
-    mutationFn: (data) => apiClient.post('/inventory/in', data),
-    onSuccess: () => {
+  const stockMutation = useMutation({
+    mutationFn: async ({ mode, payload }) => {
+      if (mode === 'IN') {
+        return apiClient.post('/inventory/in', payload);
+      } else if (mode === 'OUT') {
+        return apiClient.post('/inventory/out', payload);
+      } else {
+        return apiClient.post('/inventory/adjust', payload);
+      }
+    },
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['inventoryMovements'] });
-      setStockInModalOpen(false);
-      setFormData({ productId: '', quantity: '', reason: 'PURCHASE', notes: '', newAvailable: '' });
+      setStockModalOpen(false);
+      const actionLabel =
+        variables.mode === 'IN'
+          ? 'Stock In (+)'
+          : variables.mode === 'OUT'
+          ? 'Stock Out (-)'
+          : 'Stock count adjusted (=)';
+      setActionMsg(`✓ ${actionLabel} recorded successfully`);
+      setTimeout(() => setActionMsg(''), 4000);
     },
     onError: (err) => {
-      setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to record stock in'}`);
-    }
-  });
-
-  const stockOutMutation = useMutation({
-    mutationFn: (data) => apiClient.post('/inventory/out', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['inventory'] });
-      queryClient.invalidateQueries({ queryKey: ['inventoryMovements'] });
-      setStockOutModalOpen(false);
-      setFormData({ productId: '', quantity: '', reason: 'DAMAGED', notes: '', newAvailable: '' });
-    },
-    onError: (err) => {
-      setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to record stock out'}`);
-    }
-  });
-
-  const adjustMutation = useMutation({
-    mutationFn: (data) => apiClient.post('/inventory/adjust', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['inventory'] });
-      queryClient.invalidateQueries({ queryKey: ['inventoryMovements'] });
-      setAdjustModalOpen(false);
-      setFormData({ productId: '', quantity: '', reason: 'PURCHASE', notes: '', newAvailable: '' });
-    },
-    onError: (err) => {
-      setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to adjust stock'}`);
+      setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to update stock'}`);
+      setTimeout(() => setActionMsg(''), 6000);
     }
   });
 
@@ -215,8 +208,55 @@ export function InventoryLedgerPage() {
     }
   });
 
-  const selectedProductObj = productsData?.find((p) => p._id === formData.productId);
-  const writeBranchId = (selectedBranchId && selectedBranchId !== 'ALL' ? selectedBranchId : null) || formData.branchId || (availableBranches[0]?._id ? String(availableBranches[0]._id) : null);
+  const openStockModal = (mode = 'IN', row = null) => {
+    setStockModalMode(mode);
+    if (row) {
+      const bId = row.branchId?._id || (typeof row.branchId === 'string' ? row.branchId : '') || (selectedBranchId !== 'ALL' ? selectedBranchId : (availableBranches[0]?._id ? String(availableBranches[0]._id) : ''));
+      setFormData({
+        inventoryId: row._id || '',
+        productId: row.productId?._id || row.productId || '',
+        productName: row.productId?.name || '',
+        productSku: row.productId?.sku || '',
+        branchId: bId,
+        currentAvailable: Number(row.availableQuantity || 0),
+        quantity: '',
+        reason: mode === 'IN' ? 'PURCHASE' : mode === 'OUT' ? 'DAMAGED' : 'PHYSICAL_VERIFICATION',
+        notes: '',
+        newAvailable: row.availableQuantity != null ? String(row.availableQuantity) : '0'
+      });
+    } else {
+      const firstProd = productsData?.[0];
+      const defaultBranch = selectedBranchId !== 'ALL' ? selectedBranchId : (availableBranches[0]?._id ? String(availableBranches[0]._id) : '');
+      const existingMatch = firstProd ? inventory.find(inv => (inv.productId?._id || inv.productId) === firstProd._id) : null;
+      setFormData({
+        inventoryId: existingMatch?._id || '',
+        productId: firstProd?._id || '',
+        productName: firstProd?.name || '',
+        productSku: firstProd?.sku || '',
+        branchId: defaultBranch,
+        currentAvailable: existingMatch ? Number(existingMatch.availableQuantity || 0) : 0,
+        quantity: '',
+        reason: mode === 'IN' ? 'PURCHASE' : mode === 'OUT' ? 'DAMAGED' : 'PHYSICAL_VERIFICATION',
+        notes: '',
+        newAvailable: existingMatch ? String(existingMatch.availableQuantity || 0) : '0'
+      });
+    }
+    setStockModalOpen(true);
+  };
+
+  const handleProductSelect = (selectedProdId) => {
+    const prodObj = (productsData || []).find(p => p._id === selectedProdId);
+    const existing = inventory.find(inv => (inv.productId?._id || inv.productId) === selectedProdId);
+    setFormData(prev => ({
+      ...prev,
+      productId: selectedProdId,
+      productName: prodObj?.name || '',
+      productSku: prodObj?.sku || '',
+      inventoryId: existing?._id || '',
+      currentAvailable: existing ? Number(existing.availableQuantity || 0) : 0,
+      newAvailable: existing ? String(existing.availableQuantity || 0) : '0'
+    }));
+  };
 
   const invColumns = [
     {
@@ -230,7 +270,11 @@ export function InventoryLedgerPage() {
     },
     {
       header: 'Branch',
-      cell: (row) => <Badge variant="neutral" size="sm">{row.branchId?.name}</Badge>
+      cell: (row) => (
+        <Badge variant="neutral" size="sm">
+          {row.branchId?.name || availableBranches[0]?.name || 'Hosur Main Hub'}
+        </Badge>
+      )
     },
     {
       header: 'Available Stock',
@@ -255,21 +299,21 @@ export function InventoryLedgerPage() {
         <div className="flex items-center justify-end gap-1.5">
           <button
             type="button"
-            onClick={() => {
-              setFormData({
-                productId: row.productId?._id || '',
-                branchId: row.branchId?._id || row.branchId || '',
-                quantity: '',
-                reason: 'PHYSICAL_AUDIT',
-                notes: `Audited from current available ${row.availableQuantity}`,
-                newAvailable: row.availableQuantity
-              });
-              setAdjustModalOpen(true);
-            }}
-            title="Edit / Adjust Stock Level"
-            className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center cursor-pointer"
+            onClick={() => openStockModal('IN', row)}
+            title="Stock In: Add new purchase or shipment units to this product (+)"
+            className="px-2 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer border border-emerald-200/80 shadow-2xs"
           >
-            <Pencil className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5" />
+            <span className="text-[11px]">Stock In</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => openStockModal('ADJUST', row)}
+            title="Adjust Stock: Recalibrate actual count to match physical shelf audit (=)"
+            className="px-2 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer border border-blue-200/80 shadow-2xs"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span className="text-[11px]">Adjust</span>
           </button>
           <button
             type="button"
@@ -278,7 +322,7 @@ export function InventoryLedgerPage() {
               setDeleteStockModalOpen(true);
             }}
             title="Delete Stock Item"
-            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors flex items-center cursor-pointer"
+            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors flex items-center cursor-pointer border border-red-200/60 shadow-2xs"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -357,15 +401,29 @@ export function InventoryLedgerPage() {
           >
             📦 Master Products Catalog →
           </Button>
-          <Button variant="outline" icon={Minus} onClick={() => setStockOutModalOpen(true)} className="justify-center text-xs">
-            Stock Out
+          <Button variant="outline" icon={Minus} onClick={() => openStockModal('OUT')} className="justify-center text-xs">
+            Stock Out (-)
           </Button>
-          <Button variant="outline" icon={SlidersHorizontal} onClick={() => setAdjustModalOpen(true)} className="justify-center text-xs">
-            Adjust Stock
+          <Button variant="outline" icon={SlidersHorizontal} onClick={() => openStockModal('ADJUST')} className="justify-center text-xs">
+            Adjust Stock (=)
           </Button>
-          <Button variant="primary" icon={Plus} onClick={() => setStockInModalOpen(true)} className="col-span-2 sm:col-auto justify-center text-xs">
-            Stock In
+          <Button variant="primary" icon={Plus} onClick={() => openStockModal('IN')} className="col-span-2 sm:col-auto justify-center text-xs">
+            + Stock In
           </Button>
+        </div>
+      </div>
+
+      {/* Visual Guide Banner explaining Stock In vs Adjust Stock */}
+      <div className="p-3 bg-gradient-to-r from-emerald-50/90 via-teal-50/90 to-blue-50/90 border border-emerald-200/80 rounded-xl text-xs text-slate-700 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="flex items-start sm:items-center gap-2.5">
+          <span className="text-lg shrink-0">💡</span>
+          <div>
+            <span className="font-bold text-slate-900">Understanding Stock Actions:</span>
+            <span className="ml-1.5">
+              Use <strong className="text-emerald-800 bg-emerald-100/80 px-1.5 py-0.5 rounded font-semibold">+ Stock In</strong> to <em>add incoming units</em> (supplier purchases or factory shipments) to current inventory.
+              Use <strong className="text-blue-800 bg-blue-100/80 px-1.5 py-0.5 rounded font-semibold">⚖️ Adjust Stock</strong> to <em>recalibrate the exact total count</em> to match physical shelf audits.
+            </span>
+          </div>
         </div>
       </div>
 
@@ -489,240 +547,254 @@ export function InventoryLedgerPage() {
         onPageChange={setPage}
       />
 
-      {/* Stock In Modal */}
+      {/* Unified Stock Action Modal */}
       <Modal
-        isOpen={stockInModalOpen}
-        onClose={() => setStockInModalOpen(false)}
-        title="Stock In (Physical Stock Addition)"
-        subtitle="Record new factory shipments or supplier purchase intake"
+        isOpen={stockModalOpen}
+        onClose={() => setStockModalOpen(false)}
+        title={
+          stockModalMode === 'IN'
+            ? 'Stock In (Add Incoming Units)'
+            : stockModalMode === 'OUT'
+            ? 'Stock Out (Controlled Reduction)'
+            : 'Adjust Stock (Physical Shelf Count)'
+        }
+        subtitle={
+          stockModalMode === 'IN'
+            ? 'Add newly received factory shipments or purchase intake to existing stock'
+            : stockModalMode === 'OUT'
+            ? 'Deduct damaged, expired, or clinic sample stock from available inventory'
+            : 'Directly overwrite and recalibrate total available stock after physical count'
+        }
         maxWidth="max-w-md"
-        icon="📥"
+        icon={stockModalMode === 'IN' ? '📥' : stockModalMode === 'OUT' ? '📤' : '⚖️'}
       >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!writeBranchId) {
-              setActionMsg('⚠ Select a specific branch before recording stock.');
-              return;
-            }
-            stockInMutation.mutate({
-              productId: formData.productId,
-              branchId: writeBranchId,
-              quantity: Number(formData.quantity),
-              reason: formData.reason,
-              notes: formData.notes
-            });
-          }}
-          className="space-y-3.5"
-        >
-          <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-            <span className="text-slate-500 font-medium">Target Branch:</span>
-            <span className="font-bold text-slate-800">
-              {availableBranches.find(b => String(b._id || b.id) === String(writeBranchId))?.name || availableBranches[0]?.name || 'Assigned Branch'}
-            </span>
+        <form onSubmit={handleStockSubmit} className="space-y-3.5">
+          {/* Mode Switcher Tabs */}
+          <div className="grid grid-cols-3 p-1 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                setStockModalMode('IN');
+                if (formData.reason === 'DAMAGED' || formData.reason === 'PHYSICAL_AUDIT') {
+                  setFormData(prev => ({ ...prev, reason: 'PURCHASE' }));
+                }
+              }}
+              className={`py-2 px-1 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                stockModalMode === 'IN'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Stock In (+)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStockModalMode('ADJUST');
+                if (formData.reason === 'PURCHASE' || formData.reason === 'DAMAGED') {
+                  setFormData(prev => ({ ...prev, reason: 'PHYSICAL_AUDIT' }));
+                }
+              }}
+              className={`py-2 px-1 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                stockModalMode === 'ADJUST'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Adjust Stock (=)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStockModalMode('OUT');
+                if (formData.reason === 'PURCHASE' || formData.reason === 'PHYSICAL_AUDIT') {
+                  setFormData(prev => ({ ...prev, reason: 'DAMAGED' }));
+                }
+              }}
+              className={`py-2 px-1 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                stockModalMode === 'OUT'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <Minus className="w-3.5 h-3.5" />
+              <span>Stock Out (-)</span>
+            </button>
           </div>
 
-          <Select
-            label="Select Product *"
-            required
-            value={formData.productId}
-            onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-            options={[
-              { value: '', label: 'Select a product...' },
-              ...(productsData || []).map((p) => ({ value: p._id, label: `${p.name} (${p.sku})` }))
-            ]}
-          />
-
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Quantity to Add *"
-              type="number"
-              min="1"
-              required
-              value={formData.quantity}
-              onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-            />
+          {/* Target Branch */}
+          {availableBranches.length > 1 ? (
             <Select
-              label="Reason *"
-              value={formData.reason}
-              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+              label="Target Branch *"
+              required
+              value={formData.branchId || (availableBranches[0]?._id ? String(availableBranches[0]._id) : '')}
+              onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
+              options={availableBranches.map((b) => ({ value: String(b._id || b.id), label: b.name }))}
+            />
+          ) : (
+            <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+              <span className="text-slate-500 font-medium">Target Branch:</span>
+              <span className="font-bold text-slate-800">
+                {availableBranches[0]?.name || 'Hosur Main Hub'}
+              </span>
+            </div>
+          )}
+
+          {/* Product Selection / Display */}
+          {formData.productName ? (
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Selected Product</div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-slate-900 text-sm">{formData.productName}</div>
+                  <div className="text-xs text-slate-500 font-mono">{formData.productSku}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[11px] text-slate-500">Current In Stock</div>
+                  <div className="text-sm font-black text-slate-900 font-mono">{currentAvailableNum} units</div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <Select
+              label="Select Product *"
+              required
+              value={formData.productId}
+              onChange={(e) => handleProductSelect(e.target.value)}
               options={[
-                { value: 'PURCHASE', label: 'Supplier Purchase' },
-                { value: 'PRODUCTION', label: 'Factory Production' },
-                { value: 'INITIAL_STOCK', label: 'Initial Baseline' }
+                { value: '', label: 'Select a product...' },
+                ...(productsData || []).map((p) => ({ value: p._id, label: `${p.name} (${p.sku})` }))
               ]}
             />
+          )}
+
+          {/* Dynamic Quantity Input Based on Mode */}
+          {stockModalMode === 'IN' && (
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Quantity to Add (+)*"
+                type="number"
+                min="1"
+                required
+                placeholder="e.g. 50"
+                value={formData.quantity}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+              />
+              <Select
+                label="Reason *"
+                value={formData.reason}
+                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                options={[
+                  { value: 'PURCHASE', label: 'Supplier Purchase' },
+                  { value: 'PRODUCTION', label: 'Factory Production' },
+                  { value: 'INITIAL_STOCK', label: 'Initial Baseline' }
+                ]}
+              />
+            </div>
+          )}
+
+          {stockModalMode === 'OUT' && (
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Quantity to Remove (-)*"
+                type="number"
+                min="1"
+                max={currentAvailableNum}
+                required
+                placeholder="e.g. 5"
+                value={formData.quantity}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+              />
+              <Select
+                label="Reason *"
+                value={formData.reason}
+                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                options={[
+                  { value: 'DAMAGED', label: 'Damaged Stock' },
+                  { value: 'SAMPLE', label: 'Doctor Sample' },
+                  { value: 'INTERNAL_USE', label: 'Internal Clinic Use' },
+                  { value: 'MANUAL_ADJUSTMENT', label: 'Manual Correction' }
+                ]}
+              />
+            </div>
+          )}
+
+          {stockModalMode === 'ADJUST' && (
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="New Actual Available Count (=)*"
+                type="number"
+                min="0"
+                required
+                placeholder="e.g. 80"
+                value={formData.newAvailable}
+                onChange={(e) => setFormData({ ...formData, newAvailable: e.target.value })}
+              />
+              <Select
+                label="Reason *"
+                value={formData.reason}
+                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                options={[
+                  { value: 'PHYSICAL_VERIFICATION', label: 'Physical Shelf Audit' },
+                  { value: 'MANUAL_ADJUSTMENT', label: 'Discrepancy Reconciliation' },
+                  { value: 'CYCLE_COUNT', label: 'Cycle Count' }
+                ]}
+              />
+            </div>
+          )}
+
+          {/* Live Calculation Preview Card */}
+          <div className={`p-3 rounded-xl border text-xs ${previewBadgeClass}`}>
+            <div className="flex items-center justify-between font-medium mb-1">
+              <span>Current Stock: <strong className="font-mono text-slate-900">{currentAvailableNum}</strong> units</span>
+              <span className="font-bold uppercase tracking-wider text-[10px]">
+                {stockModalMode === 'IN' ? 'Addition (+)' : stockModalMode === 'OUT' ? 'Deduction (-)' : 'Recalibration (=)'}
+              </span>
+            </div>
+            <div className="text-sm font-bold flex items-center justify-between pt-1 border-t border-slate-200/60">
+              <span className="text-slate-700">Resulting Available Stock:</span>
+              <span className="font-mono text-base font-black">
+                {previewNewCount} units
+              </span>
+            </div>
+            <div className="text-[11px] text-slate-600 mt-1 font-mono">
+              {formulaDisplay}
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1.5 pt-1 border-t border-slate-200/40">
+              {stockModalMode === 'IN' && '💡 "Stock In" adds newly received incoming units to your existing stock.'}
+              {stockModalMode === 'ADJUST' && '💡 "Adjust Stock" directly sets the exact physical count counted on your shelf.'}
+              {stockModalMode === 'OUT' && '💡 "Stock Out" removes damaged, expired, or clinic sample units.'}
+            </p>
           </div>
 
           <Input
-            label="Invoice / GRN Notes"
-            placeholder="e.g. GRN-2026-992 from Mysore unit"
-            value={formData.notes}
-            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          />
-
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-            <Button variant="secondary" type="button" onClick={() => setStockInModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" type="submit" isLoading={stockInMutation.isPending}>
-              Record Stock In
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Stock Out Modal */}
-      <Modal
-        isOpen={stockOutModalOpen}
-        onClose={() => setStockOutModalOpen(false)}
-        title="Stock Out (Controlled Reduction)"
-        subtitle="Record damaged, sample, or manual stock deductions"
-        maxWidth="max-w-md"
-        icon="📤"
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!writeBranchId) {
-              setActionMsg('⚠ Select a specific branch before recording stock out.');
-              return;
+            label="Invoice / Audit Notes (Optional)"
+            placeholder={
+              stockModalMode === 'IN'
+                ? 'e.g. Supplier PO-8812 from Bangalore unit'
+                : stockModalMode === 'OUT'
+                ? 'e.g. Broken packaging or leakage'
+                : 'e.g. Monthly shelf reconciliation audit'
             }
-            stockOutMutation.mutate({
-              productId: formData.productId,
-              branchId: writeBranchId,
-              quantity: Number(formData.quantity),
-              reason: formData.reason,
-              notes: formData.notes
-            });
-          }}
-          className="space-y-3.5"
-        >
-          <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-            <span className="text-slate-500 font-medium">Target Branch:</span>
-            <span className="font-bold text-slate-800">
-              {availableBranches.find(b => String(b._id || b.id) === String(writeBranchId))?.name || availableBranches[0]?.name || 'Assigned Branch'}
-            </span>
-          </div>
-
-          <Select
-            label="Select Product *"
-            required
-            value={formData.productId}
-            onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-            options={[
-              { value: '', label: 'Select a product...' },
-              ...(productsData || []).map((p) => ({ value: p._id, label: `${p.name} (${p.sku})` }))
-            ]}
-          />
-
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Quantity to Remove *"
-              type="number"
-              min="1"
-              required
-              value={formData.quantity}
-              onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-            />
-            <Select
-              label="Reason *"
-              value={formData.reason}
-              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-              options={[
-                { value: 'DAMAGED', label: 'Damaged Stock' },
-                { value: 'SAMPLE', label: 'Doctor Sample' },
-                { value: 'INTERNAL_USE', label: 'Internal Clinic Use' },
-                { value: 'MANUAL_ADJUSTMENT', label: 'Manual Correction' }
-              ]}
-            />
-          </div>
-
-          <Input
-            label="Reason & Notes"
-            placeholder="e.g. Broken packaging or leakage..."
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           />
 
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-            <Button variant="secondary" type="button" onClick={() => setStockOutModalOpen(false)}>
+            <Button variant="secondary" type="button" onClick={() => setStockModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="danger" type="submit" isLoading={stockOutMutation.isPending} className="bg-red-600 hover:bg-red-700 text-white">
-              Record Stock Out
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Adjust Modal */}
-      <Modal
-        isOpen={adjustModalOpen}
-        onClose={() => setAdjustModalOpen(false)}
-        title="Stock Adjustment (Cycle Count)"
-        subtitle="Recalibrate physical on-hand quantity after physical count"
-        maxWidth="max-w-md"
-        icon="⚖️"
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!writeBranchId) {
-              setActionMsg('⚠ Select a specific branch before adjusting stock.');
-              return;
-            }
-            adjustMutation.mutate({
-              productId: formData.productId,
-              branchId: writeBranchId,
-              newAvailable: Number(formData.newAvailable),
-              reason: 'PHYSICAL_VERIFICATION',
-              notes: formData.notes
-            });
-          }}
-          className="space-y-3.5"
-        >
-          <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-            <span className="text-slate-500 font-medium">Target Branch:</span>
-            <span className="font-bold text-slate-800">
-              {availableBranches.find(b => String(b._id || b.id) === String(writeBranchId))?.name || availableBranches[0]?.name || 'Assigned Branch'}
-            </span>
-          </div>
-
-          <Select
-            label="Select Product *"
-            required
-            value={formData.productId}
-            onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-            options={[
-              { value: '', label: 'Select a product...' },
-              ...(productsData || []).map((p) => ({ value: p._id, label: `${p.name} (${p.sku})` }))
-            ]}
-          />
-
-          <Input
-            label="New Actual Available Count *"
-            type="number"
-            min="0"
-            required
-            value={formData.newAvailable}
-            onChange={(e) => setFormData({ ...formData, newAvailable: e.target.value })}
-          />
-
-          <Input
-            label="Reason & Auditor Notes *"
-            required
-            placeholder="Audit discrepancy reconciliation..."
-            value={formData.notes}
-            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          />
-
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-            <Button variant="secondary" type="button" onClick={() => setAdjustModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" type="submit" isLoading={adjustMutation.isPending}>
-              Apply Adjustment
+            <Button
+              variant={stockModalMode === 'OUT' ? 'danger' : 'primary'}
+              type="submit"
+              isLoading={stockMutation.isPending}
+              className={stockModalMode === 'OUT' ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+            >
+              {stockModalMode === 'IN' && 'Record Stock In (+)'}
+              {stockModalMode === 'OUT' && 'Record Stock Out (-)'}
+              {stockModalMode === 'ADJUST' && 'Apply Stock Adjustment (=)'}
             </Button>
           </div>
         </form>

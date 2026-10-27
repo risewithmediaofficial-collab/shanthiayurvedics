@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { Product } from '../models/Product.js';
+import { Branch } from '../models/Branch.js';
 import { Inventory } from '../models/Inventory.js';
 import { StockMovement } from '../models/StockMovement.js';
 import { StockTransfer } from '../models/StockTransfer.js';
@@ -23,6 +24,46 @@ export const getInventory = asyncHandler(async (req, res) => {
   const inactiveProductIds = await Product.find({ isActive: false }).distinct('_id');
   if (inactiveProductIds.length > 0) {
     await Inventory.deleteMany({ productId: { $in: inactiveProductIds } });
+  }
+
+  // Auto-heal any legacy or orphaned inventory records where branchId is null or points to a non-existent branch
+  try {
+    const validBranchIds = await Branch.find().distinct('_id');
+    const defaultBranch = (await Branch.findOne({ isActive: true }).sort({ createdAt: 1 })) || (await Branch.findOne());
+    if (defaultBranch) {
+      const orphanedRecords = await Inventory.find({
+        $or: [
+          { branchId: null },
+          { branchId: { $exists: false } },
+          { branchId: { $nin: validBranchIds } }
+        ]
+      });
+
+      for (const orphan of orphanedRecords) {
+        if (!orphan.productId) {
+          await Inventory.deleteOne({ _id: orphan._id });
+          continue;
+        }
+        const existingDefaultRecord = await Inventory.findOne({
+          productId: orphan.productId,
+          branchId: defaultBranch._id,
+          _id: { $ne: orphan._id }
+        });
+
+        if (existingDefaultRecord) {
+          existingDefaultRecord.availableQuantity += (orphan.availableQuantity || 0);
+          existingDefaultRecord.reservedQuantity += (orphan.reservedQuantity || 0);
+          existingDefaultRecord.damagedQuantity += (orphan.damagedQuantity || 0);
+          await existingDefaultRecord.save();
+          await Inventory.deleteOne({ _id: orphan._id });
+        } else {
+          orphan.branchId = defaultBranch._id;
+          await orphan.save();
+        }
+      }
+    }
+  } catch (_healErr) {
+    // Non-blocking auto-repair
   }
 
   const query = {};
@@ -148,6 +189,7 @@ export const getStockMovements = asyncHandler(async (req, res) => {
 export const stockIn = asyncHandler(async (req, res) => {
   const branchId = req.body.branchId || (!req.branchScope?.isGlobal ? req.branchScope?.branchId : null);
   const result = await InventoryService.stockIn({
+    inventoryId: req.body.inventoryId,
     productId: req.body.productId,
     batchId: req.body.batchId,
     branchId,
@@ -163,6 +205,7 @@ export const stockIn = asyncHandler(async (req, res) => {
 export const stockOut = asyncHandler(async (req, res) => {
   const branchId = req.body.branchId || (!req.branchScope?.isGlobal ? req.branchScope?.branchId : null);
   const result = await InventoryService.stockOut({
+    inventoryId: req.body.inventoryId,
     productId: req.body.productId,
     batchId: req.body.batchId,
     branchId,
@@ -178,6 +221,7 @@ export const stockOut = asyncHandler(async (req, res) => {
 export const adjustStock = asyncHandler(async (req, res) => {
   const branchId = req.body.branchId || (!req.branchScope?.isGlobal ? req.branchScope?.branchId : null);
   const result = await InventoryService.adjustStock({
+    inventoryId: req.body.inventoryId,
     productId: req.body.productId,
     batchId: req.body.batchId,
     branchId,

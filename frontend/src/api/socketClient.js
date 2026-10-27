@@ -69,14 +69,19 @@ export const initSocket = (token = null) => {
   connectionState = hasEverConnected ? 'reconnecting' : 'connecting';
   notifyConnectionListeners();
 
+  const configuredTransports = import.meta.env.VITE_SOCKET_TRANSPORTS
+    ? import.meta.env.VITE_SOCKET_TRANSPORTS.split(',').map((t) => t.trim()).filter(Boolean)
+    : ['polling'];
+  const allowUpgrade = configuredTransports.length > 1 && configuredTransports.includes('websocket');
+
   socket = io(socketUrl, {
     withCredentials: true,
     auth: {
       token: socketToken || undefined,
       requireAuth: false
     },
-    transports: ['websocket', 'polling'],
-    upgrade: true,
+    transports: configuredTransports,
+    upgrade: allowUpgrade,
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,

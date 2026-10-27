@@ -1,23 +1,44 @@
 import { useBranch } from '../../context/BranchContext.jsx';
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { PhoneCall, Calendar, Clock, User, CheckCircle2, MessageSquare, Phone, Eye } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { PhoneCall, Calendar, Clock, User, CheckCircle2, MessageSquare, Phone, Eye, Trash2, AlertTriangle } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { Table } from '../../components/common/Table.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { Pagination } from '../../components/common/Pagination.jsx';
+import { Modal } from '../../components/common/Modal.jsx';
+import { Button } from '../../components/common/Button.jsx';
 import { LeadDetailModal } from './LeadDetailModal.jsx';
 
 export function CallHistoryPage({ callerId } = {}) {
+  const queryClient = useQueryClient();
   const { selectedBranchId } = useBranch();
   const [page, setPage] = useState(1);
   const [selectedLeadId, setSelectedLeadId] = useState(null);
+  const [callToDelete, setCallToDelete] = useState(null);
+  const [actionFeedback, setActionFeedback] = useState('');
 
   const { data: callsResponse, isLoading } = useQuery({
     queryKey: ['callHistory', selectedBranchId, callerId, page],
     queryFn: async () => {
       const res = await apiClient.get('/leads/calls/history', { params: { page, limit: 15, telecallerId: callerId } });
       return res.data;
+    }
+  });
+
+  const deleteCallMutation = useMutation({
+    mutationFn: async (callId) => {
+      const res = await apiClient.delete(`/leads/calls/history/${callId}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['callHistory'] });
+      setCallToDelete(null);
+      setActionFeedback('✓ Call interaction record deleted successfully');
+      setTimeout(() => setActionFeedback(''), 3500);
+    },
+    onError: (err) => {
+      alert(err.response?.data?.message || 'Failed to delete call record');
     }
   });
 
@@ -144,6 +165,17 @@ export function CallHistoryPage({ callerId } = {}) {
                 <Phone className="w-4 h-4" />
               </a>
             )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCallToDelete(row);
+              }}
+              title="Delete Call Record"
+              className="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition-colors flex items-center justify-center min-h-[36px] min-w-[36px] cursor-pointer touch-manipulation"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
           </div>
         );
       }
@@ -152,9 +184,16 @@ export function CallHistoryPage({ callerId } = {}) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900 tracking-tight">Call History Ledger</h2>
-        <p className="text-xs text-slate-500">Immutable record of all telecaller communication and customer interactions</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Call History Ledger</h2>
+          <p className="text-xs text-slate-500">Record of all telecaller communication and customer interactions</p>
+        </div>
+        {actionFeedback && (
+          <div className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg animate-fade-in">
+            {actionFeedback}
+          </div>
+        )}
       </div>
 
       <Table
@@ -183,6 +222,80 @@ export function CallHistoryPage({ callerId } = {}) {
           leadId={selectedLeadId}
           onClose={() => setSelectedLeadId(null)}
         />
+      )}
+
+      {/* Delete Call History Confirmation Modal */}
+      {callToDelete && (
+        <Modal
+          isOpen={Boolean(callToDelete)}
+          onClose={() => setCallToDelete(null)}
+          title="Delete Call History Record"
+          subtitle="Confirm permanent deletion"
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4 text-xs">
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-3 text-rose-800">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold mb-1">Are you sure you want to delete this call record?</p>
+                <p className="text-slate-600">
+                  This call interaction log will be permanently removed from the ledger.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 space-y-2 text-slate-700">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-semibold">Customer / Lead:</span>
+                <span className="font-bold text-slate-900">
+                  {callToDelete.leadId?.name || callToDelete.customerId?.name || 'Customer'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-semibold">Outcome:</span>
+                <span>{getOutcomeBadge(callToDelete.callStatus || callToDelete.outcome)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-semibold">Discussion Notes:</span>
+                <span className="text-right max-w-[200px] truncate text-slate-800 font-medium">
+                  {callToDelete.notes || '—'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-semibold">Telecaller:</span>
+                <span className="font-medium text-slate-800">
+                  {callToDelete.telecallerId?.name || 'Staff'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-semibold">Recorded Date:</span>
+                <span className="font-mono text-slate-600 text-[11px]">
+                  {new Date(callToDelete.createdAt).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => setCallToDelete(null)}
+                disabled={deleteCallMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                type="button"
+                onClick={() => deleteCallMutation.mutate(callToDelete._id)}
+                isLoading={deleteCallMutation.isPending}
+                className="bg-rose-600 hover:bg-rose-700 text-white"
+              >
+                Delete Record
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

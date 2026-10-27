@@ -8,7 +8,7 @@ import { LeadAssignment } from '../models/LeadAssignment.js';
 import { LeadService } from '../services/leadService.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { NotFoundError } from '../utils/errors.js';
+import { NotFoundError, ForbiddenError } from '../utils/errors.js';
 import { ROLES } from '../constants/roles.js';
 import { emitToBranch } from '../sockets/index.js';
 import { parseBusinessDateTime } from '../utils/businessTime.js';
@@ -355,4 +355,37 @@ export const getCallHistory = asyncHandler(async (req, res) => {
   ]);
 
   return ApiResponse.paginated(res, calls, { page, limit, total }, 'Call history retrieved successfully');
+});
+
+export const deleteCallHistory = asyncHandler(async (req, res) => {
+  const { callId } = req.params;
+  const call = await CallHistory.findById(callId);
+  if (!call) {
+    throw new NotFoundError('Call history entry not found');
+  }
+
+  // Branch isolation
+  if (!req.branchScope?.isGlobal && req.branchScope?.branchId) {
+    if (call.branchId && call.branchId.toString() !== req.branchScope.branchId.toString()) {
+      throw new ForbiddenError('Unauthorized: You cannot delete call records from another branch');
+    }
+  }
+
+  // Telecaller scope check: telecallers can only delete their own logged calls
+  if (req.user.role === ROLES.TELECALLER) {
+    if (call.telecallerId && call.telecallerId.toString() !== req.user.id.toString()) {
+      throw new ForbiddenError('Unauthorized: Telecallers can only delete their own call logs');
+    }
+  }
+
+  await CallHistory.findByIdAndDelete(callId);
+
+  if (call.branchId) {
+    emitToBranch(call.branchId.toString(), 'callHistory:deleted', {
+      callId,
+      branchId: call.branchId
+    });
+  }
+
+  return ApiResponse.success(res, { id: callId }, 'Call history entry deleted successfully');
 });

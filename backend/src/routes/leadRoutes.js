@@ -12,10 +12,11 @@ import {
   bulkAssignLeads,
   bulkDeleteLeads,
   getCallHistory,
-  getLeadCalls
+  getLeadCalls,
+  deleteCallHistory
 } from '../controllers/leadController.js';
 import { authenticate } from '../middleware/auth.js';
-import { requirePermission } from '../middleware/rbac.js';
+import { requirePermission, requireAnyPermission } from '../middleware/rbac.js';
 import { requireBranchScope } from '../middleware/branchScope.js';
 import { validate } from '../middleware/validate.js';
 import {
@@ -31,15 +32,16 @@ const router = Router();
 router.use(authenticate);
 router.use(requireBranchScope);
 
-// Bulk routes (must be before :id param)
+// Bulk routes & Call history (must be before :id param)
 router.post('/bulk-assign', requirePermission(PERMISSIONS.LEADS_ASSIGN), bulkAssignLeads);
 router.post('/bulk-delete', requirePermission(PERMISSIONS.LEADS_EDIT), bulkDeleteLeads);
 router.delete('/bulk-delete', requirePermission(PERMISSIONS.LEADS_EDIT), bulkDeleteLeads);
+router.get('/calls/history', requirePermission(PERMISSIONS.LEADS_VIEW), getCallHistory);
+router.delete('/calls/history/:callId', requireAnyPermission([PERMISSIONS.LEADS_EDIT, PERMISSIONS.LEADS_DELETE]), deleteCallHistory);
 
 router.param('id', scopeRecord(Lead, 'assignedTo'));
 
 router.get('/', requirePermission(PERMISSIONS.LEADS_VIEW), getLeads);
-router.get('/calls/history', requirePermission(PERMISSIONS.LEADS_VIEW), getCallHistory);
 router.post('/', requirePermission(PERMISSIONS.LEADS_CREATE), validate(createLeadSchema), createLead);
 router.get('/:id', requirePermission(PERMISSIONS.LEADS_VIEW), getLeadById);
 router.get('/:id/calls', requirePermission(PERMISSIONS.LEADS_VIEW), getLeadCalls);

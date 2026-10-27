@@ -220,12 +220,13 @@ export const stockOut = asyncHandler(async (req, res) => {
 
 export const adjustStock = asyncHandler(async (req, res) => {
   const branchId = req.body.branchId || (!req.branchScope?.isGlobal ? req.branchScope?.branchId : null);
+  const rawNewAvail = req.body.newAvailable !== undefined ? req.body.newAvailable : req.body.newAvailableQuantity;
   const result = await InventoryService.adjustStock({
     inventoryId: req.body.inventoryId,
     productId: req.body.productId,
     batchId: req.body.batchId,
     branchId,
-    newAvailable: Number(req.body.newAvailable),
+    newAvailable: Number(rawNewAvail),
     reason: req.body.reason,
     notes: req.body.notes,
     user: req.user,

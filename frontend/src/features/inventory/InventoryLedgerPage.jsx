@@ -208,6 +208,53 @@ export function InventoryLedgerPage() {
     }
   });
 
+  const handleStockSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.productId) {
+      setActionMsg('⚠ Please select a product');
+      setTimeout(() => setActionMsg(''), 4000);
+      return;
+    }
+
+    const payload = {
+      inventoryId: formData.inventoryId || undefined,
+      productId: formData.productId,
+      branchId: formData.branchId || (availableBranches[0]?._id ? String(availableBranches[0]._id) : undefined),
+      reason: formData.reason,
+      notes: formData.notes
+    };
+
+    if (stockModalMode === 'IN') {
+      const qty = parseInt(formData.quantity, 10);
+      if (!qty || qty <= 0) {
+        setActionMsg('⚠ Please enter a valid quantity to add');
+        setTimeout(() => setActionMsg(''), 4000);
+        return;
+      }
+      payload.quantity = qty;
+    } else if (stockModalMode === 'OUT') {
+      const qty = parseInt(formData.quantity, 10);
+      if (!qty || qty <= 0) {
+        setActionMsg('⚠ Please enter a valid quantity to remove');
+        setTimeout(() => setActionMsg(''), 4000);
+        return;
+      }
+      payload.quantity = qty;
+    } else {
+      // ADJUST mode
+      const newAvail = parseInt(formData.newAvailable, 10);
+      if (isNaN(newAvail) || newAvail < 0) {
+        setActionMsg('⚠ Please enter a valid available stock count (0 or higher)');
+        setTimeout(() => setActionMsg(''), 4000);
+        return;
+      }
+      payload.newAvailable = newAvail;
+      payload.newAvailableQuantity = newAvail;
+    }
+
+    stockMutation.mutate({ mode: stockModalMode, payload });
+  };
+
   const openStockModal = (mode = 'IN', row = null) => {
     setStockModalMode(mode);
     if (row) {
@@ -384,6 +431,31 @@ export function InventoryLedgerPage() {
       )
     }
   ];
+
+  // Live calculation helpers for modal
+  const currentAvailableNum = Number(formData.currentAvailable || 0);
+  const inputQtyNum = parseInt(formData.quantity, 10) || 0;
+  const inputNewAvailNum = formData.newAvailable !== '' ? parseInt(formData.newAvailable, 10) : currentAvailableNum;
+
+  let previewNewCount = currentAvailableNum;
+  let formulaDisplay = '';
+  let previewBadgeClass = 'bg-slate-50 border-slate-200 text-slate-800';
+
+  if (stockModalMode === 'IN') {
+    previewNewCount = currentAvailableNum + inputQtyNum;
+    formulaDisplay = `${currentAvailableNum} current + ${inputQtyNum} incoming = ${previewNewCount} total`;
+    previewBadgeClass = 'bg-emerald-50/80 border-emerald-200 text-emerald-900';
+  } else if (stockModalMode === 'OUT') {
+    previewNewCount = Math.max(0, currentAvailableNum - inputQtyNum);
+    formulaDisplay = `${currentAvailableNum} current - ${inputQtyNum} deduction = ${previewNewCount} remaining`;
+    previewBadgeClass = 'bg-rose-50/80 border-rose-200 text-rose-900';
+  } else {
+    // ADJUST mode
+    const diff = (isNaN(inputNewAvailNum) ? currentAvailableNum : inputNewAvailNum) - currentAvailableNum;
+    previewNewCount = isNaN(inputNewAvailNum) ? currentAvailableNum : inputNewAvailNum;
+    formulaDisplay = `${currentAvailableNum} current → ${previewNewCount} physical audit (${diff >= 0 ? `+${diff}` : diff} adjustment)`;
+    previewBadgeClass = 'bg-blue-50/80 border-blue-200 text-blue-900';
+  }
 
   return (
     <div className="space-y-4">

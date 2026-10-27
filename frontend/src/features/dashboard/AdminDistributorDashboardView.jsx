@@ -2330,7 +2330,7 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <Input
                 label="Selling Price (₹) *"
                 type="number"
@@ -2344,12 +2344,6 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
                 required
                 value={newProductForm.mrp}
                 onChange={(e) => setNewProductForm({ ...newProductForm, mrp: e.target.value })}
-              />
-              <Input
-                label="Cost Price (₹)"
-                type="number"
-                value={newProductForm.costPrice}
-                onChange={(e) => setNewProductForm({ ...newProductForm, costPrice: e.target.value })}
               />
             </div>
 

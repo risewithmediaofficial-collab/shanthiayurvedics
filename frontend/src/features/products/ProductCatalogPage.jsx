@@ -833,7 +833,7 @@ export function ProductCatalogPage() {
                         className="text-[10.5px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5 cursor-pointer"
                         title="Add a custom formulation category manually"
                       >
-                        <Plus className="w-3 h-3" /> + Add New
+                        <Plus className="w-3 h-3" /> Add New
                       </button>
                     </div>
                     <Select
@@ -988,7 +988,7 @@ export function ProductCatalogPage() {
                         className="text-[10.5px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5 cursor-pointer"
                         title="Add a custom formulation category manually"
                       >
-                        <Plus className="w-3 h-3" /> + Add New
+                        <Plus className="w-3 h-3" /> Add New
                       </button>
                     </div>
                     <Select

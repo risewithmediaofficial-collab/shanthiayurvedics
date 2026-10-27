@@ -480,7 +480,7 @@ export function InventoryLedgerPage() {
             Adjust Stock (=)
           </Button>
           <Button variant="primary" icon={Plus} onClick={() => openStockModal('IN')} className="col-span-2 sm:col-auto justify-center text-xs">
-            + Stock In
+            Stock In
           </Button>
         </div>
       </div>

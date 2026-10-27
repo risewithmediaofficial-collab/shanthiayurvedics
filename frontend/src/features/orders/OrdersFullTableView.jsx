@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -139,6 +139,18 @@ export function OrdersFullTableView({
   refetchOrders
 }) {
   const navigate = useNavigate();
+
+  // Safety guard: Telecallers cannot access Full View table. Automatically switch to Card View.
+  const isTelecaller = user?.role === 'TELECALLER';
+  useEffect(() => {
+    if (isTelecaller && onSwitchView) {
+      onSwitchView();
+    }
+  }, [isTelecaller, onSwitchView]);
+
+  if (isTelecaller) {
+    return null;
+  }
 
   // Local state for Full View console
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('');

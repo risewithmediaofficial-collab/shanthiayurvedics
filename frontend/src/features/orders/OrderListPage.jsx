@@ -1,5 +1,5 @@
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -106,6 +106,10 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
   const { hasPermission, isOwner, isManager, isDistributor, role, user } = usePermissions();
   const { selectedBranchId, branches } = useBranch();
 
+  // Full View table is strictly reserved for Manager and Owner. Telecallers are restricted to Card View.
+  const isTelecaller = role === 'TELECALLER' || Boolean(callerId);
+  const canAccessFullView = (isOwner || isManager) && !isTelecaller;
+
   // Filters & Sorting State
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -116,11 +120,30 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [viewMode, setViewModeState] = useState(() => {
-    return searchParams.get('orderView') === 'full' ? 'full' : 'card';
+    return canAccessFullView && searchParams.get('orderView') === 'full' ? 'full' : 'card';
   });
   const [selectedCustomerForProfile, setSelectedCustomerForProfile] = useState(null);
 
+  // Auto-correct viewMode and clean URL if an unauthorized user attempts to open orderView=full
+  useEffect(() => {
+    if (!canAccessFullView) {
+      if (viewMode === 'full') {
+        setViewModeState('card');
+      }
+      if (searchParams.get('orderView') === 'full') {
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('orderView');
+          return next;
+        }, { replace: true });
+      }
+    }
+  }, [canAccessFullView, viewMode, searchParams, setSearchParams]);
+
   const setViewMode = (mode) => {
+    if (mode === 'full' && !canAccessFullView) {
+      return;
+    }
     setViewModeState(mode);
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -566,7 +589,6 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
 
   const isAllSelected = orders.length > 0 && selectedOrderIds.length === orders.length;
 
-  const isTelecaller = role === 'TELECALLER' || Boolean(callerId);
   const activeBranchName = selectedBranchId === 'ALL'
     ? 'All Branches'
     : (branches?.find((b) => (b._id || b.id) === selectedBranchId)?.name || user?.branchName || 'Hosur');
@@ -576,7 +598,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
 
   return (
     <div className="space-y-4 pb-12 font-sans">
-      {viewMode === 'full' ? (
+      {canAccessFullView && viewMode === 'full' ? (
         <OrdersFullTableView
           orders={orders}
           metrics={metrics}
@@ -774,13 +796,15 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
 
       {/* 4. Action Buttons Ribbon */}
       <div className="crm-table-wrap flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1.5 scrollbar-none sm:flex-wrap">
-        <button
-          type="button"
-          onClick={() => setViewMode('full')}
-          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#1b4332] hover:bg-[#143225] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
-        >
-          <span>📋 Full View</span>
-        </button>
+        {canAccessFullView && (
+          <button
+            type="button"
+            onClick={() => setViewMode('full')}
+            className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#1b4332] hover:bg-[#143225] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+          >
+            <span>📋 Full View</span>
+          </button>
+        )}
 
         <button
           type="button"

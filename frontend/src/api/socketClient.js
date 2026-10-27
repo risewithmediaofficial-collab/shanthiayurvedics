@@ -75,7 +75,7 @@ export const initSocket = (token = null) => {
       token: socketToken || undefined,
       requireAuth: false
     },
-    transports: ['polling', 'websocket'],
+    transports: ['websocket', 'polling'],
     upgrade: true,
     reconnection: true,
     reconnectionAttempts: Infinity,

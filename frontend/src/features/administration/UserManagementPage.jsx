@@ -32,6 +32,8 @@ const emptyForm = { name: '', email: '', phone: '', password: '', role: 'TELECAL
 export function UserManagementPage() {
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
+  const user = currentUser;
+  const currentUserId = String(currentUser?._id || currentUser?.id || '');
   const isOwner = currentUser?.role === 'OWNER';
   const isManager = currentUser?.role === 'MANAGER';
   const { availableBranches = [] } = useBranch();
@@ -271,7 +273,7 @@ export function UserManagementPage() {
     onError: (err) => showToast('Error: ' + (err.response?.data?.message || 'Bulk delete failed'))
   });
 
-  const deletableUsers = filteredUsers.filter((u) => u.role !== 'OWNER' && u._id !== user?._id && u._id !== user?.id);
+  const deletableUsers = filteredUsers.filter((u) => u.role !== 'OWNER' && String(u._id) !== currentUserId);
   const isAllSelected = deletableUsers.length > 0 && deletableUsers.every((u) => selectedUserIds.includes(u._id));
 
   const handleSelectAll = (e) => {
@@ -338,7 +340,7 @@ export function UserManagementPage() {
       ),
       className: 'w-10 text-center px-2',
       cell: (row) => {
-        const isDeletable = row.role !== 'OWNER' && row._id !== user?._id && row._id !== user?.id;
+        const isDeletable = row.role !== 'OWNER' && String(row._id) !== currentUserId;
         if (!isDeletable) return <div className="w-4 h-4 mx-auto" />;
         return (
           <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>

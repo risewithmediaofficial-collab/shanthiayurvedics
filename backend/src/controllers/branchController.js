@@ -361,3 +361,36 @@ export const deleteBranch = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, { id: req.params.id, name: branch.name }, 'Branch deleted successfully');
 });
 
+export const bulkDeleteBranches = asyncHandler(async (req, res) => {
+  const { branchIds } = req.body;
+  if (!Array.isArray(branchIds) || branchIds.length === 0) {
+    return ApiResponse.badRequest(res, 'No branch IDs provided for deletion');
+  }
+
+  const branches = await Branch.find({ _id: { $in: branchIds } });
+  const ids = branches.map((b) => b._id);
+
+  if (ids.length > 0) {
+    await Branch.deleteMany({ _id: { $in: ids } });
+    await User.updateMany(
+      { $or: [{ branchId: { $in: ids } }, { branches: { $in: ids } }] },
+      { $unset: { branchId: 1 }, $pull: { branches: { $in: ids } } }
+    );
+
+    for (const b of branches) {
+      await AuditService.log({
+        userId: req.user.id,
+        branchId: b._id,
+        action: 'BRANCH_DELETED',
+        module: 'branches',
+        resourceType: 'Branch',
+        resourceId: b._id,
+        oldValue: b.toObject ? b.toObject() : b,
+        req
+      });
+    }
+  }
+
+  return ApiResponse.success(res, { deletedCount: ids.length }, `Successfully deleted ${ids.length} branches`);
+});
+

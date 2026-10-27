@@ -39,6 +39,8 @@ export function BranchManagementPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedBranchIds, setSelectedBranchIds] = useState([]);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
 
   const [selectedBranchForEdit, setSelectedBranchForEdit] = useState(null);
   const [selectedBranchForDelete, setSelectedBranchForDelete] = useState(null);
@@ -310,6 +312,40 @@ export function BranchManagementPage() {
     }
   });
 
+  // Bulk Delete Branches Mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (branchIds) => apiClient.post('/branches/bulk-delete', { branchIds }),
+    onSuccess: (res, deletedIds) => {
+      if (deletedIds?.includes(selectedBranchId) || deletedIds?.map(String).includes(String(selectedBranchId))) {
+        selectBranch('ALL');
+      }
+      queryClient.invalidateQueries({ queryKey: ['branches'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-distributor-dashboard'] });
+      setSelectedBranchIds([]);
+      setIsBulkDeleteModalOpen(false);
+      showToast(`✓ Successfully deleted ${res.data?.data?.deletedCount ?? selectedBranchIds.length} branches`);
+    },
+    onError: (err) => alert(err.response?.data?.message || 'Failed to bulk delete branches')
+  });
+
+  const isAllSelected = branches.length > 0 && branches.every((b) => selectedBranchIds.includes(b._id));
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedBranchIds(branches.map((b) => b._id));
+    } else {
+      setSelectedBranchIds([]);
+    }
+  };
+
+  const handleToggleSelectBranch = (id) => {
+    setSelectedBranchIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
   const handleOpenEdit = (branch) => {
     setSelectedBranchForEdit(branch);
     setEditFormData({
@@ -348,6 +384,32 @@ export function BranchManagementPage() {
   };
 
   const columns = [
+    {
+      key: 'select',
+      header: (
+        <div className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            checked={isAllSelected}
+            onChange={handleSelectAll}
+            aria-label="Select all branches on this page"
+            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+          />
+        </div>
+      ),
+      className: 'w-10 text-center px-2',
+      cell: (row) => (
+        <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selectedBranchIds.includes(row._id)}
+            onChange={() => handleToggleSelectBranch(row._id)}
+            aria-label={`Select ${row.name}`}
+            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+          />
+        </div>
+      )
+    },
     {
       header: 'Branch & Code',
       cell: (row) => (
@@ -551,6 +613,51 @@ export function BranchManagementPage() {
           </div>
           <div className="text-[11px] text-indigo-600 font-medium">Live for booking & fulfillment</div>
         </div>
+      </div>
+
+      {/* Bulk Operations Toolbar */}
+      <div className={`rounded-xl p-2.5 sm:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs border transition-all ${
+        selectedBranchIds.length > 0
+          ? 'bg-amber-50/90 border-amber-300 shadow-sm ring-1 ring-amber-300'
+          : 'bg-slate-50 border-slate-200'
+      }`}>
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer select-none bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs hover:border-emerald-400">
+            <input
+              type="checkbox"
+              checked={isAllSelected}
+              onChange={handleSelectAll}
+              className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+            />
+            <span>Select All</span>
+          </label>
+          {selectedBranchIds.length > 0 && (
+            <span className="px-2.5 py-1 rounded-full bg-emerald-600 text-white font-bold text-[11px] shadow-2xs animate-in fade-in">
+              {selectedBranchIds.length} Selected
+            </span>
+          )}
+        </div>
+
+        {selectedBranchIds.length > 0 && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedBranchIds([])}
+              className="px-2.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 font-semibold text-xs cursor-pointer"
+            >
+              Deselect All
+            </button>
+            <Button
+              size="sm"
+              variant="danger"
+              icon={Trash2}
+              onClick={() => setIsBulkDeleteModalOpen(true)}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
+            >
+              Delete Selected ({selectedBranchIds.length})
+            </Button>
+          </div>
+        )}
       </div>
 
       <Table
@@ -1221,6 +1328,51 @@ export function BranchManagementPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Bulk Delete Branches Modal */}
+      {isBulkDeleteModalOpen && (
+        <Modal
+          isOpen={isBulkDeleteModalOpen}
+          onClose={() => setIsBulkDeleteModalOpen(false)}
+          title="Confirm Bulk Branch Deletion"
+          subtitle="Permanently remove selected operating branches"
+          maxWidth="max-w-md"
+          icon="⚠️"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-3.5 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-800">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold mb-1">Permanent Bulk Deletion</p>
+                <p>
+                  Are you sure you want to permanently delete <strong>{selectedBranchIds.length}</strong> selected branch(es)? Any staff assigned to these branches will be unassigned.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => setIsBulkDeleteModalOpen(false)}
+                disabled={bulkDeleteMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                type="button"
+                icon={Trash2}
+                isLoading={bulkDeleteMutation.isPending}
+                onClick={() => bulkDeleteMutation.mutate(selectedBranchIds)}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete {selectedBranchIds.length} Branches
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

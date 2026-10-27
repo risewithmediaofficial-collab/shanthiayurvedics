@@ -43,6 +43,8 @@ export function UserManagementPage() {
   const [statusToggleOpen, setStatusToggleOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedUser, setSelectedUser]         = useState(null);
+  const [selectedUserIds, setSelectedUserIds]   = useState([]);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
   const [toast, setToast]                       = useState('');
   const [formData, setFormData]           = useState(() => ({
     ...emptyForm,
@@ -254,6 +256,38 @@ export function UserManagementPage() {
     onError: err => showToast('Error: ' + (err.response?.data?.message || 'Failed to delete staff account'))
   });
 
+  // Bulk Delete Users Mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (userIds) => apiClient.post('/users/bulk-delete', { userIds }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-telecallers'] });
+      queryClient.invalidateQueries({ queryKey: ['telecaller-users-list'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setSelectedUserIds([]);
+      setIsBulkDeleteModalOpen(false);
+      showToast(`✓ Successfully deleted ${res.data?.data?.deletedCount ?? selectedUserIds.length} staff account(s)`);
+    },
+    onError: (err) => showToast('Error: ' + (err.response?.data?.message || 'Bulk delete failed'))
+  });
+
+  const deletableUsers = filteredUsers.filter((u) => u.role !== 'OWNER' && u._id !== user?._id && u._id !== user?.id);
+  const isAllSelected = deletableUsers.length > 0 && deletableUsers.every((u) => selectedUserIds.includes(u._id));
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedUserIds(deletableUsers.map((u) => u._id));
+    } else {
+      setSelectedUserIds([]);
+    }
+  };
+
+  const handleToggleSelectUser = (id) => {
+    setSelectedUserIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
   // Reset password
   const resetMutation = useMutation({
     mutationFn: ({ id, password }) => apiClient.post(`/users/${id}/reset-password`, { password }),
@@ -289,6 +323,36 @@ export function UserManagementPage() {
   };
 
   const columns = [
+    {
+      key: 'select',
+      header: (
+        <div className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            checked={isAllSelected}
+            onChange={handleSelectAll}
+            aria-label="Select all staff on this page"
+            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+          />
+        </div>
+      ),
+      className: 'w-10 text-center px-2',
+      cell: (row) => {
+        const isDeletable = row.role !== 'OWNER' && row._id !== user?._id && row._id !== user?.id;
+        if (!isDeletable) return <div className="w-4 h-4 mx-auto" />;
+        return (
+          <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              checked={selectedUserIds.includes(row._id)}
+              onChange={() => handleToggleSelectUser(row._id)}
+              aria-label={`Select ${row.name}`}
+              className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+            />
+          </div>
+        );
+      }
+    },
     {
       header: 'Staff Member',
       className: 'min-w-[220px]',
@@ -763,6 +827,51 @@ export function UserManagementPage() {
         </div>
       )}
 
+      {/* Bulk Operations Toolbar */}
+      <div className={`rounded-xl p-2.5 sm:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs border transition-all ${
+        selectedUserIds.length > 0
+          ? 'bg-amber-50/90 border-amber-300 shadow-sm ring-1 ring-amber-300'
+          : 'bg-slate-50 border-slate-200'
+      }`}>
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer select-none bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs hover:border-emerald-400">
+            <input
+              type="checkbox"
+              checked={isAllSelected}
+              onChange={handleSelectAll}
+              className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+            />
+            <span>Select All</span>
+          </label>
+          {selectedUserIds.length > 0 && (
+            <span className="px-2.5 py-1 rounded-full bg-emerald-600 text-white font-bold text-[11px] shadow-2xs animate-in fade-in">
+              {selectedUserIds.length} Selected
+            </span>
+          )}
+        </div>
+
+        {selectedUserIds.length > 0 && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedUserIds([])}
+              className="px-2.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 font-semibold text-xs cursor-pointer"
+            >
+              Deselect All
+            </button>
+            <Button
+              size="sm"
+              variant="danger"
+              icon={Trash2}
+              onClick={() => setIsBulkDeleteModalOpen(true)}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
+            >
+              Delete Selected ({selectedUserIds.length})
+            </Button>
+          </div>
+        )}
+      </div>
+
       {/* Users Table */}
       <Table
         columns={columns}
@@ -1041,6 +1150,52 @@ export function UserManagementPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Bulk Delete Users Modal */}
+      {isBulkDeleteModalOpen && (
+        <Modal
+          isOpen={isBulkDeleteModalOpen}
+          onClose={() => setIsBulkDeleteModalOpen(false)}
+          title="Confirm Bulk Staff Deletion"
+          subtitle="Permanently remove selected staff accounts and log out all their active sessions"
+          maxWidth="max-w-md"
+          icon="⚠️"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-3.5 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-800">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold mb-1">Permanent Bulk Account Removal</p>
+                <p>
+                  Are you sure you want to permanently delete <strong>{selectedUserIds.length}</strong> selected staff account(s)?
+                  All active sessions will be terminated immediately.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => setIsBulkDeleteModalOpen(false)}
+                disabled={bulkDeleteMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                type="button"
+                icon={Trash2}
+                isLoading={bulkDeleteMutation.isPending}
+                onClick={() => bulkDeleteMutation.mutate(selectedUserIds)}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete {selectedUserIds.length} Accounts
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

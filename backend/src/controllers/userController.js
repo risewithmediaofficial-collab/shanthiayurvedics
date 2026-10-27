@@ -339,3 +339,41 @@ export const deleteUser = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, null, 'Staff account permanently deleted');
 });
 
+export const bulkDeleteUsers = asyncHandler(async (req, res) => {
+  const { userIds } = req.body;
+  if (!Array.isArray(userIds) || userIds.length === 0) {
+    return ApiResponse.badRequest(res, 'No user IDs provided for deletion');
+  }
+
+  const usersToDelete = await User.find({ _id: { $in: userIds } });
+  const idsToDelete = [];
+
+  for (const user of usersToDelete) {
+    if (user.role === 'OWNER') continue;
+    if (req.user.id === user._id.toString()) continue;
+
+    try {
+      assertUserBranchAccess(user, req.user, req);
+    } catch {
+      continue;
+    }
+
+    await AuthService.logoutAllDevices(user._id);
+    await User.findByIdAndDelete(user._id);
+    idsToDelete.push(user._id);
+
+    await AuditService.log({
+      userId: req.user.id,
+      branchId: user.branchId,
+      action: 'USER_DELETED',
+      module: 'users',
+      resourceType: 'User',
+      resourceId: user._id,
+      oldValue: { name: user.name, email: user.email, role: user.role, phone: user.phone },
+      req
+    });
+  }
+
+  return ApiResponse.success(res, { deletedCount: idsToDelete.length }, `Successfully deleted ${idsToDelete.length} staff accounts`);
+});
+

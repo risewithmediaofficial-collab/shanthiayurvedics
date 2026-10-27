@@ -251,6 +251,36 @@ export const deleteProduct = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, null, 'Product and its stock removed successfully');
 });
 
+export const bulkDeleteProducts = asyncHandler(async (req, res) => {
+  const { productIds } = req.body;
+  if (!Array.isArray(productIds) || productIds.length === 0) {
+    return ApiResponse.badRequest(res, 'No product IDs provided for deletion');
+  }
+
+  const products = await Product.find({ _id: { $in: productIds } });
+  const ids = products.map((p) => p._id);
+
+  if (ids.length > 0) {
+    await Product.updateMany({ _id: { $in: ids } }, { $set: { isActive: false } });
+    await Inventory.deleteMany({ productId: { $in: ids } });
+    await ProductBatch.deleteMany({ productId: { $in: ids } });
+
+    for (const p of products) {
+      await AuditService.log({
+        userId: req.user.id,
+        action: 'PRODUCT_DELETED',
+        module: 'products',
+        resourceType: 'Product',
+        resourceId: p._id,
+        req
+      });
+      emitToAll('product:deleted', { productId: p._id });
+    }
+  }
+
+  return ApiResponse.success(res, { deletedCount: ids.length }, `Successfully deleted ${ids.length} products`);
+});
+
 export const getCategories = asyncHandler(async (req, res) => {
   // If no categories in DB, seed standard defaults
   const count = await ProductCategory.countDocuments();

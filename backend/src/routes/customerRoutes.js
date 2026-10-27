@@ -10,7 +10,8 @@ import {
   convertLead,
   addCustomerAddress,
   updateCustomer,
-  deleteCustomer
+  deleteCustomer,
+  bulkDeleteCustomers
 } from '../controllers/customerController.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
@@ -21,6 +22,10 @@ const router = Router();
 
 router.use(authenticate);
 router.use(requireBranchScope);
+
+// Bulk routes (must be before :id)
+router.post('/bulk-delete', requirePermission(PERMISSIONS.CUSTOMERS_EDIT), bulkDeleteCustomers);
+router.delete('/bulk-delete', requirePermission(PERMISSIONS.CUSTOMERS_EDIT), bulkDeleteCustomers);
 
 // Dedicated reorder and phone lookup routes (defined before :id to prevent collision)
 router.get('/reorders-due', requirePermission(PERMISSIONS.CUSTOMERS_VIEW), getReordersDue);

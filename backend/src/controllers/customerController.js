@@ -131,6 +131,30 @@ export const deleteCustomer = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, null, 'Customer deleted successfully');
 });
 
+export const bulkDeleteCustomers = asyncHandler(async (req, res) => {
+  const { customerIds } = req.body;
+  if (!Array.isArray(customerIds) || customerIds.length === 0) {
+    return ApiResponse.badRequest(res, 'No customer IDs provided for deletion');
+  }
+
+  const query = { _id: { $in: customerIds } };
+  if (!req.branchScope?.isGlobal && req.branchScope?.branchId) {
+    query.branchId = req.branchScope.branchId;
+  }
+
+  const customersToDelete = await Customer.find(query).lean();
+  const idsToDelete = customersToDelete.map((c) => c._id);
+
+  if (idsToDelete.length > 0) {
+    await Customer.deleteMany({ _id: { $in: idsToDelete } });
+    for (const c of customersToDelete) {
+      emitToBranch(c.branchId?.toString?.() || null, 'customer:deleted', { customerId: c._id });
+    }
+  }
+
+  return ApiResponse.success(res, { deletedCount: idsToDelete.length }, `Successfully deleted ${idsToDelete.length} customers`);
+});
+
 export const getCustomerByPhone = asyncHandler(async (req, res) => {
   const timeline = await CustomerService.getCustomerByPhone(req.params.phone);
   if (!timeline) {

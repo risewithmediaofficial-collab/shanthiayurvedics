@@ -73,6 +73,8 @@ export function LeadListPage({ callerId } = {}) {
   const [activeLead, setActiveLead] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedLeadIds, setSelectedLeadIds] = useState([]);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
   const [leadToEdit, setLeadToEdit] = useState(null);
   const [leadToDelete, setLeadToDelete] = useState(null);
   const [editFormData, setEditFormData] = useState({
@@ -277,6 +279,39 @@ export function LeadListPage({ callerId } = {}) {
     }
   });
 
+  // Bulk Delete Leads Mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (leadIds) => apiClient.post('/leads/bulk-delete', { leadIds }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setSelectedLeadIds([]);
+      setIsBulkDeleteModalOpen(false);
+      setLeadActionMsg(`✓ Successfully deleted ${res.data?.data?.deletedCount ?? selectedLeadIds.length} leads`);
+      setTimeout(() => setLeadActionMsg(''), 3000);
+    },
+    onError: (err) => {
+      setLeadActionMsg(`⚠ ${err.response?.data?.message || 'Failed to bulk delete leads'}`);
+      setTimeout(() => setLeadActionMsg(''), 4000);
+    }
+  });
+
+  const isAllSelected = leads.length > 0 && leads.every((l) => selectedLeadIds.includes(l._id));
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedLeadIds(leads.map((l) => l._id));
+    } else {
+      setSelectedLeadIds([]);
+    }
+  };
+
+  const handleToggleSelectLead = (id) => {
+    setSelectedLeadIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
   const handleDuplicateCheck = async (mobile) => {
     if (mobile.length >= 10) {
       try {
@@ -373,6 +408,32 @@ export function LeadListPage({ callerId } = {}) {
   };
 
   const columns = [
+    {
+      key: 'select',
+      header: (
+        <div className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            checked={isAllSelected}
+            onChange={handleSelectAll}
+            aria-label="Select all leads on this page"
+            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+          />
+        </div>
+      ),
+      className: 'w-10 text-center px-2',
+      cell: (row) => (
+        <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selectedLeadIds.includes(row._id)}
+            onChange={() => handleToggleSelectLead(row._id)}
+            aria-label={`Select ${row.name}`}
+            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+          />
+        </div>
+      )
+    },
     {
       header: 'Lead Name & Contact',
       cell: (row) => (
@@ -779,6 +840,51 @@ export function LeadListPage({ callerId } = {}) {
             </button>
           )}
         </div>
+      </div>
+
+      {/* Bulk Operations Toolbar */}
+      <div className={`rounded-xl p-2.5 sm:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs border transition-all ${
+        selectedLeadIds.length > 0
+          ? 'bg-amber-50/90 border-amber-300 shadow-sm ring-1 ring-amber-300'
+          : 'bg-slate-50 border-slate-200'
+      }`}>
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer select-none bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs hover:border-emerald-400">
+            <input
+              type="checkbox"
+              checked={isAllSelected}
+              onChange={handleSelectAll}
+              className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+            />
+            <span>Select All</span>
+          </label>
+          {selectedLeadIds.length > 0 && (
+            <span className="px-2.5 py-1 rounded-full bg-emerald-600 text-white font-bold text-[11px] shadow-2xs animate-in fade-in">
+              {selectedLeadIds.length} Selected
+            </span>
+          )}
+        </div>
+
+        {selectedLeadIds.length > 0 && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedLeadIds([])}
+              className="px-2.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 font-semibold text-xs cursor-pointer"
+            >
+              Deselect All
+            </button>
+            <Button
+              size="sm"
+              variant="danger"
+              icon={Trash2}
+              onClick={() => setIsBulkDeleteModalOpen(true)}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
+            >
+              Delete Selected ({selectedLeadIds.length})
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Table - horizontally scrollable on mobile */}
@@ -1282,6 +1388,48 @@ export function LeadListPage({ callerId } = {}) {
           }}
         />
       )}
+
+      {/* Bulk Delete Leads Modal */}
+      <Modal
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => setIsBulkDeleteModalOpen(false)}
+        title="Confirm Bulk Deletion"
+        subtitle="This action will permanently delete multiple leads"
+        maxWidth="max-w-md"
+        icon="⚠️"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-3.5 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-800">
+            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold mb-1">Permanent Bulk Deletion</p>
+              <p>
+                Are you sure you want to permanently delete <strong>{selectedLeadIds.length}</strong> selected lead(s)? This action cannot be undone.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => setIsBulkDeleteModalOpen(false)}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              type="button"
+              icon={Trash2}
+              isLoading={bulkDeleteMutation.isPending}
+              onClick={() => bulkDeleteMutation.mutate(selectedLeadIds)}
+            >
+              Delete {selectedLeadIds.length} Leads
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

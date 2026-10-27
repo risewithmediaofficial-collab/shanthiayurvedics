@@ -78,6 +78,8 @@ export function CustomerListPage({ callerId, hideHeader = false }) {
   const [customerForOrder, setCustomerForOrder] = useState(null);
   const [customerToEdit, setCustomerToEdit] = useState(null);
   const [customerToDelete, setCustomerToDelete] = useState(null);
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState([]);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
   const [actionMsg, setActionMsg] = useState('');
 
   const [editFormData, setEditFormData] = useState({
@@ -181,6 +183,38 @@ export function CustomerListPage({ callerId, hideHeader = false }) {
   const customers = Array.isArray(customerResponse?.data) ? customerResponse?.data : [];
   const meta = customerResponse?.pagination || customerResponse?.meta || { page: 1, totalPages: 1, total: 0 };
 
+  // Bulk Delete Mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (customerIds) => apiClient.post('/customers/bulk-delete', { customerIds }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      setSelectedCustomerIds([]);
+      setIsBulkDeleteModalOpen(false);
+      setActionMsg(`✓ Successfully deleted ${res.data?.data?.deletedCount ?? selectedCustomerIds.length} customers`);
+      setTimeout(() => setActionMsg(''), 3000);
+    },
+    onError: (err) => {
+      setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to bulk delete customers'}`);
+      setTimeout(() => setActionMsg(''), 4000);
+    }
+  });
+
+  const isAllSelected = customers.length > 0 && customers.every((c) => selectedCustomerIds.includes(c._id));
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedCustomerIds(customers.map((c) => c._id));
+    } else {
+      setSelectedCustomerIds([]);
+    }
+  };
+
+  const handleToggleSelectCustomer = (id) => {
+    setSelectedCustomerIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
   const handleOpenWhatsApp = (customer) => {
     const cleanMobile = (customer.mobile || '').replace(/\D/g, '').slice(-10);
     if (!cleanMobile) return;
@@ -259,6 +293,32 @@ export function CustomerListPage({ callerId, hideHeader = false }) {
 
   // Desktop Table Columns
   const columns = [
+    {
+      key: 'select',
+      header: (
+        <div className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            checked={isAllSelected}
+            onChange={handleSelectAll}
+            aria-label="Select all customers on this page"
+            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+          />
+        </div>
+      ),
+      className: 'w-10 text-center px-2',
+      cell: (row) => (
+        <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selectedCustomerIds.includes(row._id)}
+            onChange={() => handleToggleSelectCustomer(row._id)}
+            aria-label={`Select ${row.name}`}
+            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+          />
+        </div>
+      )
+    },
     {
       header: 'Customer Details',
       cell: (row) => {
@@ -776,6 +836,51 @@ export function CustomerListPage({ callerId, hideHeader = false }) {
       {/* Table & Mobile Cards for Active Tab */}
       {activeTab === 'all' ? (
         <>
+          {/* Bulk Operations Toolbar */}
+          <div className={`rounded-xl p-2.5 sm:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs border transition-all ${
+            selectedCustomerIds.length > 0
+              ? 'bg-amber-50/90 border-amber-300 shadow-sm ring-1 ring-amber-300'
+              : 'bg-slate-50 border-slate-200'
+          }`}>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer select-none bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs hover:border-emerald-400">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  onChange={handleSelectAll}
+                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                />
+                <span>Select All</span>
+              </label>
+              {selectedCustomerIds.length > 0 && (
+                <span className="px-2.5 py-1 rounded-full bg-emerald-600 text-white font-bold text-[11px] shadow-2xs animate-in fade-in">
+                  {selectedCustomerIds.length} Selected
+                </span>
+              )}
+            </div>
+
+            {selectedCustomerIds.length > 0 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCustomerIds([])}
+                  className="px-2.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 font-semibold text-xs cursor-pointer"
+                >
+                  Deselect All
+                </button>
+                <Button
+                  size="sm"
+                  variant="danger"
+                  icon={Trash2}
+                  onClick={() => setIsBulkDeleteModalOpen(true)}
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
+                >
+                  Delete Selected ({selectedCustomerIds.length})
+                </Button>
+              </div>
+            )}
+          </div>
+
           {/* Desktop & Tablet Table View */}
           <div className="hidden md:block">
             <Table
@@ -801,11 +906,20 @@ export function CustomerListPage({ callerId, hideHeader = false }) {
               customers.map((c) => {
                 const initials = getInitials(c.name);
                 const addr = c.addresses?.[0];
+                const isSelected = selectedCustomerIds.includes(c._id);
                 return (
-                  <div key={c._id} className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-3.5 space-y-3">
+                  <div key={c._id} className={`bg-white rounded-2xl border transition-all p-3.5 space-y-3 ${
+                    isSelected ? 'border-emerald-600 bg-emerald-50/10 ring-1 ring-emerald-500' : 'border-slate-200/90 shadow-2xs'
+                  }`}>
                     {/* Top Row: Avatar + Name + Branch */}
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelectCustomer(c._id)}
+                          className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
+                        />
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-50 border border-emerald-200 text-emerald-800 font-bold flex items-center justify-center text-xs shrink-0">
                           {initials}
                         </div>
@@ -1167,6 +1281,49 @@ export function CustomerListPage({ callerId, hideHeader = false }) {
           </div>
         </Modal>
       )}
+
+      {/* Bulk Delete Customers Modal */}
+      <Modal
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => setIsBulkDeleteModalOpen(false)}
+        title="Confirm Bulk Customer Deletion"
+        subtitle="This action will permanently remove multiple customer records"
+        maxWidth="max-w-md"
+        icon="⚠️"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-3.5 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-800">
+            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold mb-1">Permanent Bulk Deletion</p>
+              <p>
+                Are you sure you want to permanently delete <strong>{selectedCustomerIds.length}</strong> selected customer(s)? This action cannot be undone.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => setIsBulkDeleteModalOpen(false)}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              type="button"
+              icon={Trash2}
+              isLoading={bulkDeleteMutation.isPending}
+              onClick={() => bulkDeleteMutation.mutate(selectedCustomerIds)}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete {selectedCustomerIds.length} Customers
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Customer Profile Modal with complete order history & 15-day reorder alert */}
       {selectedCustomerForProfile && (

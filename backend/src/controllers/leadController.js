@@ -288,6 +288,47 @@ export const bulkAssignLeads = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, result, `Assigned ${result.assignedCount} leads successfully`);
 });
 
+export const bulkDeleteLeads = asyncHandler(async (req, res) => {
+  const { leadIds } = req.body;
+  if (!Array.isArray(leadIds) || leadIds.length === 0) {
+    throw new AppError('No lead IDs provided for deletion', 400);
+  }
+
+  const query = { _id: { $in: leadIds } };
+  if (!req.branchScope.isGlobal && req.branchScope.branchId) {
+    query.branchId = req.branchScope.branchId;
+  }
+  if (req.user.role === ROLES.TELECALLER) {
+    query.assignedTo = req.user.id;
+  }
+
+  const leadsToDelete = await Lead.find(query).lean();
+  const idsToDelete = leadsToDelete.map((l) => l._id);
+
+  if (idsToDelete.length > 0) {
+    await Lead.deleteMany({ _id: { $in: idsToDelete } });
+
+    for (const lead of leadsToDelete) {
+      await AuditService.log({
+        userId: req.user.id,
+        branchId: lead.branchId,
+        action: 'LEAD_DELETED',
+        module: 'leads',
+        resourceType: 'Lead',
+        resourceId: lead._id,
+        oldValue: lead,
+        req
+      });
+      emitToBranch(lead.branchId ? lead.branchId.toString() : '', 'lead:deleted', {
+        leadId: lead._id,
+        branchId: lead.branchId
+      });
+    }
+  }
+
+  return ApiResponse.success(res, { deletedCount: idsToDelete.length }, `Successfully deleted ${idsToDelete.length} leads`);
+});
+
 export const getCallHistory = asyncHandler(async (req, res) => {
   const { page, limit } = pagination(req.query);
   const query = recordScope(req.user, req, 'telecallerId');

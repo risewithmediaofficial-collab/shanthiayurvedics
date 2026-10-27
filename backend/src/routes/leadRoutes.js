@@ -10,6 +10,7 @@ import {
   logCall,
   assignLead,
   bulkAssignLeads,
+  bulkDeleteLeads,
   getCallHistory,
   getLeadCalls
 } from '../controllers/leadController.js';
@@ -29,12 +30,17 @@ const router = Router();
 
 router.use(authenticate);
 router.use(requireBranchScope);
+
+// Bulk routes (must be before :id param)
+router.post('/bulk-assign', requirePermission(PERMISSIONS.LEADS_ASSIGN), bulkAssignLeads);
+router.post('/bulk-delete', requirePermission(PERMISSIONS.LEADS_EDIT), bulkDeleteLeads);
+router.delete('/bulk-delete', requirePermission(PERMISSIONS.LEADS_EDIT), bulkDeleteLeads);
+
 router.param('id', scopeRecord(Lead, 'assignedTo'));
 
 router.get('/', requirePermission(PERMISSIONS.LEADS_VIEW), getLeads);
 router.get('/calls/history', requirePermission(PERMISSIONS.LEADS_VIEW), getCallHistory);
 router.post('/', requirePermission(PERMISSIONS.LEADS_CREATE), validate(createLeadSchema), createLead);
-router.post('/bulk-assign', requirePermission(PERMISSIONS.LEADS_ASSIGN), bulkAssignLeads);
 router.get('/:id', requirePermission(PERMISSIONS.LEADS_VIEW), getLeadById);
 router.get('/:id/calls', requirePermission(PERMISSIONS.LEADS_VIEW), getLeadCalls);
 router.patch('/:id', requirePermission(PERMISSIONS.LEADS_EDIT), validate(updateLeadSchema), updateLead);

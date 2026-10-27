@@ -5,6 +5,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  bulkDeleteProducts,
   addBatch,
   getCategories,
   createCategory,
@@ -20,6 +21,10 @@ const router = Router();
 
 router.use(authenticate);
 router.use(requireBranchScope);
+
+// Bulk product deletion (must be before :id)
+router.post('/bulk-delete', requireRole(ROLES.OWNER), bulkDeleteProducts);
+router.delete('/bulk-delete', requireRole(ROLES.OWNER), bulkDeleteProducts);
 
 router.get('/categories', requirePermission(PERMISSIONS.PRODUCTS_VIEW), getCategories);
 router.post('/categories', requireRole(ROLES.OWNER), createCategory);

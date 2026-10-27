@@ -6,7 +6,8 @@ import {
   updateUser,
   toggleUserStatus,
   adminResetPassword,
-  deleteUser
+  deleteUser,
+  bulkDeleteUsers
 } from '../controllers/userController.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
@@ -23,6 +24,10 @@ const router = Router();
 
 router.use(authenticate);
 router.use(requireBranchScope);
+
+// Bulk user deletion (must be before :id)
+router.post('/bulk-delete', requirePermission(PERMISSIONS.USERS_EDIT), bulkDeleteUsers);
+router.delete('/bulk-delete', requirePermission(PERMISSIONS.USERS_EDIT), bulkDeleteUsers);
 
 router.get('/', requirePermission(PERMISSIONS.USERS_VIEW), getUsers);
 router.post('/', requirePermission(PERMISSIONS.USERS_CREATE), validate(createUserSchema), createUser);

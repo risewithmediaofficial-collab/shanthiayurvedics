@@ -4,7 +4,8 @@ import {
   getAllBranchesAdmin,
   createBranch,
   updateBranch,
-  deleteBranch
+  deleteBranch,
+  bulkDeleteBranches
 } from '../controllers/branchController.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
@@ -21,6 +22,8 @@ router.get('/', getBranches);
 
 // Admin Branch Management
 router.get('/admin', requirePermission(PERMISSIONS.BRANCHES_MANAGE), getAllBranchesAdmin);
+router.post('/bulk-delete', requirePermission(PERMISSIONS.BRANCHES_MANAGE), bulkDeleteBranches);
+router.delete('/bulk-delete', requirePermission(PERMISSIONS.BRANCHES_MANAGE), bulkDeleteBranches);
 router.post('/', requirePermission(PERMISSIONS.BRANCHES_MANAGE), validate(createBranchSchema), createBranch);
 router.patch('/:id', requirePermission(PERMISSIONS.BRANCHES_MANAGE), updateBranch);
 router.put('/:id', requirePermission(PERMISSIONS.BRANCHES_MANAGE), updateBranch);

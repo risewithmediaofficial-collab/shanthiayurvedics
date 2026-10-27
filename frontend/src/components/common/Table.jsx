@@ -50,7 +50,7 @@ export function Table({
                     col.align === 'center' && 'text-center'
                   )}
                 >
-                  {col.header}
+                  {typeof col.header === 'function' ? col.header() : col.header}
                 </th>
               ))}
             </tr>

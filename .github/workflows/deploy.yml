@@ -139,11 +139,33 @@ jobs:
               echo "TPC_COD_ENABLED=false" >> .env
             fi
 
-            # 6. Stop and remove conflicting legacy containers and clear ports 8087 and 89
-            echo "🛑 Stopping and cleaning up any existing conflicting containers..."
-            docker stop shanthi_frontend shanthi_backend shanthi_mongodb 2>/dev/null || true
-            docker rm -f shanthi_frontend shanthi_backend shanthi_mongodb 2>/dev/null || true
+            # Error trap: If any failure happens during build or deployment, ensure Maintenance Mode stays up so users never get a raw 502 Bad Gateway
+            trap '
+              echo "⚠️ Deployment encountered an issue! Ensuring Maintenance Mode is active so users do not see 502..."
+              if ! docker ps --filter "name=shanthi_maintenance" --filter "status=running" | grep -q shanthi_maintenance; then
+                for port in 8087 89; do
+                  pids=$(docker ps -q --filter "publish=$port")
+                  if [ -n "$pids" ]; then
+                    docker stop $pids 2>/dev/null || true
+                    docker rm -f $pids 2>/dev/null || true
+                  fi
+                done
+                docker run -d --name shanthi_maintenance --restart always \
+                  -p 8087:80 -p 89:80 \
+                  -v "$DEPLOY_DIR/maintenance/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
+                  -v "$DEPLOY_DIR/maintenance/maintenance.html:/usr/share/nginx/html/maintenance.html:ro" \
+                  nginx:alpine 2>/dev/null || true
+              fi
+            ' ERR
 
+            # 6. Activate Maintenance Mode immediately on ports 8087 & 89
+            echo "🚧 Step 6: Activating Maintenance Mode on ports 8087 & 89..."
+            # Pre-pull nginx:alpine if not present so startup is sub-second
+            docker pull nginx:alpine >/dev/null 2>&1 || true
+
+            # Free ports 8087 and 89 from the old frontend
+            docker stop shanthi_frontend 2>/dev/null || true
+            docker rm -f shanthi_frontend 2>/dev/null || true
             for port in 8087 89; do
               pids=$(docker ps -q --filter "publish=$port")
               if [ -n "$pids" ]; then
@@ -153,30 +175,72 @@ jobs:
               fi
             done
 
-            $DC down --remove-orphans 2>/dev/null || true
+            # Launch lightweight maintenance container immediately
+            docker rm -f shanthi_maintenance 2>/dev/null || true
+            docker run -d --name shanthi_maintenance --restart always \
+              -p 8087:80 -p 89:80 \
+              -v "$DEPLOY_DIR/maintenance/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
+              -v "$DEPLOY_DIR/maintenance/maintenance.html:/usr/share/nginx/html/maintenance.html:ro" \
+              nginx:alpine
 
-            # 7. Force rebuild without cache so the new Vite bundle is generated
-            echo "🔨 Building Docker images with --no-cache..."
+            echo "✅ Maintenance Mode is LIVE on ports 8087 and 89. Visitors will see the Under Maintenance screen."
+
+            # 7. Force rebuild without cache while maintenance mode is safely serving visitors
+            echo "🔨 Step 7: Building fresh Docker images with --no-cache..."
             $DC build --no-cache
 
-            # 8. Start up all containers with healthy dependency waiting
-            echo "🚀 Starting new containers..."
-            if ! $DC up -d --force-recreate; then
-              echo "⚠️ Startup issue encountered. Outputting container logs for inspection:"
+            # 8. Start up database and backend services
+            echo "🚀 Step 8: Starting backend and database containers..."
+            $DC up -d mongodb backend
+
+            # 9. Verify backend health before cutting over
+            echo "⏳ Step 9: Waiting for backend service to become healthy..."
+            BACKEND_HEALTHY=false
+            for i in $(seq 1 40); do
+              STATUS=$(docker inspect --format='{{json .State.Health.Status}}' shanthi_backend 2>/dev/null || echo '"starting"')
+              if [ "$STATUS" = '"healthy"' ]; then
+                echo "✅ Backend service is healthy and ready to serve!"
+                BACKEND_HEALTHY=true
+                break
+              fi
+              echo "Waiting for backend health ($i/40, status: $STATUS)..."
+              sleep 2
+            done
+
+            # 10. Switch from Maintenance Mode to Production Frontend
+            echo "✨ Step 10: Seamless switchover: Removing maintenance container and starting production frontend..."
+            docker stop shanthi_maintenance 2>/dev/null || true
+            docker rm -f shanthi_maintenance 2>/dev/null || true
+
+            for port in 8087 89; do
+              pids=$(docker ps -q --filter "publish=$port")
+              if [ -n "$pids" ]; then
+                docker stop $pids 2>/dev/null || true
+                docker rm -f $pids 2>/dev/null || true
+              fi
+            done
+
+            if ! $DC up -d --force-recreate frontend; then
+              echo "⚠️ Frontend startup issue encountered. Restoring maintenance container for safety:"
+              docker run -d --name shanthi_maintenance --restart always \
+                -p 8087:80 -p 89:80 \
+                -v "$DEPLOY_DIR/maintenance/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
+                -v "$DEPLOY_DIR/maintenance/maintenance.html:/usr/share/nginx/html/maintenance.html:ro" \
+                nginx:alpine 2>/dev/null || true
               $DC logs --tail 50 backend 2>/dev/null || true
-              $DC logs --tail 50 mongodb 2>/dev/null || true
+              $DC logs --tail 50 frontend 2>/dev/null || true
               exit 1
             fi
 
-            # 9. Clean up dangling images to keep VPS disk healthy
-            echo "🧹 Pruning unused images..."
+            # 11. Clean up dangling images to keep VPS disk healthy
+            echo "🧹 Step 11: Pruning unused images..."
             docker image prune -f
 
-            # 10. Verify that services are up and healthy
-            echo "📋 Checking container status:"
-            sleep 5
+            # 12. Verify that services are up and healthy
+            echo "📋 Step 12: Final container status verification:"
+            sleep 3
             $DC ps
 
             echo "=================================================="
-            echo "✅ Deployment Successful and Verified!"
+            echo "✅ Deployment Successful! Shanthi CRM is Online!"
             echo "=================================================="

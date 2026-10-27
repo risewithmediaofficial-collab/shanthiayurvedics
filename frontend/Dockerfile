@@ -24,6 +24,9 @@ FROM nginx:alpine
 # Copy built distribution files to Nginx webroot
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 
+# Copy maintenance page for graceful 502/503/504 fallback
+COPY maintenance/maintenance.html /usr/share/nginx/html/maintenance.html
+
 # Copy Nginx proxy configuration
 COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
 

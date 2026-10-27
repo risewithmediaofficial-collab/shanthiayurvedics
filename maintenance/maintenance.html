@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Maintenance & Upgrades | Shanthi Ayurvedas CRM</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23047857'/%3E%3Cpath d='M16 44c16 1 27-8 32-25-16 0-29 8-32 25Z' fill='%23d1fae5'/%3E%3Cpath d='M17 47c9-12 18-18 30-24' fill='none' stroke='%23064e3b' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 15% 15%, #ecfdf5 0%, #f0fdf4 35%, #e6f4ea 70%, #d1fae5 100%);
+      color: #1e293b;
+      padding: 24px;
+      line-height: 1.5;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Subtle background ambient decorations */
+    .bg-blob-1 {
+      position: absolute;
+      top: -10%;
+      left: -5%;
+      width: 480px;
+      height: 480px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0) 70%);
+      pointer-events: none;
+    }
+    .bg-blob-2 {
+      position: absolute;
+      bottom: -10%;
+      right: -5%;
+      width: 520px;
+      height: 520px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(217, 119, 6, 0.12) 0%, rgba(217, 119, 6, 0) 70%);
+      pointer-events: none;
+    }
+
+    .maintenance-card {
+      position: relative;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 24px;
+      box-shadow: 0 20px 45px -10px rgba(6, 78, 59, 0.14), 0 8px 16px -6px rgba(6, 78, 59, 0.08);
+      max-width: 620px;
+      width: 100%;
+      padding: 44px 36px 36px;
+      text-align: center;
+      z-index: 10;
+    }
+
+    .brand-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .lotus-badge {
+      width: 68px;
+      height: 68px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #047857 0%, #064e3b 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 20px -5px rgba(4, 120, 87, 0.35);
+      margin-bottom: 16px;
+    }
+
+    .lotus-badge svg {
+      width: 40px;
+      height: 40px;
+    }
+
+    .brand-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: #064e3b;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .brand-subtitle {
+      font-size: 13px;
+      font-weight: 600;
+      color: #059669;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      color: #92400e;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12.5px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      letter-spacing: 0.3px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f59e0b;
+      box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+      animation: pulse-dot 1.8s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+      }
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 750;
+      color: #0f172a;
+      line-height: 1.3;
+      margin-bottom: 12px;
+      letter-spacing: -0.3px;
+    }
+
+    p.description {
+      font-size: 14.5px;
+      color: #475569;
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+
+    /* Animated Progress Bar */
+    .progress-wrapper {
+      background: #f1f5f9;
+      height: 10px;
+      border-radius: 9999px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 28px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #059669 0%, #10b981 50%, #34d399 100%);
+      border-radius: 9999px;
+      animation: indeterminate 2s infinite ease-in-out;
+      transform-origin: 0% 50%;
+    }
+
+    @keyframes indeterminate {
+      0% {
+        transform: translateX(-100%) scaleX(0.2);
+      }
+      50% {
+        transform: translateX(0%) scaleX(0.7);
+      }
+      100% {
+        transform: translateX(100%) scaleX(0.2);
+      }
+    }
+
+    /* Pipeline Status Grid */
+    .pipeline-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 28px;
+      text-align: left;
+    }
+
+    @media (max-width: 540px) {
+      .pipeline-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .maintenance-card {
+        padding: 32px 20px 24px;
+      }
+    }
+
+    .pipeline-step {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .pipeline-step.completed {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+    }
+
+    .pipeline-step.active {
+      background: #fffbeb;
+      border-color: #fde68a;
+      box-shadow: 0 4px 10px rgba(245, 158, 11, 0.1);
+    }
+
+    .step-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pipeline-step.completed .step-title {
+      color: #047857;
+    }
+
+    .pipeline-step.active .step-title {
+      color: #b45309;
+    }
+
+    .step-desc {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Auto Reload Widget */
+    .reconnect-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .reconnect-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2.5px solid #cbd5e1;
+      border-top-color: #059669;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .reconnect-text {
+      font-size: 13px;
+      color: #475569;
+    }
+
+    .reconnect-text strong {
+      color: #0f172a;
+    }
+
+    .btn-reconnect {
+      background: #047857;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-reconnect:hover {
+      background: #065f46;
+    }
+
+    .btn-reconnect:active {
+      transform: translateY(1px);
+    }
+
+    .footer-note {
+      font-size: 12px;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .footer-note a {
+      color: #059669;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .footer-note a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-blob-1"></div>
+  <div class="bg-blob-2"></div>
+
+  <div class="maintenance-card">
+    <div class="brand-header">
+      <div class="lotus-badge">
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M32 10C32 10 24 22 24 34C24 42 27.5 48 32 50C36.5 48 40 42 40 34C40 22 32 10 32 10Z" fill="#d1fae5"/>
+          <path d="M32 20C32 20 18 28 14 38C12 43 14 47 18 49C24 51 29 44 32 38" fill="#a7f3d0"/>
+          <path d="M32 20C32 20 46 28 50 38C52 43 50 47 46 49C40 51 35 44 32 38" fill="#a7f3d0"/>
+          <path d="M18 49C22 52 27 54 32 54C37 54 42 52 46 49" stroke="#047857" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="brand-title">Shanthi Ayurvedas</div>
+      <div class="brand-subtitle">Enterprise Healthcare CRM</div>
+    </div>
+
+    <div class="status-pill">
+      <div class="status-dot"></div>
+      <span>SYSTEM UPGRADE IN PROGRESS</span>
+    </div>
+
+    <h1>We Are Upgrading Your CRM</h1>
+    <p class="description">
+      We are actively deploying the latest system enhancements, performance improvements, and real-time ledger updates. All active orders and patient records are secure.
+    </p>
+
+    <div class="progress-wrapper">
+      <div class="progress-bar"></div>
+    </div>
+
+    <div class="pipeline-grid">
+      <div class="pipeline-step completed">
+        <span class="step-title">Step 1</span>
+        <span class="step-desc">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="#059669">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+          </svg>
+          Code Sync
+        </span>
+      </div>
+
+      <div class="pipeline-step active">
+        <span class="step-title">Step 2</span>
+        <span class="step-desc">
+          <span class="status-dot" style="width: 7px; height: 7px;"></span>
+          Deploying Build
+        </span>
+      </div>
+
+      <div class="pipeline-step">
+        <span class="step-title">Step 3</span>
+        <span class="step-desc">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="#94a3b8">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+          </svg>
+          Restoring CRM
+        </span>
+      </div>
+    </div>
+
+    <div class="reconnect-card">
+      <div class="reconnect-info">
+        <div class="spinner" id="reconnectSpinner"></div>
+        <div class="reconnect-text">
+          <span id="reconnectStatus">Auto-reconnecting in <strong id="countdown">3</strong>s...</span>
+        </div>
+      </div>
+      <button class="btn-reconnect" id="reconnectBtn" onclick="checkServer(true)">Check Now</button>
+    </div>
+
+    <div class="footer-note">
+      <span>Estimated duration: ~1 to 2 minutes</span>
+      <span>•</span>
+      <span>Hosur Main Hub Desk</span>
+    </div>
+  </div>
+
+  <script>
+    let countdown = 3;
+    let pollInterval = null;
+    let isChecking = false;
+
+    async function checkServer(manual = false) {
+      if (isChecking) return;
+      isChecking = true;
+
+      const statusEl = document.getElementById('reconnectStatus');
+      const spinnerEl = document.getElementById('reconnectSpinner');
+
+      if (manual) {
+        statusEl.innerHTML = '<strong>Checking server availability...</strong>';
+      }
+
+      try {
+        // Query the live health endpoint with cache busting
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+        const res = await fetch('/health?_t=' + Date.now(), {
+          method: 'GET',
+          cache: 'no-store',
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (res.status === 200) {
+          // System is back online!
+          statusEl.innerHTML = '<strong style="color: #059669;">✅ Deployment complete! Restoring CRM...</strong>';
+          spinnerEl.style.borderTopColor = '#059669';
+          setTimeout(() => {
+            window.location.reload();
+          }, 800);
+          return;
+        }
+      } catch (err) {
+        // Still updating, ignore and retry
+      } finally {
+        isChecking = false;
+      }
+
+      // Reset countdown for next automatic retry
+      countdown = 3;
+      updateCountdownText();
+    }
+
+    function updateCountdownText() {
+      const statusEl = document.getElementById('reconnectStatus');
+      statusEl.innerHTML = 'Auto-reconnecting in <strong id="countdown">' + countdown + '</strong>s...';
+    }
+
+    // Polling loop every second
+    setInterval(() => {
+      if (isChecking) return;
+      countdown--;
+      if (countdown <= 0) {
+        checkServer();
+      } else {
+        updateCountdownText();
+      }
+    }, 1000);
+  </script>
+</body>
+</html>

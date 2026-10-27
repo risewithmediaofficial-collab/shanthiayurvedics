@@ -1,4 +1,5 @@
 import { User } from '../models/User.js';
+import { Branch } from '../models/Branch.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { NotFoundError, ConflictError, ForbiddenError } from '../utils/errors.js';
@@ -104,6 +105,22 @@ export const createUser = asyncHandler(async (req, res) => {
     effectiveBranches = managerBranchId ? [managerBranchId] : [];
   }
 
+  // Handle Main Branch resolution when branchId is 'MAIN' or when role needs a branch
+  if (effectiveBranchId === 'MAIN' || (!effectiveBranchId && role !== ROLES.OWNER && role !== ROLES.MANAGER)) {
+    let mainBranch = await Branch.findOne({ $or: [{ code: 'MAIN' }, { name: /main/i }] });
+    if (!mainBranch) mainBranch = await Branch.findOne({ isActive: true });
+    if (!mainBranch) {
+      mainBranch = await Branch.create({
+        name: 'Main Branch',
+        code: 'MAIN',
+        branchType: 'COMPANY_OWNED',
+        isActive: true
+      });
+    }
+    effectiveBranchId = mainBranch._id;
+    effectiveBranches = [mainBranch._id];
+  }
+
   const normalizedEmail = email.toLowerCase().trim();
   const existing = await User.findOne({ email: normalizedEmail });
   if (existing) {
@@ -164,8 +181,41 @@ export const updateUser = asyncHandler(async (req, res) => {
     }
   }
   if (req.user.role === ROLES.OWNER) {
-    if (branchId !== undefined) user.branchId = branchId;
-    if (branches !== undefined) user.branches = branches;
+    if (branchId !== undefined) {
+      if (branchId === 'MAIN') {
+        let mainBranch = await Branch.findOne({ $or: [{ code: 'MAIN' }, { name: /main/i }] });
+        if (!mainBranch) mainBranch = await Branch.findOne({ isActive: true });
+        if (!mainBranch) {
+          mainBranch = await Branch.create({
+            name: 'Main Branch',
+            code: 'MAIN',
+            branchType: 'COMPANY_OWNED',
+            isActive: true
+          });
+        }
+        user.branchId = mainBranch._id;
+        user.branches = [mainBranch._id];
+      } else {
+        user.branchId = branchId || null;
+      }
+    }
+    if (branches !== undefined) {
+      if (Array.isArray(branches) && branches.includes('MAIN')) {
+        let mainBranch = await Branch.findOne({ $or: [{ code: 'MAIN' }, { name: /main/i }] });
+        if (!mainBranch) mainBranch = await Branch.findOne({ isActive: true });
+        if (!mainBranch) {
+          mainBranch = await Branch.create({
+            name: 'Main Branch',
+            code: 'MAIN',
+            branchType: 'COMPANY_OWNED',
+            isActive: true
+          });
+        }
+        user.branches = branches.map(b => (b === 'MAIN' ? mainBranch._id : b));
+      } else {
+        user.branches = branches;
+      }
+    }
   }
   if (phone !== undefined) user.phone = phone;
   if (isActive !== undefined) user.isActive = isActive;

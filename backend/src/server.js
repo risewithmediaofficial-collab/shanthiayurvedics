@@ -35,6 +35,8 @@ const gracefulShutdown = async (signal, exitCode = 0) => {
 import { NotificationSchedulerService } from './services/notificationSchedulerService.js';
 import { CourierTrackingSyncService } from './services/courierTrackingSyncService.js';
 
+import { Branch } from './models/Branch.js';
+
 const startServer = async () => {
   app.locals.isReady = false;
   // Start HTTP listener immediately so Nginx reverse-proxy and /health checks have an active socket
@@ -42,6 +44,19 @@ const startServer = async () => {
   try {
     await connectDB();
     await RbacService.initializeDefaultRoles();
+
+    // Ensure default Main Branch exists if database has 0 branches
+    const branchCount = await Branch.countDocuments();
+    if (branchCount === 0) {
+      await Branch.create({
+        name: 'Main Branch',
+        code: 'MAIN',
+        branchType: 'COMPANY_OWNED',
+        isActive: true
+      });
+      logger.info('Default Main Branch initialized');
+    }
+
     app.locals.isReady = true;
     logger.info({ port: env.PORT }, 'CRM API ready and database connected');
 

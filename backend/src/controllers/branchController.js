@@ -6,6 +6,17 @@ import { NotFoundError, ConflictError } from '../utils/errors.js';
 import { AuditService } from '../services/auditService.js';
 
 export const getBranches = asyncHandler(async (req, res) => {
+  // Ensure default Main Branch exists if no branches exist in the system
+  const totalBranchesCount = await Branch.countDocuments();
+  if (totalBranchesCount === 0) {
+    await Branch.create({
+      name: 'Main Branch',
+      code: 'MAIN',
+      branchType: 'COMPANY_OWNED',
+      isActive: true
+    });
+  }
+
   const query = { isActive: true };
 
   // Non-owner staff (Manager, Distributor, Telecaller) must ONLY see their assigned branch(es)
@@ -24,6 +35,11 @@ export const getBranches = asyncHandler(async (req, res) => {
       }).select('_id').lean();
       if (managed.length > 0) {
         query._id = { $in: managed.map(m => m._id) };
+      } else {
+        const defaultBranch = await Branch.findOne({ isActive: true }).select('_id').lean();
+        if (defaultBranch) {
+          query._id = defaultBranch._id;
+        }
       }
     }
   }

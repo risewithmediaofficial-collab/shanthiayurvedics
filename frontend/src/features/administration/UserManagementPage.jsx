@@ -60,11 +60,33 @@ export function UserManagementPage() {
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 4000); };
 
   // Branches
-  const { data: branchesData } = useQuery({
+  const { data: branchesResponse } = useQuery({
     queryKey: ['branches'],
-    queryFn: async () => { const res = await apiClient.get('/branches'); const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : []; }
+    queryFn: async () => {
+      const res = await apiClient.get('/branches');
+      return res.data;
+    }
   });
-  const branches = Array.isArray(branchesData) ? branchesData : [];
+
+  const rawBranches = useMemo(() => {
+    if (Array.isArray(branchesResponse)) return branchesResponse;
+    if (Array.isArray(branchesResponse?.data)) return branchesResponse.data;
+    if (Array.isArray(availableBranches) && availableBranches.length > 0) return availableBranches;
+    return [];
+  }, [branchesResponse, availableBranches]);
+
+  // If no branches have been added yet in the system, show default Main Branch
+  const branches = useMemo(() => {
+    if (rawBranches.length > 0) return rawBranches;
+    return [
+      {
+        _id: 'MAIN',
+        name: 'Main Branch',
+        code: 'MAIN',
+        isDefault: true
+      }
+    ];
+  }, [rawBranches]);
 
   // Users — filter out OWNER/Admin accounts (they manage the system, not "team")
   const { data: usersResponse, isLoading } = useQuery({
@@ -167,11 +189,16 @@ export function UserManagementPage() {
 
   // Create user
   const createMutation = useMutation({
-    mutationFn: data => apiClient.post('/users', {
-      ...data,
-      branchId: data.branchId || null,
-      branches: data.branchId ? [data.branchId] : (data.role === 'MANAGER' ? branches.map(b => b._id) : [])
-    }),
+    mutationFn: data => {
+      const effectiveBranchId = !isOwner
+        ? managerBranchId
+        : (data.branchId || (data.role !== 'MANAGER' ? (branches[0]?._id || 'MAIN') : null));
+      return apiClient.post('/users', {
+        ...data,
+        branchId: effectiveBranchId || null,
+        branches: effectiveBranchId ? [effectiveBranchId] : (data.role === 'MANAGER' ? branches.map(b => b._id) : [])
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setCreateOpen(false);
@@ -444,7 +471,17 @@ export function UserManagementPage() {
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Team Staff Management</h2>
           <p className="text-xs text-slate-500">Create and manage Manager, Distributor, and Telecaller accounts. Admin accounts are managed via your profile.</p>
         </div>
-        <Button variant="primary" icon={UserPlus} onClick={() => { setFormData(emptyForm); setCreateOpen(true); }}>
+        <Button
+          variant="primary"
+          icon={UserPlus}
+          onClick={() => {
+            setFormData({
+              ...emptyForm,
+              branchId: !isOwner ? managerBranchId : (branches[0]?._id || '')
+            });
+            setCreateOpen(true);
+          }}
+        >
           Add Staff Member
         </Button>
       </div>
@@ -783,16 +820,16 @@ export function UserManagementPage() {
               options={CREATABLE_ROLES}
             />
             <Select
-              label="Assign Branch"
-              value={!isOwner ? managerBranchId : formData.branchId}
+              label="Assign Branch *"
+              value={!isOwner ? managerBranchId : (formData.branchId || (formData.role !== 'MANAGER' ? (branches[0]?._id || '') : ''))}
               disabled={!isOwner}
               onChange={e => setFormData({ ...formData, branchId: e.target.value })}
               options={
                 !isOwner
-                  ? [{ value: managerBranchId, label: availableBranches[0]?.name || 'My Branch' }]
+                  ? [{ value: managerBranchId, label: branches.find(b => String(b._id) === managerBranchId)?.name || availableBranches[0]?.name || 'Main Branch' }]
                   : [
                       { value: '', label: formData.role === 'MANAGER' ? '🏢 All Hubs (Multi-Branch)' : 'Select branch...' },
-                      ...branches.map(b => ({ value: b._id, label: `${b.name} (${b.code})` }))
+                      ...branches.map(b => ({ value: b._id, label: `${b.name} (${b.code || 'MAIN'})` }))
                     ]
               }
               required={formData.role !== 'OWNER' && formData.role !== 'MANAGER'}
@@ -874,10 +911,10 @@ export function UserManagementPage() {
               onChange={e => setEditData({ ...editData, branchId: e.target.value })}
               options={
                 !isOwner
-                  ? [{ value: managerBranchId, label: availableBranches[0]?.name || 'My Branch' }]
+                  ? [{ value: managerBranchId, label: branches.find(b => String(b._id) === managerBranchId)?.name || availableBranches[0]?.name || 'Main Branch' }]
                   : [
                       { value: '', label: editData.role === 'MANAGER' ? '🏢 All Hubs (Multi-Branch)' : 'No branch' },
-                      ...branches.map(b => ({ value: b._id, label: `${b.name} (${b.code})` }))
+                      ...branches.map(b => ({ value: b._id, label: `${b.name} (${b.code || 'MAIN'})` }))
                     ]
               }
             />

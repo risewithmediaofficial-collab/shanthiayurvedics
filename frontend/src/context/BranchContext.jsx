@@ -27,7 +27,16 @@ export function BranchProvider({ children }) {
   });
 
   const allBranches = useMemo(() => {
-    return Array.isArray(branchesResponse?.data) ? branchesResponse.data : [];
+    const list = Array.isArray(branchesResponse?.data)
+      ? branchesResponse.data
+      : (Array.isArray(branchesResponse) ? branchesResponse : []);
+    if (list.length > 0) return list;
+    return [{
+      _id: 'MAIN',
+      name: 'Main Branch',
+      code: 'MAIN',
+      isDefault: true
+    }];
   }, [branchesResponse]);
 
   const availableBranches = useMemo(() => {
@@ -64,7 +73,7 @@ export function BranchProvider({ children }) {
       ? allBranches.find((b) => (b._id || b.id)?.toString() === userBranchIdStr)
       : null;
 
-    return matchedBranch ? [matchedBranch] : [];
+    return matchedBranch ? [matchedBranch] : (allBranches.length > 0 ? [allBranches[0]] : []);
   }, [user, allBranches]);
 
   // Keep selectedBranchId clean and synchronized

@@ -16,6 +16,11 @@ export class ApiResponse {
   }
 
   static paginated(res, data = [], pagination = {}, message = 'Data fetched successfully', extra = {}) {
+    const total = Number(pagination.total) || 0;
+    const limit = Number(pagination.limit) || 20;
+    const page = Number(pagination.page) || 1;
+    const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
+
     return res.status(200).json({
       ...extra,
       success: true,
@@ -23,10 +28,18 @@ export class ApiResponse {
       data,
       pagination: {
         ...pagination,
-        page: Number(pagination.page) || 1,
-        limit: Number(pagination.limit) || 20,
-        total: Number(pagination.total) || 0,
-        totalPages: Math.ceil((Number(pagination.total) || 0) / (Number(pagination.limit) || 20))
+        page,
+        limit,
+        total,
+        totalPages
+      },
+      meta: {
+        ...(extra.meta || {}),
+        page,
+        limit,
+        total,
+        totalPages,
+        summary: extra.summary || extra.meta?.summary
       }
     });
   }

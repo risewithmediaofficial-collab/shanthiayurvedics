@@ -22,7 +22,23 @@ const branchSchema = new mongoose.Schema(
       pincode: { type: String, trim: true },
       country: { type: String, default: 'India' }
     },
+    postalPickupDetails: {
+      senderName: { type: String, trim: true, default: 'SHANTHI AYURVEDAS' },
+      contactPerson: { type: String, trim: true },
+      phone: { type: String, trim: true },
+      alternatePhone: { type: String, trim: true },
+      street: { type: String, trim: true },
+      city: { type: String, trim: true },
+      state: { type: String, trim: true },
+      pincode: { type: String, trim: true },
+      bookingOffice: { type: String, trim: true },
+      notes: { type: String, trim: true }
+    },
     phone: {
+      type: String,
+      trim: true
+    },
+    alternatePhone: {
       type: String,
       trim: true
     },

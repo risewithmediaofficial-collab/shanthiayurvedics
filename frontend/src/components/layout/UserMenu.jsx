@@ -42,7 +42,13 @@ export function UserMenu() {
     setView('profile');
   };
 
+  const isTelecaller = user?.role === 'TELECALLER';
+
   const openPassword = () => {
+    if (isTelecaller) {
+      setView('password-support');
+      return;
+    }
     setPasswordData({ currentPassword: '', newPassword: '', confirm: '' });
     setSuccessMsg('');
     setErrorMsg('');
@@ -149,19 +155,35 @@ export function UserMenu() {
                   </div>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={openPassword}
-                  className="w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer group"
-                >
-                  <span className="w-7 h-7 rounded-lg bg-blue-50 group-hover:bg-blue-100 border border-blue-100 flex items-center justify-center transition-colors flex-shrink-0">
-                    <LockResetRounded sx={{ fontSize: 15 }} className="text-blue-600" />
-                  </span>
-                  <div>
-                    <div className="font-semibold text-slate-800">Change Password</div>
-                    <div className="text-[10px] text-slate-400 font-normal">Update your login password</div>
-                  </div>
-                </button>
+                {isTelecaller ? (
+                  <button
+                    type="button"
+                    onClick={() => setView('password-support')}
+                    className="w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer group"
+                  >
+                    <span className="w-7 h-7 rounded-lg bg-emerald-50 group-hover:bg-emerald-100 border border-emerald-100 flex items-center justify-center transition-colors flex-shrink-0">
+                      <SecurityRounded sx={{ fontSize: 15 }} className="text-emerald-600" />
+                    </span>
+                    <div>
+                      <div className="font-semibold text-slate-800">Password Support</div>
+                      <div className="text-[10px] text-slate-400 font-normal">Managed by Manager / Admin</div>
+                    </div>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={openPassword}
+                    className="w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors cursor-pointer group"
+                  >
+                    <span className="w-7 h-7 rounded-lg bg-blue-50 group-hover:bg-blue-100 border border-blue-100 flex items-center justify-center transition-colors flex-shrink-0">
+                      <LockResetRounded sx={{ fontSize: 15 }} className="text-blue-600" />
+                    </span>
+                    <div>
+                      <div className="font-semibold text-slate-800">Change Password</div>
+                      <div className="text-[10px] text-slate-400 font-normal">Update your login password</div>
+                    </div>
+                  </button>
+                )}
               </div>
 
               <div className="border-t border-slate-100 py-1">
@@ -242,7 +264,7 @@ export function UserMenu() {
           )}
 
           {/* ── CHANGE PASSWORD VIEW ── */}
-          {view === 'password' && (
+          {view === 'password' && !isTelecaller && (
             <div className="p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-slate-800">Change Password</h3>
@@ -318,6 +340,48 @@ export function UserMenu() {
                   </button>
                 </div>
               </form>
+            </div>
+          )}
+
+          {/* ── PASSWORD SUPPORT VIEW (TELECALLER) ── */}
+          {(view === 'password-support' || (view === 'password' && isTelecaller)) && (
+            <div className="p-4 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                  <SecurityRounded sx={{ fontSize: 16 }} className="text-emerald-600" />
+                  <span>Password Support</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setView('menu')}
+                  className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                >
+                  <CloseRounded sx={{ fontSize: 18 }} />
+                </button>
+              </div>
+
+              <div className="bg-emerald-50/70 border border-emerald-200/90 rounded-xl p-3.5 space-y-2 text-xs">
+                <div className="font-bold text-emerald-950 flex items-center gap-1.5">
+                  <span className="text-base">🔐</span>
+                  <span>Managed by Branch Leadership</span>
+                </div>
+                <p className="text-[11.5px] text-emerald-900 leading-relaxed font-medium">
+                  Telecaller passwords are set and changed by your <strong>Branch Manager</strong> or <strong>System Admin</strong>.
+                </p>
+                <p className="text-[11px] text-emerald-800 leading-relaxed">
+                  If you need to change or reset your password, please give a request to your <strong>Branch Manager</strong> or <strong>Admin</strong>. They will update your credentials from the management portal.
+                </p>
+              </div>
+
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setView('menu')}
+                  className="w-full py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+                >
+                  Back to Menu
+                </button>
+              </div>
             </div>
           )}
 

@@ -16,7 +16,14 @@ export const getSalesReport = asyncHandler(async (req, res) => {
     limit: parseInt(limit, 10) || 25
   });
 
-  return ApiResponse.paginated(res, result.orders, result, 'Sales report retrieved', { summary: result.summary });
+  return ApiResponse.paginated(res, result.orders, result, 'Sales report retrieved', {
+    summary: result.summary,
+    meta: {
+      summary: result.summary,
+      total: result.total,
+      totalPages: result.totalPages
+    }
+  });
 });
 
 export const getLeadReport = asyncHandler(async (req, res) => {

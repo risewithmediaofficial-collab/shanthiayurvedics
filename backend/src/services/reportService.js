@@ -20,7 +20,13 @@ export class ReportService {
   static async getSalesReport({ branchId, startDate, endDate, page = 1, limit = 25 }) {
     ({ page, limit } = pagination({ page, limit }));
     const filter = { status: { $ne: ORDER_STATUS.CANCELLED } };
-    if (branchId && branchId !== 'ALL') filter.branchId = new mongoose.Types.ObjectId(branchId);
+    if (branchId && branchId !== 'ALL') {
+      if (mongoose.Types.ObjectId.isValid(branchId)) {
+        filter.branchId = new mongoose.Types.ObjectId(branchId);
+      } else {
+        filter.branchId = branchId;
+      }
+    }
     if (startDate || endDate) {
       filter.createdAt = dateRange(startDate, endDate);
     }
@@ -42,13 +48,15 @@ export class ReportService {
         {
           $group: {
             _id: null,
-            totalRevenue: { $sum: '$grandTotal' },
-            totalItems: { $sum: { $size: '$items' } },
-            avgOrderValue: { $avg: '$grandTotal' }
+            totalRevenue: { $sum: { $toDouble: { $ifNull: ['$grandTotal', 0] } } },
+            totalItems: { $sum: { $size: { $ifNull: ['$items', []] } } },
+            avgOrderValue: { $avg: { $toDouble: { $ifNull: ['$grandTotal', 0] } } }
           }
         }
       ])
     ]);
+
+    const aggSummary = summary && summary[0] ? summary[0] : null;
 
     return {
       orders,
@@ -56,7 +64,11 @@ export class ReportService {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
-      summary: summary[0] || { totalRevenue: 0, totalItems: 0, avgOrderValue: 0 }
+      summary: {
+        totalRevenue: aggSummary ? Math.round(aggSummary.totalRevenue || 0) : 0,
+        totalItems: aggSummary ? (aggSummary.totalItems || 0) : 0,
+        avgOrderValue: aggSummary ? Math.round(aggSummary.avgOrderValue || 0) : 0
+      }
     };
   }
 

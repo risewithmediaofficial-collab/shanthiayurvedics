@@ -206,6 +206,10 @@ export const getMe = asyncHandler(async (req, res) => {
 });
 
 export const changePassword = asyncHandler(async (req, res) => {
+  if (req.user.role === 'TELECALLER') {
+    return ApiResponse.error(res, 'Telecallers cannot change passwords directly. Please submit a request to your Branch Manager or Admin.', 403);
+  }
+
   const { currentPassword, newPassword } = req.body;
   const user = await User.findById(req.user.id).select('+passwordHash');
 

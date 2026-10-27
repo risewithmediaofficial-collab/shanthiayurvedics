@@ -94,19 +94,27 @@ export const getProductById = asyncHandler(async (req, res) => {
 export const createProduct = asyncHandler(async (req, res) => {
   const { name, sku, category, description, price, mrp, costPrice, unit, taxPercent, lowStockThreshold, initialBatch, weight } = req.body;
 
-  const existingSku = await Product.findOne({ sku: sku.toUpperCase().trim() });
-  if (existingSku) {
+  let effectiveSku = sku ? sku.toUpperCase().trim() : '';
+  if (!effectiveSku) {
+    const prefix = name ? name.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'AYU') : 'PRD';
+    effectiveSku = `${prefix}-${Date.now().toString().slice(-5)}`;
+  }
+
+  const existingSku = await Product.findOne({ sku: effectiveSku });
+  if (existingSku && sku?.trim()) {
     throw new ConflictError(`Product with SKU '${sku}' already exists`);
+  } else if (existingSku) {
+    effectiveSku = `PRD-${Date.now().toString().slice(-4)}${Math.floor(100 + Math.random() * 900)}`;
   }
 
   const product = new Product({
     name,
-    sku: sku.toUpperCase().trim(),
+    sku: effectiveSku,
     category,
     description,
     price,
     mrp,
-    costPrice,
+    costPrice: costPrice !== undefined && costPrice !== null && costPrice !== '' ? Number(costPrice) : 0,
     unit,
     taxPercent,
     lowStockThreshold,

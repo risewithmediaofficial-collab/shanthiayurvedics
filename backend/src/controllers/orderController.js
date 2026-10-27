@@ -49,6 +49,10 @@ export const getOrders = asyncHandler(async (req, res) => {
     }
   }
 
+  const orderChannel = req.query.orderChannel || req.query.channel;
+  const isOfficeSaleParam = req.query.isOfficeSale;
+  const isCounterSaleFilter = orderChannel === 'COUNTER_SALE' || isOfficeSaleParam === 'true' || isOfficeSaleParam === true;
+
   if (district && district !== 'ALL') {
     query['deliveryAddress.district'] = { $regex: district, $options: 'i' };
   }
@@ -59,6 +63,19 @@ export const getOrders = asyncHandler(async (req, res) => {
 
   if (startDate || endDate) {
     query.createdAt = dateRange(startDate, endDate);
+  }
+
+  if (isCounterSaleFilter) {
+    const offlineConditions = [
+      { orderChannel: 'COUNTER_SALE' },
+      { isOfficeSale: true },
+      { courierName: /counter/i },
+      { 'deliveryAddress.street': /counter|walk-in/i },
+      { notes: /counter|walk-in|office sale/i }
+    ];
+    query.$or = offlineConditions;
+  } else if (orderChannel && orderChannel !== 'ALL') {
+    query.orderChannel = orderChannel;
   }
 
   if (search) {
@@ -81,7 +98,12 @@ export const getOrders = asyncHandler(async (req, res) => {
     if (/deliver/i.test(search)) {
       searchConditions.push({ status: 'DELIVERED' });
     }
-    query.$or = searchConditions;
+    if (query.$or) {
+      query.$and = [{ $or: query.$or }, { $or: searchConditions }];
+      delete query.$or;
+    } else {
+      query.$or = searchConditions;
+    }
   }
 
   // Dynamic sorting configuration
@@ -104,7 +126,7 @@ export const getOrders = asyncHandler(async (req, res) => {
     Order.find(query)
       .populate('customerId', 'name mobile email')
       .populate('telecallerId', 'name email phone role')
-      .populate('branchId', 'name code')
+      .populate('branchId', 'name code address phone alternatePhone postalPickupDetails billerId gstNumber')
       .sort(sortObj)
       .skip(skip)
       .limit(limit)
@@ -133,7 +155,7 @@ export const getOrderById = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id)
     .populate('customerId', 'name mobile email addresses')
     .populate('telecallerId', 'name email phone role')
-    .populate('branchId', 'name code address phone')
+    .populate('branchId', 'name code address phone alternatePhone postalPickupDetails billerId gstNumber')
     .lean();
 
   if (!order) {
@@ -371,7 +393,7 @@ export const sendOrderWhatsApp = asyncHandler(async (req, res) => {
   }
 
   const result = await Msg91WhatsAppService.sendOrderConfirmation(order);
-  if (!result.success) {
+  if (!result.success && !result.dryRun) {
     const errorMsg = result.data?.errors || result.data?.message || result.error || 'Failed to send WhatsApp message via MSG91';
     return ApiResponse.error(
       res,
@@ -385,7 +407,11 @@ export const sendOrderWhatsApp = asyncHandler(async (req, res) => {
   order.whatsappConfirmationStatus = 'SENT';
   await order.save();
 
-  return ApiResponse.success(res, result.data, 'WhatsApp order confirmation message queued successfully');
+  const successMessage = result.dryRun
+    ? 'WhatsApp order confirmation simulated (Dry-run: MSG91 auth key not set)'
+    : 'WhatsApp order confirmation message queued successfully via MSG91 template';
+
+  return ApiResponse.success(res, result.data || { dryRun: true }, successMessage);
 });
 
 export const sendOrderDispatchWhatsApp = asyncHandler(async (req, res) => {

@@ -57,23 +57,26 @@ export class OrderService {
     let targetCustomerId = customerId;
     let customer = null;
 
+    const resolvedPatientName = (orderData.patientName || orderData.patientDetails?.patientName || orderData.patientDetails?.name || '').trim();
+    const resolvedMobile = (orderData.mobile || orderData.patientDetails?.mobile || orderData.patientDetails?.phone || '').trim();
+
     if (targetCustomerId) {
       customer = await Customer.findById(targetCustomerId);
-    } else if (orderData.patientName && orderData.mobile) {
+    } else if (resolvedPatientName && resolvedMobile) {
       // Find existing customer by mobile or create new customer on the fly
-      customer = await Customer.findOne({ mobile: orderData.mobile.trim(), branchId });
+      customer = await Customer.findOne({ mobile: resolvedMobile, branchId });
       if (!customer) {
         customer = await Customer.create({
-          name: orderData.patientName.trim(),
-          fatherName: orderData.fatherName?.trim(),
-          mobile: orderData.mobile.trim(),
-          altMobile: orderData.altMobile?.trim(),
+          name: resolvedPatientName,
+          fatherName: (orderData.fatherName || orderData.patientDetails?.fatherName)?.trim(),
+          mobile: resolvedMobile,
+          altMobile: (orderData.altMobile || orderData.patientDetails?.alternateMobile)?.trim(),
           branchId,
           assignedTelecallerId: user.id || user._id,
           isAppRegistered: Boolean(orderData.patientAppRegistered),
           addresses: [
             {
-              street: deliveryAddress?.street || 'Main Street',
+              street: deliveryAddress?.street || (isOfficeSaleInit ? 'Office Walk-In Counter' : 'Main Street'),
               landmark: deliveryAddress?.landmark || '',
               city: deliveryAddress?.city || 'Hosur',
               state: deliveryAddress?.state || 'Tamil Nadu',
@@ -227,14 +230,15 @@ export class OrderService {
         offerPrice: orderData.offerPrice ? Number(orderData.offerPrice) : undefined,
         grandTotal,
         orderChannel: resolvedChannel,
+        isOfficeSale: isOfficeSale,
         status: resolvedStatus,
         paymentMethod: resolvedPaymentMethod,
         paymentStatus: resolvedPaymentStatus,
         patientDetails: {
-          patientName: orderData.patientName || customer.name,
-          fatherName: orderData.fatherName || customer.fatherName,
-          mobile: orderData.mobile || customer.mobile,
-          alternateMobile: orderData.altMobile || orderData.alternateMobile || customer.altMobile
+          patientName: resolvedPatientName || orderData.patientName || customer.name,
+          fatherName: orderData.fatherName || orderData.patientDetails?.fatherName || customer.fatherName,
+          mobile: resolvedMobile || orderData.mobile || customer.mobile,
+          alternateMobile: orderData.altMobile || orderData.alternateMobile || orderData.patientDetails?.alternateMobile || customer.altMobile
         },
         patientAppRegistered: Boolean(orderData.patientAppRegistered),
         notes: orderData.notes || (isOfficeSale ? 'Direct Office Counter Sale' : undefined),

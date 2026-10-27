@@ -780,7 +780,7 @@ export function UserManagementPage() {
               label="Role *"
               value={formData.role}
               onChange={e => setFormData({ ...formData, role: e.target.value })}
-              options={isOwner ? CREATABLE_ROLES : CREATABLE_ROLES.filter(r => r.value === 'TELECALLER')}
+              options={CREATABLE_ROLES}
             />
             <Select
               label="Assign Branch"
@@ -863,9 +863,9 @@ export function UserManagementPage() {
             <Select
               label="Role"
               value={editData.role || 'TELECALLER'}
-              disabled={!isOwner}
+              disabled={false}
               onChange={e => setEditData({ ...editData, role: e.target.value })}
-              options={isOwner ? CREATABLE_ROLES : CREATABLE_ROLES.filter(r => r.value === 'TELECALLER')}
+              options={CREATABLE_ROLES}
             />
             <Select
               label="Branch"

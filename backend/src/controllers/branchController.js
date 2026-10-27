@@ -62,7 +62,14 @@ export const createBranch = asyncHandler(async (req, res) => {
     branchType,
     revenueSharePercent,
     billerId,
-    gstNumber
+    gstNumber,
+    // Branch Account Setup fields
+    accountName,
+    accountEmail,
+    accountPassword,
+    accountRole,
+    // Postal Pickup Details
+    postalPickupDetails
   } = req.body;
 
   const existingCode = await Branch.findOne({ code: code.toUpperCase() });
@@ -70,23 +77,68 @@ export const createBranch = asyncHandler(async (req, res) => {
     throw new ConflictError(`Branch with code '${code}' already exists`);
   }
 
-  // Resolve manager details if managerId is provided
+  // Optional manual user account creation for the branch / franchise
+  let createdAccount = null;
+  let effectiveManagerId = managerId || null;
   let effectiveManagerName = managerName;
   let effectiveManagerPhone = managerPhone;
-  if (managerId) {
-    const mgrUser = await User.findById(managerId).select('name phone email').lean();
+  let effectiveDistributorId = distributorId || null;
+  let effectiveDistributorName = distributorName;
+  let effectiveDistributorPhone = distributorPhone;
+  let effectiveDistributorEmail = distributorEmail;
+
+  if (accountEmail && accountPassword) {
+    const normalizedEmail = accountEmail.toLowerCase().trim();
+    const existing = await User.findOne({ email: normalizedEmail });
+    if (existing) {
+      throw new ConflictError(`User account with email/username '${normalizedEmail}' already exists`);
+    }
+
+    const passwordHash = await User.hashPassword(accountPassword);
+    const assignedRole = accountRole === 'DISTRIBUTOR' ? 'DISTRIBUTOR' : 'MANAGER';
+    const newAccountUser = new User({
+      name: accountName?.trim() || effectiveManagerName || name,
+      email: normalizedEmail,
+      passwordHash,
+      role: assignedRole,
+      phone: postalPickupDetails?.phone || phone || '',
+      isActive: true
+    });
+    await newAccountUser.save();
+
+    if (assignedRole === 'DISTRIBUTOR') {
+      effectiveDistributorId = newAccountUser._id;
+      effectiveDistributorName = newAccountUser.name;
+      effectiveDistributorPhone = newAccountUser.phone;
+      effectiveDistributorEmail = newAccountUser.email;
+    } else {
+      effectiveManagerId = newAccountUser._id;
+      effectiveManagerName = newAccountUser.name;
+      effectiveManagerPhone = newAccountUser.phone;
+    }
+
+    createdAccount = {
+      id: newAccountUser._id,
+      name: newAccountUser.name,
+      username: newAccountUser.email,
+      email: newAccountUser.email,
+      password: accountPassword,
+      role: assignedRole
+    };
+  }
+
+  // Resolve manager details if an existing managerId was selected
+  if (effectiveManagerId && !createdAccount) {
+    const mgrUser = await User.findById(effectiveManagerId).select('name phone email').lean();
     if (mgrUser) {
       effectiveManagerName = effectiveManagerName || mgrUser.name;
       effectiveManagerPhone = effectiveManagerPhone || mgrUser.phone;
     }
   }
 
-  // Resolve distributor details if distributorId is provided
-  let effectiveDistributorName = distributorName;
-  let effectiveDistributorPhone = distributorPhone;
-  let effectiveDistributorEmail = distributorEmail;
-  if (distributorId) {
-    const distUser = await User.findById(distributorId).select('name phone email').lean();
+  // Resolve distributor details if an existing distributorId was selected
+  if (effectiveDistributorId && !createdAccount) {
+    const distUser = await User.findById(effectiveDistributorId).select('name phone email').lean();
     if (distUser) {
       effectiveDistributorName = effectiveDistributorName || distUser.name;
       effectiveDistributorPhone = effectiveDistributorPhone || distUser.phone;
@@ -98,12 +150,13 @@ export const createBranch = asyncHandler(async (req, res) => {
     name,
     code: code.toUpperCase(),
     address,
+    postalPickupDetails: postalPickupDetails || {},
     phone,
     email,
-    managerId: managerId || null,
+    managerId: effectiveManagerId,
     managerName: effectiveManagerName,
     managerPhone: effectiveManagerPhone,
-    distributorId: distributorId || null,
+    distributorId: effectiveDistributorId,
     distributorName: effectiveDistributorName,
     distributorPhone: effectiveDistributorPhone,
     distributorEmail: effectiveDistributorEmail,
@@ -116,15 +169,21 @@ export const createBranch = asyncHandler(async (req, res) => {
 
   await newBranch.save();
 
-  // Link newly created branch to assigned manager & distributor
-  if (managerId) {
-    await User.findByIdAndUpdate(managerId, {
+  // Link newly created branch to the newly created user or assigned manager & distributor
+  if (createdAccount?.id) {
+    await User.findByIdAndUpdate(createdAccount.id, {
       branchId: newBranch._id,
       $addToSet: { branches: newBranch._id }
     });
   }
-  if (distributorId) {
-    await User.findByIdAndUpdate(distributorId, {
+  if (effectiveManagerId && (!createdAccount || String(effectiveManagerId) !== String(createdAccount.id))) {
+    await User.findByIdAndUpdate(effectiveManagerId, {
+      branchId: newBranch._id,
+      $addToSet: { branches: newBranch._id }
+    });
+  }
+  if (effectiveDistributorId && (!createdAccount || String(effectiveDistributorId) !== String(createdAccount.id))) {
+    await User.findByIdAndUpdate(effectiveDistributorId, {
       branchId: newBranch._id,
       $addToSet: { branches: newBranch._id }
     });
@@ -146,7 +205,7 @@ export const createBranch = asyncHandler(async (req, res) => {
     .populate('distributorId', 'name phone email role')
     .lean();
 
-  return ApiResponse.created(res, populatedBranch, 'Branch created successfully');
+  return ApiResponse.created(res, { ...populatedBranch, createdAccount }, 'Branch created successfully');
 });
 
 export const updateBranch = asyncHandler(async (req, res) => {
@@ -189,6 +248,7 @@ export const updateBranch = asyncHandler(async (req, res) => {
 
   if (name !== undefined) branch.name = name;
   if (address !== undefined) branch.address = address;
+  if (req.body.postalPickupDetails !== undefined) branch.postalPickupDetails = req.body.postalPickupDetails;
   if (phone !== undefined) branch.phone = phone;
   if (email !== undefined) branch.email = email;
   if (isActive !== undefined) branch.isActive = isActive;

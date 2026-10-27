@@ -163,6 +163,7 @@ describe('POST /api/shipping/import-status — API integration', () => {
         deliveryAddress: { street: '1 Test St', city: 'Hosur', state: 'Tamil Nadu', pincode: '635109' },
         paymentMethod: 'COD',
         status: ORDER_STATUS.DISPATCHED,
+        trackingNumber: awbNumber,
       });
 
       const shipment = await Shipment.create({

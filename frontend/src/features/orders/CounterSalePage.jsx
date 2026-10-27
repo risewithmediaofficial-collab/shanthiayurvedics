@@ -15,7 +15,12 @@ import {
   Pencil,
   Trash2,
   X,
-  AlertTriangle
+  AlertTriangle,
+  MessageSquare,
+  Share2,
+  RefreshCw,
+  Clock,
+  PhoneCall
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { useBranch } from '../../context/BranchContext.jsx';
@@ -31,31 +36,61 @@ export function CounterSalePage() {
   const isTelecaller = user?.role === 'TELECALLER';
   const queryClient = useQueryClient();
   const { selectedBranchId, branches } = useBranch();
+
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState(null);
   const [selectedOrderForEdit, setSelectedOrderForEdit] = useState(null);
   const [selectedOrderForDelete, setSelectedOrderForDelete] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sendingWhatsAppId, setSendingWhatsAppId] = useState(null);
+  const [whatsAppToast, setWhatsAppToast] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [editError, setEditError] = useState('');
   const [deleteError, setDeleteError] = useState('');
 
-  // Fetch recent counter orders
-  const { data: ordersResponse, isLoading } = useQuery({
+  // Fetch only offline orders (walk-in counter sales)
+  const { data: ordersResponse, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['counterOrders', selectedBranchId],
     queryFn: async () => {
-      const res = await apiClient.get('/orders', { params: { limit: 25 } });
+      const res = await apiClient.get('/orders', {
+        params: {
+          limit: 100,
+          orderChannel: 'COUNTER_SALE',
+          isOfficeSale: 'true'
+        }
+      });
       return res.data;
     },
     enabled: !isTelecaller
   });
 
-  const orders = Array.isArray(ordersResponse?.data) ? ordersResponse?.data : [];
+  const rawOrders = Array.isArray(ordersResponse?.data) ? ordersResponse?.data : [];
+
+  // Strictly filter for offline orders (walk-in customers only)
+  const offlineOrders = rawOrders.filter((o) =>
+    o.orderChannel === 'COUNTER_SALE' ||
+    o.isOfficeSale === true ||
+    /counter/i.test(o.courierName || '') ||
+    /counter|walk-in|office/i.test(o.notes || '') ||
+    /counter|walk-in/i.test(o.deliveryAddress?.street || '')
+  );
+
+  // Search filter
+  const filteredOrders = offlineOrders.filter((ord) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    const pName = (ord.patientDetails?.patientName || ord.customerId?.name || '').toLowerCase();
+    const pMobile = ord.patientDetails?.mobile || ord.customerId?.mobile || '';
+    const ordNum = (ord.orderNumber || '').toLowerCase();
+    return pName.includes(q) || pMobile.includes(q) || ordNum.includes(q);
+  });
+
   const currentBranch = branches?.find((b) => b._id === selectedBranchId) || { name: 'Hosur Main Branch' };
 
-  // Calculate totals
-  const totalSales = orders.reduce((acc, curr) => acc + (curr.grandTotal || 0), 0);
-  const codSales = orders.filter((o) => o.paymentMethod === 'COD').reduce((acc, curr) => acc + (curr.grandTotal || 0), 0);
-  const counterSales = orders.filter((o) => o.paymentMethod !== 'COD').reduce((acc, curr) => acc + (curr.grandTotal || 0), 0);
+  // Calculate totals strictly for offline walk-in orders
+  const totalSales = offlineOrders.reduce((acc, curr) => acc + (curr.grandTotal || 0), 0);
+  const cashSales = offlineOrders.filter((o) => o.paymentMethod === 'CASH' || o.paymentMethod === 'OFFLINE').reduce((acc, curr) => acc + (curr.grandTotal || 0), 0);
+  const upiPrepaidSales = offlineOrders.filter((o) => o.paymentMethod !== 'CASH' && o.paymentMethod !== 'COD').reduce((acc, curr) => acc + (curr.grandTotal || 0), 0);
 
   // Update Order Mutation
   const updateOrderMutation = useMutation({
@@ -95,6 +130,27 @@ export function CounterSalePage() {
   if (isTelecaller) {
     return <Navigate to="/dashboard?view=telecaller" replace />;
   }
+
+  // Handle direct WhatsApp send for an offline walk-in order
+  const handleSendWhatsApp = async (ord) => {
+    if (!ord?._id || sendingWhatsAppId) return;
+    setSendingWhatsAppId(ord._id);
+    setWhatsAppToast(null);
+
+    try {
+      const res = await apiClient.post(`/orders/${ord._id}/send-whatsapp`);
+      const msg = res.data?.message || `Order confirmed bill sent to ${ord.patientDetails?.mobile || 'patient'} via WhatsApp template!`;
+      setWhatsAppToast({ type: 'success', message: msg });
+      queryClient.invalidateQueries({ queryKey: ['counterOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    } catch (err) {
+      const errMsg = err.response?.data?.message || err.response?.data?.error || 'Failed to send WhatsApp message via MSG91';
+      setWhatsAppToast({ type: 'error', message: errMsg });
+    } finally {
+      setSendingWhatsAppId(null);
+      setTimeout(() => setWhatsAppToast(null), 6000);
+    }
+  };
 
   const handleOpenEdit = (ord) => {
     setSelectedOrderForEdit(ord);
@@ -148,6 +204,33 @@ export function CounterSalePage() {
 
   return (
     <div className="space-y-6">
+      {/* Toast notification */}
+      {whatsAppToast && (
+        <div
+          className={`p-3.5 rounded-2xl text-xs font-semibold flex items-center justify-between gap-3 shadow-md border animate-in slide-in-from-top-2 duration-200 ${
+            whatsAppToast.type === 'success'
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+              : 'bg-rose-50 border-rose-300 text-rose-900'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {whatsAppToast.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+            )}
+            <span>{whatsAppToast.message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setWhatsAppToast(null)}
+            className="text-sm font-bold opacity-70 hover:opacity-100 cursor-pointer"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex items-center gap-3">
@@ -157,123 +240,237 @@ export function CounterSalePage() {
             className="h-10 w-auto max-w-[140px] object-contain shrink-0"
           />
           <div>
-            <h2 className="text-lg font-bold text-slate-900 leading-tight">
-              Direct Counter & Office Walk-In POS
-            </h2>
-            <p className="text-xs text-slate-500">
-              {currentBranch.name} • Instant Walk-In Invoicing & Direct Counter Billing
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg font-bold text-slate-900 leading-tight">
+                Office Sale — Walk-in Customer Orders
+              </h2>
+              <Badge variant="emerald" size="sm">Offline Orders Only</Badge>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {currentBranch.name} • Counter Walk-in Bills & Instant WhatsApp Confirmation
             </p>
           </div>
         </div>
 
-        <Button
-          variant="primary"
-          icon={Plus}
-          onClick={() => setIsOrderModalOpen(true)}
-          className="bg-purple-700 hover:bg-purple-800 text-white font-bold"
-        >
-          New Counter Invoice
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            icon={RefreshCw}
+            isLoading={isFetching}
+            onClick={() => refetch()}
+            className="text-xs"
+            title="Refresh offline orders"
+          >
+            Refresh
+          </Button>
+
+          <Button
+            variant="primary"
+            icon={Plus}
+            onClick={() => setIsOrderModalOpen(true)}
+            className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs"
+          >
+            New Counter Bill
+          </Button>
+        </div>
       </div>
 
       {/* Counter Sales KPI Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
-          <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Total Counter Invoiced</div>
+          <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
+            Total Offline Walk-In Sales
+          </div>
           <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 font-mono">
             ₹{totalSales.toLocaleString()}
           </div>
-          <div className="text-[10px] text-slate-400 mt-0.5">{orders.length} transactions recorded</div>
+          <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+            <Store className="w-3 h-3 text-slate-400" />
+            <span>{offlineOrders.length} walk-in bills recorded</span>
+          </div>
         </div>
 
         <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
-          <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Direct Counter Sales</div>
+          <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
+            Cash Till Collections
+          </div>
           <div className="text-2xl sm:text-3xl font-black text-emerald-700 mt-1 font-mono">
-            ₹{counterSales.toLocaleString()}
+            ₹{cashSales.toLocaleString()}
           </div>
-          <div className="text-[10px] text-emerald-600 mt-0.5">Instant register billing</div>
+          <div className="text-[10px] text-emerald-600 mt-0.5">Direct cash counter tender</div>
         </div>
 
         <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
-          <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Cash / Counter COD</div>
-          <div className="text-2xl sm:text-3xl font-black text-amber-700 mt-1 font-mono">
-            ₹{codSales.toLocaleString()}
+          <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
+            UPI / Prepaid Counter Sales
           </div>
-          <div className="text-[10px] text-amber-600 mt-0.5">Till register collection</div>
+          <div className="text-2xl sm:text-3xl font-black text-blue-700 mt-1 font-mono">
+            ₹{upiPrepaidSales.toLocaleString()}
+          </div>
+          <div className="text-[10px] text-blue-600 mt-0.5">QR UPI / Card register billing</div>
         </div>
       </div>
 
-      {/* Recent Counter Transactions Table */}
+      {/* Offline Orders Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-bold text-slate-900">Recent Counter Receipts</h3>
-          <span className="text-xs text-slate-400">{orders.length} total orders</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+          <div>
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span>Walk-in Customer Offline Orders</span>
+              <span className="text-xs font-mono font-bold px-2 py-0.5 bg-slate-100 text-slate-700 rounded-full">
+                {filteredOrders.length}
+              </span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Only direct walk-in customer orders are shown. Print bills and send confirmed bills via WhatsApp template.
+            </p>
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative w-full sm:w-72">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search patient, phone, or bill #..."
+              className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-600"
+            />
+          </div>
         </div>
 
         {isLoading ? (
           <div className="py-16 text-center">
-            <Spinner size="lg" text="Loading counter receipts..." />
+            <Spinner size="lg" text="Loading walk-in offline orders..." />
           </div>
-        ) : orders.length === 0 ? (
+        ) : filteredOrders.length === 0 ? (
           <div className="py-16 text-center text-slate-500">
             <div className="text-3xl mb-2">🧾</div>
-            <div className="text-sm font-semibold text-slate-800">No counter sales yet</div>
-            <p className="text-xs text-slate-400 mt-1">Click "New Counter Invoice" to bill a walk-in patient.</p>
+            <div className="text-sm font-semibold text-slate-800">
+              {searchQuery ? 'No matching walk-in orders found' : 'No offline walk-in orders yet'}
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              {searchQuery
+                ? 'Try searching with a different mobile number or patient name.'
+                : 'Click "New Counter Bill" above to create an offline walk-in bill.'}
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-slate-100 text-xs">
-            {orders.map((ord) => {
+            {filteredOrders.map((ord) => {
               const pat = ord.patientDetails || {};
+              const patientName = pat.patientName || ord.customerId?.name || 'Walk-In Patient';
+              const mobile = pat.mobile || ord.customerId?.mobile || '—';
+              const isSendingWA = sendingWhatsAppId === ord._id;
+
               return (
-                <div key={ord._id} className="py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="space-y-1 min-w-0">
+                <div
+                  key={ord._id}
+                  className="py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 hover:bg-slate-50/60 p-2 rounded-xl transition-colors"
+                >
+                  {/* Order & Patient Details */}
+                  <div className="space-y-1.5 min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-slate-900 text-sm font-mono">{ord.orderNumber}</span>
-                      <span className="text-slate-700 font-semibold truncate">{pat.patientName || ord.customerId?.name || 'Walk-In Patient'}</span>
-                      <Badge variant="primary" size="sm">{ord.paymentMethod}</Badge>
+                      <span className="font-mono font-bold text-slate-900 text-sm">
+                        {ord.orderNumber}
+                      </span>
+                      <Badge variant="emerald" size="sm">
+                        Walk-in Offline
+                      </Badge>
+                      <Badge variant="primary" size="sm">
+                        {ord.paymentMethod || 'CASH'}
+                      </Badge>
+
+                      {/* WhatsApp Status Indicator */}
+                      {ord.whatsappConfirmationSentAt ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>WA Sent ({new Date(ord.whatsappConfirmationSentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                          <Clock className="w-3 h-3" />
+                          <span>WA Pending</span>
+                        </span>
+                      )}
                     </div>
-                    <div className="text-slate-400 text-[11px] truncate">
-                      {ord.items?.map((i) => `${i.quantity}x ${i.productName}`).join(', ')} • {new Date(ord.createdAt).toLocaleDateString('en-GB')}
+
+                    <div className="flex items-center gap-3 text-slate-700 flex-wrap">
+                      <span className="font-bold text-sm text-slate-900">{patientName}</span>
+                      <span className="font-mono font-bold text-slate-700 flex items-center gap-1">
+                        📱 {mobile}
+                      </span>
+                      <span className="text-slate-400 text-[11px]">
+                        📅 {new Date(ord.createdAt).toLocaleDateString('en-GB')} at {new Date(ord.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+
+                    {/* Medicines Prescribed */}
+                    <div className="text-slate-500 text-[11px] truncate max-w-xl">
+                      <span className="font-semibold text-slate-600">Prescribed: </span>
+                      {(ord.items || []).map((i) => `${i.quantity}x ${i.productName}`).join(', ') || 'Herbal Formulations'}
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                    <span className="font-bold text-slate-900 font-mono text-sm sm:mr-2">
-                      ₹{ord.grandTotal?.toLocaleString()}
-                    </span>
+                  {/* Pricing and Action Buttons */}
+                  <div className="flex items-center justify-between lg:justify-end gap-3 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                    <div className="text-left lg:text-right pr-2">
+                      <div className="text-[10px] text-slate-400 uppercase font-semibold">Total Amount</div>
+                      <div className="font-mono font-black text-slate-900 text-base">
+                        ₹{ord.grandTotal?.toLocaleString()}
+                      </div>
+                    </div>
 
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEdit(ord)}
-                        className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer touch-manipulation min-h-[36px]"
-                        title="Edit Counter Receipt"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        <span>Edit</span>
-                      </button>
-
+                      {/* Make Print / Print Bill */}
                       <button
                         type="button"
                         onClick={() => setSelectedOrderForInvoice(ord)}
-                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer touch-manipulation min-h-[36px]"
-                        title="Print Tax Invoice"
+                        className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs touch-manipulation min-h-[36px]"
+                        title="Make Print: View and print official tax bill"
                       >
                         <Printer className="w-3.5 h-3.5" />
-                        <span>Print</span>
+                        <span>Make Print</span>
                       </button>
 
+                      {/* Send WhatsApp (Existing Template) */}
+                      <button
+                        type="button"
+                        disabled={isSendingWA}
+                        onClick={() => handleSendWhatsApp(ord)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer touch-manipulation min-h-[36px] ${
+                          ord.whatsappConfirmationSentAt
+                            ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                        }`}
+                        title="Send order confirmed bill via MSG91 WhatsApp template"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>{isSendingWA ? 'Sending...' : ord.whatsappConfirmationSentAt ? 'Resend WA' : 'Send WA'}</span>
+                      </button>
+
+                      {/* Edit */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(ord)}
+                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer touch-manipulation min-h-[36px]"
+                        title="Edit Receipt Details"
+                      >
+                        <Pencil className="w-3.5 h-3.5 text-slate-500" />
+                        <span className="hidden sm:inline">Edit</span>
+                      </button>
+
+                      {/* Delete */}
                       <button
                         type="button"
                         onClick={() => {
                           setSelectedOrderForDelete(ord);
                           setDeleteError('');
                         }}
-                        className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer touch-manipulation min-h-[36px]"
+                        className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer touch-manipulation min-h-[36px]"
                         title="Delete Counter Receipt"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                        <span>Delete</span>
                       </button>
                     </div>
                   </div>
@@ -290,17 +487,23 @@ export function CounterSalePage() {
           isOpen={isOrderModalOpen}
           onClose={() => setIsOrderModalOpen(false)}
           isOfficeSale={true}
-          onOrderCreated={(newOrder) => setSelectedOrderForInvoice(newOrder)}
+          onOrderCreated={(newOrder) => {
+            setSelectedOrderForInvoice(newOrder);
+            queryClient.invalidateQueries({ queryKey: ['counterOrders'] });
+          }}
         />
       )}
 
-      {/* Printable Invoice Modal */}
+      {/* Printable Invoice Modal with Auto-Print & WhatsApp Trigger */}
       {selectedOrderForInvoice && (
         <PrintableInvoiceModal
           isOpen={Boolean(selectedOrderForInvoice)}
           onClose={() => setSelectedOrderForInvoice(null)}
           order={selectedOrderForInvoice}
           autoPrint={true}
+          onWhatsAppSent={() => {
+            queryClient.invalidateQueries({ queryKey: ['counterOrders'] });
+          }}
         />
       )}
 
@@ -316,7 +519,7 @@ export function CounterSalePage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm">
-                    Edit Counter Receipt #{selectedOrderForEdit.orderNumber}
+                    Edit Walk-In Receipt #{selectedOrderForEdit.orderNumber}
                   </h3>
                   <p className="text-[11px] text-slate-400">Update patient details, billing amounts, or notes</p>
                 </div>
@@ -350,7 +553,7 @@ export function CounterSalePage() {
                       required
                       value={editFormData.patientName || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, patientName: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-600"
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-600"
                     />
                   </div>
                   <div>
@@ -361,54 +564,41 @@ export function CounterSalePage() {
                       maxLength={10}
                       value={editFormData.mobile || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, mobile: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-blue-600"
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-emerald-600"
                     />
                   </div>
                   <div>
                     <label className="block text-slate-600 font-semibold mb-1">Alternate Phone</label>
                     <input
                       type="tel"
-                      maxLength={10}
                       value={editFormData.alternateMobile || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, alternateMobile: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-600"
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-600 font-semibold mb-1">Father / Caretaker</label>
+                    <label className="block text-slate-600 font-semibold mb-1">Father / Guardian</label>
                     <input
                       type="text"
                       value={editFormData.fatherName || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, fatherName: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Billing Amounts & Payment Mode */}
+              {/* Financial & Payment */}
               <div className="space-y-2 pt-2 border-t border-slate-100">
-                <h4 className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">2. Billing & Payment</h4>
+                <h4 className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">2. Payment & Amounts</h4>
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
                     <label className="block text-slate-600 font-semibold mb-1">Grand Total (₹)</label>
                     <input
                       type="number"
-                      min="0"
-                      value={editFormData.grandTotal || ''}
+                      value={editFormData.grandTotal}
                       onChange={(e) => setEditFormData({ ...editFormData, grandTotal: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-blue-600"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-semibold mb-1">Offer / Discounted Price (₹)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Optional"
-                      value={editFormData.offerPrice || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, offerPrice: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-600"
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold"
                     />
                   </div>
                   <div>
@@ -416,12 +606,12 @@ export function CounterSalePage() {
                     <select
                       value={editFormData.paymentMethod || 'CASH'}
                       onChange={(e) => setEditFormData({ ...editFormData, paymentMethod: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-600"
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold"
                     >
-                      <option value="CASH">💵 Cash</option>
-                      <option value="UPI">📱 UPI</option>
-                      <option value="ONLINE">💳 Online / Card</option>
-                      <option value="COD">📦 Cash on Delivery (COD)</option>
+                      <option value="CASH">CASH</option>
+                      <option value="UPI">UPI</option>
+                      <option value="ONLINE">ONLINE</option>
+                      <option value="COD">COD</option>
                     </select>
                   </div>
                   <div>
@@ -429,64 +619,28 @@ export function CounterSalePage() {
                     <select
                       value={editFormData.paymentStatus || 'PAID'}
                       onChange={(e) => setEditFormData({ ...editFormData, paymentStatus: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-600"
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold"
                     >
-                      <option value="PAID">PAID (Settled)</option>
+                      <option value="PAID">PAID</option>
                       <option value="PENDING">PENDING</option>
-                      <option value="COD_PENDING">COD PENDING</option>
+                      <option value="COD_PENDING">COD_PENDING</option>
                     </select>
                   </div>
                 </div>
               </div>
 
-              {/* Address (Optional) */}
-              <div className="space-y-2 pt-2 border-t border-slate-100">
-                <h4 className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">3. Address (Optional)</h4>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div className="col-span-2">
-                    <label className="block text-slate-600 font-semibold mb-1">Street / Clinic Location</label>
-                    <input
-                      type="text"
-                      value={editFormData.street || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, street: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-semibold mb-1">District / City</label>
-                    <input
-                      type="text"
-                      value={editFormData.district || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, district: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-semibold mb-1">Pincode</label>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      value={editFormData.pincode || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, pincode: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-600"
-                    />
-                  </div>
-                </div>
-              </div>
-
               {/* Notes */}
-              <div className="pt-2 border-t border-slate-100">
-                <label className="block text-slate-600 font-semibold mb-1">Notes / Remarks</label>
+              <div className="space-y-1 pt-2 border-t border-slate-100">
+                <label className="block text-slate-600 font-semibold">Regimen / Treatment Notes</label>
                 <textarea
                   rows={2}
                   value={editFormData.notes || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-600"
-                  placeholder="Additional order or patient instructions..."
+                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs"
                 />
               </div>
 
-              {/* Modal Footer */}
+              {/* Actions */}
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
                 <Button
                   variant="secondary"
@@ -501,7 +655,7 @@ export function CounterSalePage() {
                   size="sm"
                   type="submit"
                   isLoading={updateOrderMutation.isPending}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold"
                 >
                   Save Changes
                 </Button>
@@ -519,7 +673,7 @@ export function CounterSalePage() {
               🗑️
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-base">Delete Counter Receipt?</h3>
+              <h3 className="font-bold text-slate-900 text-base">Delete Walk-In Receipt?</h3>
               <p className="text-xs text-slate-500 mt-1">
                 Are you sure you want to delete receipt <strong className="font-mono text-slate-800">{selectedOrderForDelete.orderNumber}</strong>?
               </p>

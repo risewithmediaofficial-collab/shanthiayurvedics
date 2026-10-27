@@ -154,6 +154,11 @@ const orderSchema = new mongoose.Schema(
       enum: ['DIRECT', 'COUNTER_SALE', 'ONLINE', 'TELECALLING'],
       default: 'DIRECT'
     },
+    isOfficeSale: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
     paymentMethod: {
       type: String,
       enum: ['COD', 'ONLINE', 'BANK_TRANSFER', 'UPI', 'CASH'],
@@ -248,6 +253,7 @@ const orderSchema = new mongoose.Schema(
 orderSchema.index({ branchId: 1, status: 1 });
 orderSchema.index({ telecallerId: 1, createdAt: -1 });
 orderSchema.index({ branchId: 1, createdAt: -1 });
+orderSchema.index({ orderChannel: 1 });
 
 export const Order = mongoose.model('Order', orderSchema);
 export default Order;

@@ -16,7 +16,12 @@ import {
   Calendar,
   Sparkles,
   Phone,
-  ShieldCheck
+  ShieldCheck,
+  MessageSquare,
+  Share2,
+  Clock,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 import apiClient from '../../../api/apiClient.js';
 import { useBranch } from '../../../context/BranchContext.jsx';
@@ -24,6 +29,7 @@ import { Button } from '../../../components/common/Button.jsx';
 import { Badge } from '../../../components/common/Badge.jsx';
 import { Modal } from '../../../components/common/Modal.jsx';
 import { Spinner } from '../../../components/common/Spinner.jsx';
+import { PrintableInvoiceModal } from '../../orders/PrintableInvoiceModal.jsx';
 
 const PINCODE_MAP = {
   '635109': { city: 'Hosur', taluk: 'Hosur', district: 'Krishnagiri', state: 'Tamil Nadu' },
@@ -73,7 +79,61 @@ export function ManagerOfficeSaleTab() {
   const [paymentMethod, setPaymentMethod] = useState('CASH'); // 'CASH' | 'COD' | 'PREPAID'
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [printedBill, setPrintedBill] = useState(null);
+  const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState(null);
+  const [sendingWhatsAppId, setSendingWhatsAppId] = useState(null);
+  const [activeSubTab, setActiveSubTab] = useState('desk'); // 'desk' | 'orders'
+  const [offlineSearchQuery, setOfflineSearchQuery] = useState('');
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
+
+  // Fetch only offline walk-in orders
+  const { data: offlineOrdersRes, isLoading: isLoadingOffline, refetch: refetchOfflineOrders } = useQuery({
+    queryKey: ['manager-offline-orders', selectedBranchId],
+    queryFn: async () => {
+      const res = await apiClient.get('/orders', {
+        params: {
+          limit: 100,
+          orderChannel: 'COUNTER_SALE',
+          isOfficeSale: 'true'
+        }
+      });
+      return res.data;
+    }
+  });
+
+  const rawOfflineOrders = Array.isArray(offlineOrdersRes?.data) ? offlineOrdersRes?.data : [];
+  const offlineOrders = rawOfflineOrders.filter((o) =>
+    o.orderChannel === 'COUNTER_SALE' ||
+    o.isOfficeSale === true ||
+    /counter/i.test(o.courierName || '') ||
+    /counter|walk-in|office/i.test(o.notes || '') ||
+    /counter|walk-in/i.test(o.deliveryAddress?.street || '')
+  );
+
+  const filteredOfflineOrders = offlineOrders.filter((ord) => {
+    if (!offlineSearchQuery.trim()) return true;
+    const q = offlineSearchQuery.toLowerCase().trim();
+    const pName = (ord.patientDetails?.patientName || ord.customerId?.name || '').toLowerCase();
+    const pMobile = ord.patientDetails?.mobile || ord.customerId?.mobile || '';
+    const ordNum = (ord.orderNumber || '').toLowerCase();
+    return pName.includes(q) || pMobile.includes(q) || ordNum.includes(q);
+  });
+
+  const handleSendWhatsAppTemplate = async (ord) => {
+    if (!ord?._id || sendingWhatsAppId) return;
+    setSendingWhatsAppId(ord._id);
+    try {
+      const res = await apiClient.post(`/orders/${ord._id}/send-whatsapp`);
+      setActionSuccessMsg(res.data?.message || `WhatsApp confirmed bill sent to ${ord.patientDetails?.mobile || 'patient'}!`);
+      queryClient.invalidateQueries({ queryKey: ['manager-offline-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['counterOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      setTimeout(() => setActionSuccessMsg(''), 5000);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to send WhatsApp message via MSG91');
+    } finally {
+      setSendingWhatsAppId(null);
+    }
+  };
 
   // Fetch catalog products
   const { data: products = [] } = useQuery({
@@ -215,6 +275,15 @@ export function ManagerOfficeSaleTab() {
 
     setIsSubmitting(true);
     const orderPayload = {
+      patientName: patientName.trim(),
+      mobile: patientMobile.trim(),
+      fatherName: '',
+      isOfficeSale: true,
+      orderChannel: 'COUNTER_SALE',
+      courierName: 'Direct Office Counter',
+      paymentMethod,
+      paymentStatus: 'PAID',
+      status: paymentMethod === 'COD' ? 'PROCESSING' : 'DELIVERED',
       patientDetails: {
         patientName: patientName.trim(),
         mobile: patientMobile.trim(),
@@ -227,18 +296,19 @@ export function ManagerOfficeSaleTab() {
         village: village || 'Hosur',
         taluk: taluk || 'Hosur',
         district: district || 'Krishnagiri',
+        city: village || 'Hosur',
         state: stateName || 'Tamil Nadu',
-        pincode: pincode || '635109'
+        pincode: pincode || '635109',
+        phone: patientMobile.trim()
       },
       items: cart.map((item) => ({
         productId: item.productId,
         productName: item.productName,
         quantity: item.quantity,
-        unitPrice: item.price
+        unitPrice: item.price,
+        discountPercent: item.discountPercent || 0,
+        discount: item.discountPercent ? Math.round((item.price * item.discountPercent) / 100) : 0
       })),
-      paymentMethod,
-      orderChannel: 'COUNTER_SALE',
-      status: paymentMethod === 'COD' ? 'PROCESSING' : 'DELIVERED',
       notes: `Office Treatment Order: ${healthCondition} (${planDuration})${includeServiceFee ? ' + Service Fee ₹699' : ''}`
     };
 
@@ -246,22 +316,9 @@ export function ManagerOfficeSaleTab() {
       const res = await apiClient.post('/orders', orderPayload);
       const createdOrder = res.data?.data;
 
-      setPrintedBill({
-        orderNumber: createdOrder?.orderNumber || `POS-${Date.now().toString().slice(-6)}`,
-        date: new Date().toLocaleDateString('en-GB'),
-        patientName,
-        patientMobile,
-        patientAge,
-        patientGender,
-        healthCondition,
-        planDuration,
-        address: `${street}, ${village}, ${district}, ${stateName} - ${pincode}`,
-        items: [...cart],
-        serviceFee: serviceFeeAmount,
-        subtotal: cartSubtotal,
-        grandTotal,
-        paymentMethod
-      });
+      if (createdOrder) {
+        setSelectedOrderForInvoice(createdOrder);
+      }
 
       // Reset form
       setCart([]);
@@ -270,29 +327,14 @@ export function ManagerOfficeSaleTab() {
       setPatientAge('');
       setLandmark('');
       setIncludeServiceFee(false);
-      setActionSuccessMsg('Treatment Order & Tax Bill generated successfully!');
+      setActionSuccessMsg('Walk-in Treatment Order & Tax Bill saved successfully! WhatsApp notification queued.');
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-offline-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['counterOrders'] });
       queryClient.invalidateQueries({ queryKey: ['sidebar-metrics'] });
       setTimeout(() => setActionSuccessMsg(''), 5000);
     } catch (e) {
-      // Local fallback receipt
-      setPrintedBill({
-        orderNumber: `POS-${Date.now().toString().slice(-6)}`,
-        date: new Date().toLocaleDateString('en-GB'),
-        patientName,
-        patientMobile,
-        patientAge,
-        patientGender,
-        healthCondition,
-        planDuration,
-        address: `${street}, ${village}, ${district}, ${stateName} - ${pincode}`,
-        items: [...cart],
-        serviceFee: serviceFeeAmount,
-        subtotal: cartSubtotal,
-        grandTotal,
-        paymentMethod
-      });
-      setCart([]);
+      alert(e.response?.data?.message || 'Failed to save walk-in order to database');
     } finally {
       setIsSubmitting(false);
     }
@@ -694,6 +736,148 @@ export function ManagerOfficeSaleTab() {
         </div>
       </div>
 
+      {/* Offline Walk-in Orders List Section */}
+      <div className="bento-card space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-emerald-600" />
+                <span>Walk-in Customer Offline Orders</span>
+              </h4>
+              <Badge variant="emerald" size="sm">Offline Only</Badge>
+              <span className="text-xs font-mono font-bold px-2 py-0.5 bg-slate-100 text-slate-700 rounded-full">
+                {filteredOfflineOrders.length} bills
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Only direct walk-in customer counter orders are shown. Print official bills and send WhatsApp confirmation in existing template.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-64">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={offlineSearchQuery}
+                onChange={(e) => setOfflineSearchQuery(e.target.value)}
+                placeholder="Search patient, phone, bill #..."
+                className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-600"
+              />
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={RefreshCw}
+              isLoading={isLoadingOffline}
+              onClick={() => refetchOfflineOrders()}
+              className="text-xs"
+              title="Refresh offline orders"
+            >
+              Refresh
+            </Button>
+          </div>
+        </div>
+
+        {isLoadingOffline ? (
+          <div className="py-12 text-center">
+            <Spinner size="md" text="Loading walk-in orders..." />
+          </div>
+        ) : filteredOfflineOrders.length === 0 ? (
+          <div className="py-10 text-center text-slate-400 text-xs">
+            <Receipt className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            <p className="font-semibold text-slate-600">No walk-in offline orders found</p>
+            <p className="text-[11px] mt-0.5">Create a walk-in bill using the desk above.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100 text-xs">
+            {filteredOfflineOrders.map((ord) => {
+              const pat = ord.patientDetails || {};
+              const pName = pat.patientName || ord.customerId?.name || 'Walk-In Patient';
+              const pMobile = pat.mobile || ord.customerId?.mobile || '—';
+              const isSendingWA = sendingWhatsAppId === ord._id;
+
+              return (
+                <div
+                  key={ord._id}
+                  className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 p-2 rounded-xl transition-colors"
+                >
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono font-bold text-slate-900">{ord.orderNumber}</span>
+                      <span className="font-bold text-slate-800">{pName}</span>
+                      <span className="font-mono text-slate-600 font-semibold">📱 {pMobile}</span>
+                      <Badge variant="primary" size="sm">{ord.paymentMethod || 'CASH'}</Badge>
+
+                      {ord.whatsappConfirmationSentAt ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>WA Sent ({new Date(ord.whatsappConfirmationSentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                          <Clock className="w-3 h-3" />
+                          <span>WA Pending</span>
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-500 truncate">
+                      {(ord.items || []).map((i) => `${i.quantity}x ${i.productName}`).join(', ')} • {new Date(ord.createdAt).toLocaleDateString('en-GB')}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                    <span className="font-mono font-black text-slate-900 text-sm">
+                      ₹{ord.grandTotal?.toLocaleString()}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOrderForInvoice(ord)}
+                      className="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer shadow-xs touch-manipulation"
+                      title="Make Print: Open invoice and print"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>Make Print</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isSendingWA}
+                      onClick={() => handleSendWhatsAppTemplate(ord)}
+                      className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer touch-manipulation ${
+                        ord.whatsappConfirmationSentAt
+                          ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                      }`}
+                      title="Send WhatsApp confirmation in existing template via MSG91"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>{isSendingWA ? 'Sending...' : ord.whatsappConfirmationSentAt ? 'Resend WA' : 'Send WA'}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Printable Invoice Modal with autoPrint and WhatsApp template trigger */}
+      {selectedOrderForInvoice && (
+        <PrintableInvoiceModal
+          isOpen={Boolean(selectedOrderForInvoice)}
+          onClose={() => setSelectedOrderForInvoice(null)}
+          order={selectedOrderForInvoice}
+          autoPrint={true}
+          onWhatsAppSent={() => {
+            queryClient.invalidateQueries({ queryKey: ['manager-offline-orders'] });
+            queryClient.invalidateQueries({ queryKey: ['counterOrders'] });
+          }}
+        />
+      )}
+
       {/* Printable Receipt Modal */}
       {printedBill && (
         <Modal
@@ -757,18 +941,34 @@ export function ManagerOfficeSaleTab() {
               </div>
             </div>
 
-            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2">
-              <Button variant="secondary" onClick={() => setPrintedBill(null)} className="w-full sm:w-auto">
-                Close
-              </Button>
-              <Button
-                variant="primary"
-                icon={Printer}
-                onClick={() => window.print()}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold w-full sm:w-auto"
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const phone = (printedBill.patientMobile || '').replace(/\D/g, '');
+                  const intlPhone = phone.length === 10 ? `91${phone}` : phone;
+                  const text = `*SHANTHI AYURVEDAS — OFFICIAL ORDER BILL* 🌿\nBill: ${printedBill.orderNumber}\nPatient: ${printedBill.patientName}\nTotal: ₹${printedBill.grandTotal?.toLocaleString()}\nPayment: ${printedBill.paymentMethod}\nHosur Main Clinic Walk-In\n\nWishing you holistic health!`;
+                  window.open(`https://api.whatsapp.com/send?phone=${intlPhone}&text=${encodeURIComponent(text)}`, '_blank');
+                }}
+                className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer touch-manipulation"
               >
-                Print Receipt
-              </Button>
+                <Share2 className="w-3.5 h-3.5 text-emerald-700" />
+                <span>WhatsApp Web</span>
+              </button>
+
+              <div className="flex items-center gap-2 justify-end">
+                <Button variant="secondary" onClick={() => setPrintedBill(null)} className="w-full sm:w-auto text-xs">
+                  Close
+                </Button>
+                <Button
+                  variant="primary"
+                  icon={Printer}
+                  onClick={() => window.print()}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold w-full sm:w-auto text-xs"
+                >
+                  Print Receipt
+                </Button>
+              </div>
             </div>
           </div>
         </Modal>

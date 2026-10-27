@@ -96,6 +96,9 @@ export const createUser = asyncHandler(async (req, res) => {
   let effectiveBranchId = branchId;
   let effectiveBranches = branches;
   if (req.user?.role !== ROLES.OWNER) {
+    if (role === ROLES.OWNER) {
+      throw new ForbiddenError('You cannot assign the Owner role');
+    }
     const managerBranchId = req.branchScope?.branchId || req.user?.branchId || (Array.isArray(req.user?.branches) && req.user.branches[0]);
     effectiveBranchId = managerBranchId || null;
     effectiveBranches = managerBranchId ? [managerBranchId] : [];
@@ -153,7 +156,13 @@ export const updateUser = asyncHandler(async (req, res) => {
   const { name, role, branchId, branches, phone, isActive } = req.body;
 
   if (name !== undefined) user.name = name;
-  if (role !== undefined && req.user.role === ROLES.OWNER) user.role = role;
+  if (role !== undefined) {
+    if (req.user.role === ROLES.OWNER) {
+      user.role = role;
+    } else if (role !== ROLES.OWNER) {
+      user.role = role;
+    }
+  }
   if (req.user.role === ROLES.OWNER) {
     if (branchId !== undefined) user.branchId = branchId;
     if (branches !== undefined) user.branches = branches;

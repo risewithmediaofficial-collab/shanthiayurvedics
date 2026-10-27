@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Building,
@@ -13,7 +14,14 @@ import {
   Users,
   ShieldCheck,
   UserCheck,
-  UserX
+  UserX,
+  Key,
+  Copy,
+  Eye,
+  EyeOff,
+  Truck,
+  ExternalLink,
+  Sparkles
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { Table } from '../../components/common/Table.jsx';
@@ -25,6 +33,7 @@ import { Select } from '../../components/common/Select.jsx';
 import { useBranch } from '../../context/BranchContext.jsx';
 
 export function BranchManagementPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { selectedBranchId, selectBranch } = useBranch();
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -34,6 +43,12 @@ export function BranchManagementPage() {
   const [selectedBranchForEdit, setSelectedBranchForEdit] = useState(null);
   const [selectedBranchForDelete, setSelectedBranchForDelete] = useState(null);
   const [actionMsg, setActionMsg] = useState('');
+
+  // Post-account creation modal state
+  const [showPassword, setShowPassword] = useState(false);
+  const [createdCredentialsModalOpen, setCreatedCredentialsModalOpen] = useState(false);
+  const [newlyCreatedAccount, setNewlyCreatedAccount] = useState(null);
+  const [copiedCredentials, setCopiedCredentials] = useState(false);
 
   const showToast = (msg) => {
     setActionMsg(msg);
@@ -50,13 +65,32 @@ export function BranchManagementPage() {
     state: 'Tamil Nadu',
     pincode: '',
     branchType: 'COMPANY_OWNED',
+    billerId: '1000058077',
+    gstNumber: '',
     managerId: '',
     managerName: '',
     managerPhone: '',
     distributorId: '',
     distributorName: '',
     distributorPhone: '',
-    distributorEmail: ''
+    distributorEmail: '',
+    // Franchise / Branch Account Manual Creation:
+    createAccount: true,
+    accountName: '',
+    accountEmail: '',
+    accountPassword: '',
+    accountRole: 'MANAGER',
+    // Shipping Label & Postal Pickup Details:
+    pickupSenderName: 'SHANTHI AYURVEDAS',
+    pickupContactPerson: '',
+    pickupPhone: '',
+    pickupAlternatePhone: '',
+    pickupStreet: '',
+    pickupCity: '',
+    pickupState: 'Tamil Nadu',
+    pickupPincode: '',
+    pickupBookingOffice: '',
+    pickupNotes: ''
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -138,7 +172,6 @@ export function BranchManagementPage() {
       apiClient.post('/branches', {
         name: data.name,
         code: data.code.toUpperCase(),
-        phone: data.phone,
         email: data.email,
         branchType: data.branchType,
         managerId: data.managerId || null,
@@ -149,18 +182,58 @@ export function BranchManagementPage() {
         distributorPhone: data.distributorPhone,
         distributorEmail: data.distributorEmail,
         address: {
-          street: data.street,
-          city: data.city,
-          state: data.state,
-          pincode: data.pincode
-        }
+          street: data.pickupStreet || data.street,
+          city: data.pickupCity || data.city,
+          state: data.pickupState || data.state,
+          pincode: data.pickupPincode || data.pincode
+        },
+        postalPickupDetails: {
+          senderName: data.pickupSenderName || 'SHANTHI AYURVEDAS',
+          contactPerson: data.pickupContactPerson || data.accountName || data.managerName || data.name,
+          phone: data.pickupPhone || data.phone || data.managerPhone,
+          alternatePhone: data.pickupAlternatePhone || '',
+          street: data.pickupStreet || data.street,
+          city: data.pickupCity || data.city,
+          state: data.pickupState || data.state,
+          pincode: data.pickupPincode || data.pincode,
+          bookingOffice: data.pickupBookingOffice || '',
+          notes: data.pickupNotes || ''
+        },
+        billerId: data.billerId || '1000058077',
+        gstNumber: data.gstNumber || '',
+        phone: data.pickupPhone || data.phone,
+        alternatePhone: data.pickupAlternatePhone || '',
+        ...(data.createAccount && data.accountEmail && data.accountPassword ? {
+          accountName: data.accountName || data.name,
+          accountEmail: data.accountEmail,
+          accountPassword: data.accountPassword,
+          accountRole: data.accountRole || 'MANAGER'
+        } : {})
       }),
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['branches'] });
       queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       setCreateModalOpen(false);
+
+      const createdAcc = res.data?.data?.createdAccount;
+      if (createdAcc) {
+        setNewlyCreatedAccount({
+          ...createdAcc,
+          branchName: formData.name,
+          branchCode: formData.code.toUpperCase(),
+          pickupDetails: {
+            contactPerson: formData.pickupContactPerson || formData.accountName || formData.name,
+            phone: formData.pickupPhone || formData.phone,
+            address: `${formData.pickupStreet || formData.street || ''}, ${formData.pickupCity || formData.city || ''} - ${formData.pickupPincode || formData.pincode || ''}`
+          }
+        });
+        setCreatedCredentialsModalOpen(true);
+      } else {
+        showToast('✓ Branch created successfully');
+      }
+
       setFormData(initialFormState);
-      showToast('✓ Branch created and assigned successfully');
     },
     onError: (err) => {
       alert(err.response?.data?.message || 'Failed to create branch');
@@ -172,10 +245,13 @@ export function BranchManagementPage() {
       apiClient.patch(`/branches/${selectedBranchForEdit._id}`, {
         name: data.name,
         code: data.code.toUpperCase(),
-        phone: data.phone,
+        phone: data.pickupPhone || data.phone,
+        alternatePhone: data.pickupAlternatePhone || '',
         email: data.email,
         isActive: data.isActive,
         branchType: data.branchType,
+        billerId: data.billerId || '1000058077',
+        gstNumber: data.gstNumber || '',
         managerId: data.managerId || null,
         managerName: data.managerName,
         managerPhone: data.managerPhone,
@@ -184,10 +260,22 @@ export function BranchManagementPage() {
         distributorPhone: data.distributorPhone,
         distributorEmail: data.distributorEmail,
         address: {
-          street: data.street,
-          city: data.city,
-          state: data.state,
-          pincode: data.pincode
+          street: data.pickupStreet || data.street,
+          city: data.pickupCity || data.city,
+          state: data.pickupState || data.state,
+          pincode: data.pickupPincode || data.pincode
+        },
+        postalPickupDetails: {
+          senderName: data.pickupSenderName || 'SHANTHI AYURVEDAS',
+          contactPerson: data.pickupContactPerson || '',
+          phone: data.pickupPhone || '',
+          alternatePhone: data.pickupAlternatePhone || '',
+          street: data.pickupStreet || '',
+          city: data.pickupCity || '',
+          state: data.pickupState || 'Tamil Nadu',
+          pincode: data.pickupPincode || '',
+          bookingOffice: data.pickupBookingOffice || '',
+          notes: data.pickupNotes || ''
         }
       }),
     onSuccess: () => {
@@ -195,7 +283,7 @@ export function BranchManagementPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
       setEditModalOpen(false);
       setSelectedBranchForEdit(null);
-      showToast('✓ Branch and assignments updated successfully');
+      showToast('✓ Branch and postal pickup details updated successfully');
     },
     onError: (err) => {
       alert(err.response?.data?.message || 'Failed to update branch');
@@ -229,11 +317,13 @@ export function BranchManagementPage() {
       code: branch.code || '',
       phone: branch.phone || '',
       email: branch.email || '',
-      street: branch.address?.street || '',
-      city: branch.address?.city || '',
-      state: branch.address?.state || 'Tamil Nadu',
-      pincode: branch.address?.pincode || '',
+      street: branch.address?.street || branch.postalPickupDetails?.street || '',
+      city: branch.address?.city || branch.postalPickupDetails?.city || '',
+      state: branch.address?.state || branch.postalPickupDetails?.state || 'Tamil Nadu',
+      pincode: branch.address?.pincode || branch.postalPickupDetails?.pincode || '',
       branchType: branch.branchType || 'COMPANY_OWNED',
+      billerId: branch.billerId || '1000058077',
+      gstNumber: branch.gstNumber || '',
       managerId: branch.managerId?._id || branch.managerId || '',
       managerName: branch.managerName || branch.managerId?.name || '',
       managerPhone: branch.managerPhone || branch.managerId?.phone || '',
@@ -241,6 +331,17 @@ export function BranchManagementPage() {
       distributorName: branch.distributorName || branch.distributorId?.name || '',
       distributorPhone: branch.distributorPhone || branch.distributorId?.phone || '',
       distributorEmail: branch.distributorEmail || branch.distributorId?.email || '',
+      // Label & Pickup Details:
+      pickupSenderName: branch.postalPickupDetails?.senderName || 'SHANTHI AYURVEDAS',
+      pickupContactPerson: branch.postalPickupDetails?.contactPerson || '',
+      pickupPhone: branch.postalPickupDetails?.phone || branch.phone || '',
+      pickupAlternatePhone: branch.postalPickupDetails?.alternatePhone || branch.alternatePhone || '',
+      pickupStreet: branch.postalPickupDetails?.street || branch.address?.street || '',
+      pickupCity: branch.postalPickupDetails?.city || branch.address?.city || '',
+      pickupState: branch.postalPickupDetails?.state || branch.address?.state || 'Tamil Nadu',
+      pickupPincode: branch.postalPickupDetails?.pincode || branch.address?.pincode || '',
+      pickupBookingOffice: branch.postalPickupDetails?.bookingOffice || '',
+      pickupNotes: branch.postalPickupDetails?.notes || '',
       isActive: branch.isActive !== false
     });
     setEditModalOpen(true);
@@ -318,6 +419,30 @@ export function BranchManagementPage() {
       }
     },
     {
+      header: 'Postal Pickup Point',
+      cell: (row) => {
+        const pickup = row.postalPickupDetails;
+        if (!pickup || (!pickup.contactPerson && !pickup.street && !pickup.phone)) {
+          return (
+            <span className="text-[11px] text-slate-400 italic flex items-center gap-1">
+              <Truck className="w-3 h-3 text-slate-300" /> Physical address
+            </span>
+          );
+        }
+        return (
+          <div className="text-xs">
+            <div className="font-semibold text-slate-800 flex items-center gap-1">
+              <Truck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>{pickup.contactPerson || 'Postal Dispatch'}</span>
+            </div>
+            <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+              {pickup.phone ? `${pickup.phone} • ` : ''}{pickup.pincode ? `PIN: ${pickup.pincode}` : pickup.city || ''}
+            </div>
+          </div>
+        );
+      }
+    },
+    {
       header: 'Location & Phone',
       cell: (row) => (
         <div className="text-xs text-slate-600">
@@ -340,6 +465,18 @@ export function BranchManagementPage() {
       align: 'right',
       cell: (row) => (
         <div className="flex items-center justify-end gap-1.5">
+          <button
+            type="button"
+            title="Switch & View this Branch Panel (Boss Access)"
+            onClick={() => {
+              selectBranch(row._id);
+              navigate('/dashboard?view=manager');
+            }}
+            className="px-2.5 py-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200 shadow-xs flex items-center gap-1 cursor-pointer"
+          >
+            <span>👁️</span>
+            <span className="hidden sm:inline">View Panel</span>
+          </button>
           <button
             type="button"
             title="Edit Branch & Assignments"
@@ -427,9 +564,9 @@ export function BranchManagementPage() {
       <Modal
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        title="Add Operating Branch & Assign Leadership"
-        subtitle="Configure branch location and assign a Distributor and Branch Manager"
-        maxWidth="max-w-lg"
+        title="Add New Branch / Franchise"
+        subtitle="Configure branch identity, login credentials, and shipping pickup address"
+        maxWidth="max-w-2xl"
         icon="🏢"
       >
         <form
@@ -437,115 +574,229 @@ export function BranchManagementPage() {
             e.preventDefault();
             createMutation.mutate(formData);
           }}
-          className="space-y-4"
+          className="space-y-4 max-h-[80vh] overflow-y-auto px-1 pr-2"
         >
-          {/* Section 1: Branch Info */}
+          {/* Section 1: Branch Identity */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 border-b pb-1.5">
               1. Branch Identity
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Input
                 label="Branch Name *"
                 required
-                placeholder="e.g. Krishnagiri Branch"
+                placeholder="e.g. Salem Franchise Branch"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const autoCode = val ? val.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'BR') : '';
+                  setFormData((prev) => ({
+                    ...prev,
+                    name: val,
+                    code: prev.code || autoCode,
+                    accountName: prev.accountName || val,
+                    pickupContactPerson: prev.pickupContactPerson || val
+                  }));
+                }}
               />
               <Input
                 label="Branch Code *"
                 required
-                placeholder="e.g. KGI"
+                placeholder="e.g. SLM"
                 value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                onChange={(e) => {
+                  const c = e.target.value.toUpperCase();
+                  setFormData((prev) => ({
+                    ...prev,
+                    code: c,
+                    accountEmail: prev.accountEmail || (c ? `${c.toLowerCase()}.mgr@shanthiayurvedas.com` : '')
+                  }));
+                }}
               />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Select
                 label="Branch Type"
                 value={formData.branchType}
                 onChange={(e) => setFormData({ ...formData, branchType: e.target.value })}
                 options={[
-                  { value: 'COMPANY_OWNED', label: 'Company Owned Branch' },
-                  { value: 'FRANCHISE', label: 'Franchise Partner' }
+                  { value: 'FRANCHISE', label: 'Franchise Partner' },
+                  { value: 'COMPANY_OWNED', label: 'Company Owned' }
                 ]}
               />
-              <Input
-                label="Phone Number"
-                placeholder="Branch phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              />
             </div>
-          </div>
 
-          {/* Section 2: Leadership Assignment */}
-          <div className="space-y-3 bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
-              <span>👑</span>
-              <span>2. Assign Leadership (Distributor & Manager)</span>
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Select
-                  label="Assigned Distributor (Stock Lead)"
-                  value={formData.distributorId}
-                  onChange={(e) => handleDistributorSelectCreate(e.target.value)}
-                  options={[
-                    { value: '', label: '— Select Distributor —' },
-                    ...distributors.map((d) => ({
-                      value: d._id || d.id,
-                      label: `${d.name} (${d.phone || d.email})`
-                    }))
-                  ]}
-                />
-                <p className="text-[10px] text-slate-500 mt-1">
-                  Responsible for branch stock levels & transfers
-                </p>
-              </div>
-
-              <div>
-                <Select
-                  label="Assigned Manager (Operations Lead)"
-                  value={formData.managerId}
-                  onChange={(e) => handleManagerSelectCreate(e.target.value)}
-                  options={[
-                    { value: '', label: '— Select Manager —' },
-                    ...managers.map((m) => ({
-                      value: m._id || m.id,
-                      label: `${m.name} (${m.phone || m.email})`
-                    }))
-                  ]}
-                />
-                <p className="text-[10px] text-slate-500 mt-1">
-                  Responsible for orders, packing & team callers
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 3: Physical Address */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1">
-              3. Physical Location
-            </h4>
-            <Input
-              label="Street Address"
-              placeholder="Main Road, Bazaar Street"
-              value={formData.street}
-              onChange={(e) => setFormData({ ...formData, street: e.target.value })}
-            />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Input
-                label="City"
-                placeholder="Krishnagiri"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                label="Contact Phone"
+                placeholder="e.g. 9876543210"
+                value={formData.phone}
+                onChange={(e) => {
+                  const p = e.target.value;
+                  setFormData((prev) => ({
+                    ...prev,
+                    phone: p,
+                    pickupPhone: prev.pickupPhone || p
+                  }));
+                }}
+              />
+              <Input
+                label="Speed Post Biller ID"
+                placeholder="1000058077"
+                value={formData.billerId}
+                onChange={(e) => setFormData({ ...formData, billerId: e.target.value })}
+              />
+              <Input
+                label="GSTIN (GST Number)"
+                placeholder="e.g. 33BNCPS0374P1ZM"
+                value={formData.gstNumber}
+                onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })}
+              />
+            </div>
+          </div>
+
+          {/* Section 2: Franchise / Branch Login Account */}
+          <div className="space-y-3 bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-200/80">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5 text-emerald-700" />
+                <span>2. Franchise Login Account</span>
+              </h4>
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.createAccount}
+                  onChange={(e) => setFormData({ ...formData, createAccount: e.target.checked })}
+                  className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                />
+                <span>Create Login Account</span>
+              </label>
+            </div>
+
+            {formData.createAccount && (
+              <div className="space-y-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    label="Account Lead Name *"
+                    required={formData.createAccount}
+                    placeholder="e.g. Ramesh Kumar"
+                    value={formData.accountName}
+                    onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
+                  />
+                  <Select
+                    label="Assigned Role *"
+                    value={formData.accountRole}
+                    onChange={(e) => setFormData({ ...formData, accountRole: e.target.value })}
+                    options={[
+                      { value: 'MANAGER', label: 'Branch Manager (Manage branch & callers)' },
+                      { value: 'DISTRIBUTOR', label: 'Distributor (Stock & order access)' }
+                    ]}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    label="Username / Email *"
+                    required={formData.createAccount}
+                    placeholder="e.g. salem.franchise@shanthiayurvedas.com"
+                    value={formData.accountEmail}
+                    onChange={(e) => setFormData({ ...formData, accountEmail: e.target.value })}
+                  />
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700">Password *</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const randPass = `Shanthi@${Math.floor(1000 + Math.random() * 9000)}`;
+                          setFormData({ ...formData, accountPassword: randPass });
+                        }}
+                        className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <Sparkles className="w-2.5 h-2.5" /> Auto-Generate
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        required={formData.createAccount}
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Set password"
+                        value={formData.accountPassword}
+                        onChange={(e) => setFormData({ ...formData, accountPassword: e.target.value })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        title={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Section 3: Shipping Pickup & From Address */}
+          <div className="space-y-3 bg-blue-50/60 p-3.5 rounded-xl border border-blue-200/80">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5 border-b border-blue-200/80 pb-1.5">
+              <Truck className="w-3.5 h-3.5 text-blue-700" />
+              <span>3. Shipping Label & Pickup Address</span>
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Sender Brand Name *"
+                required
+                placeholder="e.g. SHANTHI AYURVEDAS"
+                value={formData.pickupSenderName}
+                onChange={(e) => setFormData({ ...formData, pickupSenderName: e.target.value })}
+              />
+              <Input
+                label="Pickup Contact Person *"
+                required
+                placeholder="e.g. Ramesh Kumar"
+                value={formData.pickupContactPerson}
+                onChange={(e) => setFormData({ ...formData, pickupContactPerson: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Dispatch Phone 1 *"
+                required
+                placeholder="e.g. 8884747209"
+                value={formData.pickupPhone}
+                onChange={(e) => setFormData({ ...formData, pickupPhone: e.target.value })}
+              />
+              <Input
+                label="Dispatch Phone 2 (Alternate)"
+                placeholder="e.g. 8884113629"
+                value={formData.pickupAlternatePhone}
+                onChange={(e) => setFormData({ ...formData, pickupAlternatePhone: e.target.value })}
+              />
+            </div>
+
+            <Input
+              label="Street Address *"
+              required
+              placeholder="e.g. NO15, JAYPEE GATEWAY, ANTHIVADI"
+              value={formData.pickupStreet}
+              onChange={(e) => setFormData({ ...formData, pickupStreet: e.target.value })}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Input
+                label="City *"
+                required
+                placeholder="e.g. Hosur"
+                value={formData.pickupCity}
+                onChange={(e) => setFormData({ ...formData, pickupCity: e.target.value })}
               />
               <Select
-                label="State"
-                value={formData.state}
-                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                label="State *"
+                value={formData.pickupState}
+                onChange={(e) => setFormData({ ...formData, pickupState: e.target.value })}
                 options={[
                   { value: 'Tamil Nadu', label: 'Tamil Nadu' },
                   { value: 'Karnataka', label: 'Karnataka' },
@@ -557,20 +808,71 @@ export function BranchManagementPage() {
                 ]}
               />
               <Input
-                label="Pincode"
-                placeholder="635001"
-                value={formData.pincode}
-                onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                label="Pincode *"
+                required
+                placeholder="e.g. 635110"
+                value={formData.pickupPincode}
+                onChange={(e) => setFormData({ ...formData, pickupPincode: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Booking Post Office"
+                placeholder="e.g. HOSUR BPC POST - 635110"
+                value={formData.pickupBookingOffice}
+                onChange={(e) => setFormData({ ...formData, pickupBookingOffice: e.target.value })}
+              />
+              <Input
+                label="Special Pickup Notes / Landmark"
+                placeholder="e.g. Near bus stand, dispatch counter"
+                value={formData.pickupNotes}
+                onChange={(e) => setFormData({ ...formData, pickupNotes: e.target.value })}
               />
             </div>
           </div>
 
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
+          {/* Section 4: Optional Existing Leadership Assignment */}
+          {!formData.createAccount && (
+            <div className="space-y-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                4. Assign Existing Leadership
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Select
+                  label="Assigned Distributor"
+                  value={formData.distributorId}
+                  onChange={(e) => handleDistributorSelectCreate(e.target.value)}
+                  options={[
+                    { value: '', label: '— Select Distributor —' },
+                    ...distributors.map((d) => ({
+                      value: d._id || d.id,
+                      label: `${d.name} (${d.phone || d.email})`
+                    }))
+                  ]}
+                />
+                <Select
+                  label="Assigned Manager"
+                  value={formData.managerId}
+                  onChange={(e) => handleManagerSelectCreate(e.target.value)}
+                  options={[
+                    { value: '', label: '— Select Manager —' },
+                    ...managers.map((m) => ({
+                      value: m._id || m.id,
+                      label: `${m.name} (${m.phone || m.email})`
+                    }))
+                  ]}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100 sticky bottom-0 bg-white py-2">
             <Button variant="secondary" type="button" className="w-full sm:w-auto" onClick={() => setCreateModalOpen(false)}>
               Cancel
             </Button>
             <Button variant="primary" type="submit" className="w-full sm:w-auto" isLoading={createMutation.isPending}>
-              Create & Assign Branch
+              Create Branch
             </Button>
           </div>
         </form>
@@ -580,9 +882,9 @@ export function BranchManagementPage() {
       <Modal
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}
-        title="Edit Branch & Leadership Assignments"
-        subtitle={`Update details and reassign leadership for ${selectedBranchForEdit?.name || 'Branch'}`}
-        maxWidth="max-w-lg"
+        title="Edit Branch & Pickup Details"
+        subtitle={`Update details and postal pickup settings for ${selectedBranchForEdit?.name || 'Branch'}`}
+        maxWidth="max-w-2xl"
         icon="✏️"
       >
         <form
@@ -590,14 +892,23 @@ export function BranchManagementPage() {
             e.preventDefault();
             editMutation.mutate(editFormData);
           }}
-          className="space-y-4"
+          className="space-y-4 max-h-[80vh] overflow-y-auto px-1 pr-2"
         >
-          {/* Section 1: Branch Info */}
+          {/* Section 1: Branch Identity */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1">
-              1. Branch Identity
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 border-b pb-1.5 flex items-center justify-between">
+              <span>1. Branch Identity</span>
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editFormData.isActive}
+                  onChange={(e) => setEditFormData({ ...editFormData, isActive: e.target.checked })}
+                  className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                />
+                <span>Active Branch</span>
+              </label>
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Input
                 label="Branch Name *"
                 required
@@ -610,90 +921,93 @@ export function BranchManagementPage() {
                 value={editFormData.code}
                 onChange={(e) => setEditFormData({ ...editFormData, code: e.target.value.toUpperCase() })}
               />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Select
                 label="Branch Type"
                 value={editFormData.branchType}
                 onChange={(e) => setEditFormData({ ...editFormData, branchType: e.target.value })}
                 options={[
-                  { value: 'COMPANY_OWNED', label: 'Company Owned Branch' },
+                  { value: 'COMPANY_OWNED', label: 'Company Owned' },
                   { value: 'FRANCHISE', label: 'Franchise Partner' }
                 ]}
               />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Input
-                label="Phone Number"
+                label="Contact Phone"
                 value={editFormData.phone}
                 onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
               />
+              <Input
+                label="Speed Post Biller ID"
+                placeholder="1000058077"
+                value={editFormData.billerId}
+                onChange={(e) => setEditFormData({ ...editFormData, billerId: e.target.value })}
+              />
+              <Input
+                label="GSTIN (GST Number)"
+                placeholder="e.g. 33BNCPS0374P1ZM"
+                value={editFormData.gstNumber}
+                onChange={(e) => setEditFormData({ ...editFormData, gstNumber: e.target.value })}
+              />
             </div>
           </div>
 
-          {/* Section 2: Leadership Assignment */}
-          <div className="space-y-3 bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
-              <span>👑</span>
-              <span>2. Assigned Leadership</span>
+          {/* Section 2: Shipping Pickup & From Address */}
+          <div className="space-y-3 bg-blue-50/60 p-3.5 rounded-xl border border-blue-200/80">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5 border-b border-blue-200/80 pb-1.5">
+              <Truck className="w-3.5 h-3.5 text-blue-700" />
+              <span>2. Shipping Label & Pickup Address</span>
             </h4>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Select
-                  label="Assigned Distributor"
-                  value={editFormData.distributorId}
-                  onChange={(e) => handleDistributorSelectEdit(e.target.value)}
-                  options={[
-                    { value: '', label: '— Select Distributor —' },
-                    ...distributors.map((d) => ({
-                      value: d._id || d.id,
-                      label: `${d.name} (${d.phone || d.email})`
-                    }))
-                  ]}
-                />
-                <p className="text-[10px] text-slate-500 mt-1">
-                  Responsible for branch stock levels & transfers
-                </p>
-              </div>
-
-              <div>
-                <Select
-                  label="Assigned Manager"
-                  value={editFormData.managerId}
-                  onChange={(e) => handleManagerSelectEdit(e.target.value)}
-                  options={[
-                    { value: '', label: '— Select Manager —' },
-                    ...managers.map((m) => ({
-                      value: m._id || m.id,
-                      label: `${m.name} (${m.phone || m.email})`
-                    }))
-                  ]}
-                />
-                <p className="text-[10px] text-slate-500 mt-1">
-                  Responsible for orders, packing & team callers
-                </p>
-              </div>
+              <Input
+                label="Sender Brand Name *"
+                required
+                placeholder="e.g. SHANTHI AYURVEDAS"
+                value={editFormData.pickupSenderName}
+                onChange={(e) => setEditFormData({ ...editFormData, pickupSenderName: e.target.value })}
+              />
+              <Input
+                label="Pickup Contact Person"
+                placeholder="e.g. Ramesh Kumar"
+                value={editFormData.pickupContactPerson}
+                onChange={(e) => setEditFormData({ ...editFormData, pickupContactPerson: e.target.value })}
+              />
             </div>
-          </div>
 
-          {/* Section 3: Physical Address */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1">
-              3. Physical Location
-            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Dispatch Phone 1"
+                placeholder="e.g. 8884747209"
+                value={editFormData.pickupPhone}
+                onChange={(e) => setEditFormData({ ...editFormData, pickupPhone: e.target.value })}
+              />
+              <Input
+                label="Dispatch Phone 2 (Alternate)"
+                placeholder="e.g. 8884113629"
+                value={editFormData.pickupAlternatePhone}
+                onChange={(e) => setEditFormData({ ...editFormData, pickupAlternatePhone: e.target.value })}
+              />
+            </div>
+
             <Input
               label="Street Address"
-              value={editFormData.street}
-              onChange={(e) => setEditFormData({ ...editFormData, street: e.target.value })}
+              placeholder="e.g. NO15, JAYPEE GATEWAY, ANTHIVADI"
+              value={editFormData.pickupStreet}
+              onChange={(e) => setEditFormData({ ...editFormData, pickupStreet: e.target.value })}
             />
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Input
                 label="City"
-                value={editFormData.city}
-                onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                placeholder="e.g. Hosur"
+                value={editFormData.pickupCity}
+                onChange={(e) => setEditFormData({ ...editFormData, pickupCity: e.target.value })}
               />
               <Select
                 label="State"
-                value={editFormData.state}
-                onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })}
+                value={editFormData.pickupState}
+                onChange={(e) => setEditFormData({ ...editFormData, pickupState: e.target.value })}
                 options={[
                   { value: 'Tamil Nadu', label: 'Tamil Nadu' },
                   { value: 'Karnataka', label: 'Karnataka' },
@@ -706,26 +1020,63 @@ export function BranchManagementPage() {
               />
               <Input
                 label="Pincode"
-                value={editFormData.pincode}
-                onChange={(e) => setEditFormData({ ...editFormData, pincode: e.target.value })}
+                placeholder="e.g. 635110"
+                value={editFormData.pickupPincode}
+                onChange={(e) => setEditFormData({ ...editFormData, pickupPincode: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Booking Post Office"
+                placeholder="e.g. HOSUR BPC POST - 635110"
+                value={editFormData.pickupBookingOffice}
+                onChange={(e) => setEditFormData({ ...editFormData, pickupBookingOffice: e.target.value })}
+              />
+              <Input
+                label="Special Pickup Notes / Landmark"
+                placeholder="e.g. Near bus stand, dispatch counter"
+                value={editFormData.pickupNotes}
+                onChange={(e) => setEditFormData({ ...editFormData, pickupNotes: e.target.value })}
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
-            <input
-              type="checkbox"
-              id="branch-active-toggle"
-              checked={editFormData.isActive}
-              onChange={(e) => setEditFormData({ ...editFormData, isActive: e.target.checked })}
-              className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
-            />
-            <label htmlFor="branch-active-toggle" className="text-xs font-semibold text-slate-700 cursor-pointer">
-              Branch Active Status (Enabled for order routing & stock)
-            </label>
+          {/* Section 3: Leadership Assignment */}
+          <div className="space-y-3 bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+              <span>👑</span>
+              <span>3. Assigned Leadership</span>
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Select
+                label="Assigned Distributor"
+                value={editFormData.distributorId}
+                onChange={(e) => handleDistributorSelectEdit(e.target.value)}
+                options={[
+                  { value: '', label: '— Select Distributor —' },
+                  ...distributors.map((d) => ({
+                    value: d._id || d.id,
+                    label: `${d.name} (${d.phone || d.email})`
+                  }))
+                ]}
+              />
+              <Select
+                label="Assigned Manager"
+                value={editFormData.managerId}
+                onChange={(e) => handleManagerSelectEdit(e.target.value)}
+                options={[
+                  { value: '', label: '— Select Manager —' },
+                  ...managers.map((m) => ({
+                    value: m._id || m.id,
+                    label: `${m.name} (${m.phone || m.email})`
+                  }))
+                ]}
+              />
+            </div>
           </div>
 
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100 sticky bottom-0 bg-white py-2">
             <Button variant="secondary" type="button" className="w-full sm:w-auto" onClick={() => setEditModalOpen(false)}>
               Cancel
             </Button>
@@ -735,6 +1086,80 @@ export function BranchManagementPage() {
           </div>
         </form>
       </Modal>
+
+      {/* ── FRANCHISE CREDENTIALS SUCCESS MODAL (SHARE WITH FRANCHISE OWNER) ── */}
+      {createdCredentialsModalOpen && newlyCreatedAccount && (
+        <Modal
+          isOpen={createdCredentialsModalOpen}
+          onClose={() => setCreatedCredentialsModalOpen(false)}
+          title="Branch & Franchise Account Created!"
+          subtitle="Share these login credentials and pickup details with the franchise lead"
+          maxWidth="max-w-lg"
+          icon="🎉"
+        >
+          <div className="space-y-4">
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-3">
+              <div className="flex items-center justify-between border-b border-emerald-200 pb-2">
+                <span className="text-xs font-bold text-emerald-900 uppercase">
+                  {newlyCreatedAccount.branchName} ({newlyCreatedAccount.branchCode})
+                </span>
+                <Badge variant="emerald" size="sm">{newlyCreatedAccount.role}</Badge>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-emerald-100">
+                  <span className="text-slate-500">Contact / Name:</span>
+                  <span className="font-bold text-slate-900">{newlyCreatedAccount.name}</span>
+                </div>
+                <div className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-emerald-100">
+                  <span className="text-slate-500">Username / Email:</span>
+                  <span className="font-mono font-bold text-slate-900 select-all">{newlyCreatedAccount.username || newlyCreatedAccount.email}</span>
+                </div>
+                <div className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-emerald-100">
+                  <span className="text-slate-500">Password:</span>
+                  <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded select-all">{newlyCreatedAccount.password}</span>
+                </div>
+                {newlyCreatedAccount.pickupDetails?.address && (
+                  <div className="bg-white p-2.5 rounded-lg border border-emerald-100">
+                    <span className="text-slate-500 block mb-0.5">Postal Pickup Point:</span>
+                    <span className="font-medium text-slate-800 text-[11px] block">{newlyCreatedAccount.pickupDetails.address}</span>
+                    <span className="font-mono text-slate-500 text-[10px]">Contact: {newlyCreatedAccount.pickupDetails.contactPerson} ({newlyCreatedAccount.pickupDetails.phone})</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 leading-relaxed">
+              📋 <strong>Instructions for Franchise Owner:</strong> Give this username and password to them. When they log in, they can view their branch orders, add team members, and assign roles like Distributor, Telecaller, or Manager.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                variant="primary"
+                type="button"
+                className="w-full sm:w-auto flex items-center justify-center gap-1.5"
+                onClick={() => {
+                  const credsText = `*Shanthi Ayurvedas - Branch Login Account*\n\nBranch: ${newlyCreatedAccount.branchName} (${newlyCreatedAccount.branchCode})\nRole: ${newlyCreatedAccount.role}\nUsername: ${newlyCreatedAccount.username || newlyCreatedAccount.email}\nPassword: ${newlyCreatedAccount.password}\n\nPostal Pickup: ${newlyCreatedAccount.pickupDetails?.address || 'Configured in Branch'}\nContact: ${newlyCreatedAccount.pickupDetails?.contactPerson || newlyCreatedAccount.name} (${newlyCreatedAccount.pickupDetails?.phone || ''})\n\nPortal: https://shanthiayurvedas.com/login\n\nYou can log in, add your team members, and assign roles (Distributor, Telecaller, Manager).`;
+                  navigator.clipboard.writeText(credsText);
+                  setCopiedCredentials(true);
+                  setTimeout(() => setCopiedCredentials(false), 3000);
+                }}
+              >
+                {copiedCredentials ? <CheckCircle2 className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
+                <span>{copiedCredentials ? 'Copied to Clipboard!' : 'Copy Login Details'}</span>
+              </Button>
+              <Button
+                variant="secondary"
+                type="button"
+                className="w-full sm:w-auto"
+                onClick={() => setCreatedCredentialsModalOpen(false)}
+              >
+                Done / Close
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* ── DELETE BRANCH CONFIRMATION DIALOG (CENTERED MODAL) ── */}
       {deleteModalOpen && selectedBranchForDelete && (

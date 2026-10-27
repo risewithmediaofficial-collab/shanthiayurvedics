@@ -22,7 +22,6 @@ const PRODUCT_SORT_OPTIONS = [
   { value: 'name', label: 'Product Name' },
   { value: 'price', label: 'Selling Price' },
   { value: 'mrp', label: 'MRP' },
-  { value: 'costPrice', label: 'Cost Price' },
   { value: 'sku', label: 'SKU Code' },
   { value: 'createdAt', label: 'Date Added' }
 ];
@@ -705,9 +704,8 @@ export function ProductCatalogPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
               <Input
-                label="SKU Code *"
-                required
-                placeholder="e.g. MSO-200"
+                label="SKU Code (Optional)"
+                placeholder="e.g. MSO-200 (Auto-generated if empty)"
                 value={formData.sku}
                 onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
               />
@@ -792,7 +790,7 @@ export function ProductCatalogPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Selling Price (₹) *"
                 type="number"
@@ -806,12 +804,6 @@ export function ProductCatalogPage() {
                 required
                 value={formData.mrp}
                 onChange={(e) => setFormData({ ...formData, mrp: e.target.value })}
-              />
-              <Input
-                label="Cost Price (₹)"
-                type="number"
-                value={formData.costPrice}
-                onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
               />
             </div>
 
@@ -945,7 +937,7 @@ export function ProductCatalogPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Selling Price (₹) *"
                 type="number"
@@ -959,12 +951,6 @@ export function ProductCatalogPage() {
                 required
                 value={editData.mrp}
                 onChange={(e) => setEditData({ ...editData, mrp: e.target.value })}
-              />
-              <Input
-                label="Cost Price (₹)"
-                type="number"
-                value={editData.costPrice}
-                onChange={(e) => setEditData({ ...editData, costPrice: e.target.value })}
               />
             </div>
 

@@ -66,15 +66,48 @@ export function ShippingLabelLandscapeModal({
     const altMobile = pat.alternateMobile || addr.alternatePhone || '';
     const fatherName = pat.fatherName ? pat.fatherName.toUpperCase() : '';
 
-    const addressParts = [
-      addr.street,
-      addr.landmark ? `LANDMARK: ${addr.landmark}` : null,
-      addr.village,
-      addr.taluk,
-      addr.district || addr.city,
-      addr.state ? `${addr.state} - ${addr.pincode || ''}` : addr.pincode
-    ].filter(Boolean);
-    const formattedAddress = addressParts.join(', ').toUpperCase();
+    // Format delivery address with smart token deduplication to prevent repetitive street/taluk/district blocks
+    const cleanStreet = (addr.street || '').trim();
+    const cleanLandmark = (addr.landmark || '').trim();
+    const cleanVillage = (addr.village || '').trim();
+    const cleanTaluk = (addr.taluk || '').trim();
+    const cleanDistrict = (addr.district || addr.city || '').trim();
+    const cleanState = (addr.state || '').trim();
+    const cleanPincode = (addr.pincode || '').trim();
+
+    const streetLower = cleanStreet.toLowerCase();
+    const addressParts = [];
+
+    if (cleanStreet) addressParts.push(cleanStreet);
+    if (cleanLandmark && !streetLower.includes(cleanLandmark.toLowerCase())) {
+      addressParts.push(`LANDMARK: ${cleanLandmark}`);
+    }
+    if (cleanVillage && !streetLower.includes(cleanVillage.toLowerCase())) {
+      addressParts.push(cleanVillage);
+    }
+    if (cleanTaluk && !streetLower.includes(cleanTaluk.toLowerCase())) {
+      addressParts.push(cleanTaluk);
+    }
+    if (cleanDistrict && !streetLower.includes(cleanDistrict.toLowerCase())) {
+      addressParts.push(cleanDistrict);
+    }
+
+    const stateWithPin = cleanState && cleanPincode
+      ? (!streetLower.includes(cleanPincode.toLowerCase()) ? `${cleanState} - ${cleanPincode}` : cleanState)
+      : (cleanState || cleanPincode);
+
+    if (stateWithPin && !streetLower.includes(stateWithPin.toLowerCase())) {
+      addressParts.push(stateWithPin);
+    } else if (cleanPincode && !addressParts.some(p => p.includes(cleanPincode))) {
+      addressParts.push(cleanPincode);
+    }
+
+    const formattedAddress = addressParts
+      .join(', ')
+      .replace(/,\s*,/g, ',')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toUpperCase();
 
     // Language detection based on delivery state
     const stateNorm = (addr.state || '').toLowerCase();
@@ -106,9 +139,36 @@ export function ShippingLabelLandscapeModal({
       : `SPEED POST : PREPAID (Rs ${payableAmount}) | ${amountWords} RUPEES ONLY`;
 
     const tracking = order.trackingNumber || order.awbNumber || `EM${order.orderNumber?.replace(/[^0-9]/g, '').slice(-9) || Date.now().toString().slice(-9)}IN`;
-    const billerId = order.branchId?.billerId || '1000058077';
+    
+    // Dynamic Branch Sender & Return / From Address
+    const branch = typeof order.branchId === 'object' && order.branchId ? order.branchId : {};
+    const pickup = branch.postalPickupDetails || {};
+    const branchAddr = branch.address || {};
+
+    // 1. Sender / Brand Title
+    const senderTitle = (pickup.senderName || 'SHANTHI AYURVEDAS').toUpperCase();
+
+    // 2. Street, City, Pincode
+    const senderStreet = (pickup.street || branchAddr.street || 'NO15, JAYPEE GATEWAY, ANTHIVADI').toUpperCase();
+    const senderCity = (pickup.city || branchAddr.city || 'HOSUR').toUpperCase();
+    const senderPincode = (pickup.pincode || branchAddr.pincode || '635110').toUpperCase();
+    const fromAddressText = `FROM : ${senderTitle}, ${senderStreet}, ${senderCity} - ${senderPincode}`;
+
+    // 3. Sender Mobile numbers
+    const primarySenderPhone = pickup.phone || branch.phone || '8884747209';
+    const altSenderPhone = pickup.alternatePhone || branch.alternatePhone || (branch.code === 'HSR' || !branch.code ? '8884113629' : '');
+    const senderMobileText = altSenderPhone && altSenderPhone !== primarySenderPhone
+      ? `MOBILE : ${primarySenderPhone} / ${altSenderPhone}`
+      : `MOBILE : ${primarySenderPhone}`;
+
+    // 4. Biller ID & Booking Location
+    const billerId = branch.billerId || '1000058077';
+    const bookingLocation = (
+      pickup.bookingOffice ||
+      (senderCity ? `${senderCity} BPC POST - ${senderPincode}` : 'HOSUR BPC POST - 635110')
+    ).toUpperCase();
+
     const isTPC = (order.courierName || '').toLowerCase().includes('professional');
-    const bookingLocation = 'HOSUR BPC POST - 635110';
     const carrierSubheaderText = isTPC
       ? `TPC EXPRESS LOGISTICS NETWORK · BILLER ID : ${billerId} (BOOKED AT ${bookingLocation})`
       : `BILLER ID : ${billerId} (BOOKED AT ${bookingLocation})`;
@@ -154,6 +214,10 @@ export function ShippingLabelLandscapeModal({
       speedPostText,
       tracking,
       carrierSubheaderText,
+      fromAddressText,
+      senderMobileText,
+      billerId,
+      bookingLocation,
       totalPieces,
       weightText,
       telecallerName,
@@ -241,21 +305,17 @@ export function ShippingLabelLandscapeModal({
             <div class="main-grid">
               <!-- Left Column: Recipient Details -->
               <div class="col-left">
-                <div style="display: flex; flex-direction: column; height: 100%; justify-content: space-between;">
-                  <div>
-                    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 4px; margin-bottom: 2px;">
-                      <div class="cust-name">${d.customerName}</div>
-                      <div class="cod-badge">
-                        ${d.isCOD ? `COD <strong style="font-size:11px;">₹${d.payableAmount}</strong>` : `PREPAID`}
-                      </div>
-                    </div>
-                    <div class="cust-phone">
-                      <span style="font-size: 9.5px;">📞</span> ${d.mobile} ${d.altMobile ? `/ ${d.altMobile}` : ''}
-                    </div>
-                    ${d.fatherName ? `<div style="font-size: 8px; font-weight: 800; text-transform: uppercase; margin-bottom: 2px;">C/O ${d.fatherName}</div>` : ''}
-                    <div class="cust-address">${d.formattedAddress}</div>
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 4px; margin-bottom: 1px;">
+                  <div class="cust-name">${d.customerName}</div>
+                  <div class="cod-badge">
+                    ${d.isCOD ? `COD <strong style="font-size:10px;">₹${d.payableAmount}</strong>` : `PREPAID`}
                   </div>
                 </div>
+                <div class="cust-phone">
+                  <span style="font-size: 9px;">📞</span> ${d.mobile} ${d.altMobile ? `/ ${d.altMobile}` : ''}
+                </div>
+                ${d.fatherName ? `<div style="font-size: 7.5px; font-weight: 800; text-transform: uppercase; margin-bottom: 1px;">C/O ${d.fatherName}</div>` : ''}
+                <div class="cust-address">${d.formattedAddress}</div>
               </div>
 
               <!-- Right Column: Tracking & Table -->
@@ -289,8 +349,8 @@ export function ShippingLabelLandscapeModal({
 
             <!-- 6. Sender Details -->
             <div class="footer-sender">
-              <div>FROM : SHANTHI AYURVEDAS, SHANTHI AYURVEDAS NO15, JAYPEE GATEWAY, ANTHIVADI, HOSUR - 635110</div>
-              <div>MOBILE : 8884747209 / 8884113629</div>
+              <div>${d.fromAddressText}</div>
+              <div>${d.senderMobileText}</div>
             </div>
 
             <!-- 7. Emergency Medicine Banner -->
@@ -411,7 +471,7 @@ export function ShippingLabelLandscapeModal({
           .label-header {
             background-color: #362115 !important;
             color: #fff !important;
-            padding: 2.5px 6px;
+            padding: 2px 6px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -419,14 +479,14 @@ export function ShippingLabelLandscapeModal({
           .sheet-meta {
             text-align: right;
             font-family: monospace;
-            font-size: 7.5px;
+            font-size: 7px;
             line-height: 1.15;
             color: #f3f4f6;
           }
           .sub-row {
             border-bottom: 1px solid #000;
-            padding: 2px 6px;
-            font-size: 8.5px;
+            padding: 1.5px 6px;
+            font-size: 8px;
             font-weight: 800;
             text-transform: uppercase;
             line-height: 1.15;
@@ -436,8 +496,8 @@ export function ShippingLabelLandscapeModal({
             background-color: #166534 !important;
             color: #ffffff !important;
             text-align: center;
-            padding: 2px 5px;
-            font-size: 8.5px;
+            padding: 1.5px 5px;
+            font-size: 8px;
             font-weight: 800;
             border-bottom: 1px solid #000;
             letter-spacing: 0.1px;
@@ -449,69 +509,71 @@ export function ShippingLabelLandscapeModal({
             border-bottom: 1px solid #000;
             flex: 1;
             min-height: 0;
-            overflow: hidden;
           }
           .col-left {
             border-right: 1px solid #000;
-            padding: 3px 6px;
+            padding: 2.5px 6px;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: flex-start;
           }
           .cust-name {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 0.2px;
+            letter-spacing: 0.1px;
             line-height: 1.1;
           }
           .cod-badge {
             border: 1.2px solid #dc2626;
             color: #dc2626;
             font-weight: 900;
-            font-size: 9.5px;
-            padding: 0.5px 4px;
+            font-size: 9px;
+            padding: 0.5px 3.5px;
             border-radius: 2px;
             white-space: nowrap;
           }
           .cust-phone {
-            font-size: 9.5px;
+            font-size: 9px;
             font-weight: 900;
             color: #000;
-            margin: 1.5px 0;
+            margin: 1px 0;
             display: flex;
             align-items: center;
             gap: 2px;
           }
           .cust-address {
-            font-size: 8px;
+            font-size: 7.2px;
             font-weight: 800;
             text-transform: uppercase;
-            line-height: 1.2;
+            line-height: 1.18;
             color: #111;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            margin-top: 1px;
           }
           .col-right {
-            padding: 2.5px 5px;
+            padding: 2px 5px;
             display: flex;
             flex-direction: column;
-            gap: 2.5px;
+            gap: 2px;
             justify-content: flex-start;
           }
           .article-box {
             border: 1px dashed #737373;
-            padding: 2px 3px;
+            padding: 1.5px 3px;
             text-align: center;
             background: #fafafa;
           }
           .art-title {
-            font-size: 7px;
+            font-size: 6.5px;
             font-weight: 800;
             text-transform: uppercase;
             color: #525252;
           }
           .art-code {
             font-family: monospace;
-            font-size: 10px;
+            font-size: 9.5px;
             font-weight: 900;
             letter-spacing: 0.8px;
             margin-top: 0.5px;
@@ -525,8 +587,8 @@ export function ShippingLabelLandscapeModal({
             text-transform: uppercase;
           }
           .footer-sender {
-            padding: 2px 6px;
-            font-size: 7.5px;
+            padding: 1.5px 6px;
+            font-size: 7px;
             font-weight: 800;
             text-transform: uppercase;
             line-height: 1.15;
@@ -536,11 +598,12 @@ export function ShippingLabelLandscapeModal({
             background-color: #dc2626 !important;
             color: #ffffff !important;
             text-align: center;
-            padding: 1.5px 4px;
-            font-size: 7px;
+            padding: 1px 4px;
+            font-size: 6.8px;
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 0.4px;
+            line-height: 1.15;
           }
         </style>
       </head>
@@ -676,10 +739,9 @@ export function ShippingLabelLandscapeModal({
         <div className="flex-1 bg-slate-300 p-2 sm:p-4 overflow-y-auto flex flex-col items-center justify-start min-h-0">
           {/* White A4 Sheet Container (Standard Portrait 210 x 297, calibrated to display all 3 labels at once) */}
           <div
-            className="bg-white rounded-sm shadow-2xl border border-slate-400 w-full max-w-[460px] p-2 sm:p-2.5 text-black select-none my-auto flex flex-col shrink-0"
+            className="bg-white rounded-sm shadow-2xl border border-slate-400 w-full max-w-[480px] p-2 sm:p-2.5 text-black select-none my-auto flex flex-col shrink-0 min-h-[760px]"
             style={{
-              aspectRatio: '210 / 297',
-              maxHeight: 'min(640px, calc(86vh - 75px))'
+              aspectRatio: '210 / 297'
             }}
           >
             {/* 3 Labels Stacked Vertically with Cutting Guides */}
@@ -712,7 +774,7 @@ export function ShippingLabelLandscapeModal({
                         const remainingCount = d.products.length - visibleProducts.length;
 
                         return (
-                          <div className="w-full border-[1.5px] border-black bg-white flex flex-col justify-between text-xs overflow-hidden shadow-2xs flex-1 min-h-0">
+                          <div className="w-full border-[1.5px] border-black bg-white flex flex-col justify-between text-xs shadow-2xs flex-1 min-h-0">
                             {/* 1. Header Banner */}
                             <div className="bg-[#362115] text-white px-2 py-0.5 flex items-center justify-between shrink-0">
                               <div className="w-6"></div>
@@ -749,19 +811,19 @@ export function ShippingLabelLandscapeModal({
                             </div>
 
                             {/* 5. Middle Two-Column Grid */}
-                            <div className="grid grid-cols-[1.18fr_0.82fr] divide-x divide-black border-b border-black flex-1 min-h-0 bg-white overflow-hidden">
+                            <div className="grid grid-cols-[1.18fr_0.82fr] divide-x divide-black border-b border-black flex-1 min-h-0 bg-white">
                               {/* Left Column: Customer details */}
-                              <div className="p-1 sm:p-1.5 flex flex-col justify-between overflow-hidden">
+                              <div className="p-1 sm:p-1.5 flex flex-col justify-start">
                                 <div>
-                                  <div className="flex items-start justify-between gap-1 mb-0.2">
-                                    <div className="font-black text-[9.5px] sm:text-[10.5px] uppercase leading-tight text-black">
+                                  <div className="flex items-start justify-between gap-1 mb-0.5">
+                                    <div className="font-black text-[9.5px] sm:text-[10px] uppercase leading-tight text-black">
                                       {d.customerName}
                                     </div>
-                                    <div className="border border-red-600 text-red-600 font-black text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded-xs shrink-0">
-                                      {d.isCOD ? <><span>COD </span><strong style={{fontWeight:'900',fontSize:'10px'}}>₹{d.payableAmount}</strong></> : 'PREPAID'}
+                                    <div className="border border-red-600 text-red-600 font-black text-[7.5px] sm:text-[8px] px-1 py-0.2 rounded-xs shrink-0">
+                                      {d.isCOD ? <><span>COD </span><strong style={{fontWeight:'900',fontSize:'9.5px'}}>₹{d.payableAmount}</strong></> : 'PREPAID'}
                                     </div>
                                   </div>
-                                  <div className="font-black text-[8px] sm:text-[8.5px] text-black flex items-center gap-1 my-0.2">
+                                  <div className="font-black text-[7.5px] sm:text-[8px] text-black flex items-center gap-1 my-0.2">
                                     <span className="text-purple-700">📞</span> {d.mobile} {d.altMobile ? `/ ${d.altMobile}` : ''}
                                   </div>
                                   {d.fatherName && (
@@ -769,14 +831,14 @@ export function ShippingLabelLandscapeModal({
                                       C/O {d.fatherName}
                                     </div>
                                   )}
-                                  <div className="font-bold text-[7px] sm:text-[7.5px] uppercase leading-tight text-neutral-900">
+                                  <div className="font-bold text-[7px] sm:text-[7.5px] uppercase leading-snug text-neutral-900 break-words mt-0.5">
                                     {d.formattedAddress}
                                   </div>
                                 </div>
                               </div>
 
                               {/* Right Column: Tracking Box & Table */}
-                              <div className="p-1 flex flex-col gap-0.5 overflow-hidden justify-start">
+                              <div className="p-1 flex flex-col gap-0.5 justify-start">
                                 <div className="border border-dashed border-neutral-400 p-0.2 text-center bg-neutral-50 rounded-xs">
                                   <div className="text-[6px] sm:text-[6.5px] font-bold text-neutral-500 uppercase tracking-wider">
                                     ARTICLE NUMBER
@@ -821,8 +883,8 @@ export function ShippingLabelLandscapeModal({
 
                             {/* 6. Sender Bottom Details */}
                             <div className="px-1.5 py-0.2 font-bold text-[6.5px] sm:text-[7px] uppercase leading-tight bg-white text-black shrink-0">
-                              <div>FROM : SHANTHI AYURVEDAS, SHANTHI AYURVEDAS NO15, JAYPEE GATEWAY, ANTHIVADI, HOSUR - 635110</div>
-                              <div>MOBILE : 8884747209 / 8884113629</div>
+                              <div>{d.fromAddressText}</div>
+                              <div>{d.senderMobileText}</div>
                             </div>
 
                             {/* 7. Bottom Emergency Medicine Banner */}

@@ -66,7 +66,18 @@ export function ReportsHubPage() {
   });
 
   const salesOrders = Array.isArray(salesReportData?.data) ? salesReportData?.data : [];
-  const salesSummary = salesReportData?.meta?.summary || {};
+
+  // Summary stats with dual source (backend aggregated summary + robust client calculation fallback)
+  const rawSummary = salesReportData?.summary || salesReportData?.meta?.summary || {};
+  const ordersTotalCount = salesReportData?.pagination?.total ?? salesReportData?.meta?.total ?? salesOrders.length;
+  const clientRevenueSum = salesOrders.reduce((sum, o) => sum + (Number(o.grandTotal) || 0), 0);
+  const totalRevenue = (rawSummary.totalRevenue !== undefined && rawSummary.totalRevenue > 0)
+    ? rawSummary.totalRevenue
+    : clientRevenueSum;
+  const totalOrders = ordersTotalCount > 0 ? ordersTotalCount : salesOrders.length;
+  const avgOrderValue = (rawSummary.avgOrderValue !== undefined && rawSummary.avgOrderValue > 0)
+    ? rawSummary.avgOrderValue
+    : (totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0);
 
   const handleExportReport = (format) => {
     const dateStamp = new Date().toISOString().split('T')[0];
@@ -215,19 +226,19 @@ export function ReportsHubPage() {
             <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Total Filtered Revenue</div>
               <div className="text-2xl font-black text-emerald-700 mt-1">
-                ₹{(salesSummary.totalRevenue || 0).toLocaleString()}
+                ₹{(totalRevenue || 0).toLocaleString()}
               </div>
             </Card>
             <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Total Filtered Orders</div>
               <div className="text-2xl font-black text-slate-900 mt-1">
-                {salesReportData?.meta?.total || 0}
+                {totalOrders}
               </div>
             </Card>
             <Card className="p-4">
               <div className="text-xs text-slate-500 font-semibold uppercase">Average Order Value (AOV)</div>
               <div className="text-2xl font-black text-ayur-800 mt-1">
-                ₹{Math.round(salesSummary.avgOrderValue || 0).toLocaleString()}
+                ₹{Math.round(avgOrderValue || 0).toLocaleString()}
               </div>
             </Card>
           </div>

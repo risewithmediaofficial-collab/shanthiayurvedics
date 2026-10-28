@@ -226,6 +226,7 @@ export class OrderService {
         advanceAmount,
         advanceUtr,
         courierName,
+        trackingNumber: orderData.trackingNumber ? String(orderData.trackingNumber).trim() : undefined,
         weight: orderWeight,
         offerPrice: orderData.offerPrice ? Number(orderData.offerPrice) : undefined,
         grandTotal,

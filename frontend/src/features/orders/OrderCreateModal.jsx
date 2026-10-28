@@ -101,16 +101,25 @@ export function OrderCreateModal({
   const [offerPrice, setOfferPrice] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
 
-  // 4. Logistics & Payment (Manual Entry Supported)
-  const [courierName, setCourierName] = useState('India Post'); // 'India Post' | 'The Professional Courier'
+  // 4. Logistics & Payment (Supports India Post, TPC, and Manual Entry e.g. ST Courier)
+  const [courierType, setCourierType] = useState('India Post'); // 'India Post' | 'The Professional Courier' | 'MANUAL'
+  const [customCourierName, setCustomCourierName] = useState('ST Courier');
+  const [manualTrackingNumber, setManualTrackingNumber] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('COD'); // 'COD' | 'ONLINE'
   const [shippingCharge, setShippingCharge] = useState('69');
   const [advanceAmount, setAdvanceAmount] = useState('');
   const [advanceUtr, setAdvanceUtr] = useState('');
   const [codAmount, setCodAmount] = useState('');
 
+  const isTPC = courierType === 'The Professional Courier';
+  const resolvedCourierName = isOfficeOrder
+    ? 'Direct Office Counter'
+    : (courierType === 'MANUAL'
+        ? (customCourierName.trim() || 'ST Courier')
+        : courierType);
+
   const handleCourierChange = (newCourier) => {
-    setCourierName(newCourier);
+    setCourierType(newCourier);
     if (newCourier === 'The Professional Courier') {
       setPaymentMethod('ONLINE');
       setCodAmount('');
@@ -118,11 +127,11 @@ export function OrderCreateModal({
   };
 
   useEffect(() => {
-    if (courierName === 'The Professional Courier' && paymentMethod === 'COD') {
+    if (isTPC && paymentMethod === 'COD') {
       setPaymentMethod('ONLINE');
       setCodAmount('');
     }
-  }, [courierName, paymentMethod]);
+  }, [isTPC, paymentMethod]);
 
   // 5. Patient App Registration
   const [registerPatientApp, setRegisterPatientApp] = useState(true);
@@ -273,7 +282,7 @@ export function OrderCreateModal({
   const finalPayableTotal = offerPrice.trim() !== '' ? Number(offerPrice) : autoCalculatedTotal;
   const parsedAdvance = Math.max(0, Number(advanceAmount) || 0);
   const defaultCodToCollect = Math.max(0, finalPayableTotal - parsedAdvance);
-  const effectiveCodAmount = isOfficeOrder || courierName === 'The Professional Courier'
+  const effectiveCodAmount = isOfficeOrder || isTPC
     ? 0
     : (paymentMethod === 'COD'
         ? (codAmount.trim() !== '' ? Number(codAmount) : defaultCodToCollect)
@@ -316,7 +325,12 @@ export function OrderCreateModal({
       return;
     }
 
-    if (!isOfficeOrder && courierName === 'The Professional Courier' && paymentMethod === 'COD') {
+    if (!isOfficeOrder && courierType === 'MANUAL' && !customCourierName.trim()) {
+      setFormError('Please enter a courier service name (e.g. ST Courier).');
+      return;
+    }
+
+    if (!isOfficeOrder && isTPC && paymentMethod === 'COD') {
       setFormError('The Professional Courier does not support Cash on Delivery (COD). Pre-payment (UPI/Online) is required.');
       return;
     }
@@ -326,7 +340,8 @@ export function OrderCreateModal({
       fatherName,
       mobile,
       altMobile,
-      courierName: isOfficeOrder ? 'Direct Office Counter' : courierName,
+      courierName: resolvedCourierName,
+      trackingNumber: manualTrackingNumber.trim() || undefined,
       telecallerId: telecallerId || (user?.role === 'TELECALLER' ? (user._id || user.id) : undefined),
       telecallerName: user?.role === 'TELECALLER' ? user?.name : undefined,
       telecallerPhone: user?.role === 'TELECALLER' ? (user?.phone || user?.mobile) : undefined,
@@ -349,10 +364,10 @@ export function OrderCreateModal({
       shippingCharge: isOfficeOrder ? 0 : parsedShippingCharge,
       advanceAmount: parsedAdvance,
       advanceUtr: advanceUtr.trim(),
-      codAmount: isOfficeOrder || courierName === 'The Professional Courier' ? 0 : effectiveCodAmount,
+      codAmount: isOfficeOrder || isTPC ? 0 : effectiveCodAmount,
       discountTotal: totalDiscountAmount,
       offerPrice: offerPrice.trim() !== '' ? Number(offerPrice) : undefined,
-      paymentMethod: isOfficeOrder ? paymentMethod : (courierName === 'The Professional Courier' ? 'ONLINE' : paymentMethod),
+      paymentMethod: isOfficeOrder ? paymentMethod : (isTPC ? 'ONLINE' : paymentMethod),
       orderChannel: isOfficeOrder ? 'COUNTER_SALE' : 'DIRECT',
       isOfficeSale: isOfficeOrder,
       status: isOfficeOrder ? 'DELIVERED' : undefined,
@@ -961,17 +976,17 @@ export function OrderCreateModal({
                   1. Select Courier Service Partner *
                 </span>
                 <span className="text-[11px] text-slate-500 font-medium">
-                  {courierName === 'The Professional Courier' ? '⚡ Professional Express' : '📮 India Post Speed Post'}
+                  {isTPC ? '⚡ Professional Express' : (courierType === 'MANUAL' ? `🚚 ${resolvedCourierName}` : '📮 India Post Speed Post')}
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 {/* India Post Option */}
                 <button
                   type="button"
                   onClick={() => handleCourierChange('India Post')}
-                  className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer relative ${
-                    courierName === 'India Post'
+                  className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer relative ${
+                    courierType === 'India Post'
                       ? 'border-ayur-700 bg-ayur-50/70 shadow-sm ring-2 ring-ayur-600/20'
                       : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
@@ -982,9 +997,9 @@ export function OrderCreateModal({
                       COD + UPI
                     </span>
                   </div>
-                  <div className="font-bold text-slate-900 text-sm">India Post (Speed Post)</div>
-                  <div className="text-xs text-slate-500 mt-0.5">
-                    Government postal service · Supports Doorstep COD & Prepaid UPI
+                  <div className="font-bold text-slate-900 text-sm">India Post</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                    Speed Post · Supports Doorstep COD & Prepaid
                   </div>
                 </button>
 
@@ -992,8 +1007,8 @@ export function OrderCreateModal({
                 <button
                   type="button"
                   onClick={() => handleCourierChange('The Professional Courier')}
-                  className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer relative ${
-                    courierName === 'The Professional Courier'
+                  className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer relative ${
+                    isTPC
                       ? 'border-blue-600 bg-blue-50/70 shadow-sm ring-2 ring-blue-500/20'
                       : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
@@ -1001,15 +1016,99 @@ export function OrderCreateModal({
                   <div className="flex items-start justify-between">
                     <div className="text-2xl mb-1">⚡</div>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                      Pre-Payment Only
+                      Prepaid Only
                     </span>
                   </div>
-                  <div className="font-bold text-slate-900 text-sm">The Professional Courier (TPC)</div>
-                  <div className="text-xs text-slate-500 mt-0.5">
-                    Express courier network · Strictly Pre-Payment (API booking later)
+                  <div className="font-bold text-slate-900 text-sm">Professional (TPC)</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                    Express courier network · Strictly Pre-Payment
+                  </div>
+                </button>
+
+                {/* Manual / Other Courier Option (ST Courier, DTDC, etc.) */}
+                <button
+                  type="button"
+                  onClick={() => handleCourierChange('MANUAL')}
+                  className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer relative ${
+                    courierType === 'MANUAL'
+                      ? 'border-emerald-600 bg-emerald-50/70 shadow-sm ring-2 ring-emerald-500/20'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="text-2xl mb-1">🚚</div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      COD + UPI
+                    </span>
+                  </div>
+                  <div className="font-bold text-slate-900 text-sm">Other Courier (Manual)</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                    ST Courier, DTDC, Trackon or Local Branch Courier
                   </div>
                 </button>
               </div>
+
+              {/* Custom / Manual Courier Details Input Box */}
+              {courierType === 'MANUAL' && (
+                <div className="mt-3 p-3.5 bg-white rounded-xl border border-emerald-300 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <span>🚚 Enter Courier Partner & Booking Details</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      Manual Courier Entry
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Courier Partner Name *
+                      </label>
+                      <Input
+                        type="text"
+                        placeholder="e.g. ST Courier"
+                        value={customCourierName}
+                        onChange={(e) => setCustomCourierName(e.target.value)}
+                        required
+                      />
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        <span className="text-[10px] text-slate-400 font-medium">Quick Pick:</span>
+                        {['ST Courier', 'DTDC', 'Trackon', 'Professional (Local)', 'French Courier', 'Anjani Courier'].map((cName) => (
+                          <button
+                            key={cName}
+                            type="button"
+                            onClick={() => setCustomCourierName(cName)}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
+                              customCourierName.trim().toLowerCase() === cName.toLowerCase()
+                                ? 'bg-emerald-700 text-white border-emerald-700'
+                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            {cName}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                        <span>Tracking / Docket Number</span>
+                        <span className="text-[10px] text-slate-400 font-normal">Optional now</span>
+                      </label>
+                      <Input
+                        type="text"
+                        placeholder="e.g. ST12345678 or Docket No."
+                        value={manualTrackingNumber}
+                        onChange={(e) => setManualTrackingNumber(e.target.value)}
+                      />
+                      <div className="text-[10px] text-slate-400 mt-1">
+                        Can also be scanned or entered later after dispatch from orders list.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 4B. Payment Method Selection */}
@@ -1018,7 +1117,7 @@ export function OrderCreateModal({
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
                   2. Payment Method *
                 </span>
-                {courierName === 'The Professional Courier' ? (
+                {isTPC ? (
                   <span className="text-[11px] text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
                     COD not supported for Professional Courier
                   </span>
@@ -1029,7 +1128,7 @@ export function OrderCreateModal({
                 )}
               </div>
 
-              {courierName === 'The Professional Courier' ? (
+              {isTPC ? (
                 /* ONLY Pre-Payment Option for Professional Courier */
                 <div className="space-y-2.5">
                   <div className="p-3.5 rounded-xl border-2 border-blue-600 bg-white shadow-sm flex items-start gap-3">
@@ -1057,7 +1156,7 @@ export function OrderCreateModal({
                   </div>
                 </div>
               ) : (
-                /* BOTH COD and Online Prepaid for India Post */
+                /* BOTH COD and Online Prepaid for India Post & Manual Courier (ST Courier, DTDC, etc.) */
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -1074,7 +1173,9 @@ export function OrderCreateModal({
                     <div className="text-2xl mb-1">💵</div>
                     <div className="font-bold text-slate-900 text-sm">Cash on Delivery (COD)</div>
                     <div className="text-xs text-slate-500 mt-0.5">
-                      Collect payment at doorstep via Postman
+                      {courierType === 'MANUAL'
+                        ? `Collect payment at doorstep via ${resolvedCourierName} agent`
+                        : 'Collect payment at doorstep via Postman'}
                     </div>
                   </button>
 
@@ -1221,15 +1322,15 @@ export function OrderCreateModal({
                   </div>
                 </div>
 
-                {/* 4. Manual COD Collect Amount (Only for COD with India Post) */}
+                {/* 4. Manual COD Collect Amount (Only for COD) */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
                     <span>💵 COD Collect Amount (₹)</span>
                     <span className="text-[10px] text-slate-400 font-normal">
-                      {courierName === 'The Professional Courier' ? 'Not Applicable' : 'Auto: Total - Advance'}
+                      {isTPC ? 'Not Applicable' : 'Auto: Total - Advance'}
                     </span>
                   </label>
-                  {courierName !== 'The Professional Courier' && paymentMethod === 'COD' ? (
+                  {!isTPC && paymentMethod === 'COD' ? (
                     <>
                       <Input
                         type="number"
@@ -1260,7 +1361,7 @@ export function OrderCreateModal({
                     </>
                   ) : (
                     <div className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 font-medium">
-                      {courierName === 'The Professional Courier'
+                      {isTPC
                         ? '₹0 (Professional Courier is Pre-Payment Only)'
                         : '₹0 (Prepaid Order — No Doorstep Cash Collection)'}
                     </div>
@@ -1279,7 +1380,7 @@ export function OrderCreateModal({
               <span>Gross Products: ₹{productsGrossSubtotal.toLocaleString()}</span>
               {!isOfficeOrder && <span>• Shipping: ₹{parsedShippingCharge}</span>}
               {!isOfficeOrder && (
-                <span className="text-cyan-300 font-semibold">• {courierName} ({courierName === 'The Professional Courier' ? 'Pre-Payment Only' : (paymentMethod === 'COD' ? 'COD' : 'Prepaid')})</span>
+                <span className="text-cyan-300 font-semibold">• {resolvedCourierName} ({isTPC ? 'Pre-Payment Only' : (paymentMethod === 'COD' ? 'COD' : 'Prepaid')})</span>
               )}
               {isOfficeOrder && (
                 <span className="text-purple-300 font-bold">• Office Counter Sale (₹0 Shipping)</span>
@@ -1305,12 +1406,12 @@ export function OrderCreateModal({
             <div className="text-2xl font-black text-emerald-400 font-mono">
               ₹{finalPayableTotal.toLocaleString()}
             </div>
-            {!isOfficeOrder && courierName !== 'The Professional Courier' && paymentMethod === 'COD' ? (
+            {!isOfficeOrder && !isTPC && paymentMethod === 'COD' ? (
               <div className="text-[11px] text-amber-300 font-bold font-mono">
                 COD to Collect: ₹{effectiveCodAmount.toLocaleString()}
                 {parsedAdvance > 0 && ` (After ₹${parsedAdvance} Adv)`}
               </div>
-            ) : !isOfficeOrder && (courierName === 'The Professional Courier' || paymentMethod === 'ONLINE') ? (
+            ) : !isOfficeOrder && (isTPC || paymentMethod === 'ONLINE') ? (
               <div className="text-[10px] text-cyan-300 font-bold font-mono">
                 Prepaid Total: ₹{finalPayableTotal.toLocaleString()}
               </div>

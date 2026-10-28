@@ -1358,7 +1358,22 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                         💵 COD: <strong>₹{(order.codAmount ?? Math.max(0, (order.grandTotal || 0) - order.advanceAmount)).toLocaleString()}</strong>
                       </div>
                     )}
-                    <div className="flex items-center justify-end gap-1 mt-1">
+                    <div className="flex items-center justify-end gap-1 mt-1 flex-wrap">
+                      {order.courierName && (
+                        <span className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold border whitespace-nowrap ${
+                          order.courierName.includes('Professional')
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : (/india post|post/i.test(order.courierName)
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-emerald-50 text-emerald-800 border-emerald-200')
+                        }`}>
+                          {order.courierName.includes('Professional')
+                            ? '⚡ TPC'
+                            : (/india post|post/i.test(order.courierName)
+                                ? '📮 Post'
+                                : `🚚 ${order.courierName}`)}
+                        </span>
+                      )}
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${statusConfig.bg}`}>
                         {statusConfig.label}
                       </span>
@@ -1397,7 +1412,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                   <div className="flex items-center gap-1.5 flex-1 min-w-0">
                     {order.trackingNumber && (
                       <span className="px-1.5 py-1 rounded bg-amber-50 text-amber-800 font-mono text-[10px] border border-amber-200 shrink-0 flex items-center gap-1">
-                        <span>📮</span>
+                        <span>{order.courierName?.includes('Professional') ? '⚡' : (/post/i.test(order.courierName || '') ? '📮' : '🚚')}</span>
                         <span className="truncate max-w-[85px] sm:max-w-none">{order.trackingNumber}</span>
                       </span>
                     )}
@@ -1906,13 +1921,18 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                     >
                       <option value="India Post">India Post (Speed Post)</option>
                       <option value="The Professional Courier">The Professional Courier (TPC)</option>
-                      <option value="BlueDart">BlueDart</option>
+                      <option value="ST Courier">ST Courier</option>
                       <option value="DTDC">DTDC</option>
+                      <option value="Trackon">Trackon</option>
+                      <option value="BlueDart">BlueDart</option>
                       <option value="Delhivery">Delhivery</option>
                       <option value="Ekart">Ekart Logistics</option>
                       <option value="Xpressbees">Xpressbees</option>
                       <option value="Shadowfax">Shadowfax</option>
                       <option value="Other">Other</option>
+                      {editFormData.courierName && !['India Post', 'The Professional Courier', 'ST Courier', 'DTDC', 'Trackon', 'BlueDart', 'Delhivery', 'Ekart', 'Xpressbees', 'Shadowfax', 'Other'].includes(editFormData.courierName) && (
+                        <option value={editFormData.courierName}>{editFormData.courierName}</option>
+                      )}
                     </select>
                   </div>
                 </div>

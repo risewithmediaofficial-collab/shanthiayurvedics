@@ -1184,9 +1184,15 @@ export function OrdersFullTableView({
                           <span className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-semibold border ${
                             row.courierName.includes('Professional')
                               ? 'bg-blue-50 text-blue-700 border-blue-200'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                              : (/india post|post/i.test(row.courierName)
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                  : 'bg-emerald-50 text-emerald-800 border-emerald-200')
                           }`}>
-                            {row.courierName.includes('Professional') ? '⚡ TPC' : '📮 Post'}
+                            {row.courierName.includes('Professional')
+                              ? '⚡ TPC'
+                              : (/india post|post/i.test(row.courierName)
+                                  ? '📮 Post'
+                                  : `🚚 ${row.courierName}`)}
                           </span>
                         )}
                       </div>

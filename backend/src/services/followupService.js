@@ -11,6 +11,7 @@ export class FollowupService {
    * List follow-ups categorized by today, overdue, upcoming
    */
   static async getCategorizedFollowups({ telecallerId, branchId, category, page = 1, limit = 20 }) {
+    await this.cleanupOrphanedFollowups();
     const { startOfToday, endOfToday } = businessDateBoundaries();
 
     const baseFilter = {};
@@ -56,9 +57,68 @@ export class FollowupService {
   }
 
   /**
+   * Automatically purge orphaned follow-ups whose referenced lead/customer no longer exists
+   */
+  static async cleanupOrphanedFollowups() {
+    try {
+      const { Lead } = await import('../models/Lead.js');
+      const { Customer } = await import('../models/Customer.js');
+
+      const pendingFollowups = await FollowUp.find({ status: FOLLOWUP_STATUS.PENDING })
+        .select('_id leadId customerId')
+        .lean();
+
+      if (!pendingFollowups || pendingFollowups.length === 0) return;
+
+      const leadIds = pendingFollowups.map((f) => f.leadId).filter(Boolean);
+      const customerIds = pendingFollowups.map((f) => f.customerId).filter(Boolean);
+
+      const [existingLeads, existingCustomers] = await Promise.all([
+        leadIds.length ? Lead.find({ _id: { $in: leadIds } }).select('_id').lean() : [],
+        customerIds.length ? Customer.find({ _id: { $in: customerIds } }).select('_id').lean() : []
+      ]);
+
+      const existingLeadIdSet = new Set(existingLeads.map((l) => l._id.toString()));
+      const existingCustomerIdSet = new Set(existingCustomers.map((c) => c._id.toString()));
+
+      const toDeleteIds = [];
+      for (const f of pendingFollowups) {
+        const hasLead = f.leadId && existingLeadIdSet.has(f.leadId.toString());
+        const hasCustomer = f.customerId && existingCustomerIdSet.has(f.customerId.toString());
+        if (!hasLead && !hasCustomer) {
+          toDeleteIds.push(f._id);
+        }
+      }
+
+      if (toDeleteIds.length > 0) {
+        await FollowUp.deleteMany({ _id: { $in: toDeleteIds } });
+      }
+    } catch {
+      // Non-blocking cleanup
+    }
+  }
+
+  /**
+   * Clear all overdue follow-ups
+   */
+  static async clearOverdueFollowups({ telecallerId, branchId }) {
+    const { startOfToday } = businessDateBoundaries();
+    const filter = {
+      status: FOLLOWUP_STATUS.PENDING,
+      scheduledAt: { $lt: startOfToday }
+    };
+    if (telecallerId) filter.telecallerId = telecallerId;
+    if (branchId && branchId !== 'ALL') filter.branchId = branchId;
+
+    const res = await FollowUp.deleteMany(filter);
+    return { deletedCount: res.deletedCount };
+  }
+
+  /**
    * Get count breakdown for today, overdue, upcoming
    */
   static async getCounts({ telecallerId, branchId }) {
+    await this.cleanupOrphanedFollowups();
     const { startOfToday, endOfToday } = businessDateBoundaries();
 
     const scopeFilter = {};

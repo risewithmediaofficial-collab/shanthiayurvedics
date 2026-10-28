@@ -24,11 +24,18 @@ import { OrderCreateModal } from '../orders/OrderCreateModal.jsx';
 import { ExportButton } from '../../components/common/ExportButton.jsx';
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils.js';
 
-export function FollowUpListPage({ callerId } = {}) {
+export function FollowUpListPage({ callerId, initialTab = 'TODAY' } = {}) {
   const { selectedBranchId } = useBranch();
   const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('TODAY'); // TODAY, OVERDUE, UPCOMING, COMPLETED
+  const [activeTab, setActiveTab] = useState(initialTab || 'TODAY'); // TODAY, OVERDUE, UPCOMING, COMPLETED
+  const [clearOverdueModalOpen, setClearOverdueModalOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -95,6 +102,22 @@ export function FollowUpListPage({ callerId } = {}) {
     },
     onError: (err) => {
       setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to remove follow-up'}`);
+      setTimeout(() => setActionMsg(''), 4000);
+    }
+  });
+
+  const clearOverdueMutation = useMutation({
+    mutationFn: () => apiClient.delete('/followups/clear-overdue', { params: { telecallerId: callerId } }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['followups'] });
+      queryClient.invalidateQueries({ queryKey: ['caller-workspace'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setClearOverdueModalOpen(false);
+      setActionMsg(`✓ Cleared ${res.data?.data?.deletedCount || 0} overdue follow-up(s)`);
+      setTimeout(() => setActionMsg(''), 4000);
+    },
+    onError: (err) => {
+      setActionMsg(`⚠ ${err.response?.data?.message || 'Failed to clear overdue follow-ups'}`);
       setTimeout(() => setActionMsg(''), 4000);
     }
   });
@@ -312,67 +335,96 @@ export function FollowUpListPage({ callerId } = {}) {
 
       {/* Bento Metric Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bento-card flex flex-col gap-1">
+        <div
+          onClick={() => setActiveTab('TODAY')}
+          className={`bento-card flex flex-col gap-1 cursor-pointer transition-all hover:scale-101 ${
+            activeTab === 'TODAY' ? 'ring-2 ring-emerald-500 bg-emerald-50/20' : ''
+          }`}
+        >
           <div className="bento-metric-title">Today's Scheduled</div>
           <div className="bento-metric-value text-slate-900">
-            {followups.filter(f => f.status === 'PENDING').length}
+            {followupsResponse?.stats?.today ?? 0}
           </div>
           <div className="text-[11px] text-slate-500 font-medium">Calls due today</div>
         </div>
-        <div className="bento-card flex flex-col gap-1">
+        <div
+          onClick={() => setActiveTab('OVERDUE')}
+          className={`bento-card flex flex-col gap-1 cursor-pointer transition-all hover:scale-101 ${
+            activeTab === 'OVERDUE' ? 'ring-2 ring-rose-500 bg-rose-50/20' : ''
+          }`}
+        >
           <div className="bento-metric-title">Overdue Inquiries</div>
           <div className="bento-metric-value text-rose-600">
-            {followups.filter(f => f.status === 'OVERDUE' || (new Date(f.scheduledAt) < new Date() && f.status === 'PENDING')).length}
+            {followupsResponse?.stats?.overdue ?? 0}
           </div>
           <div className="text-[11px] text-rose-500 font-medium">Pending callback</div>
         </div>
-        <div className="bento-card flex flex-col gap-1">
+        <div
+          onClick={() => setActiveTab('COMPLETED')}
+          className={`bento-card flex flex-col gap-1 cursor-pointer transition-all hover:scale-101 ${
+            activeTab === 'COMPLETED' ? 'ring-2 ring-emerald-500 bg-emerald-50/20' : ''
+          }`}
+        >
           <div className="bento-metric-title">Completed Care Follow-ups</div>
           <div className="bento-metric-value text-emerald-700">
-            {followups.filter(f => f.status === 'COMPLETED').length}
+            {followupsResponse?.stats?.completed ?? 0}
           </div>
           <div className="text-[11px] text-emerald-600 font-medium">Patient queries resolved</div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bento-card p-2.5 crm-table-wrap flex items-center gap-2 overflow-x-auto scrollbar-none">
-        <button
-          type="button"
-          onClick={() => setActiveTab('TODAY')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 min-h-[36px] sm:min-h-0 touch-manipulation cursor-pointer ${
-            activeTab === 'TODAY' ? 'bg-ayur-800 text-white shadow-sm font-bold' : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          Today's Scheduled
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('OVERDUE')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 min-h-[36px] sm:min-h-0 touch-manipulation cursor-pointer ${
-            activeTab === 'OVERDUE' ? 'bg-rose-700 text-white shadow-sm font-bold' : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          🚨 Overdue
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('UPCOMING')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 min-h-[36px] sm:min-h-0 touch-manipulation cursor-pointer ${
-            activeTab === 'UPCOMING' ? 'bg-ayur-800 text-white shadow-sm font-bold' : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          Upcoming (7 Days)
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('COMPLETED')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 min-h-[36px] sm:min-h-0 touch-manipulation cursor-pointer ${
-            activeTab === 'COMPLETED' ? 'bg-slate-800 text-white shadow-sm font-bold' : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          Completed
-        </button>
+      <div className="bento-card p-2.5 crm-table-wrap flex items-center justify-between gap-2 overflow-x-auto scrollbar-none flex-wrap">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('TODAY')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 min-h-[36px] sm:min-h-0 touch-manipulation cursor-pointer ${
+              activeTab === 'TODAY' ? 'bg-ayur-800 text-white shadow-sm font-bold' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Today's Scheduled {followupsResponse?.stats?.today !== undefined ? `(${followupsResponse.stats.today})` : ''}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('OVERDUE')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 min-h-[36px] sm:min-h-0 touch-manipulation cursor-pointer ${
+              activeTab === 'OVERDUE' ? 'bg-rose-700 text-white shadow-sm font-bold' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            🚨 Overdue {followupsResponse?.stats?.overdue !== undefined ? `(${followupsResponse.stats.overdue})` : ''}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('UPCOMING')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 min-h-[36px] sm:min-h-0 touch-manipulation cursor-pointer ${
+              activeTab === 'UPCOMING' ? 'bg-ayur-800 text-white shadow-sm font-bold' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Upcoming (7 Days) {followupsResponse?.stats?.upcoming !== undefined ? `(${followupsResponse.stats.upcoming})` : ''}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('COMPLETED')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 min-h-[36px] sm:min-h-0 touch-manipulation cursor-pointer ${
+              activeTab === 'COMPLETED' ? 'bg-slate-800 text-white shadow-sm font-bold' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Completed {followupsResponse?.stats?.completed !== undefined ? `(${followupsResponse.stats.completed})` : ''}
+          </button>
+        </div>
+
+        {activeTab === 'OVERDUE' && (followupsResponse?.stats?.overdue || 0) > 0 && (
+          <button
+            type="button"
+            onClick={() => setClearOverdueModalOpen(true)}
+            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+            title="Dismiss all overdue follow-ups"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Clear All Overdue ({followupsResponse.stats.overdue})</span>
+          </button>
+        )}
       </div>
 
       <Table
@@ -505,6 +557,45 @@ export function FollowUpListPage({ callerId } = {}) {
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Delete Follow-Up
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Clear Overdue Confirmation Modal */}
+      {clearOverdueModalOpen && (
+        <Modal
+          isOpen={clearOverdueModalOpen}
+          onClose={() => setClearOverdueModalOpen(false)}
+          title="Clear All Overdue Follow-ups?"
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-3.5 bg-amber-50 border border-amber-200 rounded-xl">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-900">
+                <p className="font-bold mb-1">Dismiss all overdue follow-up reminders?</p>
+                <p>
+                  This will remove all <strong>{followupsResponse?.stats?.overdue || 0}</strong> overdue pending reminder(s) from past dates and reset your overdue counter to 0.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="secondary"
+                onClick={() => setClearOverdueModalOpen(false)}
+                disabled={clearOverdueMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => clearOverdueMutation.mutate()}
+                isLoading={clearOverdueMutation.isPending}
+                className="bg-rose-600 hover:bg-rose-700 text-white"
+              >
+                Yes, Clear All Overdue
               </Button>
             </div>
           </div>

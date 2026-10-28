@@ -259,6 +259,10 @@ export const deleteLead = asyncHandler(async (req, res) => {
     throw new NotFoundError('Lead');
   }
 
+  // Delete associated followups so they don't linger as orphaned overdue metrics
+  const { FollowUp } = await import('../models/FollowUp.js');
+  await FollowUp.deleteMany({ leadId: lead._id });
+
   // Retain append-only call and assignment history for the audit trail.
   await AuditService.log({ userId: req.user.id, branchId: lead.branchId, action: 'LEAD_DELETED', module: 'leads', resourceType: 'Lead', resourceId: lead._id, oldValue: lead.toObject(), req });
   await Lead.findByIdAndDelete(req.params.id);

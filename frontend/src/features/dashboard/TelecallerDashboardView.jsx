@@ -29,6 +29,7 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('leads');
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [followUpInitialTab, setFollowUpInitialTab] = useState('TODAY');
 
   const isPreview = user?.role !== 'TELECALLER';
 
@@ -243,7 +244,13 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
               onClick={() => {
                 if (key === 'reordersDue') setActiveTab('customers');
                 else if (key === 'leads') setActiveTab('leads');
-                else if (key === 'today' || key === 'overdue') setActiveTab('followups');
+                else if (key === 'today') {
+                  setFollowUpInitialTab('TODAY');
+                  setActiveTab('followups');
+                } else if (key === 'overdue') {
+                  setFollowUpInitialTab('OVERDUE');
+                  setActiveTab('followups');
+                }
                 else if (key === 'orders') setActiveTab('orders');
               }}
               className={`rounded-xl border bg-white p-2.5 sm:p-4 shadow-sm cursor-pointer transition-all hover:scale-101 min-w-0 ${
@@ -288,7 +295,7 @@ export function TelecallerDashboardView({ previewCaller, onSwitchToManagerView, 
 
       {/* Tab Content */}
       <Suspense fallback={<Spinner text="Loading workspace…" className="py-16" />}>
-        <Page key={`${activeTab}:${callerId}`} callerId={callerId} hideHeader={true} />
+        <Page key={`${activeTab}:${callerId}:${activeTab === 'followups' ? followUpInitialTab : ''}`} callerId={callerId} hideHeader={true} initialTab={activeTab === 'followups' ? followUpInitialTab : undefined} />
       </Suspense>
 
       {/* Full-Featured Prescription Order Modal */}

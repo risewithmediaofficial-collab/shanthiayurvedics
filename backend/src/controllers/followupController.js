@@ -72,3 +72,11 @@ export const deleteFollowup = asyncHandler(async (req, res) => {
   await FollowUp.findByIdAndDelete(req.params.id);
   return ApiResponse.success(res, null, 'Follow-up removed successfully');
 });
+
+export const clearOverdueFollowups = asyncHandler(async (req, res) => {
+  const telecallerId = req.user.role === ROLES.TELECALLER ? req.user.id : req.query.telecallerId;
+  const branchId = req.branchScope.isGlobal ? req.query.branchId : req.branchScope.branchId;
+
+  const result = await FollowupService.clearOverdueFollowups({ telecallerId, branchId });
+  return ApiResponse.success(res, result, 'Overdue follow-ups cleared successfully');
+});

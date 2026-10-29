@@ -86,26 +86,14 @@ export function BranchManagementPage() {
     code: '',
     phone: '',
     email: '',
-    street: '',
-    city: '',
-    state: 'Tamil Nadu',
-    pincode: '',
     branchType: 'COMPANY_OWNED',
     billerId: '1000058077',
     gstNumber: '',
-    managerId: '',
-    managerName: '',
-    managerPhone: '',
-    distributorId: '',
-    distributorName: '',
-    distributorPhone: '',
-    distributorEmail: '',
-    // Franchise / Branch Account Manual Creation:
-    createAccount: true,
-    accountName: '',
-    accountEmail: '',
-    accountPassword: '',
-    accountRole: 'MANAGER',
+    // Branch Head Login Profile (Give to Branch Head)
+    headName: '',
+    headEmail: '',
+    headPassword: '',
+    headPhone: '',
     // Shipping Label & Postal Pickup Details:
     pickupSenderName: 'SHANTHI AYURVEDAS',
     pickupContactPerson: '',
@@ -122,7 +110,9 @@ export function BranchManagementPage() {
   const [formData, setFormData] = useState(initialFormState);
   const [editFormData, setEditFormData] = useState({
     ...initialFormState,
-    isActive: true
+    isActive: true,
+    hasHeadAccount: false,
+    existingPassword: null
   });
 
   // 1. Fetch Branches
@@ -135,7 +125,7 @@ export function BranchManagementPage() {
   });
   const branches = Array.isArray(branchesResponse?.data) ? branchesResponse?.data : [];
 
-  // 2. Fetch Users to populate Manager and Distributor dropdowns
+  // 2. Fetch Users for Total Staff Metrics
   const { data: usersResponse } = useQuery({
     queryKey: ['admin-users-list'],
     queryFn: async () => {
@@ -144,97 +134,45 @@ export function BranchManagementPage() {
     }
   });
   const allUsers = Array.isArray(usersResponse?.data) ? usersResponse?.data : [];
-  const managers = allUsers.filter((u) => u.role === 'MANAGER');
-  const distributors = allUsers.filter((u) => u.role === 'DISTRIBUTOR');
-
-  // Handle Manager selection change in Create Form
-  const handleManagerSelectCreate = (mgrId) => {
-    const mgr = managers.find((m) => (m._id || m.id) === mgrId);
-    setFormData((prev) => ({
-      ...prev,
-      managerId: mgrId,
-      managerName: mgr ? mgr.name : '',
-      managerPhone: mgr ? mgr.phone || '' : ''
-    }));
-  };
-
-  // Handle Distributor selection change in Create Form
-  const handleDistributorSelectCreate = (distId) => {
-    const dist = distributors.find((d) => (d._id || d.id) === distId);
-    setFormData((prev) => ({
-      ...prev,
-      distributorId: distId,
-      distributorName: dist ? dist.name : '',
-      distributorPhone: dist ? dist.phone || '' : '',
-      distributorEmail: dist ? dist.email || '' : ''
-    }));
-  };
-
-  // Handle Manager selection change in Edit Form
-  const handleManagerSelectEdit = (mgrId) => {
-    const mgr = managers.find((m) => (m._id || m.id) === mgrId);
-    setEditFormData((prev) => ({
-      ...prev,
-      managerId: mgrId,
-      managerName: mgr ? mgr.name : '',
-      managerPhone: mgr ? mgr.phone || '' : ''
-    }));
-  };
-
-  // Handle Distributor selection change in Edit Form
-  const handleDistributorSelectEdit = (distId) => {
-    const dist = distributors.find((d) => (d._id || d.id) === distId);
-    setEditFormData((prev) => ({
-      ...prev,
-      distributorId: distId,
-      distributorName: dist ? dist.name : '',
-      distributorPhone: dist ? dist.phone || '' : '',
-      distributorEmail: dist ? dist.email || '' : ''
-    }));
-  };
+  const totalStaffCount = allUsers.filter((u) => u.role !== 'OWNER').length;
 
   const createMutation = useMutation({
     mutationFn: (data) =>
       apiClient.post('/branches', {
         name: data.name,
         code: data.code.toUpperCase(),
-        email: data.email,
+        email: data.headEmail || data.email,
+        phone: data.pickupPhone || data.phone || data.headPhone,
+        alternatePhone: data.pickupAlternatePhone || '',
         branchType: data.branchType,
-        managerId: data.managerId || null,
-        managerName: data.managerName,
-        managerPhone: data.managerPhone,
-        distributorId: data.distributorId || null,
-        distributorName: data.distributorName,
-        distributorPhone: data.distributorPhone,
-        distributorEmail: data.distributorEmail,
+        billerId: data.billerId || '1000058077',
+        gstNumber: data.gstNumber || '',
+        headName: data.headName || `${data.name} Branch Head`,
+        headEmail: data.headEmail,
+        headPassword: data.headPassword,
+        headPhone: data.headPhone || data.pickupPhone || data.phone,
+        accountName: data.headName || `${data.name} Branch Head`,
+        accountEmail: data.headEmail,
+        accountPassword: data.headPassword,
+        accountRole: 'MANAGER',
         address: {
-          street: data.pickupStreet || data.street,
-          city: data.pickupCity || data.city,
-          state: data.pickupState || data.state,
-          pincode: data.pickupPincode || data.pincode
+          street: data.pickupStreet || '',
+          city: data.pickupCity || '',
+          state: data.pickupState || 'Tamil Nadu',
+          pincode: data.pickupPincode || ''
         },
         postalPickupDetails: {
           senderName: data.pickupSenderName || 'SHANTHI AYURVEDAS',
-          contactPerson: data.pickupContactPerson || data.accountName || data.managerName || data.name,
-          phone: data.pickupPhone || data.phone || data.managerPhone,
+          contactPerson: data.pickupContactPerson || data.headName || data.name,
+          phone: data.pickupPhone || data.phone || data.headPhone,
           alternatePhone: data.pickupAlternatePhone || '',
-          street: data.pickupStreet || data.street,
-          city: data.pickupCity || data.city,
-          state: data.pickupState || data.state,
-          pincode: data.pickupPincode || data.pincode,
+          street: data.pickupStreet || '',
+          city: data.pickupCity || '',
+          state: data.pickupState || 'Tamil Nadu',
+          pincode: data.pickupPincode || '',
           bookingOffice: data.pickupBookingOffice || '',
           notes: data.pickupNotes || ''
-        },
-        billerId: data.billerId || '1000058077',
-        gstNumber: data.gstNumber || '',
-        phone: data.pickupPhone || data.phone,
-        alternatePhone: data.pickupAlternatePhone || '',
-        ...(data.createAccount && data.accountEmail && data.accountPassword ? {
-          accountName: data.accountName || data.name,
-          accountEmail: data.accountEmail,
-          accountPassword: data.accountPassword,
-          accountRole: data.accountRole || 'MANAGER'
-        } : {})
+        }
       }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['branches'] });
@@ -249,14 +187,14 @@ export function BranchManagementPage() {
           branchName: formData.name,
           branchCode: formData.code.toUpperCase(),
           pickupDetails: {
-            contactPerson: formData.pickupContactPerson || formData.accountName || formData.name,
+            contactPerson: formData.pickupContactPerson || formData.headName || formData.name,
             phone: formData.pickupPhone || formData.phone,
-            address: `${formData.pickupStreet || formData.street || ''}, ${formData.pickupCity || formData.city || ''} - ${formData.pickupPincode || formData.pincode || ''}`
+            address: `${formData.pickupStreet || ''}, ${formData.pickupCity || ''} - ${formData.pickupPincode || ''}`
           }
         });
         setCreatedCredentialsModalOpen(true);
       } else {
-        showToast('✓ Branch created successfully');
+        showToast('✓ Branch profile created successfully');
       }
 
       setFormData(initialFormState);
@@ -271,25 +209,22 @@ export function BranchManagementPage() {
       apiClient.patch(`/branches/${selectedBranchForEdit._id}`, {
         name: data.name,
         code: data.code.toUpperCase(),
-        phone: data.pickupPhone || data.phone,
+        phone: data.pickupPhone || data.phone || data.headPhone,
         alternatePhone: data.pickupAlternatePhone || '',
-        email: data.email,
+        email: data.headEmail || data.email,
         isActive: data.isActive,
         branchType: data.branchType,
         billerId: data.billerId || '1000058077',
         gstNumber: data.gstNumber || '',
-        managerId: data.managerId || null,
-        managerName: data.managerName,
-        managerPhone: data.managerPhone,
-        distributorId: data.distributorId || null,
-        distributorName: data.distributorName,
-        distributorPhone: data.distributorPhone,
-        distributorEmail: data.distributorEmail,
+        headName: data.headName,
+        headEmail: data.headEmail,
+        headPassword: data.headPassword || undefined,
+        headPhone: data.headPhone || data.pickupPhone || data.phone,
         address: {
-          street: data.pickupStreet || data.street,
-          city: data.pickupCity || data.city,
-          state: data.pickupState || data.state,
-          pincode: data.pickupPincode || data.pincode
+          street: data.pickupStreet || '',
+          city: data.pickupCity || '',
+          state: data.pickupState || 'Tamil Nadu',
+          pincode: data.pickupPincode || ''
         },
         postalPickupDetails: {
           senderName: data.pickupSenderName || 'SHANTHI AYURVEDAS',
@@ -307,9 +242,11 @@ export function BranchManagementPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['branches'] });
       queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['branch-credentials', selectedBranchForEdit?._id] });
       setEditModalOpen(false);
       setSelectedBranchForEdit(null);
-      showToast('✓ Branch and postal pickup details updated successfully');
+      showToast('✓ Branch profile and pickup details updated successfully');
     },
     onError: (err) => {
       alert(err.response?.data?.message || 'Failed to update branch');
@@ -456,25 +393,30 @@ export function BranchManagementPage() {
 
   const handleOpenEdit = (branch) => {
     setSelectedBranchForEdit(branch);
+    const cred = branch.initialCredentials?.find(
+      (c) => c.role === 'MANAGER' || (branch.managerId && (c.userId === branch.managerId._id || c.userId === branch.managerId))
+    );
+    const headName = branch.managerName || branch.managerId?.name || cred?.name || '';
+    const headEmail = branch.managerId?.email || cred?.email || (branch.code ? `${branch.code.toLowerCase()}.head@shanthiayurvedas.com` : '');
+    const headPhone = branch.managerPhone || branch.managerId?.phone || cred?.phone || branch.phone || '';
+
     setEditFormData({
       name: branch.name || '',
       code: branch.code || '',
       phone: branch.phone || '',
+      alternatePhone: branch.alternatePhone || '',
       email: branch.email || '',
-      street: branch.address?.street || branch.postalPickupDetails?.street || '',
-      city: branch.address?.city || branch.postalPickupDetails?.city || '',
-      state: branch.address?.state || branch.postalPickupDetails?.state || 'Tamil Nadu',
-      pincode: branch.address?.pincode || branch.postalPickupDetails?.pincode || '',
       branchType: branch.branchType || 'COMPANY_OWNED',
       billerId: branch.billerId || '1000058077',
       gstNumber: branch.gstNumber || '',
-      managerId: branch.managerId?._id || branch.managerId || '',
-      managerName: branch.managerName || branch.managerId?.name || '',
-      managerPhone: branch.managerPhone || branch.managerId?.phone || '',
-      distributorId: branch.distributorId?._id || branch.distributorId || '',
-      distributorName: branch.distributorName || branch.distributorId?.name || '',
-      distributorPhone: branch.distributorPhone || branch.distributorId?.phone || '',
-      distributorEmail: branch.distributorEmail || branch.distributorId?.email || '',
+      isActive: branch.isActive !== false,
+      // Branch Head Profile details:
+      headName,
+      headEmail,
+      headPhone,
+      headPassword: '',
+      existingPassword: cred?.password || branch.managerId?.initialPassword || null,
+      hasHeadAccount: Boolean(branch.managerId || branch.managerName || cred),
       // Label & Pickup Details:
       pickupSenderName: branch.postalPickupDetails?.senderName || 'SHANTHI AYURVEDAS',
       pickupContactPerson: branch.postalPickupDetails?.contactPerson || '',
@@ -485,8 +427,7 @@ export function BranchManagementPage() {
       pickupState: branch.postalPickupDetails?.state || branch.address?.state || 'Tamil Nadu',
       pickupPincode: branch.postalPickupDetails?.pincode || branch.address?.pincode || '',
       pickupBookingOffice: branch.postalPickupDetails?.bookingOffice || '',
-      pickupNotes: branch.postalPickupDetails?.notes || '',
-      isActive: branch.isActive !== false
+      pickupNotes: branch.postalPickupDetails?.notes || ''
     });
     setEditModalOpen(true);
   };
@@ -534,56 +475,60 @@ export function BranchManagementPage() {
       )
     },
     {
-      header: 'Assigned Distributor',
-      cell: (row) => {
-        const distName = row.distributorName || row.distributorId?.name;
-        const distPhone = row.distributorPhone || row.distributorId?.phone;
-        const distEmail = row.distributorEmail || row.distributorId?.email;
-
-        if (!distName) {
-          return (
-            <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md font-medium">
-              <span>⚠️</span> Unassigned
-            </span>
-          );
-        }
-
-        return (
-          <div className="text-xs">
-            <div className="font-bold text-slate-900 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>{distName}</span>
-            </div>
-            <div className="text-[10px] text-slate-500 font-mono mt-0.5">
-              {distPhone || distEmail || 'Distributor'}
-            </div>
-          </div>
-        );
-      }
-    },
-    {
-      header: 'Assigned Manager',
+      header: 'Branch Head Account',
       cell: (row) => {
         const mgrName = row.managerName || row.managerId?.name;
         const mgrPhone = row.managerPhone || row.managerId?.phone;
+        const mgrEmail = row.managerId?.email || row.email;
+        const cred = row.initialCredentials?.find(
+          (c) => c.role === 'MANAGER' || (row.managerId && (c.userId === row.managerId._id || c.userId === row.managerId))
+        );
 
-        if (!mgrName) {
+        if (!mgrName && !cred) {
           return (
-            <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md font-medium">
-              <UserX className="w-3 h-3 text-slate-400" /> None
-            </span>
+            <div className="flex flex-col items-start gap-1">
+              <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md font-medium">
+                <AlertTriangle className="w-3 h-3 text-amber-600" /> No Head Set
+              </span>
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedBranchForCredentials(row);
+                    setCreateAccountSubModalOpen(true);
+                  }}
+                  className="text-[10px] text-emerald-700 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                >
+                  <Plus className="w-2.5 h-2.5" /> Set Up Head Login
+                </button>
+              )}
+            </div>
           );
         }
 
+        const headName = mgrName || cred?.name || `${row.name} Head`;
+        const headEmail = mgrEmail || cred?.email || '—';
+        const headPhone = mgrPhone || cred?.phone || row.phone || '';
+
         return (
           <div className="text-xs">
-            <div className="font-bold text-slate-900 flex items-center gap-1">
-              <UserCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-              <span>{mgrName}</span>
+            <div className="font-bold text-slate-900 flex items-center gap-1.5">
+              <span className="text-xs">👑</span>
+              <span>{headName}</span>
+              <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.2 rounded font-semibold">
+                Branch Head
+              </span>
             </div>
-            <div className="text-[10px] text-slate-500 font-mono mt-0.5">
-              {mgrPhone || 'Manager'}
+            <div className="text-[11px] text-slate-600 font-mono mt-0.5 flex items-center gap-1">
+              <Mail className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+              <span className="truncate max-w-[190px]">{headEmail}</span>
             </div>
+            {headPhone && (
+              <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                <Phone className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                <span>{headPhone}</span>
+              </div>
+            )}
           </div>
         );
       }
@@ -704,7 +649,7 @@ export function BranchManagementPage() {
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">Enterprise Branch Management</h2>
           <p className="text-xs text-slate-500">
-            Create multiple operating branches and assign a dedicated Distributor and Branch Manager to each.
+            Create autonomous operating branches & franchises with dedicated Branch Head logins. Each branch head manages their own team independently.
           </p>
         </div>
         <Button variant="primary" icon={Plus} onClick={() => setCreateModalOpen(true)}>
@@ -715,30 +660,30 @@ export function BranchManagementPage() {
       {/* Bento Metric Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bento-card flex flex-col gap-1">
-          <div className="bento-metric-title">Operating Branches</div>
+          <div className="bento-metric-title">Operating Hubs & Franchises</div>
           <div className="bento-metric-value text-slate-900">{branches.length}</div>
-          <div className="text-[11px] text-slate-500 font-medium">Physical dispensary hubs</div>
+          <div className="text-[11px] text-slate-500 font-medium">Autonomous dispensary branches</div>
         </div>
         <div className="bento-card flex flex-col gap-1">
-          <div className="bento-metric-title">Assigned Distributors</div>
+          <div className="bento-metric-title">Branch Head Logins</div>
           <div className="bento-metric-value text-emerald-700">
-            {branches.filter((b) => b.distributorId || b.distributorName).length}
+            {branches.filter((b) => b.managerId || b.managerName || (b.initialCredentials && b.initialCredentials.length > 0)).length}
           </div>
-          <div className="text-[11px] text-emerald-600 font-medium">Managing branch stocks</div>
+          <div className="text-[11px] text-emerald-600 font-medium">Active branch administrators</div>
         </div>
         <div className="bento-card flex flex-col gap-1">
-          <div className="bento-metric-title">Assigned Managers</div>
+          <div className="bento-metric-title">Franchise Partners</div>
           <div className="bento-metric-value text-blue-700">
-            {branches.filter((b) => b.managerId || b.managerName).length}
+            {branches.filter((b) => b.branchType === 'FRANCHISE').length}
           </div>
-          <div className="text-[11px] text-blue-600 font-medium">Managing branch orders & team</div>
+          <div className="text-[11px] text-blue-600 font-medium">Licensed franchise dispensaries</div>
         </div>
         <div className="bento-card flex flex-col gap-1">
-          <div className="bento-metric-title">Active Stations</div>
+          <div className="bento-metric-title">Live Stations</div>
           <div className="bento-metric-value text-indigo-600">
             {branches.filter((b) => b.isActive).length}
           </div>
-          <div className="text-[11px] text-indigo-600 font-medium">Live for booking & fulfillment</div>
+          <div className="text-[11px] text-indigo-600 font-medium">Active for booking & dispatch</div>
         </div>
       </div>
 
@@ -812,8 +757,9 @@ export function BranchManagementPage() {
         >
           {/* Section 1: Branch Identity */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 border-b pb-1.5">
-              1. Branch Identity
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 border-b pb-1.5 flex items-center justify-between">
+              <span>1. Branch Profile & Identity</span>
+              <span className="text-[11px] text-slate-400 font-normal">Independent branch profile</span>
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Input
@@ -824,12 +770,16 @@ export function BranchManagementPage() {
                 onChange={(e) => {
                   const val = e.target.value;
                   const autoCode = val ? val.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'BR') : '';
+                  const autoEmail = autoCode ? `${autoCode.toLowerCase()}.head@shanthiayurvedas.com` : '';
+                  const randPass = formData.headPassword || `Shanthi@${Math.floor(1000 + Math.random() * 9000)}`;
                   setFormData((prev) => ({
                     ...prev,
                     name: val,
                     code: prev.code || autoCode,
-                    accountName: prev.accountName || val,
-                    pickupContactPerson: prev.pickupContactPerson || val
+                    headName: prev.headName || (val ? `${val} Branch Head` : ''),
+                    headEmail: prev.headEmail || autoEmail,
+                    headPassword: randPass,
+                    pickupContactPerson: prev.pickupContactPerson || (val ? `${val} Dispatch Head` : '')
                   }));
                 }}
               />
@@ -843,7 +793,7 @@ export function BranchManagementPage() {
                   setFormData((prev) => ({
                     ...prev,
                     code: c,
-                    accountEmail: prev.accountEmail || (c ? `${c.toLowerCase()}.mgr@shanthiayurvedas.com` : '')
+                    headEmail: prev.headEmail || (c ? `${c.toLowerCase()}.head@shanthiayurvedas.com` : '')
                   }));
                 }}
               />
@@ -868,6 +818,7 @@ export function BranchManagementPage() {
                   setFormData((prev) => ({
                     ...prev,
                     phone: p,
+                    headPhone: prev.headPhone || p,
                     pickupPhone: prev.pickupPhone || p
                   }));
                 }}
@@ -887,88 +838,85 @@ export function BranchManagementPage() {
             </div>
           </div>
 
-          {/* Section 2: Franchise / Branch Login Account */}
-          <div className="space-y-3 bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-200/80">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+          {/* Section 2: Branch Head Login Profile (Give to Branch Head) */}
+          <div className="space-y-3 bg-emerald-50/70 p-3.5 rounded-xl border border-emerald-200">
+            <div className="flex items-center justify-between border-b border-emerald-200 pb-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
                 <Key className="w-3.5 h-3.5 text-emerald-700" />
-                <span>2. Franchise Login Account</span>
+                <span>2. Branch Head Login Profile (Give to Branch Head)</span>
               </h4>
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.createAccount}
-                  onChange={(e) => setFormData({ ...formData, createAccount: e.target.checked })}
-                  className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
-                />
-                <span>Create Login Account</span>
-              </label>
+              <Badge variant="emerald" size="sm">Autonomous Portal</Badge>
             </div>
 
-            {formData.createAccount && (
-              <div className="space-y-3 pt-1">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Input
-                    label="Account Lead Name *"
-                    required={formData.createAccount}
-                    placeholder="e.g. Ramesh Kumar"
-                    value={formData.accountName}
-                    onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
-                  />
-                  <Select
-                    label="Assigned Role *"
-                    value={formData.accountRole}
-                    onChange={(e) => setFormData({ ...formData, accountRole: e.target.value })}
-                    options={[
-                      { value: 'MANAGER', label: 'Branch Manager (Manage branch & callers)' },
-                      { value: 'DISTRIBUTOR', label: 'Distributor (Stock & order access)' }
-                    ]}
-                  />
-                </div>
+            <div className="bg-white/80 border border-emerald-200/80 rounded-lg p-2.5 text-xs text-emerald-900 flex items-start gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">No Central Manager/Distributor Assignment Needed</p>
+                <p className="text-[11px] text-emerald-700 mt-0.5 leading-relaxed">
+                  Give these login credentials to the Branch Head. Upon login, the Branch Head will manage their own branch, assign roles, and add their own team members (telecallers, dispatchers) without interconnecting with other branches.
+                </p>
+              </div>
+            </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Input
-                    label="Username / Email *"
-                    required={formData.createAccount}
-                    placeholder="e.g. salem.franchise@shanthiayurvedas.com"
-                    value={formData.accountEmail}
-                    onChange={(e) => setFormData({ ...formData, accountEmail: e.target.value })}
-                  />
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-semibold text-slate-700">Password *</label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const randPass = `Shanthi@${Math.floor(1000 + Math.random() * 9000)}`;
-                          setFormData({ ...formData, accountPassword: randPass });
-                        }}
-                        className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5 cursor-pointer"
-                      >
-                        <Sparkles className="w-2.5 h-2.5" /> Auto-Generate
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <Input
-                        required={formData.createAccount}
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Set password"
-                        value={formData.accountPassword}
-                        onChange={(e) => setFormData({ ...formData, accountPassword: e.target.value })}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
-                        title={showPassword ? 'Hide password' : 'Show password'}
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
+            <div className="space-y-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  label="Branch Head Full Name *"
+                  required
+                  placeholder="e.g. Ramesh Kumar"
+                  value={formData.headName}
+                  onChange={(e) => setFormData({ ...formData, headName: e.target.value })}
+                />
+                <Input
+                  label="Branch Head Phone (For WhatsApp)"
+                  placeholder="e.g. 9876543210"
+                  value={formData.headPhone}
+                  onChange={(e) => setFormData({ ...formData, headPhone: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  label="Username / Login Email *"
+                  required
+                  placeholder="e.g. salem.head@shanthiayurvedas.com"
+                  value={formData.headEmail}
+                  onChange={(e) => setFormData({ ...formData, headEmail: e.target.value })}
+                />
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700">Password *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const randPass = `Shanthi@${Math.floor(1000 + Math.random() * 9000)}`;
+                        setFormData({ ...formData, headPassword: randPass });
+                      }}
+                      className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Sparkles className="w-2.5 h-2.5" /> Auto-Generate
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      required
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Set password"
+                      value={formData.headPassword}
+                      onChange={(e) => setFormData({ ...formData, headPassword: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Section 3: Shipping Pickup & From Address */}
@@ -1066,47 +1014,12 @@ export function BranchManagementPage() {
             </div>
           </div>
 
-          {/* Section 4: Optional Existing Leadership Assignment */}
-          {!formData.createAccount && (
-            <div className="space-y-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                4. Assign Existing Leadership
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Select
-                  label="Assigned Distributor"
-                  value={formData.distributorId}
-                  onChange={(e) => handleDistributorSelectCreate(e.target.value)}
-                  options={[
-                    { value: '', label: '— Select Distributor —' },
-                    ...distributors.map((d) => ({
-                      value: d._id || d.id,
-                      label: `${d.name} (${d.phone || d.email})`
-                    }))
-                  ]}
-                />
-                <Select
-                  label="Assigned Manager"
-                  value={formData.managerId}
-                  onChange={(e) => handleManagerSelectCreate(e.target.value)}
-                  options={[
-                    { value: '', label: '— Select Manager —' },
-                    ...managers.map((m) => ({
-                      value: m._id || m.id,
-                      label: `${m.name} (${m.phone || m.email})`
-                    }))
-                  ]}
-                />
-              </div>
-            </div>
-          )}
-
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100 sticky bottom-0 bg-white py-2">
             <Button variant="secondary" type="button" className="w-full sm:w-auto" onClick={() => setCreateModalOpen(false)}>
               Cancel
             </Button>
             <Button variant="primary" type="submit" className="w-full sm:w-auto" isLoading={createMutation.isPending}>
-              Create Branch
+              Create Branch Profile & Head Login
             </Button>
           </div>
         </form>
@@ -1116,8 +1029,8 @@ export function BranchManagementPage() {
       <Modal
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}
-        title="Edit Branch & Pickup Details"
-        subtitle={`Update details and postal pickup settings for ${selectedBranchForEdit?.name || 'Branch'}`}
+        title="Edit Branch & Head Profile"
+        subtitle={`Update profile, postal pickup, and branch head access for ${selectedBranchForEdit?.name || 'Branch'}`}
         maxWidth="max-w-2xl"
         icon="✏️"
       >
@@ -1131,7 +1044,7 @@ export function BranchManagementPage() {
           {/* Section 1: Branch Identity */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 border-b pb-1.5 flex items-center justify-between">
-              <span>1. Branch Identity</span>
+              <span>1. Branch Profile & Identity</span>
               <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1276,38 +1189,143 @@ export function BranchManagementPage() {
             </div>
           </div>
 
-          {/* Section 3: Leadership Assignment */}
-          <div className="space-y-3 bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-              <span>👑</span>
-              <span>3. Assigned Leadership</span>
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Select
-                label="Assigned Distributor"
-                value={editFormData.distributorId}
-                onChange={(e) => handleDistributorSelectEdit(e.target.value)}
-                options={[
-                  { value: '', label: '— Select Distributor —' },
-                  ...distributors.map((d) => ({
-                    value: d._id || d.id,
-                    label: `${d.name} (${d.phone || d.email})`
-                  }))
-                ]}
-              />
-              <Select
-                label="Assigned Manager"
-                value={editFormData.managerId}
-                onChange={(e) => handleManagerSelectEdit(e.target.value)}
-                options={[
-                  { value: '', label: '— Select Manager —' },
-                  ...managers.map((m) => ({
-                    value: m._id || m.id,
-                    label: `${m.name} (${m.phone || m.email})`
-                  }))
-                ]}
-              />
+          {/* Section 3: Branch Head Profile & Access (Replaces Manager & Distributor Assignment) */}
+          <div className="space-y-3 bg-amber-50/70 p-3.5 rounded-xl border border-amber-200">
+            <div className="flex items-center justify-between border-b border-amber-200 pb-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+                <span>👑</span>
+                <span>3. Branch Head Profile & Login Access</span>
+              </h4>
+              <Badge variant="warning" size="sm">Branch Admin</Badge>
             </div>
+
+            {editFormData.hasHeadAccount ? (
+              <div className="space-y-3">
+                <div className="bg-white p-3 rounded-xl border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                      <span>👑</span>
+                      <span>{editFormData.headName || 'Branch Head'}</span>
+                      <span className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 font-semibold">
+                        Branch Head / Manager
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-600 font-mono mt-1 flex items-center gap-1">
+                      <Mail className="w-3 h-3 text-slate-400" />
+                      <span>{editFormData.headEmail || 'No email'}</span>
+                      {editFormData.headPhone && (
+                        <>
+                          <span className="text-slate-300">•</span>
+                          <Phone className="w-3 h-3 text-slate-400" />
+                          <span>{editFormData.headPhone}</span>
+                        </>
+                      )}
+                    </div>
+                    {editFormData.existingPassword && (
+                      <div className="text-[11px] text-emerald-800 font-mono mt-1.5 flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 w-fit">
+                        <Key className="w-3 h-3 text-emerald-600" />
+                        <span>Password: <strong>{revealedPasswords['edit_head'] ? editFormData.existingPassword : '••••••••'}</strong></span>
+                        <button
+                          type="button"
+                          onClick={() => setRevealedPasswords(prev => ({ ...prev, edit_head: !prev['edit_head'] }))}
+                          className="ml-1 text-slate-500 hover:text-slate-800 cursor-pointer"
+                        >
+                          {revealedPasswords['edit_head'] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedBranchForCredentials(selectedBranchForEdit);
+                      setCredentialsModalOpen(true);
+                    }}
+                    className="px-3 py-1.5 text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors border border-amber-300 shadow-2xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                  >
+                    <Key className="w-3.5 h-3.5 text-amber-700" />
+                    <span>View / WhatsApp Credentials</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <Input
+                    label="Update Branch Head Name"
+                    value={editFormData.headName}
+                    onChange={(e) => setEditFormData({ ...editFormData, headName: e.target.value })}
+                  />
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700">Reset Password (Optional)</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const randPass = `Shanthi@${Math.floor(1000 + Math.random() * 9000)}`;
+                          setEditFormData({ ...editFormData, headPassword: randPass });
+                        }}
+                        className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <Sparkles className="w-2.5 h-2.5" /> Auto-Generate
+                      </button>
+                    </div>
+                    <Input
+                      placeholder="Leave blank to keep existing password"
+                      value={editFormData.headPassword}
+                      onChange={(e) => setEditFormData({ ...editFormData, headPassword: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-[11px] text-amber-800">
+                  No Branch Head account is currently created for this branch. Create the login account below so the Branch Head can log in and manage team members.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    label="Branch Head Full Name *"
+                    placeholder="e.g. Ramesh Kumar"
+                    value={editFormData.headName}
+                    onChange={(e) => setEditFormData({ ...editFormData, headName: e.target.value })}
+                  />
+                  <Input
+                    label="Branch Head Phone"
+                    placeholder="e.g. 9876543210"
+                    value={editFormData.headPhone}
+                    onChange={(e) => setEditFormData({ ...editFormData, headPhone: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    label="Username / Login Email *"
+                    placeholder="e.g. head@shanthiayurvedas.com"
+                    value={editFormData.headEmail}
+                    onChange={(e) => setEditFormData({ ...editFormData, headEmail: e.target.value })}
+                  />
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700">Set Initial Password *</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const randPass = `Shanthi@${Math.floor(1000 + Math.random() * 9000)}`;
+                          setEditFormData({ ...editFormData, headPassword: randPass });
+                        }}
+                        className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <Sparkles className="w-2.5 h-2.5" /> Auto-Generate
+                      </button>
+                    </div>
+                    <Input
+                      placeholder="Enter password"
+                      value={editFormData.headPassword}
+                      onChange={(e) => setEditFormData({ ...editFormData, headPassword: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100 sticky bottom-0 bg-white py-2">
@@ -1364,16 +1382,39 @@ export function BranchManagementPage() {
             </div>
 
             <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 leading-relaxed">
-              📋 <strong>Instructions for Franchise Owner:</strong> Give this username and password to them. When they log in, they can view their branch orders, add team members, and assign roles like Distributor, Telecaller, or Manager.
+              📋 <strong>Instructions for Branch Head:</strong> Give this username and password to the Branch Head. When they log in, they can view their branch orders, add team members (telecallers, distributors, dispatchers), and assign roles independently for their branch.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer text-xs"
+                onClick={() => {
+                  const rawPhone = newlyCreatedAccount.pickupDetails?.phone || newlyCreatedAccount.phone || formData.headPhone || '';
+                  const cleanPhone = rawPhone.replace(/\D/g, '').slice(-10);
+                  const text = encodeURIComponent(
+                    `🌿 *Shanthi Ayurvedas - Branch Head Login Credentials*\n\n` +
+                    `🏢 *Branch:* ${newlyCreatedAccount.branchName} (${newlyCreatedAccount.branchCode})\n` +
+                    `👑 *Designation:* Branch Head / Manager\n` +
+                    `👤 *Name:* ${newlyCreatedAccount.name}\n` +
+                    `📧 *Username / Login:* ${newlyCreatedAccount.username || newlyCreatedAccount.email}\n` +
+                    `🔑 *Password:* ${newlyCreatedAccount.password}\n\n` +
+                    `🌐 *Login Portal:* https://shanthiayurvedas.com/login\n\n` +
+                    `Welcome to Shanthi Ayurvedas! Please log in to access your branch desk, assign roles, and add your team members.`
+                  );
+                  const url = cleanPhone ? `https://wa.me/91${cleanPhone}?text=${text}` : `https://wa.me/?text=${text}`;
+                  window.open(url, '_blank');
+                }}
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span>Share on WhatsApp</span>
+              </button>
               <Button
                 variant="primary"
                 type="button"
                 className="w-full sm:w-auto flex items-center justify-center gap-1.5"
                 onClick={() => {
-                  const credsText = `*Shanthi Ayurvedas - Branch Login Account*\n\nBranch: ${newlyCreatedAccount.branchName} (${newlyCreatedAccount.branchCode})\nRole: ${newlyCreatedAccount.role}\nUsername: ${newlyCreatedAccount.username || newlyCreatedAccount.email}\nPassword: ${newlyCreatedAccount.password}\n\nPostal Pickup: ${newlyCreatedAccount.pickupDetails?.address || 'Configured in Branch'}\nContact: ${newlyCreatedAccount.pickupDetails?.contactPerson || newlyCreatedAccount.name} (${newlyCreatedAccount.pickupDetails?.phone || ''})\n\nPortal: https://shanthiayurvedas.com/login\n\nYou can log in, add your team members, and assign roles (Distributor, Telecaller, Manager).`;
+                  const credsText = `*Shanthi Ayurvedas - Branch Head Login Account*\n\nBranch: ${newlyCreatedAccount.branchName} (${newlyCreatedAccount.branchCode})\nRole: Branch Head / Manager\nName: ${newlyCreatedAccount.name}\nUsername: ${newlyCreatedAccount.username || newlyCreatedAccount.email}\nPassword: ${newlyCreatedAccount.password}\n\nPostal Pickup: ${newlyCreatedAccount.pickupDetails?.address || 'Configured in Branch'}\nContact: ${newlyCreatedAccount.pickupDetails?.contactPerson || newlyCreatedAccount.name} (${newlyCreatedAccount.pickupDetails?.phone || ''})\n\nPortal: https://shanthiayurvedas.com/login\n\nPlease log in to access your branch portal, assign roles, and add your team members.`;
                   navigator.clipboard.writeText(credsText);
                   setCopiedCredentials(true);
                   setTimeout(() => setCopiedCredentials(false), 3000);
@@ -1459,16 +1500,16 @@ export function BranchManagementPage() {
                       <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                         <div className="flex items-center gap-2">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
-                            account.role === 'DISTRIBUTOR'
+                            account.isBranchHead || account.role === 'MANAGER'
+                              ? 'bg-amber-100 text-amber-900 border-amber-300 shadow-2xs font-extrabold'
+                              : account.role === 'DISTRIBUTOR'
                               ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                              : account.role === 'MANAGER'
-                              ? 'bg-blue-50 text-blue-800 border-blue-200'
                               : 'bg-purple-50 text-purple-800 border-purple-200'
                           }`}>
-                            {account.role === 'DISTRIBUTOR'
+                            {account.isBranchHead || account.role === 'MANAGER'
+                              ? '👑 Branch Head'
+                              : account.role === 'DISTRIBUTOR'
                               ? '📦 Branch Distributor'
-                              : account.role === 'MANAGER'
-                              ? '👔 Branch Manager'
                               : `👤 ${account.role}`}
                           </span>
                           <span className="font-bold text-slate-900 text-xs">{account.name}</span>

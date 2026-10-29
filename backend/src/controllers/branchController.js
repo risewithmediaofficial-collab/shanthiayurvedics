@@ -67,6 +67,7 @@ export const createBranch = asyncHandler(async (req, res) => {
     code,
     address,
     phone,
+    alternatePhone,
     email,
     managerId,
     managerName,
@@ -79,7 +80,11 @@ export const createBranch = asyncHandler(async (req, res) => {
     revenueSharePercent,
     billerId,
     gstNumber,
-    // Branch Account Setup fields
+    // Branch Head Account Setup fields (Branch Profile + Head Credentials)
+    headName,
+    headEmail,
+    headPassword,
+    headPhone,
     accountName,
     accountEmail,
     accountPassword,
@@ -93,7 +98,7 @@ export const createBranch = asyncHandler(async (req, res) => {
     throw new ConflictError(`Branch with code '${code}' already exists`);
   }
 
-  // Optional manual user account creation for the branch / franchise
+  // Branch Head login account creation (autonomous per branch)
   let createdAccount = null;
   let effectiveManagerId = managerId || null;
   let effectiveManagerName = managerName;
@@ -103,22 +108,26 @@ export const createBranch = asyncHandler(async (req, res) => {
   let effectiveDistributorPhone = distributorPhone;
   let effectiveDistributorEmail = distributorEmail;
 
-  if (accountEmail && accountPassword) {
-    const normalizedEmail = accountEmail.toLowerCase().trim();
-    const existing = await User.findOne({ email: normalizedEmail });
+  const resolvedHeadEmail = (headEmail || accountEmail)?.toLowerCase()?.trim();
+  const resolvedHeadPassword = headPassword || accountPassword;
+  const resolvedHeadName = (headName || accountName || `${name} Branch Head`)?.trim();
+  const resolvedHeadPhone = headPhone || postalPickupDetails?.phone || phone || '';
+
+  if (resolvedHeadEmail && resolvedHeadPassword) {
+    const existing = await User.findOne({ email: resolvedHeadEmail });
     if (existing) {
-      throw new ConflictError(`User account with email/username '${normalizedEmail}' already exists`);
+      throw new ConflictError(`User account with email/username '${resolvedHeadEmail}' already exists`);
     }
 
-    const passwordHash = await User.hashPassword(accountPassword);
+    const passwordHash = await User.hashPassword(resolvedHeadPassword);
     const assignedRole = accountRole === 'DISTRIBUTOR' ? 'DISTRIBUTOR' : 'MANAGER';
     const newAccountUser = new User({
-      name: accountName?.trim() || effectiveManagerName || name,
-      email: normalizedEmail,
+      name: resolvedHeadName,
+      email: resolvedHeadEmail,
       passwordHash,
-      initialPassword: accountPassword,
+      initialPassword: resolvedHeadPassword,
       role: assignedRole,
-      phone: postalPickupDetails?.phone || phone || '',
+      phone: resolvedHeadPhone,
       isActive: true
     });
     await newAccountUser.save();
@@ -139,8 +148,9 @@ export const createBranch = asyncHandler(async (req, res) => {
       name: newAccountUser.name,
       username: newAccountUser.email,
       email: newAccountUser.email,
-      password: accountPassword,
-      role: assignedRole
+      password: resolvedHeadPassword,
+      role: assignedRole,
+      isBranchHead: true
     };
   }
 
@@ -245,6 +255,7 @@ export const updateBranch = asyncHandler(async (req, res) => {
     code,
     address,
     phone,
+    alternatePhone,
     email,
     isActive,
     managerId,
@@ -257,7 +268,12 @@ export const updateBranch = asyncHandler(async (req, res) => {
     branchType,
     revenueSharePercent,
     billerId,
-    gstNumber
+    gstNumber,
+    // Branch Head Direct Management fields
+    headName,
+    headEmail,
+    headPassword,
+    headPhone
   } = req.body;
 
   if (code && code.toUpperCase() !== branch.code) {
@@ -275,8 +291,94 @@ export const updateBranch = asyncHandler(async (req, res) => {
   if (address !== undefined) branch.address = address;
   if (req.body.postalPickupDetails !== undefined) branch.postalPickupDetails = req.body.postalPickupDetails;
   if (phone !== undefined) branch.phone = phone;
+  if (alternatePhone !== undefined) branch.alternatePhone = alternatePhone;
   if (email !== undefined) branch.email = email;
   if (isActive !== undefined) branch.isActive = isActive;
+
+  // Handle Branch Head Account Updates or Creation from Edit Branch
+  if (headEmail || headPassword) {
+    const resolvedHeadEmail = headEmail?.toLowerCase()?.trim();
+    const resolvedHeadPassword = headPassword?.trim();
+    const resolvedHeadName = (headName || branch.managerName || `${branch.name} Branch Head`)?.trim();
+    const resolvedHeadPhone = headPhone || postalPickupDetails?.phone || phone || branch.phone || '';
+
+    let headUser = null;
+    if (branch.managerId) {
+      headUser = await User.findById(branch.managerId);
+    }
+    if (!headUser && resolvedHeadEmail) {
+      headUser = await User.findOne({ email: resolvedHeadEmail });
+    }
+
+    if (headUser) {
+      if (resolvedHeadName) headUser.name = resolvedHeadName;
+      if (resolvedHeadEmail) headUser.email = resolvedHeadEmail;
+      if (resolvedHeadPhone) headUser.phone = resolvedHeadPhone;
+      if (resolvedHeadPassword && resolvedHeadPassword.length >= 4) {
+        headUser.passwordHash = await User.hashPassword(resolvedHeadPassword);
+        headUser.initialPassword = resolvedHeadPassword;
+        headUser.failedLoginAttempts = 0;
+        headUser.isLocked = false;
+        headUser.lockUntil = null;
+      }
+      headUser.role = 'MANAGER';
+      headUser.branchId = branch._id;
+      if (!Array.isArray(headUser.branches) || !headUser.branches.some(b => String(b) === String(branch._id))) {
+        headUser.branches = [branch._id];
+      }
+      headUser.isActive = true;
+      await headUser.save();
+
+      branch.managerId = headUser._id;
+      branch.managerName = headUser.name;
+      branch.managerPhone = headUser.phone;
+
+      // Update recorded initialCredentials
+      if (resolvedHeadPassword) {
+        const credIdx = branch.initialCredentials?.findIndex(c => c.email?.toLowerCase() === headUser.email.toLowerCase());
+        if (credIdx !== -1 && credIdx !== undefined) {
+          branch.initialCredentials[credIdx].password = resolvedHeadPassword;
+          branch.initialCredentials[credIdx].name = headUser.name;
+        } else {
+          branch.initialCredentials.push({
+            userId: headUser._id,
+            name: headUser.name,
+            email: headUser.email,
+            role: 'MANAGER',
+            password: resolvedHeadPassword,
+            createdAt: new Date()
+          });
+        }
+      }
+    } else if (resolvedHeadEmail && resolvedHeadPassword && resolvedHeadPassword.length >= 4) {
+      const passwordHash = await User.hashPassword(resolvedHeadPassword);
+      headUser = new User({
+        name: resolvedHeadName,
+        email: resolvedHeadEmail,
+        passwordHash,
+        initialPassword: resolvedHeadPassword,
+        role: 'MANAGER',
+        phone: resolvedHeadPhone,
+        branchId: branch._id,
+        branches: [branch._id],
+        isActive: true
+      });
+      await headUser.save();
+
+      branch.managerId = headUser._id;
+      branch.managerName = headUser.name;
+      branch.managerPhone = headUser.phone;
+
+      branch.initialCredentials.push({
+        userId: headUser._id,
+        name: headUser.name,
+        email: headUser.email,
+        role: 'MANAGER',
+        password: resolvedHeadPassword,
+        createdAt: new Date()
+      });
+    }
+  }
   
   if (managerId !== undefined) {
     branch.managerId = managerId || null;
@@ -428,9 +530,11 @@ export const getBranchCredentials = asyncHandler(async (req, res) => {
   }).select('name email username phone role isActive initialPassword lastLoginAt createdAt').lean();
 
   // Deduplicate and format credentials
+  const headUserIdStr = branch.managerId ? (branch.managerId._id || branch.managerId).toString() : null;
   const userMap = new Map();
   for (const u of branchUsers) {
     const savedCred = branch.initialCredentials?.find(c => c.email?.toLowerCase() === u.email?.toLowerCase());
+    const isHead = headUserIdStr ? headUserIdStr === u._id.toString() : (u.role === 'MANAGER');
     userMap.set(u._id.toString(), {
       id: u._id,
       name: u.name,
@@ -438,6 +542,7 @@ export const getBranchCredentials = asyncHandler(async (req, res) => {
       username: u.username || u.email,
       phone: u.phone,
       role: u.role,
+      isBranchHead: isHead,
       isActive: u.isActive,
       initialPassword: u.initialPassword || savedCred?.password || null,
       lastLoginAt: u.lastLoginAt,
@@ -445,7 +550,12 @@ export const getBranchCredentials = asyncHandler(async (req, res) => {
     });
   }
 
-  const credentialsList = Array.from(userMap.values());
+  // Sort so the Branch Head is always the first featured credential
+  const credentialsList = Array.from(userMap.values()).sort((a, b) => {
+    if (a.isBranchHead && !b.isBranchHead) return -1;
+    if (!a.isBranchHead && b.isBranchHead) return 1;
+    return 0;
+  });
 
   return ApiResponse.success(res, {
     branch: {

@@ -104,6 +104,16 @@ const branchSchema = new mongoose.Schema(
       default: 0,
       min: 0
     },
+    initialCredentials: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        name: { type: String, trim: true },
+        email: { type: String, trim: true },
+        role: { type: String, trim: true },
+        password: { type: String, trim: true },
+        createdAt: { type: Date, default: Date.now }
+      }
+    ],
     isActive: {
       type: Boolean,
       default: true,

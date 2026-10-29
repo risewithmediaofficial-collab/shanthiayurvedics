@@ -5,7 +5,10 @@ import {
   createBranch,
   updateBranch,
   deleteBranch,
-  bulkDeleteBranches
+  bulkDeleteBranches,
+  getBranchCredentials,
+  resetBranchUserPassword,
+  createBranchAccount
 } from '../controllers/branchController.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
@@ -25,6 +28,12 @@ router.get('/admin', requirePermission(PERMISSIONS.BRANCHES_MANAGE), getAllBranc
 router.post('/bulk-delete', requirePermission(PERMISSIONS.BRANCHES_MANAGE), bulkDeleteBranches);
 router.delete('/bulk-delete', requirePermission(PERMISSIONS.BRANCHES_MANAGE), bulkDeleteBranches);
 router.post('/', requirePermission(PERMISSIONS.BRANCHES_MANAGE), validate(createBranchSchema), createBranch);
+
+// Branch Credentials (Owner Only)
+router.get('/:id/credentials', requirePermission(PERMISSIONS.BRANCHES_MANAGE), getBranchCredentials);
+router.post('/:id/credentials/reset-password', requirePermission(PERMISSIONS.BRANCHES_MANAGE), resetBranchUserPassword);
+router.post('/:id/credentials/create-account', requirePermission(PERMISSIONS.BRANCHES_MANAGE), createBranchAccount);
+
 router.patch('/:id', requirePermission(PERMISSIONS.BRANCHES_MANAGE), updateBranch);
 router.put('/:id', requirePermission(PERMISSIONS.BRANCHES_MANAGE), updateBranch);
 router.delete('/:id', requirePermission(PERMISSIONS.BRANCHES_MANAGE), deleteBranch);

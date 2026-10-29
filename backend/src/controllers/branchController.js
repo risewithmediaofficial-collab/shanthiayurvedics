@@ -116,6 +116,7 @@ export const createBranch = asyncHandler(async (req, res) => {
       name: accountName?.trim() || effectiveManagerName || name,
       email: normalizedEmail,
       passwordHash,
+      initialPassword: accountPassword,
       role: assignedRole,
       phone: postalPickupDetails?.phone || phone || '',
       isActive: true
@@ -180,6 +181,14 @@ export const createBranch = asyncHandler(async (req, res) => {
     revenueSharePercent: Number(revenueSharePercent || 0),
     billerId: billerId || '1000058077',
     gstNumber,
+    initialCredentials: createdAccount ? [{
+      userId: createdAccount.id,
+      name: createdAccount.name,
+      email: createdAccount.email,
+      role: createdAccount.role,
+      password: createdAccount.password,
+      createdAt: new Date()
+    }] : [],
     isActive: true
   });
 
@@ -392,5 +401,185 @@ export const bulkDeleteBranches = asyncHandler(async (req, res) => {
   }
 
   return ApiResponse.success(res, { deletedCount: ids.length }, `Successfully deleted ${ids.length} branches`);
+});
+
+export const getBranchCredentials = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'OWNER') {
+    return res.status(403).json({ success: false, message: 'Only the Business Owner can view branch credentials' });
+  }
+
+  const branch = await Branch.findById(req.params.id)
+    .populate('managerId', 'name email phone role isActive initialPassword lastLoginAt')
+    .populate('distributorId', 'name email phone role isActive initialPassword lastLoginAt')
+    .lean();
+
+  if (!branch) {
+    throw new NotFoundError('Branch');
+  }
+
+  // Find all users linked to this branch (telecallers, managers, distributors)
+  const branchUsers = await User.find({
+    $or: [
+      { branchId: branch._id },
+      { branches: branch._id },
+      ...(branch.managerId ? [{ _id: branch.managerId._id || branch.managerId }] : []),
+      ...(branch.distributorId ? [{ _id: branch.distributorId._id || branch.distributorId }] : [])
+    ]
+  }).select('name email username phone role isActive initialPassword lastLoginAt createdAt').lean();
+
+  // Deduplicate and format credentials
+  const userMap = new Map();
+  for (const u of branchUsers) {
+    const savedCred = branch.initialCredentials?.find(c => c.email?.toLowerCase() === u.email?.toLowerCase());
+    userMap.set(u._id.toString(), {
+      id: u._id,
+      name: u.name,
+      email: u.email,
+      username: u.username || u.email,
+      phone: u.phone,
+      role: u.role,
+      isActive: u.isActive,
+      initialPassword: u.initialPassword || savedCred?.password || null,
+      lastLoginAt: u.lastLoginAt,
+      createdAt: u.createdAt
+    });
+  }
+
+  const credentialsList = Array.from(userMap.values());
+
+  return ApiResponse.success(res, {
+    branch: {
+      id: branch._id,
+      name: branch.name,
+      code: branch.code,
+      branchType: branch.branchType,
+      phone: branch.phone,
+      manager: branch.managerId || null,
+      distributor: branch.distributorId || null
+    },
+    credentials: credentialsList,
+    recordedCredentials: branch.initialCredentials || []
+  }, 'Branch credentials retrieved');
+});
+
+export const resetBranchUserPassword = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'OWNER') {
+    return res.status(403).json({ success: false, message: 'Only the Business Owner can reset credentials' });
+  }
+
+  const { userId, newPassword } = req.body;
+  if (!userId || !newPassword || newPassword.length < 4) {
+    return res.status(400).json({ success: false, message: 'Valid userId and newPassword (min 4 chars) are required' });
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new NotFoundError('User');
+  }
+
+  const passwordHash = await User.hashPassword(newPassword);
+  user.passwordHash = passwordHash;
+  user.initialPassword = newPassword;
+  user.failedLoginAttempts = 0;
+  user.isLocked = false;
+  user.lockUntil = null;
+  await user.save();
+
+  // Also update branch recorded credentials if exists
+  await Branch.updateOne(
+    { _id: req.params.id, 'initialCredentials.email': user.email },
+    { $set: { 'initialCredentials.$.password': newPassword } }
+  );
+
+  await AuditService.log({
+    userId: req.user.id,
+    branchId: req.params.id,
+    action: 'BRANCH_USER_PASSWORD_RESET',
+    module: 'branches',
+    resourceType: 'User',
+    resourceId: user._id,
+    newValue: { email: user.email, role: user.role },
+    req
+  });
+
+  return ApiResponse.success(res, {
+    id: user._id,
+    email: user.email,
+    password: newPassword
+  }, 'Password updated successfully');
+});
+
+export const createBranchAccount = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'OWNER') {
+    return res.status(403).json({ success: false, message: 'Only the Business Owner can create branch credentials' });
+  }
+
+  const branch = await Branch.findById(req.params.id);
+  if (!branch) {
+    throw new NotFoundError('Branch');
+  }
+
+  const { name, email, password, role, phone } = req.body;
+  if (!email || !password || !name) {
+    return res.status(400).json({ success: false, message: 'Name, email, and password are required' });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const existing = await User.findOne({ email: normalizedEmail });
+  if (existing) {
+    throw new ConflictError(`User account with email '${normalizedEmail}' already exists`);
+  }
+
+  const assignedRole = role === 'DISTRIBUTOR' ? 'DISTRIBUTOR' : 'MANAGER';
+  const passwordHash = await User.hashPassword(password);
+
+  const newUser = new User({
+    name: name.trim(),
+    email: normalizedEmail,
+    passwordHash,
+    initialPassword: password,
+    role: assignedRole,
+    phone: phone?.trim() || branch.phone || '',
+    branchId: branch._id,
+    branches: [branch._id],
+    isActive: true
+  });
+  await newUser.save();
+
+  // If branch didn't have manager or distributor assigned, assign it
+  const updateData = {};
+  if (assignedRole === 'MANAGER' && !branch.managerId) {
+    updateData.managerId = newUser._id;
+    updateData.managerName = newUser.name;
+    updateData.managerPhone = newUser.phone;
+  } else if (assignedRole === 'DISTRIBUTOR' && !branch.distributorId) {
+    updateData.distributorId = newUser._id;
+    updateData.distributorName = newUser.name;
+    updateData.distributorPhone = newUser.phone;
+    updateData.distributorEmail = newUser.email;
+  }
+
+  await Branch.findByIdAndUpdate(branch._id, {
+    ...updateData,
+    $push: {
+      initialCredentials: {
+        userId: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: assignedRole,
+        password,
+        createdAt: new Date()
+      }
+    }
+  });
+
+  return ApiResponse.created(res, {
+    id: newUser._id,
+    name: newUser.name,
+    email: newUser.email,
+    password,
+    role: assignedRole,
+    phone: newUser.phone
+  }, 'Branch user account created successfully');
 });
 

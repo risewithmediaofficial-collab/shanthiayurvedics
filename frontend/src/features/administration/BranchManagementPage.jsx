@@ -21,7 +21,11 @@ import {
   EyeOff,
   Truck,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Share2,
+  Lock,
+  RefreshCw,
+  MessageSquare
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { Table } from '../../components/common/Table.jsx';
@@ -31,10 +35,13 @@ import { Modal } from '../../components/common/Modal.jsx';
 import { Input } from '../../components/common/Input.jsx';
 import { Select } from '../../components/common/Select.jsx';
 import { useBranch } from '../../context/BranchContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 export function BranchManagementPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isOwner = user?.role === 'OWNER';
   const { selectedBranchId, selectBranch } = useBranch();
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -45,6 +52,23 @@ export function BranchManagementPage() {
   const [selectedBranchForEdit, setSelectedBranchForEdit] = useState(null);
   const [selectedBranchForDelete, setSelectedBranchForDelete] = useState(null);
   const [actionMsg, setActionMsg] = useState('');
+
+  // Owner Credentials Management state
+  const [credentialsModalOpen, setCredentialsModalOpen] = useState(false);
+  const [selectedBranchForCredentials, setSelectedBranchForCredentials] = useState(null);
+  const [revealedPasswords, setRevealedPasswords] = useState({});
+  const [copiedUserIndex, setCopiedUserIndex] = useState(null);
+  const [resetPasswordModalUser, setResetPasswordModalUser] = useState(null);
+  const [newPasswordVal, setNewPasswordVal] = useState('');
+  const [showResetPasswordVal, setShowResetPasswordVal] = useState(true);
+  const [createAccountSubModalOpen, setCreateAccountSubModalOpen] = useState(false);
+  const [newAccountFormData, setNewAccountFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'MANAGER',
+    phone: ''
+  });
 
   // Post-account creation modal state
   const [showPassword, setShowPassword] = useState(false);
@@ -330,6 +354,90 @@ export function BranchManagementPage() {
     onError: (err) => alert(err.response?.data?.message || 'Failed to bulk delete branches')
   });
 
+  // Fetch branch credentials for owner modal
+  const {
+    data: credentialsData,
+    isLoading: isLoadingCredentials,
+    refetch: refetchCredentials
+  } = useQuery({
+    queryKey: ['branch-credentials', selectedBranchForCredentials?._id],
+    queryFn: async () => {
+      const res = await apiClient.get(`/branches/${selectedBranchForCredentials._id}/credentials`);
+      return res.data?.data;
+    },
+    enabled: Boolean(credentialsModalOpen && selectedBranchForCredentials?._id)
+  });
+
+  // Reset user password mutation
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ userId, newPassword }) => {
+      const res = await apiClient.post(`/branches/${selectedBranchForCredentials._id}/credentials/reset-password`, {
+        userId,
+        newPassword
+      });
+      return res.data?.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['branch-credentials', selectedBranchForCredentials?._id] });
+      setResetPasswordModalUser(null);
+      setNewPasswordVal('');
+      showToast(`✓ Password successfully updated for ${data.email}`);
+    },
+    onError: (err) => {
+      showToast(`⚠️ ${err.response?.data?.message || 'Failed to update password'}`);
+    }
+  });
+
+  // Create branch account mutation
+  const createBranchAccountMutation = useMutation({
+    mutationFn: async (payload) => {
+      const res = await apiClient.post(`/branches/${selectedBranchForCredentials._id}/credentials/create-account`, payload);
+      return res.data?.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['branch-credentials', selectedBranchForCredentials?._id] });
+      queryClient.invalidateQueries({ queryKey: ['branches'] });
+      setCreateAccountSubModalOpen(false);
+      setNewAccountFormData({ name: '', email: '', password: '', role: 'MANAGER', phone: '' });
+      showToast(`✓ Created ${data.role} account for ${data.name}`);
+    },
+    onError: (err) => {
+      showToast(`⚠️ ${err.response?.data?.message || 'Failed to create branch account'}`);
+    }
+  });
+
+  const handleShareCredentialsWhatsApp = (account, branch) => {
+    const rawPhone = account.phone || branch?.phone || '';
+    const cleanPhone = rawPhone.replace(/\D/g, '').slice(-10);
+    const pass = account.initialPassword || '(Contact Owner for Password)';
+    const text = encodeURIComponent(
+      `🌿 *Shanthi Ayurvedas Branch Login Credentials*\n\n` +
+      `🏢 *Branch:* ${branch?.name || ''} (${branch?.code || ''})\n` +
+      `👤 *Role:* ${account.role === 'DISTRIBUTOR' ? 'Branch Distributor' : 'Branch Manager'}\n` +
+      `📧 *Username / Email:* ${account.email}\n` +
+      `🔑 *Password:* ${pass}\n\n` +
+      `🌐 *Login Portal:* https://shanthiayurvedas.com/login\n\n` +
+      `Please log in with these credentials, accept the branch partnership agreement, and access your branch portal.`
+    );
+    const url = cleanPhone ? `https://wa.me/91${cleanPhone}?text=${text}` : `https://wa.me/?text=${text}`;
+    window.open(url, '_blank');
+  };
+
+  const handleCopyAccountCredentials = (account, branch, index) => {
+    const pass = account.initialPassword || '(Password securely saved in system)';
+    const text =
+      `*Shanthi Ayurvedas - Branch Login Account*\n\n` +
+      `Branch: ${branch?.name || ''} (${branch?.code || ''})\n` +
+      `Role: ${account.role}\n` +
+      `Name: ${account.name}\n` +
+      `Username: ${account.email}\n` +
+      `Password: ${pass}\n` +
+      `Portal: https://shanthiayurvedas.com/login`;
+    navigator.clipboard.writeText(text);
+    setCopiedUserIndex(index);
+    setTimeout(() => setCopiedUserIndex(null), 3000);
+  };
+
   const isAllSelected = branches.length > 0 && branches.every((b) => selectedBranchIds.includes(b._id));
 
   const handleSelectAll = (e) => {
@@ -527,6 +635,7 @@ export function BranchManagementPage() {
       align: 'right',
       cell: (row) => (
         <div className="flex items-center justify-end gap-1.5">
+          {/* View Panel Button */}
           <button
             type="button"
             title="Switch & View this Branch Panel (Boss Access)"
@@ -539,6 +648,24 @@ export function BranchManagementPage() {
             <span>👁️</span>
             <span className="hidden sm:inline">View Panel</span>
           </button>
+
+          {/* Owner Credentials Button */}
+          {isOwner && (
+            <button
+              type="button"
+              title="View & Manage Branch Login Credentials (Owner Only)"
+              onClick={() => {
+                setSelectedBranchForCredentials(row);
+                setCredentialsModalOpen(true);
+              }}
+              className="px-2.5 py-1 text-[11px] font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-300 shadow-xs flex items-center gap-1 cursor-pointer"
+            >
+              <Key className="w-3.5 h-3.5 text-amber-700" />
+              <span>Credentials</span>
+            </button>
+          )}
+
+          {/* Edit Branch Button */}
           <button
             type="button"
             title="Edit Branch & Assignments"
@@ -1265,6 +1392,427 @@ export function BranchManagementPage() {
               </Button>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {/* ── OWNER BRANCH CREDENTIALS MANAGEMENT MODAL ── */}
+      {credentialsModalOpen && selectedBranchForCredentials && (
+        <Modal
+          isOpen={credentialsModalOpen}
+          onClose={() => {
+            setCredentialsModalOpen(false);
+            setSelectedBranchForCredentials(null);
+            setRevealedPasswords({});
+          }}
+          title={`🔑 ${selectedBranchForCredentials.name} — Login Credentials`}
+          subtitle={`Branch Code: ${selectedBranchForCredentials.code} • Confidential Owner Access`}
+          maxWidth="max-w-2xl"
+          icon="🔐"
+        >
+          <div className="space-y-4 max-h-[75vh] overflow-y-auto px-1 pr-1.5">
+            {/* Top Bar with Info & Add Button */}
+            <div className="p-3 bg-amber-50/90 border border-amber-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-start gap-2 text-xs text-amber-900">
+                <Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Owner Security:</strong> Passwords and login details are securely stored. Share credentials with the branch manager or distributor via WhatsApp or Copy.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewAccountFormData({
+                    name: '',
+                    email: `${selectedBranchForCredentials.code.toLowerCase()}.mgr@shanthiayurvedas.com`,
+                    password: `Shanthi@${Math.floor(1000 + Math.random() * 9000)}`,
+                    role: 'MANAGER',
+                    phone: selectedBranchForCredentials.phone || ''
+                  });
+                  setCreateAccountSubModalOpen(true);
+                }}
+                className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Login Account</span>
+              </button>
+            </div>
+
+            {/* Loading State */}
+            {isLoadingCredentials ? (
+              <div className="py-12 text-center text-slate-500 text-xs">
+                <RefreshCw className="w-6 h-6 animate-spin mx-auto text-emerald-600 mb-2" />
+                <span>Loading branch credentials…</span>
+              </div>
+            ) : credentialsData?.credentials && credentialsData.credentials.length > 0 ? (
+              <div className="space-y-3">
+                {credentialsData.credentials.map((account, idx) => {
+                  const isRevealed = Boolean(revealedPasswords[account.id]);
+                  const hasPassword = Boolean(account.initialPassword);
+                  const isCopied = copiedUserIndex === idx;
+
+                  return (
+                    <div
+                      key={account.id}
+                      className="p-3.5 bg-white border border-slate-200 rounded-2xl shadow-xs space-y-3 hover:border-emerald-300 transition-colors"
+                    >
+                      {/* Account Header */}
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
+                            account.role === 'DISTRIBUTOR'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              : account.role === 'MANAGER'
+                              ? 'bg-blue-50 text-blue-800 border-blue-200'
+                              : 'bg-purple-50 text-purple-800 border-purple-200'
+                          }`}>
+                            {account.role === 'DISTRIBUTOR'
+                              ? '📦 Branch Distributor'
+                              : account.role === 'MANAGER'
+                              ? '👔 Branch Manager'
+                              : `👤 ${account.role}`}
+                          </span>
+                          <span className="font-bold text-slate-900 text-xs">{account.name}</span>
+                          {account.phone && (
+                            <span className="text-[11px] text-slate-500 font-mono">({account.phone})</span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setResetPasswordModalUser(account);
+                              setNewPasswordVal(`Shanthi@${Math.floor(1000 + Math.random() * 9000)}`);
+                            }}
+                            className="px-2 py-1 text-[10px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors flex items-center gap-1 cursor-pointer"
+                            title="Reset Password"
+                          >
+                            <RefreshCw className="w-3 h-3 text-slate-500" />
+                            <span>Reset Password</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Credentials Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        {/* Username / Email */}
+                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                          <div className="min-w-0 pr-2">
+                            <span className="text-[10px] uppercase font-bold text-slate-400 block">Username / Email</span>
+                            <span className="font-mono font-bold text-slate-900 truncate block text-xs select-all">
+                              {account.email}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(account.email);
+                              showToast(`✓ Copied username: ${account.email}`);
+                            }}
+                            className="p-1 text-slate-400 hover:text-emerald-700 rounded hover:bg-white cursor-pointer"
+                            title="Copy Username"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Password */}
+                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                          <div className="min-w-0 pr-2">
+                            <span className="text-[10px] uppercase font-bold text-slate-400 block">Password</span>
+                            <span className="font-mono font-bold text-emerald-800 truncate block text-xs select-all">
+                              {hasPassword
+                                ? (isRevealed ? account.initialPassword : '••••••••••••')
+                                : '•••••••• (Encrypted)'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            {hasPassword ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setRevealedPasswords((prev) => ({ ...prev, [account.id]: !prev[account.id] }))}
+                                  className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-white cursor-pointer"
+                                  title={isRevealed ? 'Hide Password' : 'Show Password'}
+                                >
+                                  {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(account.initialPassword);
+                                    showToast('✓ Password copied to clipboard');
+                                  }}
+                                  className="p-1 text-slate-400 hover:text-emerald-700 rounded hover:bg-white cursor-pointer"
+                                  title="Copy Password"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setResetPasswordModalUser(account);
+                                  setNewPasswordVal(`Shanthi@${Math.floor(1000 + Math.random() * 9000)}`);
+                                }}
+                                className="text-[10px] font-bold text-emerald-700 hover:underline cursor-pointer"
+                              >
+                                Set Password
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons: Copy All & Share WhatsApp */}
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-1">
+                        <div className="text-[11px] text-slate-500 font-mono">
+                          Portal: <span className="text-emerald-700 font-semibold">https://shanthiayurvedas.com/login</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleCopyAccountCredentials(account, selectedBranchForCredentials, idx)}
+                            className="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                          >
+                            {isCopied ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                            <span>{isCopied ? 'Copied Details!' : 'Copy Details'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleShareCredentialsWhatsApp(account, selectedBranchForCredentials)}
+                            className="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Share on WhatsApp</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Empty state if no account created */
+              <div className="p-8 bg-slate-50 border border-dashed border-slate-300 rounded-2xl text-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto text-xl font-bold">
+                  🔑
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">No Login Account Found</h4>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+                    No dedicated login account has been created for {selectedBranchForCredentials.name} yet. Create an account to give the branch manager or distributor login access.
+                  </p>
+                </div>
+                <Button
+                  variant="primary"
+                  icon={Plus}
+                  onClick={() => {
+                    setNewAccountFormData({
+                      name: '',
+                      email: `${selectedBranchForCredentials.code.toLowerCase()}.mgr@shanthiayurvedas.com`,
+                      password: `Shanthi@${Math.floor(1000 + Math.random() * 9000)}`,
+                      role: 'MANAGER',
+                      phone: selectedBranchForCredentials.phone || ''
+                    });
+                    setCreateAccountSubModalOpen(true);
+                  }}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs"
+                >
+                  Create Branch Account Now
+                </Button>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2 border-t border-slate-100">
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => {
+                  setCredentialsModalOpen(false);
+                  setSelectedBranchForCredentials(null);
+                  setRevealedPasswords({});
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── RESET USER PASSWORD SUB-MODAL ── */}
+      {resetPasswordModalUser && (
+        <Modal
+          isOpen={Boolean(resetPasswordModalUser)}
+          onClose={() => setResetPasswordModalUser(null)}
+          title={`Reset Password for ${resetPasswordModalUser.name}`}
+          subtitle={`Username / Email: ${resetPasswordModalUser.email}`}
+          maxWidth="max-w-md"
+          icon="🔑"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              resetPasswordMutation.mutate({
+                userId: resetPasswordModalUser.id,
+                newPassword: newPasswordVal
+              });
+            }}
+            className="space-y-4"
+          >
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700">New Password *</label>
+                <button
+                  type="button"
+                  onClick={() => setNewPasswordVal(`Shanthi@${Math.floor(1000 + Math.random() * 9000)}`)}
+                  className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5 cursor-pointer"
+                >
+                  <Sparkles className="w-2.5 h-2.5" /> Auto-Generate
+                </button>
+              </div>
+              <div className="relative">
+                <Input
+                  required
+                  type={showResetPasswordVal ? 'text' : 'password'}
+                  placeholder="Enter new password (min 4 characters)"
+                  value={newPasswordVal}
+                  onChange={(e) => setNewPasswordVal(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowResetPasswordVal(!showResetPasswordVal)}
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  title={showResetPasswordVal ? 'Hide password' : 'Show password'}
+                >
+                  {showResetPasswordVal ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">
+                This will immediately update the login password and store it for the owner's reference.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => setResetPasswordModalUser(null)}
+                disabled={resetPasswordMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                type="submit"
+                isLoading={resetPasswordMutation.isPending}
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold"
+              >
+                Save & Update Password
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* ── CREATE BRANCH ACCOUNT SUB-MODAL ── */}
+      {createAccountSubModalOpen && selectedBranchForCredentials && (
+        <Modal
+          isOpen={createAccountSubModalOpen}
+          onClose={() => setCreateAccountSubModalOpen(false)}
+          title={`Create Login Account for ${selectedBranchForCredentials.name}`}
+          subtitle="Add a dedicated Branch Manager or Distributor login"
+          maxWidth="max-w-md"
+          icon="👤"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              createBranchAccountMutation.mutate(newAccountFormData);
+            }}
+            className="space-y-3.5"
+          >
+            <Input
+              label="Contact / Lead Name *"
+              required
+              placeholder="e.g. Ramesh Kumar"
+              value={newAccountFormData.name}
+              onChange={(e) => setNewAccountFormData({ ...newAccountFormData, name: e.target.value })}
+            />
+
+            <Select
+              label="Assigned Role *"
+              value={newAccountFormData.role}
+              onChange={(e) => setNewAccountFormData({ ...newAccountFormData, role: e.target.value })}
+              options={[
+                { value: 'MANAGER', label: 'Branch Manager (Manage branch orders & callers)' },
+                { value: 'DISTRIBUTOR', label: 'Distributor (Manage inventory stock & fulfillment)' }
+              ]}
+            />
+
+            <Input
+              label="Username / Email *"
+              required
+              type="email"
+              placeholder="e.g. salem.mgr@shanthiayurvedas.com"
+              value={newAccountFormData.email}
+              onChange={(e) => setNewAccountFormData({ ...newAccountFormData, email: e.target.value })}
+            />
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700">Password *</label>
+                <button
+                  type="button"
+                  onClick={() => setNewAccountFormData({
+                    ...newAccountFormData,
+                    password: `Shanthi@${Math.floor(1000 + Math.random() * 9000)}`
+                  })}
+                  className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5 cursor-pointer"
+                >
+                  <Sparkles className="w-2.5 h-2.5" /> Auto-Generate
+                </button>
+              </div>
+              <Input
+                required
+                type="text"
+                placeholder="Set password"
+                value={newAccountFormData.password}
+                onChange={(e) => setNewAccountFormData({ ...newAccountFormData, password: e.target.value })}
+              />
+            </div>
+
+            <Input
+              label="Contact Phone"
+              placeholder="e.g. 9876543210"
+              value={newAccountFormData.phone}
+              onChange={(e) => setNewAccountFormData({ ...newAccountFormData, phone: e.target.value })}
+            />
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => setCreateAccountSubModalOpen(false)}
+                disabled={createBranchAccountMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                type="submit"
+                isLoading={createBranchAccountMutation.isPending}
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold"
+              >
+                Create Account
+              </Button>
+            </div>
+          </form>
         </Modal>
       )}
 

@@ -41,6 +41,11 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Password hash is required'],
       select: false
     },
+    initialPassword: {
+      type: String,
+      trim: true,
+      select: true
+    },
     role: {
       type: String,
       required: [true, 'Role is required'],

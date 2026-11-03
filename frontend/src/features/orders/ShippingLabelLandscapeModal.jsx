@@ -277,6 +277,12 @@ export function ShippingLabelLandscapeModal({
       helpBannerText = `Help (How to use & Problems/Contact us)`;
     }
 
+    // Courier Detection (India Post vs TPC vs other private couriers)
+    const courierRaw = (order.courierName || '').toLowerCase().trim();
+    const isTPC = courierRaw.includes('professional') || courierRaw === 'tpc' || courierRaw.startsWith('tpc') || courierRaw.includes('the professional');
+    const isOtherCourier = !isTPC && Boolean(courierRaw && !courierRaw.includes('post') && !courierRaw.includes('india'));
+    const isIndiaPost = !isTPC && !isOtherCourier;
+
     const isCOD = (order.paymentMethod || 'COD') === 'COD';
     const advanceAmount = Number(order.advanceAmount || 0);
     const advanceUtr = order.advanceUtr || '';
@@ -287,11 +293,32 @@ export function ShippingLabelLandscapeModal({
     ) || 0);
     const amountWords = convertNumberToIndianWords(payableAmount);
 
-    const speedPostText = isCOD
-      ? `SPEED POST : Rs ${payableAmount} | ${amountWords} RUPEES ONLY`
-      : `SPEED POST : PREPAID (Rs ${payableAmount}) | ${amountWords} RUPEES ONLY`;
+    // 1. Top Carrier Line (Line 2):
+    // For TPC: "THE PROFESSIONAL COURIERS (TPC) · PREPAID (Rs ...) | ... RUPEES ONLY"
+    // For Other: "<COURIER> · PREPAID (Rs ...) | ... RUPEES ONLY"
+    // For India Post: "SPEED POST : Rs ... | ... RUPEES ONLY"
+    let carrierBannerText;
+    if (isTPC) {
+      carrierBannerText = `THE PROFESSIONAL COURIERS (TPC) · ${isCOD ? `COD : Rs ${payableAmount}` : `PREPAID (Rs ${payableAmount})`} | ${amountWords} RUPEES ONLY`;
+    } else if (isOtherCourier) {
+      carrierBannerText = `${(order.courierName || 'EXPRESS COURIER').toUpperCase()} · ${isCOD ? `COD : Rs ${payableAmount}` : `PREPAID (Rs ${payableAmount})`} | ${amountWords} RUPEES ONLY`;
+    } else {
+      carrierBannerText = isCOD
+        ? `SPEED POST : Rs ${payableAmount} | ${amountWords} RUPEES ONLY`
+        : `SPEED POST : PREPAID (Rs ${payableAmount}) | ${amountWords} RUPEES ONLY`;
+    }
+    const speedPostText = carrierBannerText;
 
-    const tracking = order.trackingNumber || order.awbNumber || `EM${order.orderNumber?.replace(/[^0-9]/g, '').slice(-9) || Date.now().toString().slice(-9)}IN`;
+    // Tracking / Consignment Docket Number
+    const cleanOrderNum = order.orderNumber?.replace(/[^0-9]/g, '').slice(-9) || Date.now().toString().slice(-9);
+    const trackingTitle = isTPC
+      ? 'TPC CONSIGNMENT NUMBER'
+      : (isOtherCourier ? 'CONSIGNMENT / DOCKET NUMBER' : 'ARTICLE NUMBER');
+    const tracking = order.trackingNumber || order.awbNumber || (
+      isTPC
+        ? `TPC${cleanOrderNum}`
+        : (isOtherCourier ? `CR${cleanOrderNum}` : `EM${cleanOrderNum}IN`)
+    );
     
     // Dynamic Branch Sender & Return / From Address
     const branch = typeof order.branchId === 'object' && order.branchId ? order.branchId : {};
@@ -301,22 +328,23 @@ export function ShippingLabelLandscapeModal({
 
     const senderTitle = (pickup.senderName || 'SHANTHI AYURVEDAS').toUpperCase();
 
-    // Return address: Karnataka orders use Karnataka dispatch/return details
+    // Return address: For India Post Karnataka orders, use Karnataka dispatch/return hub.
+    // For TPC and private couriers, always use branch physical dispensary/clinic address.
     let senderStreet, senderCity, senderPincode, fromAddressText;
-    if (isKarnataka) {
+    if (isIndiaPost && isKarnataka) {
       senderStreet = (knPickup.street || pickup.street || branchAddr.street || 'NO15, JAYPEE GATEWAY, ANTHIVADI').toUpperCase();
       senderCity = (knPickup.city || 'BENGALURU').toUpperCase();
       senderPincode = (knPickup.pincode || '560001').toUpperCase();
       fromAddressText = `FROM : ${senderTitle}, ${senderStreet}, ${senderCity} - ${senderPincode}`;
     } else {
-      senderStreet = (pickup.street || branchAddr.street || 'NO15, JAYPEE GATEWAY, ANTHIVADI').toUpperCase();
+      senderStreet = (pickup.street || branchAddr.street || '14/B, GANDHI ROAD, NEAR BUS STAND').toUpperCase();
       senderCity = (pickup.city || branchAddr.city || 'HOSUR').toUpperCase();
-      senderPincode = (pickup.pincode || branchAddr.pincode || '635110').toUpperCase();
+      senderPincode = (pickup.pincode || branchAddr.pincode || '635109').toUpperCase();
       fromAddressText = `FROM : ${senderTitle}, ${senderStreet}, ${senderCity} - ${senderPincode}`;
     }
 
     // Primary sender phone with typo replacement (9629985341 -> 9629985345) and clean formatting
-    let rawPrimaryPhone = isKarnataka
+    let rawPrimaryPhone = (isIndiaPost && isKarnataka)
       ? (knPickup.phone || knPickup.postOfficeNumber || pickup.phone || branch.phone || '9629985345')
       : (pickup.phone || branch.phone || '9629985345');
     
@@ -326,7 +354,7 @@ export function ShippingLabelLandscapeModal({
       .replace(/^\+91\s*/, '')
       .trim();
 
-    const knPoNumber = isKarnataka ? (knPickup.postOfficeNumber || '').trim() : '';
+    const knPoNumber = (isIndiaPost && isKarnataka) ? (knPickup.postOfficeNumber || '').trim() : '';
 
     let rawAltPhone = String(pickup.alternatePhone || branch.alternatePhone || (branch.code === 'HSR' || !branch.code ? '8884113629' : ''))
       .replace(/96299\s*85341/g, '9629985345')
@@ -335,7 +363,7 @@ export function ShippingLabelLandscapeModal({
       .trim();
 
     let senderMobileText;
-    if (isKarnataka && knPoNumber && knPoNumber !== rawPrimaryPhone) {
+    if (isIndiaPost && isKarnataka && knPoNumber && knPoNumber !== rawPrimaryPhone) {
       senderMobileText = `MOBILE : ${rawPrimaryPhone} · PO NO : ${knPoNumber}`;
     } else if (rawAltPhone && rawAltPhone !== rawPrimaryPhone) {
       senderMobileText = `MOBILE : ${rawPrimaryPhone} / ${rawAltPhone}`;
@@ -343,29 +371,31 @@ export function ShippingLabelLandscapeModal({
       senderMobileText = `MOBILE : ${rawPrimaryPhone}`;
     }
 
-    // Biller ID & Booking Location: Auto-switch to 1000054429 for Karnataka orders
-    let billerId, bookingLocation, carrierSubheaderText;
+    // 2. Subheader (Line 3):
+    // For TPC: NO Speed Post Biller ID and NO Post Office booking details!
+    let billerId = branch.billerId || '1000058077';
+    let bookingLocation = '';
+    let carrierSubheaderText;
     const knPincodeVal = (knPickup.pincode || '560001').trim();
-    const isTPC = (order.courierName || '').toLowerCase().includes('professional');
 
-    if (isKarnataka) {
+    if (isTPC) {
+      carrierSubheaderText = `THE PROFESSIONAL COURIERS · EXPRESS PARCEL & CARGO LOGISTICS · DISPATCH HUB: ${senderCity}`;
+    } else if (isOtherCourier) {
+      carrierSubheaderText = `${(order.courierName || 'EXPRESS COURIER').toUpperCase()} LOGISTICS NETWORK · DISPATCH HUB: ${senderCity}`;
+    } else if (isKarnataka) {
       billerId = knPickup.billerId || branch.karnatakaBillerId || '1000054429';
       const knRawOffice = (knPickup.bookingOffice || `BENGALURU BPC POST - ${knPincodeVal}`).toUpperCase();
       bookingLocation = knRawOffice.includes(knPincodeVal) ? knRawOffice : `${knRawOffice} - ${knPincodeVal}`;
       const poNumTag = knPoNumber ? ` · PO NO: ${knPoNumber}` : '';
       const postalCodeTag = ` · POSTAL CODE: ${knPincodeVal}`;
-      carrierSubheaderText = isTPC
-        ? `TPC EXPRESS LOGISTICS NETWORK · BILLER ID : ${billerId} (BOOKED AT ${bookingLocation}${poNumTag}${postalCodeTag})`
-        : `BILLER ID : ${billerId} (BOOKED AT ${bookingLocation}${poNumTag}${postalCodeTag})`;
+      carrierSubheaderText = `BILLER ID : ${billerId} (BOOKED AT ${bookingLocation}${poNumTag}${postalCodeTag})`;
     } else {
       billerId = branch.billerId || '1000058077';
       bookingLocation = (
         pickup.bookingOffice ||
         (senderCity ? `${senderCity} BPC POST - ${senderPincode}` : 'HOSUR BPC POST - 635110')
       ).toUpperCase();
-      carrierSubheaderText = isTPC
-        ? `TPC EXPRESS LOGISTICS NETWORK · BILLER ID : ${billerId} (BOOKED AT ${bookingLocation})`
-        : `BILLER ID : ${billerId} (BOOKED AT ${bookingLocation})`;
+      carrierSubheaderText = `BILLER ID : ${billerId} (BOOKED AT ${bookingLocation})`;
     }
 
     const totalPieces = order.items?.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0) || 1;
@@ -393,6 +423,8 @@ export function ShippingLabelLandscapeModal({
       isCOD,
       payableAmount,
       speedPostText,
+      carrierBannerText,
+      trackingTitle,
       tracking,
       carrierSubheaderText,
       fromAddressText,
@@ -408,6 +440,9 @@ export function ShippingLabelLandscapeModal({
       products,
       helpBannerText,
       isKarnataka,
+      isTPC,
+      isOtherCourier,
+      isIndiaPost,
       knPincode: knPincodeVal,
       knPostOfficeNumber: knPoNumber
     };
@@ -506,7 +541,7 @@ export function ShippingLabelLandscapeModal({
               <!-- Right Column: Tracking & Table -->
               <div class="col-right">
                 <div class="article-box">
-                  <div class="art-title">ARTICLE NUMBER</div>
+                  <div class="art-title">${d.trackingTitle}</div>
                   <div class="art-code">${d.tracking}</div>
                 </div>
 
@@ -520,12 +555,22 @@ export function ShippingLabelLandscapeModal({
                       <td style="padding: ${padTableY} 4px; border-right: 1px solid #000; background: #f9fafb; font-weight: 800; font-size: ${labelFont};">WEIGHT</td>
                       <td style="padding: ${padTableY} 4px; font-weight: 900; font-size: ${prodFont};">${d.weightText} ${d.totalPieces} PCS</td>
                     </tr>
-                    ${d.isKarnataka ? `
+                    ${d.isTPC ? `
+                      <tr style="border-bottom: 1px solid #000; background: #eff6ff;">
+                        <td style="padding: ${padTableY} 4px; border-right: 1px solid #000; font-weight: 800; font-size: ${labelFont}; color: #1e40af;">COURIER</td>
+                        <td style="padding: ${padTableY} 4px; font-weight: 900; font-size: ${prodFont}; color: #1e40af;">TPC EXPRESS LOGISTICS</td>
+                      </tr>
+                    ` : (d.isOtherCourier ? `
+                      <tr style="border-bottom: 1px solid #000; background: #eff6ff;">
+                        <td style="padding: ${padTableY} 4px; border-right: 1px solid #000; font-weight: 800; font-size: ${labelFont}; color: #1e40af;">COURIER</td>
+                        <td style="padding: ${padTableY} 4px; font-weight: 900; font-size: ${prodFont}; color: #1e40af;">${(d.order.courierName || 'COURIER').toUpperCase()}</td>
+                      </tr>
+                    ` : (d.isIndiaPost && d.isKarnataka ? `
                       <tr style="border-bottom: 1px solid #000; background: #eff6ff;">
                         <td style="padding: ${padTableY} 4px; border-right: 1px solid #000; font-weight: 800; font-size: ${labelFont}; color: #1e40af;">POSTAL CODE</td>
                         <td style="padding: ${padTableY} 4px; font-weight: 900; font-size: ${prodFont}; color: #1e40af;">${d.knPincode} (BILLER: ${d.billerId})</td>
                       </tr>
-                    ` : ''}
+                    ` : ''))}
                     ${d.advanceAmount > 0 ? `
                       <tr style="border-bottom: 1px solid #000; background: #f0fdf4;">
                         <td style="padding: ${padTableY} 4px; border-right: 1px solid #000; font-weight: 800; font-size: ${labelFont}; color: #166534;">ADVANCE</td>
@@ -956,7 +1001,7 @@ export function ShippingLabelLandscapeModal({
           <div className="p-1 flex flex-col gap-0.5 justify-start">
             <div className="border border-dashed border-neutral-400 p-0.5 text-center bg-neutral-50 rounded-xs">
               <div className="text-[6.5px] sm:text-[7.5px] font-bold text-neutral-500 uppercase tracking-wider">
-                ARTICLE NUMBER
+                {d.trackingTitle}
               </div>
               <div
                 className="font-mono font-black tracking-wider text-black"
@@ -979,12 +1024,22 @@ export function ShippingLabelLandscapeModal({
                   <td className={`px-1 ${tablePadClass} border-r border-black bg-gray-50 text-gray-700 font-bold`} style={{ fontSize: isSingleCard ? '8.5px' : fs.previewTableLabel }}>WEIGHT</td>
                   <td className={`px-1 ${tablePadClass} font-black text-black`}>{d.weightText} {d.totalPieces} PCS</td>
                 </tr>
-                {d.isKarnataka && (
+                {d.isTPC ? (
+                  <tr className="border-b border-black bg-blue-50/70">
+                    <td className={`px-1 ${tablePadClass} border-r border-black font-bold text-blue-900`} style={{ fontSize: isSingleCard ? '8.5px' : fs.previewTableLabel }}>COURIER</td>
+                    <td className={`px-1 ${tablePadClass} font-black text-blue-900`}>TPC EXPRESS LOGISTICS</td>
+                  </tr>
+                ) : d.isOtherCourier ? (
+                  <tr className="border-b border-black bg-blue-50/70">
+                    <td className={`px-1 ${tablePadClass} border-r border-black font-bold text-blue-900`} style={{ fontSize: isSingleCard ? '8.5px' : fs.previewTableLabel }}>COURIER</td>
+                    <td className={`px-1 ${tablePadClass} font-black text-blue-900`}>{(d.order.courierName || 'COURIER').toUpperCase()}</td>
+                  </tr>
+                ) : (d.isIndiaPost && d.isKarnataka) ? (
                   <tr className="border-b border-black bg-blue-50/70">
                     <td className={`px-1 ${tablePadClass} border-r border-black font-bold text-blue-900`} style={{ fontSize: isSingleCard ? '8.5px' : fs.previewTableLabel }}>POSTAL CODE</td>
                     <td className={`px-1 ${tablePadClass} font-black text-blue-900`}>{d.knPincode} (BILLER: {d.billerId})</td>
                   </tr>
-                )}
+                ) : null}
                 {d.advanceAmount > 0 && (
                   <tr className="border-b border-black bg-emerald-50/60">
                     <td className={`px-1 ${tablePadClass} border-r border-black font-bold text-emerald-800`} style={{ fontSize: isSingleCard ? '8.5px' : fs.previewTableLabel }}>ADVANCE</td>

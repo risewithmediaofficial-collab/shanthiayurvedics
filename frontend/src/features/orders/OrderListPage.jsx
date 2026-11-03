@@ -815,14 +815,16 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
           <span>New Order</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => navigate('/scan-tracker')}
-          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#1e88e5] hover:bg-[#1565c0] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
-        >
-          <Scan className="w-3.5 h-3.5" />
-          <span>Scan</span>
-        </button>
+        {!isTelecaller && (
+          <button
+            type="button"
+            onClick={() => navigate('/scan-tracker')}
+            className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#1e88e5] hover:bg-[#1565c0] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+          >
+            <Scan className="w-3.5 h-3.5" />
+            <span>Scan</span>
+          </button>
+        )}
 
         {!isTelecaller && (
           <button
@@ -845,29 +847,33 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={() => {
-            setStatusFilter('');
-            setDistrictFilter('');
-            setSearch('');
-            setPage(1);
-            showToast('Showing all online & counter orders');
-          }}
-          className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#7b1fa2] hover:bg-[#6a1b9a] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
-        >
-          <span>🌐 Online</span>
-        </button>
+        {!isTelecaller && (
+          <button
+            type="button"
+            onClick={() => {
+              setStatusFilter('');
+              setDistrictFilter('');
+              setSearch('');
+              setPage(1);
+              showToast('Showing all online & counter orders');
+            }}
+            className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-[#7b1fa2] hover:bg-[#6a1b9a] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+          >
+            <span>🌐 Online</span>
+          </button>
+        )}
 
-        <Button
-          size="sm"
-          variant="secondary"
-          className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold text-xs shrink-0 sm:ml-auto shadow-xs"
-          icon={Download}
-          onClick={() => setExcelExportOpen(true)}
-        >
-          Export
-        </Button>
+        {!isTelecaller && (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold text-xs shrink-0 sm:ml-auto shadow-xs"
+            icon={Download}
+            onClick={() => setExcelExportOpen(true)}
+          >
+            Export
+          </Button>
+        )}
       </div>
 
       {/* 5. Bulk Action Toolbar */}

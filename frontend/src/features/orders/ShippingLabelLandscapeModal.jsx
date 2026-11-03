@@ -132,6 +132,213 @@ const FONT_SCALES = {
   }
 };
 
+// Dynamic adaptive layout helper calculating proportions, column ratios, paddings, and font sizes based on product count
+const getAdaptiveLayout = (prodCount, isSingle, fontScale, addressLength = 0) => {
+  const fs = FONT_SCALES[fontScale] || FONT_SCALES.normal;
+  const isScaleUp = fontScale === 'large' || fontScale === 'xlarge';
+
+  if (isSingle) {
+    return {
+      gridCols: '1.05fr 0.95fr',
+      labelWidth: '26%',
+      padTableY: '3px',
+      prodFont: isScaleUp ? '11px' : '9.5px',
+      labelFont: isScaleUp ? '9.5px' : '8.5px',
+      previewProdFont: isScaleUp ? '11px' : '9.5px',
+      previewLabelFont: isScaleUp ? '9.5px' : '8.5px',
+      lineHeight: '1.2',
+      artBoxPadding: '2.5px 5px',
+      artTitleSize: '8px',
+      artCodeSize: '13px',
+      nameSize: '14px',
+      previewNameSize: '14px',
+      addrSize: addressLength > 140 ? '9px' : '10px',
+      previewAddrSize: addressLength > 140 ? '9px' : '10px',
+      phoneSize: '11.5px',
+      previewPhoneSize: '11.5px',
+      codBadgeSize: '11px',
+      previewCodBadgeSize: '11px',
+      codAmtSize: '13px',
+      previewCodAmtSize: '13px',
+      headerPad: '3px 8px',
+      carrierPad: '2.5px 8px',
+      subRowPad: '2px 8px',
+      helpPad: '2.5px 8px',
+      senderPad: '2.5px 8px',
+      emergencyPad: '2px 6px',
+      subRowSize: '9.5px',
+      billerSubSize: '9.5px',
+      bannerSize: '9.5px',
+      senderSize: '9px',
+      emergencySize: '8.5px',
+      previewSub: '9.5px',
+      previewSender: '9px',
+      previewEmergency: '8.5px',
+      articleBoxClass: 'py-1'
+    };
+  }
+
+  // 3-per-sheet Mode: Adaptively adjust according to product count
+  if (prodCount <= 2) {
+    return {
+      gridCols: '1.08fr 0.92fr',
+      labelWidth: '26%',
+      padTableY: '2px',
+      prodFont: fs.tableValSize,
+      labelFont: fs.tableLabelSize,
+      previewProdFont: fs.previewTableVal,
+      previewLabelFont: fs.previewTableLabel,
+      lineHeight: '1.15',
+      artBoxPadding: '1.5px 3px',
+      artTitleSize: fs.artTitleSize,
+      artCodeSize: fs.trackSize,
+      nameSize: fs.nameSize,
+      previewNameSize: fs.previewName,
+      addrSize: addressLength > 130 ? '8px' : fs.addrSize,
+      previewAddrSize: addressLength > 130 ? '7.8px' : fs.previewAddr,
+      phoneSize: fs.phoneSize,
+      previewPhoneSize: fs.previewPhone,
+      codBadgeSize: fs.codBadgeSize,
+      previewCodBadgeSize: fs.previewCod,
+      codAmtSize: fs.codAmtSize,
+      previewCodAmtSize: fs.previewCodAmt,
+      headerPad: '2px 6px',
+      carrierPad: '1.5px 6px',
+      subRowPad: '1.5px 6px',
+      helpPad: '1.5px 5px',
+      senderPad: '1.5px 6px',
+      emergencyPad: '1px 4px',
+      subRowSize: fs.subRowSize,
+      billerSubSize: fs.billerSubSize,
+      bannerSize: fs.bannerSize,
+      senderSize: fs.senderSize,
+      emergencySize: fs.emergencySize,
+      previewSub: fs.previewSub,
+      previewSender: fs.previewSender,
+      previewEmergency: fs.previewEmergency,
+      articleBoxClass: 'p-0.5'
+    };
+  } else if (prodCount === 3) {
+    return {
+      gridCols: '1.02fr 0.98fr',
+      labelWidth: '25%',
+      padTableY: '1.4px',
+      prodFont: fontScale === 'xlarge' ? '8.8px' : (fontScale === 'large' ? '8.4px' : '8px'),
+      labelFont: '7.6px',
+      previewProdFont: fontScale === 'xlarge' ? '8.6px' : (fontScale === 'large' ? '8.2px' : '7.8px'),
+      previewLabelFont: '7.4px',
+      lineHeight: '1.1',
+      artBoxPadding: '1.2px 3px',
+      artTitleSize: '7px',
+      artCodeSize: fontScale === 'xlarge' ? '12px' : '11px',
+      nameSize: fontScale === 'xlarge' ? '13px' : fs.nameSize,
+      previewNameSize: fontScale === 'xlarge' ? '12.5px' : fs.previewName,
+      addrSize: addressLength > 120 ? '7.6px' : (fontScale === 'xlarge' ? '8.8px' : fs.addrSize),
+      previewAddrSize: addressLength > 120 ? '7.4px' : (fontScale === 'xlarge' ? '8.4px' : fs.previewAddr),
+      phoneSize: fs.phoneSize,
+      previewPhoneSize: fs.previewPhone,
+      codBadgeSize: fs.codBadgeSize,
+      previewCodBadgeSize: fs.previewCod,
+      codAmtSize: fs.codAmtSize,
+      previewCodAmtSize: fs.previewCodAmt,
+      headerPad: '1.8px 6px',
+      carrierPad: '1.2px 6px',
+      subRowPad: '1.2px 6px',
+      helpPad: '1.2px 5px',
+      senderPad: '1.2px 6px',
+      emergencyPad: '1px 4px',
+      subRowSize: fontScale === 'xlarge' ? '9.2px' : fs.subRowSize,
+      billerSubSize: fontScale === 'xlarge' ? '8.6px' : fs.billerSubSize,
+      bannerSize: fontScale === 'xlarge' ? '8.8px' : fs.bannerSize,
+      senderSize: fontScale === 'xlarge' ? '8.2px' : fs.senderSize,
+      emergencySize: fontScale === 'xlarge' ? '7.5px' : fs.emergencySize,
+      previewSub: fontScale === 'xlarge' ? '8.6px' : fs.previewSub,
+      previewSender: fontScale === 'xlarge' ? '8px' : fs.previewSender,
+      previewEmergency: fontScale === 'xlarge' ? '7.2px' : fs.previewEmergency,
+      articleBoxClass: 'py-0.5 px-1'
+    };
+  } else if (prodCount === 4) {
+    return {
+      gridCols: '0.98fr 1.02fr',
+      labelWidth: '24%',
+      padTableY: '1px',
+      prodFont: '7.8px',
+      labelFont: '7.2px',
+      previewProdFont: '7.6px',
+      previewLabelFont: '7px',
+      lineHeight: '1.08',
+      artBoxPadding: '1px 3px',
+      artTitleSize: '6.5px',
+      artCodeSize: '10.5px',
+      nameSize: '11.5px',
+      previewNameSize: '11.2px',
+      addrSize: '7.6px',
+      previewAddrSize: '7.4px',
+      phoneSize: '9.8px',
+      previewPhoneSize: '9.5px',
+      codBadgeSize: '9.5px',
+      previewCodBadgeSize: '9.2px',
+      codAmtSize: '11.5px',
+      previewCodAmtSize: '11.2px',
+      headerPad: '1.5px 6px',
+      carrierPad: '1px 6px',
+      subRowPad: '1px 6px',
+      helpPad: '1px 5px',
+      senderPad: '1px 6px',
+      emergencyPad: '0.8px 4px',
+      subRowSize: '8.2px',
+      billerSubSize: '7.8px',
+      bannerSize: '8px',
+      senderSize: '7.5px',
+      emergencySize: '6.8px',
+      previewSub: '8px',
+      previewSender: '7.4px',
+      previewEmergency: '6.8px',
+      articleBoxClass: 'py-0.5 px-0.5'
+    };
+  } else {
+    // 5+ products: Ultra-compact adaptive pack
+    return {
+      gridCols: '0.95fr 1.05fr',
+      labelWidth: '23%',
+      padTableY: '0.8px',
+      prodFont: '7.2px',
+      labelFont: '6.6px',
+      previewProdFont: '7px',
+      previewLabelFont: '6.4px',
+      lineHeight: '1.04',
+      artBoxPadding: '0.8px 2px',
+      artTitleSize: '6px',
+      artCodeSize: '9.8px',
+      nameSize: '11px',
+      previewNameSize: '10.5px',
+      addrSize: '7.2px',
+      previewAddrSize: '7px',
+      phoneSize: '9.2px',
+      previewPhoneSize: '9px',
+      codBadgeSize: '9px',
+      previewCodBadgeSize: '8.8px',
+      codAmtSize: '11px',
+      previewCodAmtSize: '10.5px',
+      headerPad: '1.2px 5px',
+      carrierPad: '0.8px 5px',
+      subRowPad: '0.8px 5px',
+      helpPad: '0.8px 4px',
+      senderPad: '0.8px 5px',
+      emergencyPad: '0.8px 3px',
+      subRowSize: '7.8px',
+      billerSubSize: '7.4px',
+      bannerSize: '7.5px',
+      senderSize: '7px',
+      emergencySize: '6.5px',
+      previewSub: '7.5px',
+      previewSender: '6.8px',
+      previewEmergency: '6.4px',
+      articleBoxClass: 'py-0.2 px-0.5'
+    };
+  }
+};
+
 export function ShippingLabelLandscapeModal({
   isOpen,
   onClose,
@@ -405,12 +612,21 @@ export function ShippingLabelLandscapeModal({
     const telecallerName = (order.assignedTo?.name || order.telecallerName || 'SHANTHI CLINIC').toUpperCase();
     const telecallerMobile = order.assignedTo?.phone || order.telecallerPhone || '8925744369';
 
-    // Show ALL products - do NOT truncate or hide any product
-    const products = Array.isArray(order.items) && order.items.length > 0
-      ? order.items.map((it) => ({
-          name: (it.productName || it.productId?.name || 'AYURVEDIC MEDICINE').toUpperCase(),
-          qty: it.quantity || 1
-        }))
+    // Show ALL products - consolidate duplicates by summing quantity, preserving every unique product
+    const productMap = new Map();
+    if (Array.isArray(order.items) && order.items.length > 0) {
+      order.items.forEach((it) => {
+        const rawName = (it.productName || it.productId?.name || 'AYURVEDIC MEDICINE').trim().toUpperCase();
+        const qty = Number(it.quantity) || 1;
+        if (productMap.has(rawName)) {
+          productMap.set(rawName, productMap.get(rawName) + qty);
+        } else {
+          productMap.set(rawName, qty);
+        }
+      });
+    }
+    const products = productMap.size > 0
+      ? Array.from(productMap.entries()).map(([name, qty]) => ({ name, qty }))
       : [{ name: 'AYURVEDIC MEDICINE', qty: 1 }];
 
     return {
@@ -465,15 +681,13 @@ export function ShippingLabelLandscapeModal({
           ? `<div style="font-size: ${isSingle ? '15px' : '13px'}; font-weight: 900; letter-spacing: 0.5px; color: #fff; text-transform: uppercase;">SHANTHI AYURVEDAS</div>`
           : `<div style="background: #ffffff; border-radius: 3px; padding: 1.5px 6px; display: inline-flex; align-items: center; justify-content: center;"><img src="/shanthi_logo.png" style="height: ${isSingle ? '24px' : '20px'}; width: auto; object-fit: contain;" /></div>`;
 
-        // Render ALL products without hiding anything
-        const padTableY = (isSingle || d.products.length <= 2) ? '2.5px' : '1.2px';
-        const prodFont = isSingle ? '9.5px' : fs.tableValSize;
-        const labelFont = isSingle ? '8.5px' : fs.tableLabelSize;
+        // Dynamic adaptive sizing based on product count
+        const adaptive = getAdaptiveLayout(d.products.length, isSingle, fontScale, d.formattedAddress?.length || 0);
 
         const productRowsHtml = d.products.map((prod, idx) => `
           <tr style="border-bottom: ${idx !== d.products.length - 1 ? '1px solid #000' : 'none'};">
-            <td style="padding: ${padTableY} 4px; border-right: 1px solid #000; width: 34%; background: #f9fafb; font-weight: 800; font-size: ${labelFont};">PRODUCT</td>
-            <td style="padding: ${padTableY} 4px; font-weight: 900; font-size: ${prodFont}; line-height: 1.15;">${prod.name} X${prod.qty}</td>
+            <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; background: #f9fafb; font-weight: 800; font-size: ${adaptive.labelFont}; white-space: nowrap;">PRODUCT</td>
+            <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; word-break: break-word; overflow-wrap: break-word; white-space: normal;">${prod.name} X${prod.qty}</td>
           </tr>
         `).join('');
 
@@ -495,7 +709,7 @@ export function ShippingLabelLandscapeModal({
         sheetItems.push(`
           <div class="${boxClass}">
             <!-- 1. Header Banner -->
-            <div class="label-header">
+            <div class="label-header" style="padding: ${adaptive.headerPad};">
               <div style="width: 40px;"></div>
               <div style="text-align: center;">
                 ${brandHeaderHtml}
@@ -507,74 +721,74 @@ export function ShippingLabelLandscapeModal({
             </div>
 
             <!-- 2. SPEED POST row -->
-            <div class="sub-row">
+            <div class="sub-row" style="font-size: ${adaptive.subRowSize}; padding: ${adaptive.carrierPad};">
               ${d.speedPostText}
             </div>
 
             <!-- 3. BILLER ID row -->
-            <div class="sub-row" style="font-size: ${isSingle ? '9.5px' : fs.billerSubSize}; padding: ${isSingle ? '2px 8px' : '1.5px 6px'};">
+            <div class="sub-row" style="font-size: ${adaptive.billerSubSize}; padding: ${adaptive.subRowPad};">
               ${d.carrierSubheaderText}
             </div>
 
             <!-- 4. Language-aware Help Banner -->
-            <div class="help-banner">
+            <div class="help-banner" style="font-size: ${adaptive.bannerSize}; padding: ${adaptive.helpPad};">
               ${d.helpBannerText}: ${d.telecallerName} - ${d.telecallerMobile}
             </div>
 
             <!-- 5. Two-Column Grid -->
-            <div class="main-grid">
+            <div class="main-grid" style="grid-template-columns: ${adaptive.gridCols};">
               <!-- Left Column: Recipient Details -->
               <div class="col-left">
                 <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 4px; margin-bottom: 2px;">
-                  <div class="cust-name">${d.customerName}</div>
-                  <div class="cod-badge">
-                    ${d.isCOD ? `COD <strong style="font-size: ${isSingle ? '13px' : fs.codAmtSize};">₹${d.payableAmount}</strong>` : `PREPAID`}
+                  <div class="cust-name" style="font-size: ${adaptive.nameSize};">${d.customerName}</div>
+                  <div class="cod-badge" style="font-size: ${adaptive.codBadgeSize};">
+                    ${d.isCOD ? `COD <strong style="font-size: ${adaptive.codAmtSize};">₹${d.payableAmount}</strong>` : `PREPAID`}
                   </div>
                 </div>
-                <div class="cust-phone">
+                <div class="cust-phone" style="font-size: ${adaptive.phoneSize};">
                   <span style="font-size: ${isSingle ? '12px' : '10px'};">📞</span> ${d.mobile} ${d.altMobile ? `/ ${d.altMobile}` : ''}
                 </div>
-                ${d.fatherName ? `<div style="font-size: ${isSingle ? '9.5px' : '8px'}; font-weight: 800; text-transform: uppercase; margin-bottom: 2px;">C/O ${d.fatherName}</div>` : ''}
-                <div class="cust-address">${d.formattedAddress}</div>
+                ${d.fatherName ? `<div style="font-size: ${isSingle ? '9.5px' : '7.5px'}; font-weight: 800; text-transform: uppercase; margin-bottom: 2px;">C/O ${d.fatherName}</div>` : ''}
+                <div class="cust-address" style="font-size: ${adaptive.addrSize};">${d.formattedAddress}</div>
               </div>
 
               <!-- Right Column: Tracking & Table -->
               <div class="col-right">
-                <div class="article-box">
-                  <div class="art-title">${d.trackingTitle}</div>
-                  <div class="art-code">${d.tracking}</div>
+                <div class="article-box" style="padding: ${adaptive.artBoxPadding};">
+                  <div class="art-title" style="font-size: ${adaptive.artTitleSize};">${d.trackingTitle}</div>
+                  <div class="art-code" style="font-size: ${adaptive.artCodeSize};">${d.tracking}</div>
                 </div>
 
                 <table class="details-table">
                   <tbody>
                     <tr style="border-bottom: 1px solid #000;">
-                      <td style="padding: ${padTableY} 4px; border-right: 1px solid #000; width: 34%; background: #f9fafb; font-weight: 800; font-size: ${labelFont};">REFER BY</td>
-                      <td style="padding: ${padTableY} 4px; font-weight: 900; font-size: ${prodFont};">${d.telecallerName}</td>
+                      <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; background: #f9fafb; font-weight: 800; font-size: ${adaptive.labelFont}; white-space: nowrap;">REFER BY</td>
+                      <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; word-break: break-word; overflow-wrap: break-word;">${d.telecallerName}</td>
                     </tr>
                     <tr style="border-bottom: 1px solid #000;">
-                      <td style="padding: ${padTableY} 4px; border-right: 1px solid #000; background: #f9fafb; font-weight: 800; font-size: ${labelFont};">WEIGHT</td>
-                      <td style="padding: ${padTableY} 4px; font-weight: 900; font-size: ${prodFont};">${d.weightText} ${d.totalPieces} PCS</td>
+                      <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; background: #f9fafb; font-weight: 800; font-size: ${adaptive.labelFont}; white-space: nowrap;">WEIGHT</td>
+                      <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; word-break: break-word; overflow-wrap: break-word;">${d.weightText} ${d.totalPieces} PCS</td>
                     </tr>
                     ${d.isTPC ? `
                       <tr style="border-bottom: 1px solid #000; background: #eff6ff;">
-                        <td style="padding: ${padTableY} 4px; border-right: 1px solid #000; font-weight: 800; font-size: ${labelFont}; color: #1e40af;">COURIER</td>
-                        <td style="padding: ${padTableY} 4px; font-weight: 900; font-size: ${prodFont}; color: #1e40af;">TPC EXPRESS LOGISTICS</td>
+                        <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #1e40af; white-space: nowrap;">COURIER</td>
+                        <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #1e40af; word-break: break-word; overflow-wrap: break-word;">TPC EXPRESS LOGISTICS</td>
                       </tr>
                     ` : (d.isOtherCourier ? `
                       <tr style="border-bottom: 1px solid #000; background: #eff6ff;">
-                        <td style="padding: ${padTableY} 4px; border-right: 1px solid #000; font-weight: 800; font-size: ${labelFont}; color: #1e40af;">COURIER</td>
-                        <td style="padding: ${padTableY} 4px; font-weight: 900; font-size: ${prodFont}; color: #1e40af;">${(d.order.courierName || 'COURIER').toUpperCase()}</td>
+                        <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #1e40af; white-space: nowrap;">COURIER</td>
+                        <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #1e40af; word-break: break-word; overflow-wrap: break-word;">${(d.order.courierName || 'COURIER').toUpperCase()}</td>
                       </tr>
                     ` : (d.isIndiaPost && d.isKarnataka ? `
                       <tr style="border-bottom: 1px solid #000; background: #eff6ff;">
-                        <td style="padding: ${padTableY} 4px; border-right: 1px solid #000; font-weight: 800; font-size: ${labelFont}; color: #1e40af;">POSTAL CODE</td>
-                        <td style="padding: ${padTableY} 4px; font-weight: 900; font-size: ${prodFont}; color: #1e40af;">${d.knPincode} (BILLER: ${d.billerId})</td>
+                        <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #1e40af; white-space: nowrap;">POSTAL CODE</td>
+                        <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #1e40af; word-break: break-word; overflow-wrap: break-word;">${d.knPincode} (BILLER: ${d.billerId})</td>
                       </tr>
                     ` : ''))}
                     ${d.advanceAmount > 0 ? `
                       <tr style="border-bottom: 1px solid #000; background: #f0fdf4;">
-                        <td style="padding: ${padTableY} 4px; border-right: 1px solid #000; font-weight: 800; font-size: ${labelFont}; color: #166534;">ADVANCE</td>
-                        <td style="padding: ${padTableY} 4px; font-weight: 900; font-size: ${prodFont}; color: #166534;">₹${d.advanceAmount} ${d.advanceUtr ? `· ${d.advanceUtr}` : ''}</td>
+                        <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #166534; white-space: nowrap;">ADVANCE</td>
+                        <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #166534; word-break: break-word; overflow-wrap: break-word;">₹${d.advanceAmount} ${d.advanceUtr ? `· ${d.advanceUtr}` : ''}</td>
                       </tr>
                     ` : ''}
                     ${productRowsHtml}
@@ -584,13 +798,13 @@ export function ShippingLabelLandscapeModal({
             </div>
 
             <!-- 6. Sender Details -->
-            <div class="footer-sender">
+            <div class="footer-sender" style="font-size: ${adaptive.senderSize}; padding: ${adaptive.senderPad};">
               <div>${d.fromAddressText}</div>
               <div>${d.senderMobileText}</div>
             </div>
 
             <!-- 7. Emergency Medicine Banner -->
-            <div class="emergency-banner">
+            <div class="emergency-banner" style="font-size: ${adaptive.emergencySize}; padding: ${adaptive.emergencyPad};">
               EMERGENCY MEDICINE - HANDLE WITH CARE AND DELIVERY IMMEDIATELY
             </div>
           </div>
@@ -653,8 +867,8 @@ export function ShippingLabelLandscapeModal({
             break-after: avoid;
           }
           .sheet-page.batch-mode {
-            height: 285mm;
-            max-height: 285mm;
+            height: 287mm;
+            max-height: 287mm;
           }
           .sheet-page.single-mode {
             height: auto;
@@ -684,8 +898,8 @@ export function ShippingLabelLandscapeModal({
           }
           .label-box.batch-mode {
             width: 196mm;
-            height: 87mm;
-            max-height: 87mm;
+            height: 89mm;
+            max-height: 89mm;
           }
           .label-box.single-mode {
             width: 196mm;
@@ -699,8 +913,8 @@ export function ShippingLabelLandscapeModal({
             justify-content: center;
             gap: 6px;
             width: 196mm;
-            height: 4mm;
-            margin: 1.5mm 0;
+            height: 3.5mm;
+            margin: 1mm 0;
             color: #6b7280;
             font-size: 7.5px;
             font-family: monospace;
@@ -742,26 +956,27 @@ export function ShippingLabelLandscapeModal({
           .sub-row {
             border-bottom: 1px solid #000;
             padding: ${isSingle ? '2.5px 8px' : '1.5px 6px'};
-            font-size: ${isSingle ? '9.5px' : fs.subRowSize};
             font-weight: 800;
             text-transform: uppercase;
             line-height: 1.15;
             background: #fff;
+            word-break: break-word;
+            overflow-wrap: break-word;
           }
           .help-banner {
             background-color: #166534 !important;
             color: #ffffff !important;
             text-align: center;
             padding: ${isSingle ? '2.5px 8px' : '1.5px 5px'};
-            font-size: ${isSingle ? '9.5px' : fs.bannerSize};
             font-weight: 800;
             border-bottom: 1px solid #000;
             letter-spacing: 0.1px;
             line-height: 1.15;
+            word-break: break-word;
+            overflow-wrap: break-word;
           }
           .main-grid {
             display: grid;
-            grid-template-columns: 1.18fr 0.82fr;
             border-bottom: 1px solid #000;
             flex: 1;
             min-height: 0;
@@ -772,37 +987,37 @@ export function ShippingLabelLandscapeModal({
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
+            min-width: 0;
           }
           .cust-name {
-            font-size: ${isSingle ? '14px' : fs.nameSize};
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 0.1px;
             line-height: 1.1;
+            word-break: break-word;
+            overflow-wrap: break-word;
           }
           .cod-badge {
             border: 1.2px solid #dc2626;
             color: #dc2626;
             font-weight: 900;
-            font-size: ${isSingle ? '11px' : fs.codBadgeSize};
             padding: ${isSingle ? '1px 5px' : '0.5px 3.5px'};
             border-radius: 2px;
             white-space: nowrap;
           }
           .cust-phone {
-            font-size: ${isSingle ? '11.5px' : fs.phoneSize};
             font-weight: 900;
             color: #000;
             margin: 1px 0;
             display: flex;
             align-items: center;
             gap: 3px;
+            white-space: nowrap;
           }
           .cust-address {
-            font-size: ${isSingle ? '10px' : fs.addrSize};
             font-weight: 800;
             text-transform: uppercase;
-            line-height: 1.2;
+            line-height: 1.15;
             color: #111;
             word-break: break-word;
             overflow-wrap: break-word;
@@ -814,6 +1029,7 @@ export function ShippingLabelLandscapeModal({
             flex-direction: column;
             gap: 2px;
             justify-content: flex-start;
+            min-width: 0;
           }
           .article-box {
             border: 1px dashed #737373;
@@ -822,14 +1038,12 @@ export function ShippingLabelLandscapeModal({
             background: #fafafa;
           }
           .art-title {
-            font-size: ${isSingle ? '8px' : fs.artTitleSize};
             font-weight: 800;
             text-transform: uppercase;
             color: #525252;
           }
           .art-code {
             font-family: monospace;
-            font-size: ${isSingle ? '13px' : fs.trackSize};
             font-weight: 900;
             letter-spacing: 0.8px;
             margin-top: 0.5px;
@@ -838,9 +1052,10 @@ export function ShippingLabelLandscapeModal({
             width: 100%;
             border-collapse: collapse;
             border: 1px solid #000;
-            font-size: ${isSingle ? '9.5px' : fs.tableValSize};
             font-weight: 800;
             text-transform: uppercase;
+            table-layout: fixed;
+          }
           }
           .footer-sender {
             padding: ${isSingle ? '2.5px 8px' : '1.5px 6px'};
@@ -907,12 +1122,15 @@ export function ShippingLabelLandscapeModal({
   // Render Label Card for preview (shared between Single and 3-per-sheet modes)
   const renderLabelCard = (ord, labelNumber, isSingleCard = false) => {
     const d = getOrderData(ord);
-    const tablePadClass = (isSingleCard || d.products.length <= 2) ? 'py-0.5' : 'py-0.2';
+    const adaptive = getAdaptiveLayout(d.products.length, isSingleCard, fontScale, d.formattedAddress?.length || 0);
 
     return (
-      <div className={`w-full border-[1.5px] border-black bg-white flex flex-col justify-between text-xs shadow-2xs ${isSingleCard ? 'min-h-[300px] border-[2px]' : 'flex-1 min-h-0'}`}>
+      <div className={`w-full border-[1.5px] border-black bg-white flex flex-col justify-between text-xs shadow-2xs ${isSingleCard ? 'min-h-[300px] border-[2px]' : 'flex-1 min-h-[230px]'}`}>
         {/* 1. Header Banner */}
-        <div className={`bg-[#362115] text-white px-2.5 ${isSingleCard ? 'py-1.5' : 'py-0.5'} flex items-center justify-between shrink-0`}>
+        <div
+          className="bg-[#362115] text-white px-2.5 flex items-center justify-between shrink-0"
+          style={{ padding: adaptive.headerPad }}
+        >
           <div className="w-6"></div>
           <div className="text-center">
             {brandStyle === 'SHANTHI' ? (
@@ -933,64 +1151,67 @@ export function ShippingLabelLandscapeModal({
 
         {/* 2. SPEED POST row */}
         <div
-          className="border-b border-black px-2 py-0.5 font-black uppercase leading-tight bg-white shrink-0"
-          style={{ fontSize: isSingleCard ? '10px' : fs.previewSub }}
+          className="border-b border-black font-black uppercase leading-tight bg-white shrink-0 break-words"
+          style={{ fontSize: adaptive.subRowSize, padding: adaptive.carrierPad }}
         >
           {d.speedPostText}
         </div>
 
         {/* 3. BILLER ID row */}
         <div
-          className="border-b border-black px-2 py-0.5 font-bold uppercase leading-tight bg-white shrink-0"
-          style={{ fontSize: isSingleCard ? '9.5px' : fs.previewSub }}
+          className="border-b border-black font-bold uppercase leading-tight bg-white shrink-0 break-words"
+          style={{ fontSize: adaptive.billerSubSize, padding: adaptive.subRowPad }}
         >
           {d.carrierSubheaderText}
         </div>
 
         {/* 4. Language-aware Help Banner */}
         <div
-          className="bg-[#166534] text-white text-center py-0.5 px-1 font-bold border-b border-black leading-tight shrink-0"
-          style={{ fontSize: isSingleCard ? '10px' : fs.previewSub }}
+          className="bg-[#166534] text-white text-center font-bold border-b border-black leading-tight shrink-0 break-words"
+          style={{ fontSize: adaptive.bannerSize, padding: adaptive.helpPad }}
         >
           {d.helpBannerText}: {d.telecallerName} - {d.telecallerMobile}
         </div>
 
         {/* 5. Middle Two-Column Grid */}
-        <div className="grid grid-cols-[1.18fr_0.82fr] divide-x divide-black border-b border-black flex-1 min-h-0 bg-white">
+        <div
+          className="grid divide-x divide-black border-b border-black flex-1 min-h-0 bg-white"
+          style={{ gridTemplateColumns: adaptive.gridCols }}
+        >
           {/* Left Column: Customer details */}
-          <div className={`p-1.5 flex flex-col justify-start ${isSingleCard ? 'gap-1' : ''}`}>
+          <div className="p-1.5 flex flex-col justify-start min-w-0">
             <div>
               <div className="flex items-start justify-between gap-1 mb-0.5">
                 <div
-                  className="font-black uppercase leading-tight text-black"
-                  style={{ fontSize: isSingleCard ? '14px' : fs.previewName }}
+                  className="font-black uppercase leading-tight text-black break-words"
+                  style={{ fontSize: adaptive.previewNameSize }}
                 >
                   {d.customerName}
                 </div>
                 <div
-                  className="border border-red-600 text-red-600 font-black px-1.5 py-0.2 rounded-xs shrink-0"
-                  style={{ fontSize: isSingleCard ? '11px' : fs.previewCod }}
+                  className="border border-red-600 text-red-600 font-black px-1.5 py-0.2 rounded-xs shrink-0 whitespace-nowrap"
+                  style={{ fontSize: adaptive.previewCodBadgeSize }}
                 >
-                  {d.isCOD ? <><span>COD </span><strong style={{ fontWeight: '900', fontSize: isSingleCard ? '13px' : fs.previewCodAmt }}>₹{d.payableAmount}</strong></> : 'PREPAID'}
+                  {d.isCOD ? <><span>COD </span><strong style={{ fontWeight: '900', fontSize: adaptive.previewCodAmtSize }}>₹{d.payableAmount}</strong></> : 'PREPAID'}
                 </div>
               </div>
               <div
-                className="font-black text-black flex items-center gap-1 my-0.5"
-                style={{ fontSize: isSingleCard ? '12px' : fs.previewPhone }}
+                className="font-black text-black flex items-center gap-1 my-0.5 whitespace-nowrap"
+                style={{ fontSize: adaptive.previewPhoneSize }}
               >
                 <span className="text-purple-700">📞</span> {d.mobile} {d.altMobile ? `/ ${d.altMobile}` : ''}
               </div>
               {d.fatherName && (
                 <div
-                  className="font-bold text-neutral-800 uppercase mb-0.5"
+                  className="font-bold text-neutral-800 uppercase mb-0.5 break-words"
                   style={{ fontSize: isSingleCard ? '9.5px' : '7.5px' }}
                 >
                   C/O {d.fatherName}
                 </div>
               )}
               <div
-                className="font-bold uppercase leading-snug text-neutral-900 break-words mt-0.5"
-                style={{ fontSize: isSingleCard ? '10px' : fs.previewAddr }}
+                className="font-bold uppercase leading-tight text-neutral-900 break-words mt-0.5"
+                style={{ fontSize: adaptive.previewAddrSize, lineHeight: 1.15 }}
               >
                 {d.formattedAddress}
               </div>
@@ -998,59 +1219,134 @@ export function ShippingLabelLandscapeModal({
           </div>
 
           {/* Right Column: Tracking Box & Table */}
-          <div className="p-1 flex flex-col gap-0.5 justify-start">
-            <div className="border border-dashed border-neutral-400 p-0.5 text-center bg-neutral-50 rounded-xs">
-              <div className="text-[6.5px] sm:text-[7.5px] font-bold text-neutral-500 uppercase tracking-wider">
+          <div className="p-1 flex flex-col gap-0.5 justify-start min-w-0">
+            <div
+              className={`border border-dashed border-neutral-400 text-center bg-neutral-50 rounded-xs ${adaptive.articleBoxClass}`}
+              style={{ padding: adaptive.artBoxPadding }}
+            >
+              <div
+                className="font-bold text-neutral-500 uppercase tracking-wider"
+                style={{ fontSize: adaptive.artTitleSize }}
+              >
                 {d.trackingTitle}
               </div>
               <div
                 className="font-mono font-black tracking-wider text-black"
-                style={{ fontSize: isSingleCard ? '13px' : fs.previewTrack }}
+                style={{ fontSize: adaptive.artCodeSize }}
               >
                 {d.tracking}
               </div>
             </div>
 
             <table
-              className="w-full border-collapse border border-black font-bold uppercase"
-              style={{ fontSize: isSingleCard ? '9.5px' : fs.previewTableVal }}
+              className="w-full border-collapse border border-black font-bold uppercase table-fixed"
             >
               <tbody>
                 <tr className="border-b border-black">
-                  <td className={`px-1 ${tablePadClass} border-r border-black w-2/5 bg-gray-50 text-gray-700 font-bold`} style={{ fontSize: isSingleCard ? '8.5px' : fs.previewTableLabel }}>REFER BY</td>
-                  <td className={`px-1 ${tablePadClass} font-black text-black`}>{d.telecallerName}</td>
+                  <td
+                    className={`px-1 ${adaptive.tablePadClass} border-r border-black bg-gray-50 text-gray-700 font-bold whitespace-nowrap`}
+                    style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
+                  >
+                    REFER BY
+                  </td>
+                  <td
+                    className={`px-1.5 ${adaptive.tablePadClass} font-black text-black break-words leading-tight`}
+                    style={{ fontSize: adaptive.previewProdFont }}
+                  >
+                    {d.telecallerName}
+                  </td>
                 </tr>
                 <tr className="border-b border-black">
-                  <td className={`px-1 ${tablePadClass} border-r border-black bg-gray-50 text-gray-700 font-bold`} style={{ fontSize: isSingleCard ? '8.5px' : fs.previewTableLabel }}>WEIGHT</td>
-                  <td className={`px-1 ${tablePadClass} font-black text-black`}>{d.weightText} {d.totalPieces} PCS</td>
+                  <td
+                    className={`px-1 ${adaptive.tablePadClass} border-r border-black bg-gray-50 text-gray-700 font-bold whitespace-nowrap`}
+                    style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
+                  >
+                    WEIGHT
+                  </td>
+                  <td
+                    className={`px-1.5 ${adaptive.tablePadClass} font-black text-black break-words leading-tight`}
+                    style={{ fontSize: adaptive.previewProdFont }}
+                  >
+                    {d.weightText} {d.totalPieces} PCS
+                  </td>
                 </tr>
                 {d.isTPC ? (
                   <tr className="border-b border-black bg-blue-50/70">
-                    <td className={`px-1 ${tablePadClass} border-r border-black font-bold text-blue-900`} style={{ fontSize: isSingleCard ? '8.5px' : fs.previewTableLabel }}>COURIER</td>
-                    <td className={`px-1 ${tablePadClass} font-black text-blue-900`}>TPC EXPRESS LOGISTICS</td>
+                    <td
+                      className={`px-1 ${adaptive.tablePadClass} border-r border-black font-bold text-blue-900 whitespace-nowrap`}
+                      style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
+                    >
+                      COURIER
+                    </td>
+                    <td
+                      className={`px-1.5 ${adaptive.tablePadClass} font-black text-blue-900 break-words leading-tight`}
+                      style={{ fontSize: adaptive.previewProdFont }}
+                    >
+                      TPC EXPRESS LOGISTICS
+                    </td>
                   </tr>
                 ) : d.isOtherCourier ? (
                   <tr className="border-b border-black bg-blue-50/70">
-                    <td className={`px-1 ${tablePadClass} border-r border-black font-bold text-blue-900`} style={{ fontSize: isSingleCard ? '8.5px' : fs.previewTableLabel }}>COURIER</td>
-                    <td className={`px-1 ${tablePadClass} font-black text-blue-900`}>{(d.order.courierName || 'COURIER').toUpperCase()}</td>
+                    <td
+                      className={`px-1 ${adaptive.tablePadClass} border-r border-black font-bold text-blue-900 whitespace-nowrap`}
+                      style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
+                    >
+                      COURIER
+                    </td>
+                    <td
+                      className={`px-1.5 ${adaptive.tablePadClass} font-black text-blue-900 break-words leading-tight`}
+                      style={{ fontSize: adaptive.previewProdFont }}
+                    >
+                      {(d.order.courierName || 'COURIER').toUpperCase()}
+                    </td>
                   </tr>
                 ) : (d.isIndiaPost && d.isKarnataka) ? (
                   <tr className="border-b border-black bg-blue-50/70">
-                    <td className={`px-1 ${tablePadClass} border-r border-black font-bold text-blue-900`} style={{ fontSize: isSingleCard ? '8.5px' : fs.previewTableLabel }}>POSTAL CODE</td>
-                    <td className={`px-1 ${tablePadClass} font-black text-blue-900`}>{d.knPincode} (BILLER: {d.billerId})</td>
+                    <td
+                      className={`px-1 ${adaptive.tablePadClass} border-r border-black font-bold text-blue-900 whitespace-nowrap`}
+                      style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
+                    >
+                      POSTAL CODE
+                    </td>
+                    <td
+                      className={`px-1.5 ${adaptive.tablePadClass} font-black text-blue-900 break-words leading-tight`}
+                      style={{ fontSize: adaptive.previewProdFont }}
+                    >
+                      {d.knPincode} (BILLER: {d.billerId})
+                    </td>
                   </tr>
                 ) : null}
                 {d.advanceAmount > 0 && (
                   <tr className="border-b border-black bg-emerald-50/60">
-                    <td className={`px-1 ${tablePadClass} border-r border-black font-bold text-emerald-800`} style={{ fontSize: isSingleCard ? '8.5px' : fs.previewTableLabel }}>ADVANCE</td>
-                    <td className={`px-1 ${tablePadClass} font-black text-emerald-800`}>₹{d.advanceAmount} {d.advanceUtr ? `· ${d.advanceUtr}` : ''}</td>
+                    <td
+                      className={`px-1 ${adaptive.tablePadClass} border-r border-black font-bold text-emerald-800 whitespace-nowrap`}
+                      style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
+                    >
+                      ADVANCE
+                    </td>
+                    <td
+                      className={`px-1.5 ${adaptive.tablePadClass} font-black text-emerald-800 break-words leading-tight`}
+                      style={{ fontSize: adaptive.previewProdFont }}
+                    >
+                      ₹{d.advanceAmount} {d.advanceUtr ? `· ${d.advanceUtr}` : ''}
+                    </td>
                   </tr>
                 )}
                 {/* Render ALL products without hiding any */}
                 {d.products.map((prod, pIdx) => (
                   <tr key={pIdx} className={pIdx !== d.products.length - 1 ? 'border-b border-black' : ''}>
-                    <td className={`px-1 ${tablePadClass} border-r border-black bg-gray-50 text-gray-700 font-bold`} style={{ fontSize: isSingleCard ? '8.5px' : fs.previewTableLabel }}>PRODUCT</td>
-                    <td className={`px-1 ${tablePadClass} font-black text-black leading-tight truncate`}>{prod.name} X{prod.qty}</td>
+                    <td
+                      className={`px-1 ${adaptive.tablePadClass} border-r border-black bg-gray-50 text-gray-700 font-bold whitespace-nowrap`}
+                      style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
+                    >
+                      PRODUCT
+                    </td>
+                    <td
+                      className={`px-1.5 ${adaptive.tablePadClass} font-black text-black leading-tight break-words whitespace-normal`}
+                      style={{ fontSize: adaptive.previewProdFont, lineHeight: adaptive.lineHeight }}
+                    >
+                      {prod.name} X{prod.qty}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1060,8 +1356,8 @@ export function ShippingLabelLandscapeModal({
 
         {/* 6. Sender Bottom Details */}
         <div
-          className="px-2 py-0.5 font-bold uppercase leading-tight bg-white text-black shrink-0"
-          style={{ fontSize: isSingleCard ? '9px' : fs.previewSender }}
+          className="px-2 font-bold uppercase leading-tight bg-white text-black shrink-0 break-words"
+          style={{ fontSize: adaptive.previewSender, padding: adaptive.senderPad }}
         >
           <div>{d.fromAddressText}</div>
           <div>{d.senderMobileText}</div>
@@ -1069,8 +1365,8 @@ export function ShippingLabelLandscapeModal({
 
         {/* 7. Bottom Emergency Medicine Banner */}
         <div
-          className="bg-[#dc2626] text-white py-0.5 px-1 text-center font-black uppercase tracking-wider shrink-0"
-          style={{ fontSize: isSingleCard ? '8.5px' : fs.previewEmergency }}
+          className="bg-[#dc2626] text-white text-center font-black uppercase tracking-wider shrink-0"
+          style={{ fontSize: adaptive.previewEmergency, padding: adaptive.emergencyPad }}
         >
           EMERGENCY MEDICINE - HANDLE WITH CARE AND DELIVERY IMMEDIATELY
         </div>

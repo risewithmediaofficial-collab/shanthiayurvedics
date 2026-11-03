@@ -9,126 +9,126 @@ const FONT_SCALES = {
     label: 'Compact (90%)',
     scale: 0.9,
     // Print 3-per-sheet sizing:
-    nameSize: '10.5px',
-    phoneSize: '9.2px',
-    addrSize: '7.8px',
-    trackSize: '10.5px',
-    artTitleSize: '6.5px',
-    codBadgeSize: '9px',
-    codAmtSize: '10.5px',
-    subRowSize: '8px',
-    billerSubSize: '7.5px',
-    bannerSize: '7.5px',
-    tableLabelSize: '7.5px',
-    tableValSize: '8px',
-    senderSize: '7px',
-    emergencySize: '6.5px',
+    nameSize: '13.5px',
+    phoneSize: '11.8px',
+    addrSize: '10px',
+    trackSize: '13px',
+    artTitleSize: '8px',
+    codBadgeSize: '11px',
+    codAmtSize: '13px',
+    subRowSize: '9.5px',
+    billerSubSize: '9px',
+    bannerSize: '9.5px',
+    tableLabelSize: '8.8px',
+    tableValSize: '9.5px',
+    senderSize: '8.8px',
+    emergencySize: '8px',
     // Preview JSX inline font sizes:
-    previewName: '10.5px',
-    previewPhone: '8.8px',
-    previewAddr: '7.5px',
-    previewTrack: '9.5px',
-    previewCod: '8.8px',
-    previewCodAmt: '10.5px',
-    previewTableLabel: '7.2px',
-    previewTableVal: '7.8px',
-    previewSub: '7.5px',
-    previewSender: '7px',
-    previewEmergency: '6.5px'
+    previewName: '12.5px',
+    previewPhone: '11px',
+    previewAddr: '9.2px',
+    previewTrack: '12px',
+    previewCod: '10.5px',
+    previewCodAmt: '12.5px',
+    previewTableLabel: '8.2px',
+    previewTableVal: '9px',
+    previewSub: '8.8px',
+    previewSender: '8.2px',
+    previewEmergency: '7.5px'
   },
   normal: {
     key: 'normal',
     label: 'Normal (100% Increased)',
     scale: 1.0,
     // Print 3-per-sheet sizing (Increased baseline legibility!):
-    nameSize: '12px',
-    phoneSize: '10.5px',
-    addrSize: '8.8px',
-    trackSize: '11.8px',
-    artTitleSize: '7.5px',
-    codBadgeSize: '10px',
-    codAmtSize: '12px',
-    subRowSize: '8.8px',
-    billerSubSize: '8.2px',
-    bannerSize: '8.5px',
-    tableLabelSize: '8.2px',
-    tableValSize: '8.8px',
-    senderSize: '7.8px',
-    emergencySize: '7.2px',
+    nameSize: '15.5px',
+    phoneSize: '13.2px',
+    addrSize: '11.2px',
+    trackSize: '14.8px',
+    artTitleSize: '9px',
+    codBadgeSize: '12px',
+    codAmtSize: '14.5px',
+    subRowSize: '10.5px',
+    billerSubSize: '10px',
+    bannerSize: '10.5px',
+    tableLabelSize: '9.6px',
+    tableValSize: '10.5px',
+    senderSize: '9.6px',
+    emergencySize: '8.8px',
     // Preview JSX inline font sizes:
-    previewName: '11.8px',
-    previewPhone: '9.8px',
-    previewAddr: '8.4px',
-    previewTrack: '11px',
-    previewCod: '9.8px',
-    previewCodAmt: '12px',
-    previewTableLabel: '8px',
-    previewTableVal: '8.6px',
-    previewSub: '8.2px',
-    previewSender: '7.8px',
-    previewEmergency: '7.2px'
+    previewName: '14px',
+    previewPhone: '12.2px',
+    previewAddr: '10.2px',
+    previewTrack: '13.5px',
+    previewCod: '11.5px',
+    previewCodAmt: '14px',
+    previewTableLabel: '9px',
+    previewTableVal: '10px',
+    previewSub: '9.8px',
+    previewSender: '9.2px',
+    previewEmergency: '8.2px'
   },
   large: {
     key: 'large',
     label: 'Large (115%)',
     scale: 1.15,
-    nameSize: '13.8px',
-    phoneSize: '11.8px',
-    addrSize: '9.8px',
-    trackSize: '13.2px',
-    artTitleSize: '8.5px',
-    codBadgeSize: '11px',
-    codAmtSize: '13.5px',
-    subRowSize: '9.8px',
-    billerSubSize: '9px',
-    bannerSize: '9.5px',
-    tableLabelSize: '9px',
-    tableValSize: '9.8px',
-    senderSize: '8.8px',
-    emergencySize: '8px',
+    nameSize: '17px',
+    phoneSize: '14.2px',
+    addrSize: '12.2px',
+    trackSize: '16.2px',
+    artTitleSize: '10px',
+    codBadgeSize: '13px',
+    codAmtSize: '16px',
+    subRowSize: '11.5px',
+    billerSubSize: '10.8px',
+    bannerSize: '11.5px',
+    tableLabelSize: '10.5px',
+    tableValSize: '11.5px',
+    senderSize: '10.5px',
+    emergencySize: '9.5px',
     // Preview JSX inline font sizes:
-    previewName: '13.2px',
-    previewPhone: '10.8px',
-    previewAddr: '9.4px',
-    previewTrack: '12.5px',
-    previewCod: '10.8px',
-    previewCodAmt: '13.2px',
-    previewTableLabel: '8.8px',
-    previewTableVal: '9.6px',
-    previewSub: '9px',
-    previewSender: '8.8px',
-    previewEmergency: '8px'
+    previewName: '15.2px',
+    previewPhone: '13.2px',
+    previewAddr: '11.2px',
+    previewTrack: '14.8px',
+    previewCod: '12.5px',
+    previewCodAmt: '15.2px',
+    previewTableLabel: '10px',
+    previewTableVal: '11px',
+    previewSub: '10.8px',
+    previewSender: '10px',
+    previewEmergency: '9px'
   },
   xlarge: {
     key: 'xlarge',
     label: 'Extra Large (130%)',
     scale: 1.3,
-    nameSize: '15.5px',
-    phoneSize: '13px',
-    addrSize: '11px',
-    trackSize: '14.8px',
-    artTitleSize: '9.5px',
-    codBadgeSize: '12px',
-    codAmtSize: '15px',
-    subRowSize: '10.8px',
-    billerSubSize: '9.8px',
-    bannerSize: '10.5px',
-    tableLabelSize: '10px',
-    tableValSize: '10.8px',
-    senderSize: '9.6px',
-    emergencySize: '8.8px',
+    nameSize: '18.5px',
+    phoneSize: '15.5px',
+    addrSize: '13.2px',
+    trackSize: '17.5px',
+    artTitleSize: '11px',
+    codBadgeSize: '14px',
+    codAmtSize: '17.5px',
+    subRowSize: '12.5px',
+    billerSubSize: '11.8px',
+    bannerSize: '12.5px',
+    tableLabelSize: '11.5px',
+    tableValSize: '12.5px',
+    senderSize: '11.5px',
+    emergencySize: '10.5px',
     // Preview JSX inline font sizes:
-    previewName: '14.8px',
-    previewPhone: '12px',
-    previewAddr: '10.5px',
-    previewTrack: '14px',
-    previewCod: '12px',
-    previewCodAmt: '14.8px',
-    previewTableLabel: '9.8px',
-    previewTableVal: '10.6px',
-    previewSub: '10px',
-    previewSender: '9.6px',
-    previewEmergency: '8.8px'
+    previewName: '16.5px',
+    previewPhone: '14.2px',
+    previewAddr: '12.2px',
+    previewTrack: '16px',
+    previewCod: '13.5px',
+    previewCodAmt: '16.5px',
+    previewTableLabel: '11px',
+    previewTableVal: '12px',
+    previewSub: '11.8px',
+    previewSender: '11px',
+    previewEmergency: '10px'
   }
 };
 
@@ -141,40 +141,40 @@ const getAdaptiveLayout = (prodCount, isSingle, fontScale, addressLength = 0) =>
     return {
       gridCols: '1.08fr 0.92fr',
       labelWidth: '26%',
-      padTableY: '2px',
-      prodFont: isScaleUp ? '10px' : '8.8px',
-      labelFont: isScaleUp ? '9px' : '8.2px',
-      previewProdFont: isScaleUp ? '10px' : '8.8px',
-      previewLabelFont: isScaleUp ? '9px' : '8.2px',
-      lineHeight: '1.15',
-      artBoxPadding: '1.5px 3px',
-      artTitleSize: '7.5px',
-      artCodeSize: '11.8px',
-      nameSize: isScaleUp ? '13px' : '12px',
-      previewNameSize: isScaleUp ? '13px' : '12px',
-      addrSize: addressLength > 130 ? '8px' : '8.8px',
-      previewAddrSize: addressLength > 130 ? '7.8px' : '8.4px',
-      phoneSize: '10.5px',
-      previewPhoneSize: '9.8px',
-      codBadgeSize: '10px',
-      previewCodBadgeSize: '9.8px',
-      codAmtSize: '12px',
-      previewCodAmtSize: '12px',
-      headerPad: '2px 6px',
-      carrierPad: '1.5px 6px',
-      subRowPad: '1.5px 6px',
-      helpPad: '1.5px 5px',
-      senderPad: '1.5px 6px',
-      emergencyPad: '1px 4px',
-      subRowSize: '8.8px',
-      billerSubSize: '8.2px',
-      bannerSize: '8.5px',
-      senderSize: '7.8px',
-      emergencySize: '7.2px',
-      previewSub: '8.2px',
-      previewSender: '7.8px',
-      previewEmergency: '7.2px',
-      articleBoxClass: 'p-0.5'
+      padTableY: '4px',
+      prodFont: isScaleUp ? '12px' : '11px',
+      labelFont: isScaleUp ? '11px' : '10px',
+      previewProdFont: isScaleUp ? '11.5px' : '10.5px',
+      previewLabelFont: isScaleUp ? '10.5px' : '9.5px',
+      lineHeight: '1.25',
+      artBoxPadding: '3px 6px',
+      artTitleSize: '9.5px',
+      artCodeSize: '15.5px',
+      nameSize: isScaleUp ? '18px' : '16.5px',
+      previewNameSize: isScaleUp ? '16px' : '15px',
+      addrSize: addressLength > 150 ? '11px' : '12px',
+      previewAddrSize: addressLength > 150 ? '10px' : '11px',
+      phoneSize: '14px',
+      previewPhoneSize: '13px',
+      codBadgeSize: '13px',
+      previewCodBadgeSize: '12.5px',
+      codAmtSize: '16px',
+      previewCodAmtSize: '15.5px',
+      headerPad: '4px 8px',
+      carrierPad: '3px 8px',
+      subRowPad: '3px 8px',
+      helpPad: '3px 8px',
+      senderPad: '3px 8px',
+      emergencyPad: '2.5px 6px',
+      subRowSize: '11px',
+      billerSubSize: '10.5px',
+      bannerSize: '11px',
+      senderSize: '10px',
+      emergencySize: '9.5px',
+      previewSub: '10px',
+      previewSender: '9.5px',
+      previewEmergency: '9px',
+      articleBoxClass: 'py-1 px-2'
     };
   }
 
@@ -183,31 +183,31 @@ const getAdaptiveLayout = (prodCount, isSingle, fontScale, addressLength = 0) =>
     return {
       gridCols: '1.08fr 0.92fr',
       labelWidth: '26%',
-      padTableY: '2px',
+      padTableY: '3px',
       prodFont: fs.tableValSize,
       labelFont: fs.tableLabelSize,
       previewProdFont: fs.previewTableVal,
       previewLabelFont: fs.previewTableLabel,
-      lineHeight: '1.15',
-      artBoxPadding: '1.5px 3px',
+      lineHeight: '1.2',
+      artBoxPadding: '2.5px 5px',
       artTitleSize: fs.artTitleSize,
       artCodeSize: fs.trackSize,
       nameSize: fs.nameSize,
       previewNameSize: fs.previewName,
-      addrSize: addressLength > 130 ? '8px' : fs.addrSize,
-      previewAddrSize: addressLength > 130 ? '7.8px' : fs.previewAddr,
+      addrSize: addressLength > 150 ? '10px' : fs.addrSize,
+      previewAddrSize: addressLength > 150 ? '9.5px' : fs.previewAddr,
       phoneSize: fs.phoneSize,
       previewPhoneSize: fs.previewPhone,
       codBadgeSize: fs.codBadgeSize,
       previewCodBadgeSize: fs.previewCod,
       codAmtSize: fs.codAmtSize,
       previewCodAmtSize: fs.previewCodAmt,
-      headerPad: '2px 6px',
-      carrierPad: '1.5px 6px',
-      subRowPad: '1.5px 6px',
-      helpPad: '1.5px 5px',
-      senderPad: '1.5px 6px',
-      emergencyPad: '1px 4px',
+      headerPad: '3px 8px',
+      carrierPad: '2.5px 8px',
+      subRowPad: '2.5px 8px',
+      helpPad: '2.5px 6px',
+      senderPad: '2.5px 8px',
+      emergencyPad: '2px 6px',
       subRowSize: fs.subRowSize,
       billerSubSize: fs.billerSubSize,
       bannerSize: fs.bannerSize,
@@ -216,84 +216,84 @@ const getAdaptiveLayout = (prodCount, isSingle, fontScale, addressLength = 0) =>
       previewSub: fs.previewSub,
       previewSender: fs.previewSender,
       previewEmergency: fs.previewEmergency,
-      articleBoxClass: 'p-0.5'
+      articleBoxClass: 'py-0.5 px-1.5'
     };
   } else if (prodCount === 3) {
     return {
       gridCols: '1.02fr 0.98fr',
       labelWidth: '25%',
-      padTableY: '1.4px',
-      prodFont: fontScale === 'xlarge' ? '8.8px' : (fontScale === 'large' ? '8.4px' : '8px'),
-      labelFont: '7.6px',
-      previewProdFont: fontScale === 'xlarge' ? '8.6px' : (fontScale === 'large' ? '8.2px' : '7.8px'),
-      previewLabelFont: '7.4px',
-      lineHeight: '1.1',
-      artBoxPadding: '1.2px 3px',
-      artTitleSize: '7px',
-      artCodeSize: fontScale === 'xlarge' ? '12px' : '11px',
-      nameSize: fontScale === 'xlarge' ? '13px' : fs.nameSize,
-      previewNameSize: fontScale === 'xlarge' ? '12.5px' : fs.previewName,
-      addrSize: addressLength > 120 ? '7.6px' : (fontScale === 'xlarge' ? '8.8px' : fs.addrSize),
-      previewAddrSize: addressLength > 120 ? '7.4px' : (fontScale === 'xlarge' ? '8.4px' : fs.previewAddr),
+      padTableY: '2.5px',
+      prodFont: fontScale === 'xlarge' ? '11.5px' : (fontScale === 'large' ? '10.8px' : '10px'),
+      labelFont: '9px',
+      previewProdFont: fontScale === 'xlarge' ? '11px' : (fontScale === 'large' ? '10.2px' : '9.5px'),
+      previewLabelFont: '8.6px',
+      lineHeight: '1.18',
+      artBoxPadding: '2px 4px',
+      artTitleSize: fs.artTitleSize,
+      artCodeSize: fs.trackSize,
+      nameSize: fs.nameSize,
+      previewNameSize: fs.previewName,
+      addrSize: addressLength > 140 ? '9.8px' : fs.addrSize,
+      previewAddrSize: addressLength > 140 ? '9.2px' : fs.previewAddr,
       phoneSize: fs.phoneSize,
       previewPhoneSize: fs.previewPhone,
       codBadgeSize: fs.codBadgeSize,
       previewCodBadgeSize: fs.previewCod,
       codAmtSize: fs.codAmtSize,
       previewCodAmtSize: fs.previewCodAmt,
-      headerPad: '1.8px 6px',
-      carrierPad: '1.2px 6px',
-      subRowPad: '1.2px 6px',
-      helpPad: '1.2px 5px',
-      senderPad: '1.2px 6px',
-      emergencyPad: '1px 4px',
-      subRowSize: fontScale === 'xlarge' ? '9.2px' : fs.subRowSize,
-      billerSubSize: fontScale === 'xlarge' ? '8.6px' : fs.billerSubSize,
-      bannerSize: fontScale === 'xlarge' ? '8.8px' : fs.bannerSize,
-      senderSize: fontScale === 'xlarge' ? '8.2px' : fs.senderSize,
-      emergencySize: fontScale === 'xlarge' ? '7.5px' : fs.emergencySize,
-      previewSub: fontScale === 'xlarge' ? '8.6px' : fs.previewSub,
-      previewSender: fontScale === 'xlarge' ? '8px' : fs.previewSender,
-      previewEmergency: fontScale === 'xlarge' ? '7.2px' : fs.previewEmergency,
+      headerPad: '2.5px 8px',
+      carrierPad: '2px 8px',
+      subRowPad: '2px 8px',
+      helpPad: '2px 6px',
+      senderPad: '2px 8px',
+      emergencyPad: '1.5px 6px',
+      subRowSize: fs.subRowSize,
+      billerSubSize: fs.billerSubSize,
+      bannerSize: fs.bannerSize,
+      senderSize: fs.senderSize,
+      emergencySize: fs.emergencySize,
+      previewSub: fs.previewSub,
+      previewSender: fs.previewSender,
+      previewEmergency: fs.previewEmergency,
       articleBoxClass: 'py-0.5 px-1'
     };
   } else if (prodCount === 4) {
     return {
       gridCols: '0.98fr 1.02fr',
       labelWidth: '24%',
-      padTableY: '1px',
-      prodFont: '7.8px',
-      labelFont: '7.2px',
-      previewProdFont: '7.6px',
-      previewLabelFont: '7px',
-      lineHeight: '1.08',
-      artBoxPadding: '1px 3px',
-      artTitleSize: '6.5px',
-      artCodeSize: '10.5px',
-      nameSize: '11.5px',
-      previewNameSize: '11.2px',
-      addrSize: '7.6px',
-      previewAddrSize: '7.4px',
-      phoneSize: '9.8px',
-      previewPhoneSize: '9.5px',
-      codBadgeSize: '9.5px',
-      previewCodBadgeSize: '9.2px',
-      codAmtSize: '11.5px',
-      previewCodAmtSize: '11.2px',
-      headerPad: '1.5px 6px',
-      carrierPad: '1px 6px',
-      subRowPad: '1px 6px',
-      helpPad: '1px 5px',
-      senderPad: '1px 6px',
-      emergencyPad: '0.8px 4px',
-      subRowSize: '8.2px',
-      billerSubSize: '7.8px',
-      bannerSize: '8px',
-      senderSize: '7.5px',
-      emergencySize: '6.8px',
-      previewSub: '8px',
-      previewSender: '7.4px',
-      previewEmergency: '6.8px',
+      padTableY: '1.8px',
+      prodFont: '9.5px',
+      labelFont: '8.6px',
+      previewProdFont: '9px',
+      previewLabelFont: '8.2px',
+      lineHeight: '1.14',
+      artBoxPadding: '1.5px 3px',
+      artTitleSize: '8px',
+      artCodeSize: '13px',
+      nameSize: '14px',
+      previewNameSize: '13px',
+      addrSize: '9.8px',
+      previewAddrSize: '9px',
+      phoneSize: '12px',
+      previewPhoneSize: '11px',
+      codBadgeSize: '11px',
+      previewCodBadgeSize: '10.5px',
+      codAmtSize: '13.5px',
+      previewCodAmtSize: '13px',
+      headerPad: '2px 7px',
+      carrierPad: '1.8px 7px',
+      subRowPad: '1.8px 7px',
+      helpPad: '1.8px 6px',
+      senderPad: '1.8px 7px',
+      emergencyPad: '1.2px 5px',
+      subRowSize: '9.8px',
+      billerSubSize: '9.2px',
+      bannerSize: '9.5px',
+      senderSize: '8.8px',
+      emergencySize: '8px',
+      previewSub: '9.2px',
+      previewSender: '8.5px',
+      previewEmergency: '7.8px',
       articleBoxClass: 'py-0.5 px-0.5'
     };
   } else {
@@ -301,40 +301,40 @@ const getAdaptiveLayout = (prodCount, isSingle, fontScale, addressLength = 0) =>
     return {
       gridCols: '0.95fr 1.05fr',
       labelWidth: '23%',
-      padTableY: '0.8px',
-      prodFont: '7.2px',
-      labelFont: '6.6px',
-      previewProdFont: '7px',
-      previewLabelFont: '6.4px',
-      lineHeight: '1.04',
-      artBoxPadding: '0.8px 2px',
-      artTitleSize: '6px',
-      artCodeSize: '9.8px',
-      nameSize: '11px',
-      previewNameSize: '10.5px',
-      addrSize: '7.2px',
-      previewAddrSize: '7px',
-      phoneSize: '9.2px',
-      previewPhoneSize: '9px',
-      codBadgeSize: '9px',
-      previewCodBadgeSize: '8.8px',
-      codAmtSize: '11px',
-      previewCodAmtSize: '10.5px',
-      headerPad: '1.2px 5px',
-      carrierPad: '0.8px 5px',
-      subRowPad: '0.8px 5px',
-      helpPad: '0.8px 4px',
-      senderPad: '0.8px 5px',
-      emergencyPad: '0.8px 3px',
-      subRowSize: '7.8px',
-      billerSubSize: '7.4px',
-      bannerSize: '7.5px',
-      senderSize: '7px',
-      emergencySize: '6.5px',
-      previewSub: '7.5px',
-      previewSender: '6.8px',
-      previewEmergency: '6.4px',
-      articleBoxClass: 'py-0.2 px-0.5'
+      padTableY: '1.2px',
+      prodFont: '8.6px',
+      labelFont: '8px',
+      previewProdFont: '8.2px',
+      previewLabelFont: '7.6px',
+      lineHeight: '1.08',
+      artBoxPadding: '1.2px 3px',
+      artTitleSize: '7.5px',
+      artCodeSize: '12px',
+      nameSize: '13px',
+      previewNameSize: '12.2px',
+      addrSize: '9px',
+      previewAddrSize: '8.4px',
+      phoneSize: '11px',
+      previewPhoneSize: '10.2px',
+      codBadgeSize: '10px',
+      previewCodBadgeSize: '9.5px',
+      codAmtSize: '12.5px',
+      previewCodAmtSize: '12px',
+      headerPad: '1.5px 6px',
+      carrierPad: '1.5px 6px',
+      subRowPad: '1.5px 6px',
+      helpPad: '1.5px 5px',
+      senderPad: '1.5px 6px',
+      emergencyPad: '1px 4px',
+      subRowSize: '9px',
+      billerSubSize: '8.5px',
+      bannerSize: '8.8px',
+      senderSize: '8.2px',
+      emergencySize: '7.5px',
+      previewSub: '8.5px',
+      previewSender: '7.8px',
+      previewEmergency: '7.2px',
+      articleBoxClass: 'py-0.5 px-0.5'
     };
   }
 };
@@ -834,7 +834,7 @@ export function ShippingLabelLandscapeModal({
           * { box-sizing: border-box; margin: 0; padding: 0; }
           @page {
             size: A4 portrait;
-            margin: ${isSingle ? '8mm 8mm' : '5mm 6mm'};
+            margin: ${isSingle ? '8mm 8mm' : '4mm 6mm'};
           }
           html, body {
             background: #fff;
@@ -849,7 +849,7 @@ export function ShippingLabelLandscapeModal({
             box-sizing: border-box;
             overflow: hidden;
             margin: 0 auto;
-            width: 196mm;
+            width: 198mm;
           }
           .sheet-page:last-child {
             page-break-after: avoid;
@@ -857,7 +857,7 @@ export function ShippingLabelLandscapeModal({
           }
           .sheet-page.batch-mode {
             height: auto;
-            max-height: 287mm;
+            max-height: 289mm;
           }
           .sheet-page.single-mode {
             height: auto;
@@ -878,22 +878,22 @@ export function ShippingLabelLandscapeModal({
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            justify-content: flex-start;
+            justify-content: space-between;
             background: #fff;
             overflow: hidden;
             color: #000;
-            line-height: 1.15;
-            width: 196mm;
-            height: auto;
+            line-height: 1.2;
+            width: 100%;
           }
           .label-box.batch-mode {
-            width: 196mm;
-            height: auto;
-            max-height: 90mm;
+            width: 100%;
+            height: 90.5mm;
+            min-height: 90.5mm;
+            max-height: 91.5mm;
           }
           .label-box.single-mode {
-            width: 196mm;
-            height: auto;
+            width: 100%;
+            min-height: 125mm;
             border: 1.5px solid #000;
           }
 
@@ -902,11 +902,11 @@ export function ShippingLabelLandscapeModal({
             align-items: center;
             justify-content: center;
             gap: 6px;
-            width: 196mm;
+            width: 100%;
             height: 3.5mm;
-            margin: 1mm 0;
+            margin: 0.5mm 0;
             color: #6b7280;
-            font-size: 7.5px;
+            font-size: 8px;
             font-family: monospace;
           }
           .cut-dash {
@@ -917,10 +917,10 @@ export function ShippingLabelLandscapeModal({
           .cut-text {
             font-weight: 800;
             letter-spacing: 0.5px;
-            font-size: 7.5px;
+            font-size: 8px;
           }
           .cut-scissor {
-            font-size: 9px;
+            font-size: 9.5px;
             color: #4b5563;
           }
           .cut-flip {
@@ -931,7 +931,7 @@ export function ShippingLabelLandscapeModal({
           .label-header {
             background-color: #362115 !important;
             color: #fff !important;
-            padding: ${isSingle ? '3px 8px' : '2px 6px'};
+            padding: ${isSingle ? '3.5px 8px' : '2.5px 6px'};
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -939,13 +939,13 @@ export function ShippingLabelLandscapeModal({
           .sheet-meta {
             text-align: right;
             font-family: monospace;
-            font-size: ${isSingle ? '8.5px' : '7.5px'};
+            font-size: ${isSingle ? '9px' : '8px'};
             line-height: 1.15;
             color: #f3f4f6;
           }
           .sub-row {
             border-bottom: 1px solid #000;
-            padding: ${isSingle ? '2.5px 8px' : '1.5px 6px'};
+            padding: ${isSingle ? '3px 8px' : '2px 6px'};
             font-weight: 800;
             text-transform: uppercase;
             line-height: 1.15;
@@ -957,7 +957,7 @@ export function ShippingLabelLandscapeModal({
             background-color: #166534 !important;
             color: #ffffff !important;
             text-align: center;
-            padding: ${isSingle ? '2.5px 8px' : '1.5px 5px'};
+            padding: ${isSingle ? '3px 8px' : '2px 5px'};
             font-weight: 800;
             border-bottom: 1px solid #000;
             letter-spacing: 0.1px;
@@ -968,61 +968,62 @@ export function ShippingLabelLandscapeModal({
           .main-grid {
             display: grid;
             border-bottom: 1px solid #000;
-            height: auto;
+            flex: 1;
+            min-height: 0;
           }
           .col-left {
             border-right: 1px solid #000;
-            padding: ${isSingle ? '3.5px 8px' : '2.5px 6px'};
+            padding: ${isSingle ? '4px 8px' : '3.5px 7px'};
             display: flex;
             flex-direction: column;
-            justify-content: flex-start;
+            justify-content: center;
             min-width: 0;
           }
           .cust-name {
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 0.1px;
-            line-height: 1.1;
+            line-height: 1.15;
             word-break: break-word;
             overflow-wrap: break-word;
           }
           .cod-badge {
-            border: 1.2px solid #dc2626;
+            border: 1.5px solid #dc2626;
             color: #dc2626;
             font-weight: 900;
-            padding: ${isSingle ? '1px 5px' : '0.5px 3.5px'};
-            border-radius: 2px;
+            padding: ${isSingle ? '1.5px 6px' : '1px 5px'};
+            border-radius: 3px;
             white-space: nowrap;
           }
           .cust-phone {
             font-weight: 900;
             color: #000;
-            margin: 1px 0;
+            margin: 2px 0;
             display: flex;
             align-items: center;
-            gap: 3px;
+            gap: 4px;
             white-space: nowrap;
           }
           .cust-address {
             font-weight: 800;
             text-transform: uppercase;
-            line-height: 1.15;
+            line-height: 1.2;
             color: #111;
             word-break: break-word;
             overflow-wrap: break-word;
-            margin-top: 1px;
+            margin-top: 2px;
           }
           .col-right {
-            padding: ${isSingle ? '3px 8px' : '2px 5px'};
+            padding: ${isSingle ? '3px 8px' : '2.5px 6px'};
             display: flex;
             flex-direction: column;
-            gap: 2px;
-            justify-content: flex-start;
+            gap: 2.5px;
+            justify-content: center;
             min-width: 0;
           }
           .article-box {
             border: 1px dashed #737373;
-            padding: ${isSingle ? '2px 4px' : '1.5px 3px'};
+            padding: ${isSingle ? '2.5px 5px' : '2px 4px'};
             text-align: center;
             background: #fafafa;
           }
@@ -1045,21 +1046,20 @@ export function ShippingLabelLandscapeModal({
             text-transform: uppercase;
             table-layout: fixed;
           }
-          }
           .footer-sender {
-            padding: ${isSingle ? '2.5px 8px' : '1.5px 6px'};
-            font-size: ${isSingle ? '9px' : fs.senderSize};
+            padding: ${isSingle ? '3px 8px' : '2px 6px'};
+            font-size: ${isSingle ? '10px' : fs.senderSize};
             font-weight: 800;
             text-transform: uppercase;
-            line-height: 1.15;
+            line-height: 1.2;
             background: #fff;
           }
           .emergency-banner {
             background-color: #dc2626 !important;
             color: #ffffff !important;
             text-align: center;
-            padding: ${isSingle ? '2px 6px' : '1px 4px'};
-            font-size: ${isSingle ? '8.5px' : fs.emergencySize};
+            padding: ${isSingle ? '2.5px 6px' : '2px 5px'};
+            font-size: ${isSingle ? '9.5px' : fs.emergencySize};
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 0.4px;
@@ -1114,7 +1114,7 @@ export function ShippingLabelLandscapeModal({
     const adaptive = getAdaptiveLayout(d.products.length, isSingleCard, fontScale, d.formattedAddress?.length || 0);
 
     return (
-      <div className="w-full border-[1.5px] border-black bg-white flex flex-col justify-start text-xs shadow-2xs">
+      <div className={`w-full border-[1.5px] border-black bg-white flex flex-col justify-between text-xs shadow-2xs ${isSingleCard ? '' : 'flex-1 min-h-0'}`}>
         {/* 1. Header Banner */}
         <div
           className="bg-[#362115] text-white px-2.5 flex items-center justify-between shrink-0"
@@ -1164,11 +1164,11 @@ export function ShippingLabelLandscapeModal({
 
         {/* 5. Middle Two-Column Grid */}
         <div
-          className="grid divide-x divide-black border-b border-black bg-white"
+          className="grid divide-x divide-black border-b border-black bg-white flex-1 min-h-0"
           style={{ gridTemplateColumns: adaptive.gridCols }}
         >
           {/* Left Column: Customer details */}
-          <div className="p-1.5 flex flex-col justify-start min-w-0">
+          <div className="p-1.5 flex flex-col justify-center min-w-0">
             <div>
               <div className="flex items-start justify-between gap-1 mb-0.5">
                 <div
@@ -1208,7 +1208,7 @@ export function ShippingLabelLandscapeModal({
           </div>
 
           {/* Right Column: Tracking Box & Table */}
-          <div className="p-1 flex flex-col gap-0.5 justify-start min-w-0">
+          <div className="p-1 flex flex-col gap-0.5 justify-center min-w-0">
             <div
               className={`border border-dashed border-neutral-400 text-center bg-neutral-50 rounded-xs ${adaptive.articleBoxClass}`}
               style={{ padding: adaptive.artBoxPadding }}
@@ -1509,7 +1509,7 @@ export function ShippingLabelLandscapeModal({
               </div>
             ) : (
               /* 3 Bills Stacked Vertically with Cutting Guides */
-              <div className="flex flex-col justify-start gap-1">
+              <div className="flex flex-col justify-between h-full flex-1 gap-1">
                 {[0, 1, 2].map((slotIdx) => {
                   const ord = currentOrdersOnSheet[slotIdx];
                   const labelNumber = currentSheetIndex * 3 + slotIdx + 1;

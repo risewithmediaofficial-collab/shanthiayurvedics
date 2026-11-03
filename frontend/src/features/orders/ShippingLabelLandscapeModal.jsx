@@ -534,6 +534,9 @@ export function ShippingLabelLandscapeModal({
     const branchAddr = branch.address || {};
 
     const senderTitle = (pickup.senderName || 'SHANTHI AYURVEDAS').toUpperCase();
+    const senderCity = (isKarnataka ? (knPickup.city || 'BENGALURU') : (pickup.city || branchAddr.city || 'HOSUR')).toUpperCase();
+    const senderPincode = (isKarnataka ? (knPickup.pincode || '562106') : (pickup.pincode || branchAddr.pincode || '635110')).trim();
+    const knPoNumber = (knPickup.postOfficeNumber || branch.karnatakaPostOfficeNumber || knPickup.phone || '').trim();
 
     // Return address:
     // Karnataka orders/pincodes:

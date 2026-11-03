@@ -9,126 +9,126 @@ const FONT_SCALES = {
     label: 'Compact (90%)',
     scale: 0.9,
     // Print 3-per-sheet sizing:
-    nameSize: '13.5px',
-    phoneSize: '11.8px',
-    addrSize: '10px',
-    trackSize: '13px',
-    artTitleSize: '8px',
-    codBadgeSize: '11px',
-    codAmtSize: '13px',
-    subRowSize: '9.5px',
-    billerSubSize: '9px',
-    bannerSize: '9.5px',
-    tableLabelSize: '8.8px',
-    tableValSize: '9.5px',
-    senderSize: '8.8px',
-    emergencySize: '8px',
+    nameSize: '18px',
+    phoneSize: '15px',
+    addrSize: '13px',
+    trackSize: '16.5px',
+    artTitleSize: '10px',
+    codBadgeSize: '14px',
+    codAmtSize: '17px',
+    subRowSize: '11.8px',
+    billerSubSize: '11.2px',
+    bannerSize: '11.8px',
+    tableLabelSize: '11.2px',
+    tableValSize: '12.5px',
+    senderSize: '10.8px',
+    emergencySize: '9.8px',
     // Preview JSX inline font sizes:
-    previewName: '12.5px',
-    previewPhone: '11px',
-    previewAddr: '9.2px',
-    previewTrack: '12px',
-    previewCod: '10.5px',
-    previewCodAmt: '12.5px',
-    previewTableLabel: '8.2px',
-    previewTableVal: '9px',
-    previewSub: '8.8px',
-    previewSender: '8.2px',
-    previewEmergency: '7.5px'
+    previewName: '15px',
+    previewPhone: '13px',
+    previewAddr: '11px',
+    previewTrack: '14px',
+    previewCod: '12px',
+    previewCodAmt: '15px',
+    previewTableLabel: '10px',
+    previewTableVal: '11px',
+    previewSub: '10.5px',
+    previewSender: '10px',
+    previewEmergency: '9px'
   },
   normal: {
     key: 'normal',
-    label: 'Normal (100% Increased)',
+    label: 'Normal (Large Text - Fills Label)',
     scale: 1.0,
-    // Print 3-per-sheet sizing (Increased baseline legibility!):
-    nameSize: '15.5px',
-    phoneSize: '13.2px',
-    addrSize: '11.2px',
-    trackSize: '14.8px',
-    artTitleSize: '9px',
-    codBadgeSize: '12px',
-    codAmtSize: '14.5px',
-    subRowSize: '10.5px',
-    billerSubSize: '10px',
-    bannerSize: '10.5px',
-    tableLabelSize: '9.6px',
-    tableValSize: '10.5px',
-    senderSize: '9.6px',
-    emergencySize: '8.8px',
+    // Print 3-per-sheet sizing (Large text, fills entire label):
+    nameSize: '21px',
+    phoneSize: '16.5px',
+    addrSize: '14.5px',
+    trackSize: '18px',
+    artTitleSize: '11px',
+    codBadgeSize: '15.5px',
+    codAmtSize: '19px',
+    subRowSize: '12.8px',
+    billerSubSize: '12px',
+    bannerSize: '12.8px',
+    tableLabelSize: '12px',
+    tableValSize: '13.8px',
+    senderSize: '11.5px',
+    emergencySize: '10.5px',
     // Preview JSX inline font sizes:
-    previewName: '14px',
-    previewPhone: '12.2px',
-    previewAddr: '10.2px',
-    previewTrack: '13.5px',
-    previewCod: '11.5px',
-    previewCodAmt: '14px',
-    previewTableLabel: '9px',
-    previewTableVal: '10px',
-    previewSub: '9.8px',
-    previewSender: '9.2px',
-    previewEmergency: '8.2px'
+    previewName: '17.5px',
+    previewPhone: '14.5px',
+    previewAddr: '12.5px',
+    previewTrack: '15.5px',
+    previewCod: '13.5px',
+    previewCodAmt: '17px',
+    previewTableLabel: '11px',
+    previewTableVal: '12.5px',
+    previewSub: '11.5px',
+    previewSender: '11px',
+    previewEmergency: '10px'
   },
   large: {
     key: 'large',
     label: 'Large (115%)',
     scale: 1.15,
-    nameSize: '17px',
-    phoneSize: '14.2px',
-    addrSize: '12.2px',
-    trackSize: '16.2px',
-    artTitleSize: '10px',
-    codBadgeSize: '13px',
-    codAmtSize: '16px',
-    subRowSize: '11.5px',
-    billerSubSize: '10.8px',
-    bannerSize: '11.5px',
-    tableLabelSize: '10.5px',
-    tableValSize: '11.5px',
-    senderSize: '10.5px',
-    emergencySize: '9.5px',
+    nameSize: '23px',
+    phoneSize: '18px',
+    addrSize: '15.5px',
+    trackSize: '19.5px',
+    artTitleSize: '12px',
+    codBadgeSize: '17px',
+    codAmtSize: '21px',
+    subRowSize: '13.8px',
+    billerSubSize: '12.8px',
+    bannerSize: '13.5px',
+    tableLabelSize: '13px',
+    tableValSize: '14.8px',
+    senderSize: '12.5px',
+    emergencySize: '11.5px',
     // Preview JSX inline font sizes:
-    previewName: '15.2px',
-    previewPhone: '13.2px',
-    previewAddr: '11.2px',
-    previewTrack: '14.8px',
-    previewCod: '12.5px',
-    previewCodAmt: '15.2px',
-    previewTableLabel: '10px',
-    previewTableVal: '11px',
-    previewSub: '10.8px',
-    previewSender: '10px',
-    previewEmergency: '9px'
+    previewName: '19px',
+    previewPhone: '15.5px',
+    previewAddr: '13.5px',
+    previewTrack: '17px',
+    previewCod: '14.5px',
+    previewCodAmt: '18.5px',
+    previewTableLabel: '12px',
+    previewTableVal: '13.5px',
+    previewSub: '12.5px',
+    previewSender: '12px',
+    previewEmergency: '11px'
   },
   xlarge: {
     key: 'xlarge',
     label: 'Extra Large (130%)',
     scale: 1.3,
-    nameSize: '18.5px',
-    phoneSize: '15.5px',
-    addrSize: '13.2px',
-    trackSize: '17.5px',
-    artTitleSize: '11px',
-    codBadgeSize: '14px',
-    codAmtSize: '17.5px',
-    subRowSize: '12.5px',
-    billerSubSize: '11.8px',
-    bannerSize: '12.5px',
-    tableLabelSize: '11.5px',
-    tableValSize: '12.5px',
-    senderSize: '11.5px',
-    emergencySize: '10.5px',
+    nameSize: '25px',
+    phoneSize: '19.5px',
+    addrSize: '16.5px',
+    trackSize: '21px',
+    artTitleSize: '13px',
+    codBadgeSize: '18.5px',
+    codAmtSize: '23px',
+    subRowSize: '14.8px',
+    billerSubSize: '13.8px',
+    bannerSize: '14.5px',
+    tableLabelSize: '14px',
+    tableValSize: '15.8px',
+    senderSize: '13.5px',
+    emergencySize: '12.5px',
     // Preview JSX inline font sizes:
-    previewName: '16.5px',
-    previewPhone: '14.2px',
-    previewAddr: '12.2px',
-    previewTrack: '16px',
-    previewCod: '13.5px',
-    previewCodAmt: '16.5px',
-    previewTableLabel: '11px',
-    previewTableVal: '12px',
-    previewSub: '11.8px',
-    previewSender: '11px',
-    previewEmergency: '10px'
+    previewName: '20.5px',
+    previewPhone: '17px',
+    previewAddr: '14.5px',
+    previewTrack: '18.5px',
+    previewCod: '16px',
+    previewCodAmt: '20.5px',
+    previewTableLabel: '13px',
+    previewTableVal: '14.5px',
+    previewSub: '13.5px',
+    previewSender: '13px',
+    previewEmergency: '12px'
   }
 };
 
@@ -140,40 +140,40 @@ const getAdaptiveLayout = (prodCount, isSingle, fontScale, addressLength = 0) =>
   if (isSingle) {
     return {
       gridCols: '1.08fr 0.92fr',
-      labelWidth: '26%',
-      padTableY: '4px',
-      prodFont: isScaleUp ? '12px' : '11px',
-      labelFont: isScaleUp ? '11px' : '10px',
-      previewProdFont: isScaleUp ? '11.5px' : '10.5px',
-      previewLabelFont: isScaleUp ? '10.5px' : '9.5px',
-      lineHeight: '1.25',
-      artBoxPadding: '3px 6px',
-      artTitleSize: '9.5px',
-      artCodeSize: '15.5px',
-      nameSize: isScaleUp ? '18px' : '16.5px',
-      previewNameSize: isScaleUp ? '16px' : '15px',
-      addrSize: addressLength > 150 ? '11px' : '12px',
-      previewAddrSize: addressLength > 150 ? '10px' : '11px',
-      phoneSize: '14px',
-      previewPhoneSize: '13px',
-      codBadgeSize: '13px',
-      previewCodBadgeSize: '12.5px',
-      codAmtSize: '16px',
-      previewCodAmtSize: '15.5px',
-      headerPad: '4px 8px',
-      carrierPad: '3px 8px',
-      subRowPad: '3px 8px',
-      helpPad: '3px 8px',
-      senderPad: '3px 8px',
-      emergencyPad: '2.5px 6px',
-      subRowSize: '11px',
-      billerSubSize: '10.5px',
-      bannerSize: '11px',
-      senderSize: '10px',
-      emergencySize: '9.5px',
-      previewSub: '10px',
-      previewSender: '9.5px',
-      previewEmergency: '9px',
+      labelWidth: '28%',
+      padTableY: '7px',
+      prodFont: isScaleUp ? '14.5px' : '13.5px',
+      labelFont: isScaleUp ? '13px' : '12px',
+      previewProdFont: isScaleUp ? '13px' : '12px',
+      previewLabelFont: isScaleUp ? '12px' : '11px',
+      lineHeight: '1.35',
+      artBoxPadding: '4px 8px',
+      artTitleSize: '11.5px',
+      artCodeSize: '19px',
+      nameSize: isScaleUp ? '24px' : '22px',
+      previewNameSize: isScaleUp ? '19px' : '17.5px',
+      addrSize: addressLength > 150 ? '13.5px' : '15px',
+      previewAddrSize: addressLength > 150 ? '12px' : '13px',
+      phoneSize: '17px',
+      previewPhoneSize: '15px',
+      codBadgeSize: '16px',
+      previewCodBadgeSize: '14px',
+      codAmtSize: '20px',
+      previewCodAmtSize: '17.5px',
+      headerPad: '4px 10px',
+      carrierPad: '4px 10px',
+      subRowPad: '3.5px 10px',
+      helpPad: '4px 10px',
+      senderPad: '4px 10px',
+      emergencyPad: '3.5px 8px',
+      subRowSize: '13.5px',
+      billerSubSize: '12.5px',
+      bannerSize: '13px',
+      senderSize: '12px',
+      emergencySize: '11px',
+      previewSub: '12px',
+      previewSender: '11px',
+      previewEmergency: '10px',
       articleBoxClass: 'py-1 px-2'
     };
   }
@@ -181,21 +181,60 @@ const getAdaptiveLayout = (prodCount, isSingle, fontScale, addressLength = 0) =>
   // 3-per-sheet Mode: Adaptively adjust according to product count
   if (prodCount <= 2) {
     return {
-      gridCols: '1.08fr 0.92fr',
-      labelWidth: '26%',
-      padTableY: '3px',
+      gridCols: '1.05fr 0.95fr',
+      labelWidth: '28%',
+      padTableY: '7px',
       prodFont: fs.tableValSize,
       labelFont: fs.tableLabelSize,
       previewProdFont: fs.previewTableVal,
       previewLabelFont: fs.previewTableLabel,
-      lineHeight: '1.2',
-      artBoxPadding: '2.5px 5px',
+      lineHeight: '1.35',
+      artBoxPadding: '3.5px 6px',
       artTitleSize: fs.artTitleSize,
       artCodeSize: fs.trackSize,
       nameSize: fs.nameSize,
       previewNameSize: fs.previewName,
-      addrSize: addressLength > 150 ? '10px' : fs.addrSize,
-      previewAddrSize: addressLength > 150 ? '9.5px' : fs.previewAddr,
+      addrSize: addressLength > 150 ? '13px' : fs.addrSize,
+      previewAddrSize: addressLength > 150 ? '11.5px' : fs.previewAddr,
+      phoneSize: fs.phoneSize,
+      previewPhoneSize: fs.previewPhone,
+      codBadgeSize: fs.codBadgeSize,
+      previewCodBadgeSize: fs.previewCod,
+      codAmtSize: fs.codAmtSize,
+      previewCodAmtSize: fs.previewCodAmt,
+      headerPad: '3.5px 8px',
+      carrierPad: '3.5px 8px',
+      subRowPad: '3px 8px',
+      helpPad: '3.5px 8px',
+      senderPad: '3.5px 8px',
+      emergencyPad: '3px 6px',
+      subRowSize: fs.subRowSize,
+      billerSubSize: fs.billerSubSize,
+      bannerSize: fs.bannerSize,
+      senderSize: fs.senderSize,
+      emergencySize: fs.emergencySize,
+      previewSub: fs.previewSub,
+      previewSender: fs.previewSender,
+      previewEmergency: fs.previewEmergency,
+      articleBoxClass: 'py-1 px-2'
+    };
+  } else if (prodCount === 3) {
+    return {
+      gridCols: '1.02fr 0.98fr',
+      labelWidth: '27%',
+      padTableY: '5px',
+      prodFont: fontScale === 'xlarge' ? '14.5px' : (fontScale === 'large' ? '13.8px' : '13px'),
+      labelFont: '11.5px',
+      previewProdFont: fontScale === 'xlarge' ? '13px' : (fontScale === 'large' ? '12.2px' : '11.5px'),
+      previewLabelFont: '10.5px',
+      lineHeight: '1.25',
+      artBoxPadding: '3px 5px',
+      artTitleSize: fs.artTitleSize,
+      artCodeSize: fs.trackSize,
+      nameSize: fs.nameSize,
+      previewNameSize: fs.previewName,
+      addrSize: addressLength > 140 ? '12.5px' : fs.addrSize,
+      previewAddrSize: addressLength > 140 ? '11px' : fs.previewAddr,
       phoneSize: fs.phoneSize,
       previewPhoneSize: fs.previewPhone,
       codBadgeSize: fs.codBadgeSize,
@@ -203,11 +242,11 @@ const getAdaptiveLayout = (prodCount, isSingle, fontScale, addressLength = 0) =>
       codAmtSize: fs.codAmtSize,
       previewCodAmtSize: fs.previewCodAmt,
       headerPad: '3px 8px',
-      carrierPad: '2.5px 8px',
+      carrierPad: '3px 8px',
       subRowPad: '2.5px 8px',
-      helpPad: '2.5px 6px',
-      senderPad: '2.5px 8px',
-      emergencyPad: '2px 6px',
+      helpPad: '3px 8px',
+      senderPad: '3px 8px',
+      emergencyPad: '2.5px 6px',
       subRowSize: fs.subRowSize,
       billerSubSize: fs.billerSubSize,
       bannerSize: fs.bannerSize,
@@ -216,125 +255,86 @@ const getAdaptiveLayout = (prodCount, isSingle, fontScale, addressLength = 0) =>
       previewSub: fs.previewSub,
       previewSender: fs.previewSender,
       previewEmergency: fs.previewEmergency,
-      articleBoxClass: 'py-0.5 px-1.5'
-    };
-  } else if (prodCount === 3) {
-    return {
-      gridCols: '1.02fr 0.98fr',
-      labelWidth: '25%',
-      padTableY: '2.5px',
-      prodFont: fontScale === 'xlarge' ? '11.5px' : (fontScale === 'large' ? '10.8px' : '10px'),
-      labelFont: '9px',
-      previewProdFont: fontScale === 'xlarge' ? '11px' : (fontScale === 'large' ? '10.2px' : '9.5px'),
-      previewLabelFont: '8.6px',
-      lineHeight: '1.18',
-      artBoxPadding: '2px 4px',
-      artTitleSize: fs.artTitleSize,
-      artCodeSize: fs.trackSize,
-      nameSize: fs.nameSize,
-      previewNameSize: fs.previewName,
-      addrSize: addressLength > 140 ? '9.8px' : fs.addrSize,
-      previewAddrSize: addressLength > 140 ? '9.2px' : fs.previewAddr,
-      phoneSize: fs.phoneSize,
-      previewPhoneSize: fs.previewPhone,
-      codBadgeSize: fs.codBadgeSize,
-      previewCodBadgeSize: fs.previewCod,
-      codAmtSize: fs.codAmtSize,
-      previewCodAmtSize: fs.previewCodAmt,
-      headerPad: '2.5px 8px',
-      carrierPad: '2px 8px',
-      subRowPad: '2px 8px',
-      helpPad: '2px 6px',
-      senderPad: '2px 8px',
-      emergencyPad: '1.5px 6px',
-      subRowSize: fs.subRowSize,
-      billerSubSize: fs.billerSubSize,
-      bannerSize: fs.bannerSize,
-      senderSize: fs.senderSize,
-      emergencySize: fs.emergencySize,
-      previewSub: fs.previewSub,
-      previewSender: fs.previewSender,
-      previewEmergency: fs.previewEmergency,
-      articleBoxClass: 'py-0.5 px-1'
+      articleBoxClass: 'py-0.8 px-1.5'
     };
   } else if (prodCount === 4) {
     return {
       gridCols: '0.98fr 1.02fr',
-      labelWidth: '24%',
-      padTableY: '1.8px',
-      prodFont: '9.5px',
-      labelFont: '8.6px',
-      previewProdFont: '9px',
-      previewLabelFont: '8.2px',
-      lineHeight: '1.14',
-      artBoxPadding: '1.5px 3px',
-      artTitleSize: '8px',
-      artCodeSize: '13px',
-      nameSize: '14px',
-      previewNameSize: '13px',
-      addrSize: '9.8px',
-      previewAddrSize: '9px',
-      phoneSize: '12px',
-      previewPhoneSize: '11px',
-      codBadgeSize: '11px',
-      previewCodBadgeSize: '10.5px',
-      codAmtSize: '13.5px',
-      previewCodAmtSize: '13px',
-      headerPad: '2px 7px',
-      carrierPad: '1.8px 7px',
-      subRowPad: '1.8px 7px',
-      helpPad: '1.8px 6px',
-      senderPad: '1.8px 7px',
-      emergencyPad: '1.2px 5px',
-      subRowSize: '9.8px',
-      billerSubSize: '9.2px',
-      bannerSize: '9.5px',
-      senderSize: '8.8px',
-      emergencySize: '8px',
-      previewSub: '9.2px',
-      previewSender: '8.5px',
-      previewEmergency: '7.8px',
-      articleBoxClass: 'py-0.5 px-0.5'
+      labelWidth: '26%',
+      padTableY: '3.5px',
+      prodFont: '12px',
+      labelFont: '10.8px',
+      previewProdFont: '10.8px',
+      previewLabelFont: '9.6px',
+      lineHeight: '1.2',
+      artBoxPadding: '2.5px 5px',
+      artTitleSize: '9.5px',
+      artCodeSize: '16.5px',
+      nameSize: '18px',
+      previewNameSize: '16px',
+      addrSize: addressLength > 140 ? '12px' : '13px',
+      previewAddrSize: addressLength > 140 ? '10.8px' : '11.8px',
+      phoneSize: '15px',
+      previewPhoneSize: '13.5px',
+      codBadgeSize: '14px',
+      previewCodBadgeSize: '12.5px',
+      codAmtSize: '16.5px',
+      previewCodAmtSize: '15px',
+      headerPad: '2.5px 8px',
+      carrierPad: '2.5px 8px',
+      subRowPad: '2.5px 8px',
+      helpPad: '2.5px 7px',
+      senderPad: '2.5px 8px',
+      emergencyPad: '2px 6px',
+      subRowSize: '12px',
+      billerSubSize: '11px',
+      bannerSize: '11.8px',
+      senderSize: '10.8px',
+      emergencySize: '9.8px',
+      previewSub: '11px',
+      previewSender: '10px',
+      previewEmergency: '9.2px',
+      articleBoxClass: 'py-0.5 px-1'
     };
   } else {
     // 5+ products: Ultra-compact adaptive pack
     return {
       gridCols: '0.95fr 1.05fr',
-      labelWidth: '23%',
-      padTableY: '1.2px',
-      prodFont: '8.6px',
-      labelFont: '8px',
-      previewProdFont: '8.2px',
-      previewLabelFont: '7.6px',
-      lineHeight: '1.08',
-      artBoxPadding: '1.2px 3px',
-      artTitleSize: '7.5px',
-      artCodeSize: '12px',
-      nameSize: '13px',
-      previewNameSize: '12.2px',
-      addrSize: '9px',
-      previewAddrSize: '8.4px',
-      phoneSize: '11px',
-      previewPhoneSize: '10.2px',
-      codBadgeSize: '10px',
-      previewCodBadgeSize: '9.5px',
-      codAmtSize: '12.5px',
-      previewCodAmtSize: '12px',
-      headerPad: '1.5px 6px',
-      carrierPad: '1.5px 6px',
-      subRowPad: '1.5px 6px',
-      helpPad: '1.5px 5px',
-      senderPad: '1.5px 6px',
-      emergencyPad: '1px 4px',
-      subRowSize: '9px',
-      billerSubSize: '8.5px',
-      bannerSize: '8.8px',
-      senderSize: '8.2px',
-      emergencySize: '7.5px',
-      previewSub: '8.5px',
-      previewSender: '7.8px',
-      previewEmergency: '7.2px',
-      articleBoxClass: 'py-0.5 px-0.5'
+      labelWidth: '24%',
+      padTableY: '2px',
+      prodFont: '10.8px',
+      labelFont: '9.6px',
+      previewProdFont: '9.8px',
+      previewLabelFont: '8.8px',
+      lineHeight: '1.14',
+      artBoxPadding: '1.8px 3px',
+      artTitleSize: '8.8px',
+      artCodeSize: '14.5px',
+      nameSize: '16px',
+      previewNameSize: '14.5px',
+      addrSize: '11.5px',
+      previewAddrSize: '10.5px',
+      phoneSize: '13.5px',
+      previewPhoneSize: '12.5px',
+      codBadgeSize: '12px',
+      previewCodBadgeSize: '11px',
+      codAmtSize: '14.5px',
+      previewCodAmtSize: '13.5px',
+      headerPad: '2px 7px',
+      carrierPad: '2px 7px',
+      subRowPad: '2px 7px',
+      helpPad: '2px 6px',
+      senderPad: '2px 7px',
+      emergencyPad: '1.5px 5px',
+      subRowSize: '11px',
+      billerSubSize: '10.2px',
+      bannerSize: '10.8px',
+      senderSize: '10px',
+      emergencySize: '9.2px',
+      previewSub: '10px',
+      previewSender: '9.2px',
+      previewEmergency: '8.5px',
+      articleBoxClass: 'py-0.2 px-0.5'
     };
   }
 };
@@ -748,41 +748,43 @@ export function ShippingLabelLandscapeModal({
                   <div class="art-code" style="font-size: ${adaptive.artCodeSize};">${d.tracking}</div>
                 </div>
 
-                <table class="details-table">
-                  <tbody>
-                    <tr style="border-bottom: 1px solid #000;">
-                      <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; background: #f9fafb; font-weight: 800; font-size: ${adaptive.labelFont}; white-space: nowrap;">REFER BY</td>
-                      <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; word-break: break-word; overflow-wrap: break-word;">${d.telecallerName}</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #000;">
-                      <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; background: #f9fafb; font-weight: 800; font-size: ${adaptive.labelFont}; white-space: nowrap;">WEIGHT</td>
-                      <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; word-break: break-word; overflow-wrap: break-word;">${d.weightText} ${d.totalPieces} PCS</td>
-                    </tr>
-                    ${d.isTPC ? `
-                      <tr style="border-bottom: 1px solid #000; background: #eff6ff;">
-                        <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #1e40af; white-space: nowrap;">COURIER</td>
-                        <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #1e40af; word-break: break-word; overflow-wrap: break-word;">TPC EXPRESS LOGISTICS</td>
+                <div class="table-wrapper">
+                  <table class="details-table">
+                    <tbody>
+                      <tr style="border-bottom: 1px solid #000;">
+                        <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; background: #f9fafb; font-weight: 800; font-size: ${adaptive.labelFont}; white-space: nowrap;">REFER BY</td>
+                        <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; word-break: break-word; overflow-wrap: break-word;">${d.telecallerName}</td>
                       </tr>
-                    ` : (d.isOtherCourier ? `
-                      <tr style="border-bottom: 1px solid #000; background: #eff6ff;">
-                        <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #1e40af; white-space: nowrap;">COURIER</td>
-                        <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #1e40af; word-break: break-word; overflow-wrap: break-word;">${(d.order.courierName || 'COURIER').toUpperCase()}</td>
+                      <tr style="border-bottom: 1px solid #000;">
+                        <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; background: #f9fafb; font-weight: 800; font-size: ${adaptive.labelFont}; white-space: nowrap;">WEIGHT</td>
+                        <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; word-break: break-word; overflow-wrap: break-word;">${d.weightText} ${d.totalPieces} PCS</td>
                       </tr>
-                    ` : (d.isIndiaPost && d.isKarnataka ? `
-                      <tr style="border-bottom: 1px solid #000; background: #eff6ff;">
-                        <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #1e40af; white-space: nowrap;">POSTAL CODE</td>
-                        <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #1e40af; word-break: break-word; overflow-wrap: break-word;">${d.knPincode} (BILLER: ${d.billerId})</td>
-                      </tr>
-                    ` : ''))}
-                    ${d.advanceAmount > 0 ? `
-                      <tr style="border-bottom: 1px solid #000; background: #f0fdf4;">
-                        <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #166534; white-space: nowrap;">ADVANCE</td>
-                        <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #166534; word-break: break-word; overflow-wrap: break-word;">₹${d.advanceAmount} ${d.advanceUtr ? `· ${d.advanceUtr}` : ''}</td>
-                      </tr>
-                    ` : ''}
-                    ${productRowsHtml}
-                  </tbody>
-                </table>
+                      ${d.isTPC ? `
+                        <tr style="border-bottom: 1px solid #000; background: #eff6ff;">
+                          <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #1e40af; white-space: nowrap;">COURIER</td>
+                          <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #1e40af; word-break: break-word; overflow-wrap: break-word;">TPC EXPRESS LOGISTICS</td>
+                        </tr>
+                      ` : (d.isOtherCourier ? `
+                        <tr style="border-bottom: 1px solid #000; background: #eff6ff;">
+                          <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #1e40af; white-space: nowrap;">COURIER</td>
+                          <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #1e40af; word-break: break-word; overflow-wrap: break-word;">${(d.order.courierName || 'COURIER').toUpperCase()}</td>
+                        </tr>
+                      ` : (d.isIndiaPost && d.isKarnataka ? `
+                        <tr style="border-bottom: 1px solid #000; background: #eff6ff;">
+                          <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #1e40af; white-space: nowrap;">POSTAL CODE</td>
+                          <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #1e40af; word-break: break-word; overflow-wrap: break-word;">${d.knPincode} (BILLER: ${d.billerId})</td>
+                        </tr>
+                      ` : ''))}
+                      ${d.advanceAmount > 0 ? `
+                        <tr style="border-bottom: 1px solid #000; background: #f0fdf4;">
+                          <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #166534; white-space: nowrap;">ADVANCE</td>
+                          <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #166534; word-break: break-word; overflow-wrap: break-word;">₹${d.advanceAmount} ${d.advanceUtr ? `· ${d.advanceUtr}` : ''}</td>
+                        </tr>
+                      ` : ''}
+                      ${productRowsHtml}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
@@ -970,14 +972,18 @@ export function ShippingLabelLandscapeModal({
             border-bottom: 1px solid #000;
             flex: 1;
             min-height: 0;
+            height: 100%;
           }
           .col-left {
             border-right: 1px solid #000;
-            padding: ${isSingle ? '4px 8px' : '3.5px 7px'};
+            padding: ${isSingle ? '6px 12px' : '5px 10px'};
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
+            gap: 4px;
             min-width: 0;
+            height: 100%;
+            box-sizing: border-box;
           }
           .cust-name {
             font-weight: 900;
@@ -991,7 +997,7 @@ export function ShippingLabelLandscapeModal({
             border: 1.5px solid #dc2626;
             color: #dc2626;
             font-weight: 900;
-            padding: ${isSingle ? '1.5px 6px' : '1px 5px'};
+            padding: ${isSingle ? '2px 7px' : '1.5px 6px'};
             border-radius: 3px;
             white-space: nowrap;
           }
@@ -1001,31 +1007,35 @@ export function ShippingLabelLandscapeModal({
             margin: 2px 0;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
             white-space: nowrap;
           }
           .cust-address {
             font-weight: 800;
             text-transform: uppercase;
-            line-height: 1.2;
+            line-height: 1.35;
             color: #111;
             word-break: break-word;
             overflow-wrap: break-word;
             margin-top: 2px;
+            flex: 1;
           }
           .col-right {
-            padding: ${isSingle ? '3px 8px' : '2.5px 6px'};
+            padding: ${isSingle ? '5px 10px' : '4px 7px'};
             display: flex;
             flex-direction: column;
-            gap: 2.5px;
-            justify-content: center;
+            gap: 3px;
+            justify-content: flex-start;
             min-width: 0;
+            height: 100%;
+            box-sizing: border-box;
           }
           .article-box {
             border: 1px dashed #737373;
-            padding: ${isSingle ? '2.5px 5px' : '2px 4px'};
+            padding: ${isSingle ? '3px 6px' : '2.5px 5px'};
             text-align: center;
             background: #fafafa;
+            flex-shrink: 0;
           }
           .art-title {
             font-weight: 800;
@@ -1038,32 +1048,52 @@ export function ShippingLabelLandscapeModal({
             letter-spacing: 0.8px;
             margin-top: 0.5px;
           }
+          .table-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            height: 100%;
+          }
           .details-table {
             width: 100%;
+            height: 100%;
+            flex: 1;
             border-collapse: collapse;
             border: 1px solid #000;
             font-weight: 800;
             text-transform: uppercase;
             table-layout: fixed;
           }
+          .details-table tbody {
+            height: 100%;
+          }
+          .details-table tr {
+            height: auto;
+          }
+          .details-table td {
+            vertical-align: middle;
+          }
           .footer-sender {
-            padding: ${isSingle ? '3px 8px' : '2px 6px'};
-            font-size: ${isSingle ? '10px' : fs.senderSize};
+            padding: ${isSingle ? '3px 8px' : '3px 8px'};
+            font-size: ${isSingle ? '11px' : fs.senderSize};
             font-weight: 800;
             text-transform: uppercase;
-            line-height: 1.2;
+            line-height: 1.25;
             background: #fff;
+            flex-shrink: 0;
           }
           .emergency-banner {
             background-color: #dc2626 !important;
             color: #ffffff !important;
             text-align: center;
-            padding: ${isSingle ? '2.5px 6px' : '2px 5px'};
-            font-size: ${isSingle ? '9.5px' : fs.emergencySize};
+            padding: ${isSingle ? '2.5px 6px' : '2.5px 6px'};
+            font-size: ${isSingle ? '10px' : fs.emergencySize};
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.5px;
             line-height: 1.15;
+            flex-shrink: 0;
           }
         </style>
       </head>
@@ -1168,49 +1198,47 @@ export function ShippingLabelLandscapeModal({
           style={{ gridTemplateColumns: adaptive.gridCols }}
         >
           {/* Left Column: Customer details */}
-          <div className="p-1.5 flex flex-col justify-center min-w-0">
-            <div>
-              <div className="flex items-start justify-between gap-1 mb-0.5">
-                <div
-                  className="font-black uppercase leading-tight text-black break-words"
-                  style={{ fontSize: adaptive.previewNameSize }}
-                >
-                  {d.customerName}
-                </div>
-                <div
-                  className="border border-red-600 text-red-600 font-black px-1.5 py-0.2 rounded-xs shrink-0 whitespace-nowrap"
-                  style={{ fontSize: adaptive.previewCodBadgeSize }}
-                >
-                  {d.isCOD ? <><span>COD </span><strong style={{ fontWeight: '900', fontSize: adaptive.previewCodAmtSize }}>₹{d.payableAmount}</strong></> : 'PREPAID'}
-                </div>
+          <div className="p-2 sm:p-2.5 flex flex-col justify-start gap-1 min-w-0 h-full">
+            <div className="flex items-start justify-between gap-1 mb-0.5">
+              <div
+                className="font-black uppercase leading-tight text-black break-words"
+                style={{ fontSize: adaptive.previewNameSize }}
+              >
+                {d.customerName}
               </div>
               <div
-                className="font-black text-black flex items-center gap-1 my-0.5 whitespace-nowrap"
-                style={{ fontSize: adaptive.previewPhoneSize }}
+                className="border border-red-600 text-red-600 font-black px-1.5 py-0.2 rounded-xs shrink-0 whitespace-nowrap"
+                style={{ fontSize: adaptive.previewCodBadgeSize }}
               >
-                <span className="text-purple-700">📞</span> {d.mobile} {d.altMobile ? `/ ${d.altMobile}` : ''}
+                {d.isCOD ? <><span>COD </span><strong style={{ fontWeight: '900', fontSize: adaptive.previewCodAmtSize }}>₹{d.payableAmount}</strong></> : 'PREPAID'}
               </div>
-              {d.fatherName && (
-                <div
-                  className="font-bold text-neutral-800 uppercase mb-0.5 break-words"
-                  style={{ fontSize: isSingleCard ? '9.5px' : '7.5px' }}
-                >
-                  C/O {d.fatherName}
-                </div>
-              )}
+            </div>
+            <div
+              className="font-black text-black flex items-center gap-1 my-0.5 whitespace-nowrap"
+              style={{ fontSize: adaptive.previewPhoneSize }}
+            >
+              <span className="text-purple-700">📞</span> {d.mobile} {d.altMobile ? `/ ${d.altMobile}` : ''}
+            </div>
+            {d.fatherName && (
               <div
-                className="font-bold uppercase leading-tight text-neutral-900 break-words mt-0.5"
-                style={{ fontSize: adaptive.previewAddrSize, lineHeight: 1.15 }}
+                className="font-bold text-neutral-800 uppercase mb-0.5 break-words"
+                style={{ fontSize: isSingleCard ? '10px' : '8.5px' }}
               >
-                {d.formattedAddress}
+                C/O {d.fatherName}
               </div>
+            )}
+            <div
+              className="font-bold uppercase leading-tight text-neutral-900 break-words mt-0.5 flex-1"
+              style={{ fontSize: adaptive.previewAddrSize, lineHeight: 1.25 }}
+            >
+              {d.formattedAddress}
             </div>
           </div>
 
           {/* Right Column: Tracking Box & Table */}
-          <div className="p-1 flex flex-col gap-0.5 justify-center min-w-0">
+          <div className="p-1.5 sm:p-2 flex flex-col gap-1 justify-start min-w-0 h-full">
             <div
-              className={`border border-dashed border-neutral-400 text-center bg-neutral-50 rounded-xs ${adaptive.articleBoxClass}`}
+              className={`border border-dashed border-neutral-400 text-center bg-neutral-50 rounded-xs shrink-0 ${adaptive.articleBoxClass}`}
               style={{ padding: adaptive.artBoxPadding }}
             >
               <div
@@ -1227,119 +1255,121 @@ export function ShippingLabelLandscapeModal({
               </div>
             </div>
 
-            <table
-              className="w-full border-collapse border border-black font-bold uppercase table-fixed"
-            >
-              <tbody>
-                <tr className="border-b border-black">
-                  <td
-                    className={`px-1 ${adaptive.tablePadClass} border-r border-black bg-gray-50 text-gray-700 font-bold whitespace-nowrap`}
-                    style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
-                  >
-                    REFER BY
-                  </td>
-                  <td
-                    className={`px-1.5 ${adaptive.tablePadClass} font-black text-black break-words leading-tight`}
-                    style={{ fontSize: adaptive.previewProdFont }}
-                  >
-                    {d.telecallerName}
-                  </td>
-                </tr>
-                <tr className="border-b border-black">
-                  <td
-                    className={`px-1 ${adaptive.tablePadClass} border-r border-black bg-gray-50 text-gray-700 font-bold whitespace-nowrap`}
-                    style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
-                  >
-                    WEIGHT
-                  </td>
-                  <td
-                    className={`px-1.5 ${adaptive.tablePadClass} font-black text-black break-words leading-tight`}
-                    style={{ fontSize: adaptive.previewProdFont }}
-                  >
-                    {d.weightText} {d.totalPieces} PCS
-                  </td>
-                </tr>
-                {d.isTPC ? (
-                  <tr className="border-b border-black bg-blue-50/70">
+            <div className="flex-1 flex flex-col min-h-0 h-full">
+              <table
+                className="w-full h-full flex-1 border-collapse border border-black font-bold uppercase table-fixed"
+              >
+                <tbody className="h-full">
+                  <tr className="border-b border-black">
                     <td
-                      className={`px-1 ${adaptive.tablePadClass} border-r border-black font-bold text-blue-900 whitespace-nowrap`}
+                      className={`px-1 ${adaptive.tablePadClass} border-r border-black bg-gray-50 text-gray-700 font-bold whitespace-nowrap align-middle`}
                       style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
                     >
-                      COURIER
+                      REFER BY
                     </td>
                     <td
-                      className={`px-1.5 ${adaptive.tablePadClass} font-black text-blue-900 break-words leading-tight`}
+                      className={`px-1.5 ${adaptive.tablePadClass} font-black text-black break-words leading-tight align-middle`}
                       style={{ fontSize: adaptive.previewProdFont }}
                     >
-                      TPC EXPRESS LOGISTICS
+                      {d.telecallerName}
                     </td>
                   </tr>
-                ) : d.isOtherCourier ? (
-                  <tr className="border-b border-black bg-blue-50/70">
+                  <tr className="border-b border-black">
                     <td
-                      className={`px-1 ${adaptive.tablePadClass} border-r border-black font-bold text-blue-900 whitespace-nowrap`}
+                      className={`px-1 ${adaptive.tablePadClass} border-r border-black bg-gray-50 text-gray-700 font-bold whitespace-nowrap align-middle`}
                       style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
                     >
-                      COURIER
+                      WEIGHT
                     </td>
                     <td
-                      className={`px-1.5 ${adaptive.tablePadClass} font-black text-blue-900 break-words leading-tight`}
+                      className={`px-1.5 ${adaptive.tablePadClass} font-black text-black break-words leading-tight align-middle`}
                       style={{ fontSize: adaptive.previewProdFont }}
                     >
-                      {(d.order.courierName || 'COURIER').toUpperCase()}
+                      {d.weightText} {d.totalPieces} PCS
                     </td>
                   </tr>
-                ) : (d.isIndiaPost && d.isKarnataka) ? (
-                  <tr className="border-b border-black bg-blue-50/70">
-                    <td
-                      className={`px-1 ${adaptive.tablePadClass} border-r border-black font-bold text-blue-900 whitespace-nowrap`}
-                      style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
-                    >
-                      POSTAL CODE
-                    </td>
-                    <td
-                      className={`px-1.5 ${adaptive.tablePadClass} font-black text-blue-900 break-words leading-tight`}
-                      style={{ fontSize: adaptive.previewProdFont }}
-                    >
-                      {d.knPincode} (BILLER: {d.billerId})
-                    </td>
-                  </tr>
-                ) : null}
-                {d.advanceAmount > 0 && (
-                  <tr className="border-b border-black bg-emerald-50/60">
-                    <td
-                      className={`px-1 ${adaptive.tablePadClass} border-r border-black font-bold text-emerald-800 whitespace-nowrap`}
-                      style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
-                    >
-                      ADVANCE
-                    </td>
-                    <td
-                      className={`px-1.5 ${adaptive.tablePadClass} font-black text-emerald-800 break-words leading-tight`}
-                      style={{ fontSize: adaptive.previewProdFont }}
-                    >
-                      ₹{d.advanceAmount} {d.advanceUtr ? `· ${d.advanceUtr}` : ''}
-                    </td>
-                  </tr>
-                )}
-                {/* Render ALL products without hiding any */}
-                {d.products.map((prod, pIdx) => (
-                  <tr key={pIdx} className={pIdx !== d.products.length - 1 ? 'border-b border-black' : ''}>
-                    <td
-                      className={`px-1 ${adaptive.tablePadClass} border-r border-black bg-gray-50 text-gray-700 font-bold whitespace-nowrap`}
-                      style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
-                    >
-                      PRODUCT
-                    </td>
-                    <td
-                      className={`px-1.5 ${adaptive.tablePadClass} font-black text-black leading-tight break-words whitespace-normal`}
-                      style={{ fontSize: adaptive.previewProdFont, lineHeight: adaptive.lineHeight }}
-                    >
-                      {prod.name} X{prod.qty}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  {d.isTPC ? (
+                    <tr className="border-b border-black bg-blue-50/70">
+                      <td
+                        className={`px-1 ${adaptive.tablePadClass} border-r border-black font-bold text-blue-900 whitespace-nowrap align-middle`}
+                        style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
+                      >
+                        COURIER
+                      </td>
+                      <td
+                        className={`px-1.5 ${adaptive.tablePadClass} font-black text-blue-900 break-words leading-tight align-middle`}
+                        style={{ fontSize: adaptive.previewProdFont }}
+                      >
+                        TPC EXPRESS LOGISTICS
+                      </td>
+                    </tr>
+                  ) : d.isOtherCourier ? (
+                    <tr className="border-b border-black bg-blue-50/70">
+                      <td
+                        className={`px-1 ${adaptive.tablePadClass} border-r border-black font-bold text-blue-900 whitespace-nowrap align-middle`}
+                        style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
+                      >
+                        COURIER
+                      </td>
+                      <td
+                        className={`px-1.5 ${adaptive.tablePadClass} font-black text-blue-900 break-words leading-tight align-middle`}
+                        style={{ fontSize: adaptive.previewProdFont }}
+                      >
+                        {(d.order.courierName || 'COURIER').toUpperCase()}
+                      </td>
+                    </tr>
+                  ) : (d.isIndiaPost && d.isKarnataka) ? (
+                    <tr className="border-b border-black bg-blue-50/70">
+                      <td
+                        className={`px-1 ${adaptive.tablePadClass} border-r border-black font-bold text-blue-900 whitespace-nowrap align-middle`}
+                        style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
+                      >
+                        POSTAL CODE
+                      </td>
+                      <td
+                        className={`px-1.5 ${adaptive.tablePadClass} font-black text-blue-900 break-words leading-tight align-middle`}
+                        style={{ fontSize: adaptive.previewProdFont }}
+                      >
+                        {d.knPincode} (BILLER: {d.billerId})
+                      </td>
+                    </tr>
+                  ) : null}
+                  {d.advanceAmount > 0 && (
+                    <tr className="border-b border-black bg-emerald-50/60">
+                      <td
+                        className={`px-1 ${adaptive.tablePadClass} border-r border-black font-bold text-emerald-800 whitespace-nowrap align-middle`}
+                        style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
+                      >
+                        ADVANCE
+                      </td>
+                      <td
+                        className={`px-1.5 ${adaptive.tablePadClass} font-black text-emerald-800 break-words leading-tight align-middle`}
+                        style={{ fontSize: adaptive.previewProdFont }}
+                      >
+                        ₹{d.advanceAmount} {d.advanceUtr ? `· ${d.advanceUtr}` : ''}
+                      </td>
+                    </tr>
+                  )}
+                  {/* Render ALL products without hiding any */}
+                  {d.products.map((prod, pIdx) => (
+                    <tr key={pIdx} className={pIdx !== d.products.length - 1 ? 'border-b border-black' : ''}>
+                      <td
+                        className={`px-1 ${adaptive.tablePadClass} border-r border-black bg-gray-50 text-gray-700 font-bold whitespace-nowrap align-middle`}
+                        style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
+                      >
+                        PRODUCT
+                      </td>
+                      <td
+                        className={`px-1.5 ${adaptive.tablePadClass} font-black text-black leading-tight break-words whitespace-normal align-middle`}
+                        style={{ fontSize: adaptive.previewProdFont, lineHeight: adaptive.lineHeight }}
+                      >
+                        {prod.name} X{prod.qty}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 

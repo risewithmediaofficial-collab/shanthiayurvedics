@@ -80,6 +80,9 @@ export const createBranch = asyncHandler(async (req, res) => {
     revenueSharePercent,
     billerId,
     gstNumber,
+    // Karnataka India Post Configuration
+    karnatakaBillerId,
+    karnatakaPostalDetails,
     // Branch Head Account Setup fields (Branch Profile + Head Credentials)
     headName,
     headEmail,
@@ -191,6 +194,18 @@ export const createBranch = asyncHandler(async (req, res) => {
     revenueSharePercent: Number(revenueSharePercent || 0),
     billerId: billerId || '1000058077',
     gstNumber,
+    karnatakaBillerId: karnatakaBillerId || karnatakaPostalDetails?.billerId || '1000054429',
+    karnatakaPostalDetails: {
+      billerId: karnatakaPostalDetails?.billerId || karnatakaBillerId || '1000054429',
+      bookingOffice: karnatakaPostalDetails?.bookingOffice || 'BENGALURU BPC POST - 560001',
+      postOfficeNumber: karnatakaPostalDetails?.postOfficeNumber || '',
+      pincode: karnatakaPostalDetails?.pincode || '560001',
+      phone: karnatakaPostalDetails?.phone || '',
+      street: karnatakaPostalDetails?.street || '',
+      city: karnatakaPostalDetails?.city || 'Bengaluru',
+      state: karnatakaPostalDetails?.state || 'Karnataka',
+      notes: karnatakaPostalDetails?.notes || ''
+    },
     initialCredentials: createdAccount ? [{
       userId: createdAccount.id,
       name: createdAccount.name,
@@ -269,6 +284,9 @@ export const updateBranch = asyncHandler(async (req, res) => {
     revenueSharePercent,
     billerId,
     gstNumber,
+    // Karnataka India Post Configuration
+    karnatakaBillerId,
+    karnatakaPostalDetails,
     // Branch Head Direct Management fields
     headName,
     headEmail,
@@ -420,6 +438,19 @@ export const updateBranch = asyncHandler(async (req, res) => {
   if (revenueSharePercent !== undefined) branch.revenueSharePercent = revenueSharePercent;
   if (billerId !== undefined) branch.billerId = billerId;
   if (gstNumber !== undefined) branch.gstNumber = gstNumber;
+
+  if (karnatakaBillerId !== undefined) {
+    branch.karnatakaBillerId = karnatakaBillerId || '1000054429';
+  }
+  if (karnatakaPostalDetails !== undefined) {
+    branch.karnatakaPostalDetails = {
+      ...branch.karnatakaPostalDetails?.toObject?.() || {},
+      ...karnatakaPostalDetails
+    };
+    if (karnatakaPostalDetails.billerId) {
+      branch.karnatakaBillerId = karnatakaPostalDetails.billerId;
+    }
+  }
 
   await branch.save();
 

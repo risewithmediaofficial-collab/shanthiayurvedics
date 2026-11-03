@@ -126,7 +126,7 @@ export const getOrders = asyncHandler(async (req, res) => {
     Order.find(query)
       .populate('customerId', 'name mobile email')
       .populate('telecallerId', 'name email phone role')
-      .populate('branchId', 'name code address phone alternatePhone postalPickupDetails billerId gstNumber')
+      .populate('branchId', 'name code address phone alternatePhone postalPickupDetails karnatakaPostalDetails karnatakaBillerId billerId gstNumber')
       .sort(sortObj)
       .skip(skip)
       .limit(limit)
@@ -155,7 +155,7 @@ export const getOrderById = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id)
     .populate('customerId', 'name mobile email addresses')
     .populate('telecallerId', 'name email phone role')
-    .populate('branchId', 'name code address phone alternatePhone postalPickupDetails billerId gstNumber')
+    .populate('branchId', 'name code address phone alternatePhone postalPickupDetails karnatakaPostalDetails karnatakaBillerId billerId gstNumber')
     .lean();
 
   if (!order) {

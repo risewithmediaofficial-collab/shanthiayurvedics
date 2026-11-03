@@ -34,6 +34,22 @@ const branchSchema = new mongoose.Schema(
       bookingOffice: { type: String, trim: true },
       notes: { type: String, trim: true }
     },
+    karnatakaPostalDetails: {
+      billerId: { type: String, trim: true, default: '1000054429' },
+      bookingOffice: { type: String, trim: true, default: 'BENGALURU BPC POST - 560001' },
+      postOfficeNumber: { type: String, trim: true },
+      pincode: { type: String, trim: true, default: '560001' },
+      phone: { type: String, trim: true },
+      street: { type: String, trim: true },
+      city: { type: String, trim: true, default: 'Bengaluru' },
+      state: { type: String, trim: true, default: 'Karnataka' },
+      notes: { type: String, trim: true }
+    },
+    karnatakaBillerId: {
+      type: String,
+      default: '1000054429',
+      trim: true
+    },
     phone: {
       type: String,
       trim: true

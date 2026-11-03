@@ -26,6 +26,14 @@ export function PrintableInvoiceModal({
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
   const [whatsAppFeedback, setWhatsAppFeedback] = useState(null);
 
+  const destPincode = (order?.deliveryAddress?.pincode || '').trim();
+  const destState = (order?.deliveryAddress?.state || '').toLowerCase();
+  const isKarnataka = destState.includes('karnataka') || /^(56|57|58|59)/.test(destPincode);
+  const branchObj = typeof order?.branchId === 'object' && order?.branchId ? order.branchId : {};
+  const invoiceBillerId = isKarnataka
+    ? (branchObj.karnatakaBillerId || branchObj.karnatakaPostalDetails?.billerId || '1000054429')
+    : (branchObj.billerId || '1000058077');
+
   useEffect(() => {
     const clearPrintMode = () => document.body.classList.remove('printing-invoice');
     window.addEventListener('afterprint', clearPrintMode);
@@ -160,7 +168,9 @@ Dr. Shanthi Ayurvedas Medical Team`;
               <div className="pt-0.5">
                 <p className="text-xs font-bold text-slate-800">Authentic Herbal Wellness & Clinic Telemedicine</p>
                 <p className="text-[11px] text-slate-500">Hosur Main Clinic, Krishnagiri, Tamil Nadu - 635109</p>
-                <p className="text-[11px] text-slate-500 font-mono">GSTIN: 33AAAAA0000A1Z5 | Biller ID: 1000058077</p>
+                <p className="text-[11px] text-slate-500 font-mono">
+                  GSTIN: {branchObj.gstNumber || '33BNCPS0374P1ZM'} | Biller ID: {invoiceBillerId}
+                </p>
               </div>
             </div>
             <div className="text-left sm:text-right w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">

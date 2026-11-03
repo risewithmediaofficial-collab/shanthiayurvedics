@@ -997,9 +997,18 @@ export function OrderCreateModal({
                       COD + UPI
                     </span>
                   </div>
-                  <div className="font-bold text-slate-900 text-sm">India Post</div>
+                  <div className="font-bold text-slate-900 text-sm flex items-center justify-between">
+                    <span>India Post</span>
+                    {(state?.toLowerCase().includes('karnataka') || /^(56|57|58|59)/.test((pincode || '').trim())) && (
+                      <span className="text-[9px] bg-amber-100 text-amber-900 font-extrabold px-1.5 py-0.5 rounded border border-amber-300">
+                        KA: 1000054429
+                      </span>
+                    )}
+                  </div>
                   <div className="text-[11px] text-slate-500 mt-0.5 leading-snug">
-                    Speed Post · Supports Doorstep COD & Prepaid
+                    {(state?.toLowerCase().includes('karnataka') || /^(56|57|58|59)/.test((pincode || '').trim()))
+                      ? 'Speed Post · Karnataka Hub (Biller ID 1000054429 • PIN 560001)'
+                      : 'Speed Post · Supports Doorstep COD & Prepaid'}
                   </div>
                 </button>
 

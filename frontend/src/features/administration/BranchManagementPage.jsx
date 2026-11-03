@@ -104,7 +104,13 @@ export function BranchManagementPage() {
     pickupState: 'Tamil Nadu',
     pickupPincode: '',
     pickupBookingOffice: '',
-    pickupNotes: ''
+    pickupNotes: '',
+    // Karnataka India Post Configuration (Auto-Applied for Karnataka Orders):
+    karnatakaBillerId: '1000054429',
+    karnatakaBookingOffice: 'BENGALURU BPC POST - 560001',
+    karnatakaPostOfficeNumber: '',
+    karnatakaPincode: '560001',
+    karnatakaPhone: ''
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -172,6 +178,16 @@ export function BranchManagementPage() {
           pincode: data.pickupPincode || '',
           bookingOffice: data.pickupBookingOffice || '',
           notes: data.pickupNotes || ''
+        },
+        karnatakaBillerId: data.karnatakaBillerId || '1000054429',
+        karnatakaPostalDetails: {
+          billerId: data.karnatakaBillerId || '1000054429',
+          bookingOffice: data.karnatakaBookingOffice || 'BENGALURU BPC POST - 560001',
+          postOfficeNumber: data.karnatakaPostOfficeNumber || '',
+          pincode: data.karnatakaPincode || '560001',
+          phone: data.karnatakaPhone || data.karnatakaPostOfficeNumber || '',
+          city: 'Bengaluru',
+          state: 'Karnataka'
         }
       }),
     onSuccess: (res) => {
@@ -237,6 +253,16 @@ export function BranchManagementPage() {
           pincode: data.pickupPincode || '',
           bookingOffice: data.pickupBookingOffice || '',
           notes: data.pickupNotes || ''
+        },
+        karnatakaBillerId: data.karnatakaBillerId || '1000054429',
+        karnatakaPostalDetails: {
+          billerId: data.karnatakaBillerId || '1000054429',
+          bookingOffice: data.karnatakaBookingOffice || 'BENGALURU BPC POST - 560001',
+          postOfficeNumber: data.karnatakaPostOfficeNumber || '',
+          pincode: data.karnatakaPincode || '560001',
+          phone: data.karnatakaPhone || data.karnatakaPostOfficeNumber || '',
+          city: 'Bengaluru',
+          state: 'Karnataka'
         }
       }),
     onSuccess: () => {
@@ -427,7 +453,13 @@ export function BranchManagementPage() {
       pickupState: branch.postalPickupDetails?.state || branch.address?.state || 'Tamil Nadu',
       pickupPincode: branch.postalPickupDetails?.pincode || branch.address?.pincode || '',
       pickupBookingOffice: branch.postalPickupDetails?.bookingOffice || '',
-      pickupNotes: branch.postalPickupDetails?.notes || ''
+      pickupNotes: branch.postalPickupDetails?.notes || '',
+      // Karnataka India Post Configuration:
+      karnatakaBillerId: branch.karnatakaBillerId || branch.karnatakaPostalDetails?.billerId || '1000054429',
+      karnatakaBookingOffice: branch.karnatakaPostalDetails?.bookingOffice || 'BENGALURU BPC POST - 560001',
+      karnatakaPostOfficeNumber: branch.karnatakaPostalDetails?.postOfficeNumber || '',
+      karnatakaPincode: branch.karnatakaPostalDetails?.pincode || '560001',
+      karnatakaPhone: branch.karnatakaPostalDetails?.phone || ''
     });
     setEditModalOpen(true);
   };
@@ -537,11 +569,18 @@ export function BranchManagementPage() {
       header: 'Postal Pickup Point',
       cell: (row) => {
         const pickup = row.postalPickupDetails;
+        const knBiller = row.karnatakaBillerId || row.karnatakaPostalDetails?.billerId || '1000054429';
+        const knPincode = row.karnatakaPostalDetails?.pincode || '560001';
         if (!pickup || (!pickup.contactPerson && !pickup.street && !pickup.phone)) {
           return (
-            <span className="text-[11px] text-slate-400 italic flex items-center gap-1">
-              <Truck className="w-3 h-3 text-slate-300" /> Physical address
-            </span>
+            <div className="text-xs">
+              <span className="text-[11px] text-slate-400 italic flex items-center gap-1">
+                <Truck className="w-3 h-3 text-slate-300" /> Physical address
+              </span>
+              <div className="text-[10px] text-amber-700 font-mono mt-0.5 font-semibold">
+                KA: {knBiller} (PIN: {knPincode})
+              </div>
+            </div>
           );
         }
         return (
@@ -552,6 +591,9 @@ export function BranchManagementPage() {
             </div>
             <div className="text-[10px] text-slate-500 font-mono mt-0.5">
               {pickup.phone ? `${pickup.phone} • ` : ''}{pickup.pincode ? `PIN: ${pickup.pincode}` : pickup.city || ''}
+            </div>
+            <div className="text-[10px] text-amber-700 font-mono mt-0.5 font-semibold">
+              KA: {knBiller} (PIN: {knPincode})
             </div>
           </div>
         );
@@ -1014,6 +1056,48 @@ export function BranchManagementPage() {
             </div>
           </div>
 
+          {/* Section 4: Karnataka India Post Configuration */}
+          <div className="space-y-3 bg-amber-50/60 p-3.5 rounded-xl border border-amber-200">
+            <div className="flex items-center justify-between border-b border-amber-200 pb-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+                <Truck className="w-3.5 h-3.5 text-amber-700" />
+                <span>4. Karnataka India Post Configuration</span>
+              </h4>
+              <Badge variant="warning" size="sm">Auto-Applied for KA</Badge>
+            </div>
+            <p className="text-[11px] text-amber-900/80 leading-relaxed">
+              When an order delivery destination is in Karnataka (Pincodes starting with 56, 57, 58, 59), the shipping label automatically prints with Karnataka Biller ID <strong>{formData.karnatakaBillerId || '1000054429'}</strong>, Karnataka booking post office, and post office pincode.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Karnataka Speed Post Biller ID *"
+                placeholder="1000054429"
+                value={formData.karnatakaBillerId}
+                onChange={(e) => setFormData({ ...formData, karnatakaBillerId: e.target.value })}
+              />
+              <Input
+                label="Karnataka Post Office Pincode *"
+                placeholder="560001"
+                value={formData.karnatakaPincode}
+                onChange={(e) => setFormData({ ...formData, karnatakaPincode: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Karnataka Booking Post Office"
+                placeholder="e.g. BENGALURU BPC POST - 560001"
+                value={formData.karnatakaBookingOffice}
+                onChange={(e) => setFormData({ ...formData, karnatakaBookingOffice: e.target.value })}
+              />
+              <Input
+                label="Karnataka Post Office Number / Phone"
+                placeholder="e.g. 080-22860000 or dispatch phone"
+                value={formData.karnatakaPostOfficeNumber}
+                onChange={(e) => setFormData({ ...formData, karnatakaPostOfficeNumber: e.target.value })}
+              />
+            </div>
+          </div>
+
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100 sticky bottom-0 bg-white py-2">
             <Button variant="secondary" type="button" className="w-full sm:w-auto" onClick={() => setCreateModalOpen(false)}>
               Cancel
@@ -1326,6 +1410,48 @@ export function BranchManagementPage() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Section 4: Karnataka India Post Configuration */}
+          <div className="space-y-3 bg-amber-50/60 p-3.5 rounded-xl border border-amber-200">
+            <div className="flex items-center justify-between border-b border-amber-200 pb-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+                <Truck className="w-3.5 h-3.5 text-amber-700" />
+                <span>4. Karnataka India Post Configuration</span>
+              </h4>
+              <Badge variant="warning" size="sm">Auto-Applied for KA</Badge>
+            </div>
+            <p className="text-[11px] text-amber-900/80 leading-relaxed">
+              When an order delivery destination is in Karnataka (Pincodes starting with 56, 57, 58, 59), the shipping label automatically prints with Karnataka Biller ID <strong>{editFormData.karnatakaBillerId || '1000054429'}</strong>, Karnataka booking post office, and post office pincode.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Karnataka Speed Post Biller ID *"
+                placeholder="1000054429"
+                value={editFormData.karnatakaBillerId}
+                onChange={(e) => setEditFormData({ ...editFormData, karnatakaBillerId: e.target.value })}
+              />
+              <Input
+                label="Karnataka Post Office Pincode *"
+                placeholder="560001"
+                value={editFormData.karnatakaPincode}
+                onChange={(e) => setEditFormData({ ...editFormData, karnatakaPincode: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Karnataka Booking Post Office"
+                placeholder="e.g. BENGALURU BPC POST - 560001"
+                value={editFormData.karnatakaBookingOffice}
+                onChange={(e) => setEditFormData({ ...editFormData, karnatakaBookingOffice: e.target.value })}
+              />
+              <Input
+                label="Karnataka Post Office Number / Phone"
+                placeholder="e.g. 080-22860000 or dispatch phone"
+                value={editFormData.karnatakaPostOfficeNumber}
+                onChange={(e) => setEditFormData({ ...editFormData, karnatakaPostOfficeNumber: e.target.value })}
+              />
+            </div>
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100 sticky bottom-0 bg-white py-2">

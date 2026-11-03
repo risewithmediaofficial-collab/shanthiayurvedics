@@ -315,19 +315,32 @@ export function ShippingLabelLandscapeModal({
       fromAddressText = `FROM : ${senderTitle}, ${senderStreet}, ${senderCity} - ${senderPincode}`;
     }
 
-    const primarySenderPhone = isKarnataka
-      ? (knPickup.phone || knPickup.postOfficeNumber || pickup.phone || branch.phone || '8884747209')
-      : (pickup.phone || branch.phone || '8884747209');
+    // Primary sender phone with typo replacement (9629985341 -> 9629985345) and clean formatting
+    let rawPrimaryPhone = isKarnataka
+      ? (knPickup.phone || knPickup.postOfficeNumber || pickup.phone || branch.phone || '9629985345')
+      : (pickup.phone || branch.phone || '9629985345');
+    
+    rawPrimaryPhone = String(rawPrimaryPhone || '9629985345')
+      .replace(/96299\s*85341/g, '9629985345')
+      .replace(/9629985341/g, '9629985345')
+      .replace(/^\+91\s*/, '')
+      .trim();
+
     const knPoNumber = isKarnataka ? (knPickup.postOfficeNumber || '').trim() : '';
-    const altSenderPhone = pickup.alternatePhone || branch.alternatePhone || (branch.code === 'HSR' || !branch.code ? '8884113629' : '');
+
+    let rawAltPhone = String(pickup.alternatePhone || branch.alternatePhone || (branch.code === 'HSR' || !branch.code ? '8884113629' : ''))
+      .replace(/96299\s*85341/g, '9629985345')
+      .replace(/9629985341/g, '9629985345')
+      .replace(/^\+91\s*/, '')
+      .trim();
 
     let senderMobileText;
-    if (isKarnataka && knPoNumber && knPoNumber !== primarySenderPhone) {
-      senderMobileText = `MOBILE : ${primarySenderPhone} · PO NO : ${knPoNumber}`;
-    } else if (altSenderPhone && altSenderPhone !== primarySenderPhone) {
-      senderMobileText = `MOBILE : ${primarySenderPhone} / ${altSenderPhone}`;
+    if (isKarnataka && knPoNumber && knPoNumber !== rawPrimaryPhone) {
+      senderMobileText = `MOBILE : ${rawPrimaryPhone} · PO NO : ${knPoNumber}`;
+    } else if (rawAltPhone && rawAltPhone !== rawPrimaryPhone) {
+      senderMobileText = `MOBILE : ${rawPrimaryPhone} / ${rawAltPhone}`;
     } else {
-      senderMobileText = `MOBILE : ${primarySenderPhone}`;
+      senderMobileText = `MOBILE : ${rawPrimaryPhone}`;
     }
 
     // Biller ID & Booking Location: Auto-switch to 1000054429 for Karnataka orders

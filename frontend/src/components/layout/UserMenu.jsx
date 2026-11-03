@@ -242,7 +242,7 @@ export function UserMenu() {
                     type="tel"
                     value={profileData.phone}
                     onChange={e => setProfileData({ ...profileData, phone: e.target.value })}
-                    placeholder="e.g. 9629985341"
+                    placeholder="e.g. 9629985345"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:ring-2 focus:ring-ayur-500 focus:border-ayur-500 outline-none transition-all"
                   />
                 </div>

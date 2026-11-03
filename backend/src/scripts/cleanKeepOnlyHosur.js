@@ -30,7 +30,7 @@ export const cleanKeepOnlyHosur = async () => {
           pincode: '635109',
           country: 'India'
         },
-        phone: '+91 96299 85341',
+        phone: '9629985345',
         email: 'hosur@shanthiayurvedas.com',
         billerId: '1000058077',
         managerName: 'Akash Manager',

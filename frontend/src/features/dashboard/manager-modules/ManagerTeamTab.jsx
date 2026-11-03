@@ -523,7 +523,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
               <tbody className="divide-y divide-slate-100">
                 {filteredTeam.map((staff, idx) => {
                   const stats = telecallerStatsMap.get(staff._id) || {};
-                  const cleanPhone = (staff.phone || '9629985341').replace(/\D/g, '').slice(-10);
+                  const cleanPhone = (staff.phone || '9629985345').replace(/\D/g, '').slice(-10);
                   const todayLeads = stats.assignedCount ?? 0;
                   const todayCalls = stats.todayCalls ?? 0;
                   const orders = stats.todayOrders ?? 0;
@@ -551,7 +551,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
                               <span className="text-[10px] text-slate-400 group-hover:text-emerald-700 font-normal">→</span>
                             </div>
                             <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="text-[11px] text-slate-500 font-mono">{staff.phone || '9629985341'}</span>
+                              <span className="text-[11px] text-slate-500 font-mono">{staff.phone || '9629985345'}</span>
                               <span className="text-slate-300 hidden sm:inline">·</span>
                               <span className="text-[10px] text-slate-400 truncate max-w-[120px] hidden sm:inline">{staff.email || `${staff.name.toLowerCase()}@shanthiayurvedas.com`}</span>
                             </div>
@@ -725,7 +725,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {filteredTeam.map((staff, idx) => {
             const stats = telecallerStatsMap.get(staff._id) || {};
-            const cleanPhone = (staff.phone || '9629985341').replace(/\D/g, '').slice(-10);
+            const cleanPhone = (staff.phone || '9629985345').replace(/\D/g, '').slice(-10);
             const todayLeads = stats.assignedCount ?? 0;
             const todayCalls = stats.todayCalls ?? 0;
             const orders = stats.todayOrders ?? 0;
@@ -752,7 +752,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
                           <span>{staff.name}</span>
                           <span className="text-[10px] text-slate-400 group-hover:text-emerald-700 font-normal">→</span>
                         </h4>
-                        <p className="text-xs text-slate-500 font-mono mt-0.5">{staff.phone || '9629985341'}</p>
+                        <p className="text-xs text-slate-500 font-mono mt-0.5">{staff.phone || '9629985345'}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5">

@@ -73,7 +73,7 @@ export function OrderDetailsModal({
       base.customerId?.mobile ||
       base.deliveryAddress?.phone ||
       base.customerPhone ||
-      '9629985341';
+      '9629985345';
 
     const altPhone =
       base.patientDetails?.alternateMobile ||

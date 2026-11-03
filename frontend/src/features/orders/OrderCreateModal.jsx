@@ -224,17 +224,37 @@ export function OrderCreateModal({
 
   const handleQuantityChange = (index, qty) => {
     const updated = [...products];
-    updated[index].quantity = Math.max(1, Number(qty) || 1);
+    if (qty === '' || qty === null || qty === undefined) {
+      updated[index].quantity = '';
+    } else {
+      const parsed = parseInt(qty, 10);
+      updated[index].quantity = isNaN(parsed) ? '' : Math.max(1, parsed);
+    }
     setProducts(updated);
   };
 
-  const handleDiscountPercentChange = (index, pct) => {
-    const cleanPct = Math.min(100, Math.max(0, Number(pct) || 0));
+  const handleQuantityBlur = (index) => {
     const updated = [...products];
-    updated[index] = {
-      ...updated[index],
-      discountPercent: cleanPct
-    };
+    if (!updated[index].quantity || Number(updated[index].quantity) < 1) {
+      updated[index].quantity = 1;
+      setProducts(updated);
+    }
+  };
+
+  const handleDiscountPercentChange = (index, pct) => {
+    const updated = [...products];
+    if (pct === '' || pct === null || pct === undefined) {
+      updated[index] = {
+        ...updated[index],
+        discountPercent: ''
+      };
+    } else {
+      const cleanPct = Math.min(100, Math.max(0, Number(pct) || 0));
+      updated[index] = {
+        ...updated[index],
+        discountPercent: cleanPct
+      };
+    }
     setProducts(updated);
   };
 
@@ -353,7 +373,7 @@ export function OrderCreateModal({
         return {
           productId: p.productId,
           batchId: p.batchId || undefined,
-          quantity: Number(p.quantity),
+          quantity: Math.max(1, Number(p.quantity) || 1),
           unitPrice: uPrice,
           discountPercent: dPct,
           discount: dAmount,
@@ -820,6 +840,8 @@ export function OrderCreateModal({
                           min="1"
                           value={item.quantity}
                           onChange={(e) => handleQuantityChange(idx, e.target.value)}
+                          onBlur={() => handleQuantityBlur(idx)}
+                          onFocus={(e) => e.target.select()}
                           className="w-full px-2.5 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono font-bold text-slate-900 text-center"
                         />
                       </div>
@@ -837,6 +859,7 @@ export function OrderCreateModal({
                             placeholder="0"
                             value={item.discountPercent || ''}
                             onChange={(e) => handleDiscountPercentChange(idx, e.target.value)}
+                            onFocus={(e) => e.target.select()}
                             className="w-full px-2.5 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono font-bold text-slate-900 pr-6"
                           />
                           <span className="absolute right-2 top-2 text-xs text-slate-400 font-bold pointer-events-none">%</span>

@@ -153,7 +153,7 @@ export function ManagerBranchOrdersTab() {
       fromBranchId: selectedBranchId,
       toBranchId: destinationBranchId,
       productId: selectedProductId,
-      quantity: Number(transferQty),
+      quantity: Math.max(1, Number(transferQty) || 1),
       notes: transferReason
     });
   };
@@ -497,7 +497,21 @@ export function ManagerBranchOrdersTab() {
                 min="1"
                 required
                 value={transferQty}
-                onChange={(e) => setTransferQty(Number(e.target.value))}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '' || val === null) {
+                    setTransferQty('');
+                  } else {
+                    const parsed = parseInt(val, 10);
+                    setTransferQty(isNaN(parsed) ? '' : Math.max(1, parsed));
+                  }
+                }}
+                onBlur={() => {
+                  if (!transferQty || Number(transferQty) < 1) {
+                    setTransferQty(1);
+                  }
+                }}
+                onFocus={(e) => e.target.select()}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold"
               />
             </div>

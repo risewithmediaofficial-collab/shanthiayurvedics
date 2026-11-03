@@ -243,11 +243,25 @@ export function ManagerOfficeSaleTab() {
   };
 
   const handleUpdateCartItemQty = (index, newQty) => {
-    const qty = Math.max(1, Number(newQty) || 1);
     const updated = [...cart];
-    updated[index].quantity = qty;
-    updated[index].total = qty * updated[index].price;
+    if (newQty === '' || newQty === null || newQty === undefined) {
+      updated[index].quantity = '';
+      updated[index].total = 0;
+    } else {
+      const qty = Math.max(1, parseInt(newQty, 10) || 1);
+      updated[index].quantity = qty;
+      updated[index].total = qty * updated[index].price;
+    }
     setCart(updated);
+  };
+
+  const handleBlurCartItemQty = (index) => {
+    const updated = [...cart];
+    if (!updated[index].quantity || Number(updated[index].quantity) < 1) {
+      updated[index].quantity = 1;
+      updated[index].total = 1 * updated[index].price;
+      setCart(updated);
+    }
   };
 
   const handleRemoveFromCart = (index) => {
@@ -304,7 +318,7 @@ export function ManagerOfficeSaleTab() {
       items: cart.map((item) => ({
         productId: item.productId,
         productName: item.productName,
-        quantity: item.quantity,
+        quantity: Math.max(1, Number(item.quantity) || 1),
         unitPrice: item.price,
         discountPercent: item.discountPercent || 0,
         discount: item.discountPercent ? Math.round((item.price * item.discountPercent) / 100) : 0
@@ -539,7 +553,21 @@ export function ManagerOfficeSaleTab() {
                       type="number"
                       min="1"
                       value={selectedQty}
-                      onChange={(e) => setSelectedQty(Math.max(1, Number(e.target.value)))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || val === null) {
+                          setSelectedQty('');
+                        } else {
+                          const parsed = parseInt(val, 10);
+                          setSelectedQty(isNaN(parsed) ? '' : Math.max(1, parsed));
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!selectedQty || Number(selectedQty) < 1) {
+                          setSelectedQty(1);
+                        }
+                      }}
+                      onFocus={(e) => e.target.select()}
                       className="w-14 px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-center"
                     />
                   </div>
@@ -642,6 +670,8 @@ export function ManagerOfficeSaleTab() {
                           min="1"
                           value={item.quantity}
                           onChange={(e) => handleUpdateCartItemQty(idx, e.target.value)}
+                          onBlur={() => handleBlurCartItemQty(idx)}
+                          onFocus={(e) => e.target.select()}
                           className="w-12 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-center font-mono font-bold"
                         />
                         <span>× ₹</span>

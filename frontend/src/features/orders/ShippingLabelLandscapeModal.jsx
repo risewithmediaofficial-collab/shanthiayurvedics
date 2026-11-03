@@ -139,42 +139,42 @@ const getAdaptiveLayout = (prodCount, isSingle, fontScale, addressLength = 0) =>
 
   if (isSingle) {
     return {
-      gridCols: '1.05fr 0.95fr',
+      gridCols: '1.08fr 0.92fr',
       labelWidth: '26%',
-      padTableY: '3px',
-      prodFont: isScaleUp ? '11px' : '9.5px',
-      labelFont: isScaleUp ? '9.5px' : '8.5px',
-      previewProdFont: isScaleUp ? '11px' : '9.5px',
-      previewLabelFont: isScaleUp ? '9.5px' : '8.5px',
-      lineHeight: '1.2',
-      artBoxPadding: '2.5px 5px',
-      artTitleSize: '8px',
-      artCodeSize: '13px',
-      nameSize: '14px',
-      previewNameSize: '14px',
-      addrSize: addressLength > 140 ? '9px' : '10px',
-      previewAddrSize: addressLength > 140 ? '9px' : '10px',
-      phoneSize: '11.5px',
-      previewPhoneSize: '11.5px',
-      codBadgeSize: '11px',
-      previewCodBadgeSize: '11px',
-      codAmtSize: '13px',
-      previewCodAmtSize: '13px',
-      headerPad: '3px 8px',
-      carrierPad: '2.5px 8px',
-      subRowPad: '2px 8px',
-      helpPad: '2.5px 8px',
-      senderPad: '2.5px 8px',
-      emergencyPad: '2px 6px',
-      subRowSize: '9.5px',
-      billerSubSize: '9.5px',
-      bannerSize: '9.5px',
-      senderSize: '9px',
-      emergencySize: '8.5px',
-      previewSub: '9.5px',
-      previewSender: '9px',
-      previewEmergency: '8.5px',
-      articleBoxClass: 'py-1'
+      padTableY: '2px',
+      prodFont: isScaleUp ? '10px' : '8.8px',
+      labelFont: isScaleUp ? '9px' : '8.2px',
+      previewProdFont: isScaleUp ? '10px' : '8.8px',
+      previewLabelFont: isScaleUp ? '9px' : '8.2px',
+      lineHeight: '1.15',
+      artBoxPadding: '1.5px 3px',
+      artTitleSize: '7.5px',
+      artCodeSize: '11.8px',
+      nameSize: isScaleUp ? '13px' : '12px',
+      previewNameSize: isScaleUp ? '13px' : '12px',
+      addrSize: addressLength > 130 ? '8px' : '8.8px',
+      previewAddrSize: addressLength > 130 ? '7.8px' : '8.4px',
+      phoneSize: '10.5px',
+      previewPhoneSize: '9.8px',
+      codBadgeSize: '10px',
+      previewCodBadgeSize: '9.8px',
+      codAmtSize: '12px',
+      previewCodAmtSize: '12px',
+      headerPad: '2px 6px',
+      carrierPad: '1.5px 6px',
+      subRowPad: '1.5px 6px',
+      helpPad: '1.5px 5px',
+      senderPad: '1.5px 6px',
+      emergencyPad: '1px 4px',
+      subRowSize: '8.8px',
+      billerSubSize: '8.2px',
+      bannerSize: '8.5px',
+      senderSize: '7.8px',
+      emergencySize: '7.2px',
+      previewSub: '8.2px',
+      previewSender: '7.8px',
+      previewEmergency: '7.2px',
+      articleBoxClass: 'p-0.5'
     };
   }
 
@@ -535,47 +535,33 @@ export function ShippingLabelLandscapeModal({
 
     const senderTitle = (pickup.senderName || 'SHANTHI AYURVEDAS').toUpperCase();
 
-    // Return address: For India Post Karnataka orders, use Karnataka dispatch/return hub.
-    // For TPC and private couriers, always use branch physical dispensary/clinic address.
-    let senderStreet, senderCity, senderPincode, fromAddressText;
-    if (isIndiaPost && isKarnataka) {
-      senderStreet = (knPickup.street || pickup.street || branchAddr.street || 'NO15, JAYPEE GATEWAY, ANTHIVADI').toUpperCase();
-      senderCity = (knPickup.city || 'BENGALURU').toUpperCase();
-      senderPincode = (knPickup.pincode || '560001').toUpperCase();
-      fromAddressText = `FROM : ${senderTitle}, ${senderStreet}, ${senderCity} - ${senderPincode}`;
+    // Return address:
+    // Karnataka orders/pincodes:
+    //   Shanthi Ayurvedas, 156,srr exbhuria,Anekal, Bengaluru district. 562106
+    // Tamil Nadu & other orders:
+    //   Shanthi Ayurvedas, No15, Jaypee gateway, anthivadi, hosur. 635110
+    let fromAddressText;
+    if (isKarnataka) {
+      fromAddressText = `FROM : ${senderTitle}, 156, SRR EXBHURIA, ANEKAL, BENGALURU DISTRICT - 562106`;
     } else {
-      senderStreet = (pickup.street || branchAddr.street || '14/B, GANDHI ROAD, NEAR BUS STAND').toUpperCase();
-      senderCity = (pickup.city || branchAddr.city || 'HOSUR').toUpperCase();
-      senderPincode = (pickup.pincode || branchAddr.pincode || '635109').toUpperCase();
-      fromAddressText = `FROM : ${senderTitle}, ${senderStreet}, ${senderCity} - ${senderPincode}`;
+      fromAddressText = `FROM : ${senderTitle}, NO15, JAYPEE GATEWAY, ANTHIVADI, HOSUR - 635110`;
     }
 
-    // Primary sender phone with typo replacement (9629985341 -> 9629985345) and clean formatting
-    let rawPrimaryPhone = (isIndiaPost && isKarnataka)
-      ? (knPickup.phone || knPickup.postOfficeNumber || pickup.phone || branch.phone || '9629985345')
-      : (pickup.phone || branch.phone || '9629985345');
-    
-    rawPrimaryPhone = String(rawPrimaryPhone || '9629985345')
-      .replace(/96299\s*85341/g, '9629985345')
-      .replace(/9629985341/g, '9629985345')
-      .replace(/^\+91\s*/, '')
-      .trim();
-
-    const knPoNumber = (isIndiaPost && isKarnataka) ? (knPickup.postOfficeNumber || '').trim() : '';
-
-    let rawAltPhone = String(pickup.alternatePhone || branch.alternatePhone || (branch.code === 'HSR' || !branch.code ? '8884113629' : ''))
-      .replace(/96299\s*85341/g, '9629985345')
-      .replace(/9629985341/g, '9629985345')
-      .replace(/^\+91\s*/, '')
-      .trim();
+    // Contact Numbers:
+    // "8884747209/8884113629 and before this contat numbers 1st should be telecaller or who order placing their contact number should be"
+    const orderPlacerPhone = String(
+      order.assignedTo?.phone ||
+      order.telecallerPhone ||
+      order.createdBy?.phone ||
+      order.assignedToPhone ||
+      ''
+    ).replace(/^\+91\s*/, '').replace(/[^0-9]/g, '').trim();
 
     let senderMobileText;
-    if (isIndiaPost && isKarnataka && knPoNumber && knPoNumber !== rawPrimaryPhone) {
-      senderMobileText = `MOBILE : ${rawPrimaryPhone} · PO NO : ${knPoNumber}`;
-    } else if (rawAltPhone && rawAltPhone !== rawPrimaryPhone) {
-      senderMobileText = `MOBILE : ${rawPrimaryPhone} / ${rawAltPhone}`;
+    if (orderPlacerPhone && orderPlacerPhone !== '8884747209' && orderPlacerPhone !== '8884113629') {
+      senderMobileText = `MOBILE : ${orderPlacerPhone} / 8884747209 / 8884113629`;
     } else {
-      senderMobileText = `MOBILE : ${rawPrimaryPhone}`;
+      senderMobileText = `MOBILE : 8884747209 / 8884113629`;
     }
 
     // 2. Subheader (Line 3):
@@ -867,12 +853,11 @@ export function ShippingLabelLandscapeModal({
             break-after: avoid;
           }
           .sheet-page.batch-mode {
-            height: 287mm;
+            height: auto;
             max-height: 287mm;
           }
           .sheet-page.single-mode {
             height: auto;
-            min-height: 270mm;
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
@@ -890,21 +875,23 @@ export function ShippingLabelLandscapeModal({
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: flex-start;
             background: #fff;
             overflow: hidden;
             color: #000;
             line-height: 1.15;
+            width: 196mm;
+            height: auto;
           }
           .label-box.batch-mode {
             width: 196mm;
-            height: 89mm;
-            max-height: 89mm;
+            height: auto;
+            max-height: 90mm;
           }
           .label-box.single-mode {
             width: 196mm;
-            min-height: 125mm;
-            border: 2px solid #000;
+            height: auto;
+            border: 1.5px solid #000;
           }
 
           .cut-guide {
@@ -978,8 +965,7 @@ export function ShippingLabelLandscapeModal({
           .main-grid {
             display: grid;
             border-bottom: 1px solid #000;
-            flex: 1;
-            min-height: 0;
+            height: auto;
           }
           .col-left {
             border-right: 1px solid #000;
@@ -1125,7 +1111,7 @@ export function ShippingLabelLandscapeModal({
     const adaptive = getAdaptiveLayout(d.products.length, isSingleCard, fontScale, d.formattedAddress?.length || 0);
 
     return (
-      <div className={`w-full border-[1.5px] border-black bg-white flex flex-col justify-between text-xs shadow-2xs ${isSingleCard ? 'min-h-[300px] border-[2px]' : 'flex-1 min-h-[230px]'}`}>
+      <div className="w-full border-[1.5px] border-black bg-white flex flex-col justify-start text-xs shadow-2xs">
         {/* 1. Header Banner */}
         <div
           className="bg-[#362115] text-white px-2.5 flex items-center justify-between shrink-0"
@@ -1175,7 +1161,7 @@ export function ShippingLabelLandscapeModal({
 
         {/* 5. Middle Two-Column Grid */}
         <div
-          className="grid divide-x divide-black border-b border-black flex-1 min-h-0 bg-white"
+          className="grid divide-x divide-black border-b border-black bg-white"
           style={{ gridTemplateColumns: adaptive.gridCols }}
         >
           {/* Left Column: Customer details */}
@@ -1501,14 +1487,14 @@ export function ShippingLabelLandscapeModal({
         <div className="flex-1 bg-slate-300 p-2 sm:p-4 overflow-y-auto flex flex-col items-center justify-start min-h-0">
           {/* White A4 Sheet Container */}
           <div
-            className="bg-white rounded-sm shadow-2xl border border-slate-400 w-full max-w-[490px] p-2.5 text-black select-none my-auto flex flex-col shrink-0 min-h-[760px]"
+            className="bg-white rounded-sm shadow-2xl border border-slate-400 w-full max-w-[500px] p-2.5 text-black select-none my-auto flex flex-col shrink-0"
             style={{
               aspectRatio: '210 / 297'
             }}
           >
             {isSingle ? (
               /* Single Bill on Page Preview */
-              <div className="flex flex-col h-full justify-start items-center flex-1 min-h-0 pt-2 sm:pt-4">
+              <div className="flex flex-col justify-start items-center pt-2 sm:pt-4">
                 {currentOrdersOnSheet[0] && (
                   <div className="w-full">
                     {renderLabelCard(currentOrdersOnSheet[0], currentSheetIndex + 1, true)}
@@ -1520,7 +1506,7 @@ export function ShippingLabelLandscapeModal({
               </div>
             ) : (
               /* 3 Bills Stacked Vertically with Cutting Guides */
-              <div className="flex flex-col h-full justify-between gap-1 flex-1 min-h-0">
+              <div className="flex flex-col justify-start gap-1">
                 {[0, 1, 2].map((slotIdx) => {
                   const ord = currentOrdersOnSheet[slotIdx];
                   const labelNumber = currentSheetIndex * 3 + slotIdx + 1;

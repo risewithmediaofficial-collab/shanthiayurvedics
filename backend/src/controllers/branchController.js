@@ -197,9 +197,9 @@ export const createBranch = asyncHandler(async (req, res) => {
     karnatakaBillerId: karnatakaBillerId || karnatakaPostalDetails?.billerId || '1000054429',
     karnatakaPostalDetails: {
       billerId: karnatakaPostalDetails?.billerId || karnatakaBillerId || '1000054429',
-      bookingOffice: karnatakaPostalDetails?.bookingOffice || 'BENGALURU BPC POST - 560001',
+      bookingOffice: karnatakaPostalDetails?.bookingOffice || 'BENGALURU BPC POST - 562106',
       postOfficeNumber: karnatakaPostalDetails?.postOfficeNumber || '',
-      pincode: karnatakaPostalDetails?.pincode || '560001',
+      pincode: karnatakaPostalDetails?.pincode || '562106',
       phone: karnatakaPostalDetails?.phone || '',
       street: karnatakaPostalDetails?.street || '',
       city: karnatakaPostalDetails?.city || 'Bengaluru',

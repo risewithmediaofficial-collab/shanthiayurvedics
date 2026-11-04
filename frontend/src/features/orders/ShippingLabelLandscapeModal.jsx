@@ -572,7 +572,7 @@ export function ShippingLabelLandscapeModal({
     let billerId = branch.billerId || '1000058077';
     let bookingLocation = '';
     let carrierSubheaderText;
-    const knPincodeVal = (knPickup.pincode || '560001').trim();
+    const knPincodeVal = (knPickup.pincode === '560001' ? '562106' : (knPickup.pincode || '562106')).trim();
 
     if (isTPC) {
       carrierSubheaderText = `THE PROFESSIONAL COURIERS · EXPRESS PARCEL & CARGO LOGISTICS · DISPATCH HUB: ${senderCity}`;
@@ -580,11 +580,11 @@ export function ShippingLabelLandscapeModal({
       carrierSubheaderText = `${(order.courierName || 'EXPRESS COURIER').toUpperCase()} LOGISTICS NETWORK · DISPATCH HUB: ${senderCity}`;
     } else if (isKarnataka) {
       billerId = knPickup.billerId || branch.karnatakaBillerId || '1000054429';
-      const knRawOffice = (knPickup.bookingOffice || `BENGALURU BPC POST - ${knPincodeVal}`).toUpperCase();
-      bookingLocation = knRawOffice.includes(knPincodeVal) ? knRawOffice : `${knRawOffice} - ${knPincodeVal}`;
+      let knRawOffice = (knPickup.bookingOffice || `BENGALURU BPC POST - ${knPincodeVal}`).toUpperCase();
+      knRawOffice = knRawOffice.replace(/560001/g, '562106');
+      bookingLocation = knRawOffice.includes('562106') ? knRawOffice : `${knRawOffice} - 562106`;
       const poNumTag = knPoNumber ? ` · PO NO: ${knPoNumber}` : '';
-      const postalCodeTag = ` · POSTAL CODE: ${knPincodeVal}`;
-      carrierSubheaderText = `BILLER ID : ${billerId} (BOOKED AT ${bookingLocation}${poNumTag}${postalCodeTag})`;
+      carrierSubheaderText = `BILLER ID : ${billerId} (BOOKED AT ${bookingLocation}${poNumTag})`;
     } else {
       billerId = branch.billerId || '1000058077';
       bookingLocation = (
@@ -738,6 +738,7 @@ export function ShippingLabelLandscapeModal({
                   <span style="font-size: ${isSingle ? '12px' : '10px'};">📞</span> ${d.mobile} ${d.altMobile ? `/ ${d.altMobile}` : ''}
                 </div>
                 ${d.fatherName ? `<div style="font-size: ${isSingle ? '9.5px' : '7.5px'}; font-weight: 800; text-transform: uppercase; margin-bottom: 2px;">C/O ${d.fatherName}</div>` : ''}
+                <div class="cust-divider"></div>
                 <div class="cust-address" style="font-size: ${adaptive.addrSize};">${d.formattedAddress}</div>
               </div>
 
@@ -769,12 +770,7 @@ export function ShippingLabelLandscapeModal({
                           <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #1e40af; white-space: nowrap;">COURIER</td>
                           <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #1e40af; word-break: break-word; overflow-wrap: break-word;">${(d.order.courierName || 'COURIER').toUpperCase()}</td>
                         </tr>
-                      ` : (d.isIndiaPost && d.isKarnataka ? `
-                        <tr style="border-bottom: 1px solid #000; background: #eff6ff;">
-                          <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #1e40af; white-space: nowrap;">POSTAL CODE</td>
-                          <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #1e40af; word-break: break-word; overflow-wrap: break-word;">${d.knPincode} (BILLER: ${d.billerId})</td>
-                        </tr>
-                      ` : ''))}
+                      ` : '')}
                       ${d.advanceAmount > 0 ? `
                         <tr style="border-bottom: 1px solid #000; background: #f0fdf4;">
                           <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #166534; white-space: nowrap;">ADVANCE</td>
@@ -1010,6 +1006,12 @@ export function ShippingLabelLandscapeModal({
             gap: 5px;
             white-space: nowrap;
           }
+          .cust-divider {
+            border-top: 1.5px solid #000;
+            width: 100%;
+            margin: 2.5px 0 3px 0;
+            flex-shrink: 0;
+          }
           .cust-address {
             font-weight: 800;
             text-transform: uppercase;
@@ -1227,8 +1229,10 @@ export function ShippingLabelLandscapeModal({
                 C/O {d.fatherName}
               </div>
             )}
+            {/* Divider Line between name/phone and address */}
+            <div className="border-t-[1.5px] border-black w-full my-1 shrink-0" />
             <div
-              className="font-bold uppercase leading-tight text-neutral-900 break-words mt-0.5 flex-1"
+              className="font-bold uppercase leading-tight text-neutral-900 break-words flex-1"
               style={{ fontSize: adaptive.previewAddrSize, lineHeight: 1.25 }}
             >
               {d.formattedAddress}
@@ -1316,21 +1320,6 @@ export function ShippingLabelLandscapeModal({
                         style={{ fontSize: adaptive.previewProdFont }}
                       >
                         {(d.order.courierName || 'COURIER').toUpperCase()}
-                      </td>
-                    </tr>
-                  ) : (d.isIndiaPost && d.isKarnataka) ? (
-                    <tr className="border-b border-black bg-blue-50/70">
-                      <td
-                        className={`px-1 ${adaptive.tablePadClass} border-r border-black font-bold text-blue-900 whitespace-nowrap align-middle`}
-                        style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
-                      >
-                        POSTAL CODE
-                      </td>
-                      <td
-                        className={`px-1.5 ${adaptive.tablePadClass} font-black text-blue-900 break-words leading-tight align-middle`}
-                        style={{ fontSize: adaptive.previewProdFont }}
-                      >
-                        {d.knPincode} (BILLER: {d.billerId})
                       </td>
                     </tr>
                   ) : null}

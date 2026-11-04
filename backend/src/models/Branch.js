@@ -36,9 +36,9 @@ const branchSchema = new mongoose.Schema(
     },
     karnatakaPostalDetails: {
       billerId: { type: String, trim: true, default: '1000054429' },
-      bookingOffice: { type: String, trim: true, default: 'BENGALURU BPC POST - 560001' },
+      bookingOffice: { type: String, trim: true, default: 'BENGALURU BPC POST - 562106' },
       postOfficeNumber: { type: String, trim: true },
-      pincode: { type: String, trim: true, default: '560001' },
+      pincode: { type: String, trim: true, default: '562106' },
       phone: { type: String, trim: true },
       street: { type: String, trim: true },
       city: { type: String, trim: true, default: 'Bengaluru' },

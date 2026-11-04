@@ -1030,7 +1030,7 @@ export function OrderCreateModal({
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5 leading-snug">
                     {(state?.toLowerCase().includes('karnataka') || /^(56|57|58|59)/.test((pincode || '').trim()))
-                      ? 'Speed Post · Karnataka Hub (Biller ID 1000054429 • PIN 560001)'
+                      ? 'Speed Post · Karnataka Hub (Biller ID 1000054429 • PIN 562106)'
                       : 'Speed Post · Supports Doorstep COD & Prepaid'}
                   </div>
                 </button>

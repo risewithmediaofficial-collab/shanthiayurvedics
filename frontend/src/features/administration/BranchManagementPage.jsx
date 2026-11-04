@@ -107,9 +107,9 @@ export function BranchManagementPage() {
     pickupNotes: '',
     // Karnataka India Post Configuration (Auto-Applied for Karnataka Orders):
     karnatakaBillerId: '1000054429',
-    karnatakaBookingOffice: 'BENGALURU BPC POST - 560001',
+    karnatakaBookingOffice: 'BENGALURU BPC POST - 562106',
     karnatakaPostOfficeNumber: '',
-    karnatakaPincode: '560001',
+    karnatakaPincode: '562106',
     karnatakaPhone: ''
   };
 
@@ -182,9 +182,9 @@ export function BranchManagementPage() {
         karnatakaBillerId: data.karnatakaBillerId || '1000054429',
         karnatakaPostalDetails: {
           billerId: data.karnatakaBillerId || '1000054429',
-          bookingOffice: data.karnatakaBookingOffice || 'BENGALURU BPC POST - 560001',
+          bookingOffice: data.karnatakaBookingOffice || 'BENGALURU BPC POST - 562106',
           postOfficeNumber: data.karnatakaPostOfficeNumber || '',
-          pincode: data.karnatakaPincode || '560001',
+          pincode: data.karnatakaPincode || '562106',
           phone: data.karnatakaPhone || data.karnatakaPostOfficeNumber || '',
           city: 'Bengaluru',
           state: 'Karnataka'
@@ -257,9 +257,9 @@ export function BranchManagementPage() {
         karnatakaBillerId: data.karnatakaBillerId || '1000054429',
         karnatakaPostalDetails: {
           billerId: data.karnatakaBillerId || '1000054429',
-          bookingOffice: data.karnatakaBookingOffice || 'BENGALURU BPC POST - 560001',
+          bookingOffice: data.karnatakaBookingOffice || 'BENGALURU BPC POST - 562106',
           postOfficeNumber: data.karnatakaPostOfficeNumber || '',
-          pincode: data.karnatakaPincode || '560001',
+          pincode: data.karnatakaPincode || '562106',
           phone: data.karnatakaPhone || data.karnatakaPostOfficeNumber || '',
           city: 'Bengaluru',
           state: 'Karnataka'
@@ -456,9 +456,9 @@ export function BranchManagementPage() {
       pickupNotes: branch.postalPickupDetails?.notes || '',
       // Karnataka India Post Configuration:
       karnatakaBillerId: branch.karnatakaBillerId || branch.karnatakaPostalDetails?.billerId || '1000054429',
-      karnatakaBookingOffice: branch.karnatakaPostalDetails?.bookingOffice || 'BENGALURU BPC POST - 560001',
+      karnatakaBookingOffice: (branch.karnatakaPostalDetails?.bookingOffice || 'BENGALURU BPC POST - 562106').replace('560001', '562106'),
       karnatakaPostOfficeNumber: branch.karnatakaPostalDetails?.postOfficeNumber || '',
-      karnatakaPincode: branch.karnatakaPostalDetails?.pincode || '560001',
+      karnatakaPincode: branch.karnatakaPostalDetails?.pincode === '560001' ? '562106' : (branch.karnatakaPostalDetails?.pincode || '562106'),
       karnatakaPhone: branch.karnatakaPostalDetails?.phone || ''
     });
     setEditModalOpen(true);
@@ -1077,7 +1077,7 @@ export function BranchManagementPage() {
               />
               <Input
                 label="Karnataka Post Office Pincode *"
-                placeholder="560001"
+                placeholder="562106"
                 value={formData.karnatakaPincode}
                 onChange={(e) => setFormData({ ...formData, karnatakaPincode: e.target.value })}
               />
@@ -1085,7 +1085,7 @@ export function BranchManagementPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Karnataka Booking Post Office"
-                placeholder="e.g. BENGALURU BPC POST - 560001"
+                placeholder="e.g. BENGALURU BPC POST - 562106"
                 value={formData.karnatakaBookingOffice}
                 onChange={(e) => setFormData({ ...formData, karnatakaBookingOffice: e.target.value })}
               />
@@ -1433,7 +1433,7 @@ export function BranchManagementPage() {
               />
               <Input
                 label="Karnataka Post Office Pincode *"
-                placeholder="560001"
+                placeholder="562106"
                 value={editFormData.karnatakaPincode}
                 onChange={(e) => setEditFormData({ ...editFormData, karnatakaPincode: e.target.value })}
               />
@@ -1441,7 +1441,7 @@ export function BranchManagementPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Karnataka Booking Post Office"
-                placeholder="e.g. BENGALURU BPC POST - 560001"
+                placeholder="e.g. BENGALURU BPC POST - 562106"
                 value={editFormData.karnatakaBookingOffice}
                 onChange={(e) => setEditFormData({ ...editFormData, karnatakaBookingOffice: e.target.value })}
               />

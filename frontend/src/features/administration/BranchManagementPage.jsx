@@ -87,7 +87,7 @@ export function BranchManagementPage() {
     phone: '',
     email: '',
     branchType: 'COMPANY_OWNED',
-    billerId: '1000058077',
+    billerId: '',
     gstNumber: '',
     // Branch Head Login Profile (Give to Branch Head)
     headName: '',
@@ -95,7 +95,7 @@ export function BranchManagementPage() {
     headPassword: '',
     headPhone: '',
     // Shipping Label & Postal Pickup Details:
-    pickupSenderName: 'SHANTHI AYURVEDAS',
+    pickupSenderName: '',
     pickupContactPerson: '',
     pickupPhone: '',
     pickupAlternatePhone: '',
@@ -105,11 +105,11 @@ export function BranchManagementPage() {
     pickupPincode: '',
     pickupBookingOffice: '',
     pickupNotes: '',
-    // Karnataka India Post Configuration (Auto-Applied for Karnataka Orders):
-    karnatakaBillerId: '1000054429',
-    karnatakaBookingOffice: 'BENGALURU BPC POST - 562106',
+    // Karnataka India Post Configuration:
+    karnatakaBillerId: '',
+    karnatakaBookingOffice: '',
     karnatakaPostOfficeNumber: '',
-    karnatakaPincode: '562106',
+    karnatakaPincode: '',
     karnatakaPhone: ''
   };
 
@@ -151,13 +151,13 @@ export function BranchManagementPage() {
         phone: data.pickupPhone || data.phone || data.headPhone,
         alternatePhone: data.pickupAlternatePhone || '',
         branchType: data.branchType,
-        billerId: data.billerId || '1000058077',
+        billerId: data.billerId || '',
         gstNumber: data.gstNumber || '',
-        headName: data.headName || `${data.name} Branch Head`,
+        headName: data.headName || data.name,
         headEmail: data.headEmail,
         headPassword: data.headPassword,
-        headPhone: data.headPhone || data.pickupPhone || data.phone,
-        accountName: data.headName || `${data.name} Branch Head`,
+        headPhone: data.headPhone || data.phone || data.pickupPhone,
+        accountName: data.headName || data.name,
         accountEmail: data.headEmail,
         accountPassword: data.headPassword,
         accountRole: 'MANAGER',
@@ -179,12 +179,12 @@ export function BranchManagementPage() {
           bookingOffice: data.pickupBookingOffice || '',
           notes: data.pickupNotes || ''
         },
-        karnatakaBillerId: data.karnatakaBillerId || '1000054429',
+        karnatakaBillerId: data.karnatakaBillerId || '',
         karnatakaPostalDetails: {
-          billerId: data.karnatakaBillerId || '1000054429',
-          bookingOffice: data.karnatakaBookingOffice || 'BENGALURU BPC POST - 562106',
+          billerId: data.karnatakaBillerId || '',
+          bookingOffice: data.karnatakaBookingOffice || '',
           postOfficeNumber: data.karnatakaPostOfficeNumber || '',
-          pincode: data.karnatakaPincode || '562106',
+          pincode: data.karnatakaPincode || '',
           phone: data.karnatakaPhone || data.karnatakaPostOfficeNumber || '',
           city: 'Bengaluru',
           state: 'Karnataka'
@@ -809,40 +809,19 @@ export function BranchManagementPage() {
                 required
                 placeholder="e.g. Salem Franchise Branch"
                 value={formData.name}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const autoCode = val ? val.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'BR') : '';
-                  const autoEmail = autoCode ? `${autoCode.toLowerCase()}.head@shanthiayurvedas.com` : '';
-                  const randPass = formData.headPassword || `Shanthi@${Math.floor(1000 + Math.random() * 9000)}`;
-                  setFormData((prev) => ({
-                    ...prev,
-                    name: val,
-                    code: prev.code || autoCode,
-                    headName: prev.headName || (val ? `${val} Branch Head` : ''),
-                    headEmail: prev.headEmail || autoEmail,
-                    headPassword: randPass,
-                    pickupContactPerson: prev.pickupContactPerson || (val ? `${val} Dispatch Head` : '')
-                  }));
-                }}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
               />
               <Input
                 label="Branch Code *"
                 required
                 placeholder="e.g. SLM"
                 value={formData.code}
-                onChange={(e) => {
-                  const c = e.target.value.toUpperCase();
-                  setFormData((prev) => ({
-                    ...prev,
-                    code: c,
-                    headEmail: prev.headEmail || (c ? `${c.toLowerCase()}.head@shanthiayurvedas.com` : '')
-                  }));
-                }}
+                onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
               />
               <Select
                 label="Branch Type"
                 value={formData.branchType}
-                onChange={(e) => setFormData({ ...formData, branchType: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, branchType: e.target.value }))}
                 options={[
                   { value: 'FRANCHISE', label: 'Franchise Partner' },
                   { value: 'COMPANY_OWNED', label: 'Company Owned' }
@@ -855,27 +834,19 @@ export function BranchManagementPage() {
                 label="Contact Phone"
                 placeholder="e.g. 9876543210"
                 value={formData.phone}
-                onChange={(e) => {
-                  const p = e.target.value;
-                  setFormData((prev) => ({
-                    ...prev,
-                    phone: p,
-                    headPhone: prev.headPhone || p,
-                    pickupPhone: prev.pickupPhone || p
-                  }));
-                }}
+                onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
               />
               <Input
                 label="Speed Post Biller ID"
-                placeholder="1000058077"
+                placeholder="e.g. 1000058077"
                 value={formData.billerId}
-                onChange={(e) => setFormData({ ...formData, billerId: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, billerId: e.target.value }))}
               />
               <Input
                 label="GSTIN (GST Number)"
                 placeholder="e.g. 33BNCPS0374P1ZM"
                 value={formData.gstNumber}
-                onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, gstNumber: e.target.value }))}
               />
             </div>
           </div>
@@ -1063,21 +1034,21 @@ export function BranchManagementPage() {
                 <Truck className="w-3.5 h-3.5 text-amber-700" />
                 <span>4. Karnataka India Post Configuration</span>
               </h4>
-              <Badge variant="warning" size="sm">Auto-Applied for KA</Badge>
+              <Badge variant="warning" size="sm">Optional for Karnataka</Badge>
             </div>
             <p className="text-[11px] text-amber-900/80 leading-relaxed">
-              When an order delivery destination is in Karnataka (Pincodes starting with 56, 57, 58, 59), the shipping label automatically prints with Karnataka Biller ID <strong>{formData.karnatakaBillerId || '1000054429'}</strong>, Karnataka booking post office, and post office pincode.
+              Optional: When an order delivery destination is in Karnataka (Pincodes starting with 56, 57, 58, 59), the shipping label uses these Karnataka booking post office and biller details.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
-                label="Karnataka Speed Post Biller ID *"
-                placeholder="1000054429"
+                label="Karnataka Speed Post Biller ID"
+                placeholder="e.g. 1000054429"
                 value={formData.karnatakaBillerId}
                 onChange={(e) => setFormData({ ...formData, karnatakaBillerId: e.target.value })}
               />
               <Input
-                label="Karnataka Post Office Pincode *"
-                placeholder="562106"
+                label="Karnataka Post Office Pincode"
+                placeholder="e.g. 562106"
                 value={formData.karnatakaPincode}
                 onChange={(e) => setFormData({ ...formData, karnatakaPincode: e.target.value })}
               />
@@ -1419,21 +1390,21 @@ export function BranchManagementPage() {
                 <Truck className="w-3.5 h-3.5 text-amber-700" />
                 <span>4. Karnataka India Post Configuration</span>
               </h4>
-              <Badge variant="warning" size="sm">Auto-Applied for KA</Badge>
+              <Badge variant="warning" size="sm">Optional for Karnataka</Badge>
             </div>
             <p className="text-[11px] text-amber-900/80 leading-relaxed">
-              When an order delivery destination is in Karnataka (Pincodes starting with 56, 57, 58, 59), the shipping label automatically prints with Karnataka Biller ID <strong>{editFormData.karnatakaBillerId || '1000054429'}</strong>, Karnataka booking post office, and post office pincode.
+              Optional: When an order delivery destination is in Karnataka (Pincodes starting with 56, 57, 58, 59), the shipping label uses these Karnataka booking post office and biller details.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
-                label="Karnataka Speed Post Biller ID *"
-                placeholder="1000054429"
+                label="Karnataka Speed Post Biller ID"
+                placeholder="e.g. 1000054429"
                 value={editFormData.karnatakaBillerId}
                 onChange={(e) => setEditFormData({ ...editFormData, karnatakaBillerId: e.target.value })}
               />
               <Input
-                label="Karnataka Post Office Pincode *"
-                placeholder="562106"
+                label="Karnataka Post Office Pincode"
+                placeholder="e.g. 562106"
                 value={editFormData.karnatakaPincode}
                 onChange={(e) => setEditFormData({ ...editFormData, karnatakaPincode: e.target.value })}
               />

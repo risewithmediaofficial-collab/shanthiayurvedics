@@ -878,13 +878,13 @@ export function BranchManagementPage() {
                   required
                   placeholder="e.g. Ramesh Kumar"
                   value={formData.headName}
-                  onChange={(e) => setFormData({ ...formData, headName: e.target.value })}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, headName: e.target.value }))}
                 />
                 <Input
                   label="Branch Head Phone (For WhatsApp)"
                   placeholder="e.g. 9876543210"
                   value={formData.headPhone}
-                  onChange={(e) => setFormData({ ...formData, headPhone: e.target.value })}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, headPhone: e.target.value }))}
                 />
               </div>
 
@@ -894,7 +894,7 @@ export function BranchManagementPage() {
                   required
                   placeholder="e.g. salem.head@shanthiayurvedas.com"
                   value={formData.headEmail}
-                  onChange={(e) => setFormData({ ...formData, headEmail: e.target.value })}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, headEmail: e.target.value }))}
                 />
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -903,7 +903,7 @@ export function BranchManagementPage() {
                       type="button"
                       onClick={() => {
                         const randPass = `Shanthi@${Math.floor(1000 + Math.random() * 9000)}`;
-                        setFormData({ ...formData, headPassword: randPass });
+                        setFormData((prev) => ({ ...prev, headPassword: randPass }));
                       }}
                       className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5 cursor-pointer"
                     >
@@ -916,7 +916,7 @@ export function BranchManagementPage() {
                       type={showPassword ? 'text' : 'password'}
                       placeholder="Set password"
                       value={formData.headPassword}
-                      onChange={(e) => setFormData({ ...formData, headPassword: e.target.value })}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, headPassword: e.target.value }))}
                     />
                     <button
                       type="button"
@@ -945,14 +945,14 @@ export function BranchManagementPage() {
                 required
                 placeholder="e.g. SHANTHI AYURVEDAS"
                 value={formData.pickupSenderName}
-                onChange={(e) => setFormData({ ...formData, pickupSenderName: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, pickupSenderName: e.target.value }))}
               />
               <Input
                 label="Pickup Contact Person *"
                 required
                 placeholder="e.g. Ramesh Kumar"
                 value={formData.pickupContactPerson}
-                onChange={(e) => setFormData({ ...formData, pickupContactPerson: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, pickupContactPerson: e.target.value }))}
               />
             </div>
 
@@ -962,13 +962,13 @@ export function BranchManagementPage() {
                 required
                 placeholder="e.g. 8884747209"
                 value={formData.pickupPhone}
-                onChange={(e) => setFormData({ ...formData, pickupPhone: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, pickupPhone: e.target.value }))}
               />
               <Input
                 label="Dispatch Phone 2 (Alternate)"
                 placeholder="e.g. 8884113629"
                 value={formData.pickupAlternatePhone}
-                onChange={(e) => setFormData({ ...formData, pickupAlternatePhone: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, pickupAlternatePhone: e.target.value }))}
               />
             </div>
 
@@ -977,7 +977,7 @@ export function BranchManagementPage() {
               required
               placeholder="e.g. NO15, JAYPEE GATEWAY, ANTHIVADI"
               value={formData.pickupStreet}
-              onChange={(e) => setFormData({ ...formData, pickupStreet: e.target.value })}
+              onChange={(e) => setFormData((prev) => ({ ...prev, pickupStreet: e.target.value }))}
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -986,12 +986,12 @@ export function BranchManagementPage() {
                 required
                 placeholder="e.g. Hosur"
                 value={formData.pickupCity}
-                onChange={(e) => setFormData({ ...formData, pickupCity: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, pickupCity: e.target.value }))}
               />
               <Select
                 label="State *"
                 value={formData.pickupState}
-                onChange={(e) => setFormData({ ...formData, pickupState: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, pickupState: e.target.value }))}
                 options={[
                   { value: 'Tamil Nadu', label: 'Tamil Nadu' },
                   { value: 'Karnataka', label: 'Karnataka' },
@@ -1007,7 +1007,7 @@ export function BranchManagementPage() {
                 required
                 placeholder="e.g. 635110"
                 value={formData.pickupPincode}
-                onChange={(e) => setFormData({ ...formData, pickupPincode: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, pickupPincode: e.target.value }))}
               />
             </div>
 
@@ -1016,13 +1016,13 @@ export function BranchManagementPage() {
                 label="Booking Post Office"
                 placeholder="e.g. HOSUR BPC POST - 635110"
                 value={formData.pickupBookingOffice}
-                onChange={(e) => setFormData({ ...formData, pickupBookingOffice: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, pickupBookingOffice: e.target.value }))}
               />
               <Input
                 label="Special Pickup Notes / Landmark"
                 placeholder="e.g. Near bus stand, dispatch counter"
                 value={formData.pickupNotes}
-                onChange={(e) => setFormData({ ...formData, pickupNotes: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, pickupNotes: e.target.value }))}
               />
             </div>
           </div>
@@ -1044,13 +1044,13 @@ export function BranchManagementPage() {
                 label="Karnataka Speed Post Biller ID"
                 placeholder="e.g. 1000054429"
                 value={formData.karnatakaBillerId}
-                onChange={(e) => setFormData({ ...formData, karnatakaBillerId: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, karnatakaBillerId: e.target.value }))}
               />
               <Input
                 label="Karnataka Post Office Pincode"
                 placeholder="e.g. 562106"
                 value={formData.karnatakaPincode}
-                onChange={(e) => setFormData({ ...formData, karnatakaPincode: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, karnatakaPincode: e.target.value }))}
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1058,13 +1058,13 @@ export function BranchManagementPage() {
                 label="Karnataka Booking Post Office"
                 placeholder="e.g. BENGALURU BPC POST - 562106"
                 value={formData.karnatakaBookingOffice}
-                onChange={(e) => setFormData({ ...formData, karnatakaBookingOffice: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, karnatakaBookingOffice: e.target.value }))}
               />
               <Input
                 label="Karnataka Post Office Number / Phone"
                 placeholder="e.g. 080-22860000 or dispatch phone"
                 value={formData.karnatakaPostOfficeNumber}
-                onChange={(e) => setFormData({ ...formData, karnatakaPostOfficeNumber: e.target.value })}
+                onChange={(e) => setFormData((prev) => ({ ...prev, karnatakaPostOfficeNumber: e.target.value }))}
               />
             </div>
           </div>
@@ -1104,7 +1104,7 @@ export function BranchManagementPage() {
                 <input
                   type="checkbox"
                   checked={editFormData.isActive}
-                  onChange={(e) => setEditFormData({ ...editFormData, isActive: e.target.checked })}
+                  onChange={(e) => setEditFormData((prev) => ({ ...prev, isActive: e.target.checked }))}
                   className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
                 />
                 <span>Active Branch</span>
@@ -1115,18 +1115,18 @@ export function BranchManagementPage() {
                 label="Branch Name *"
                 required
                 value={editFormData.name}
-                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, name: e.target.value }))}
               />
               <Input
                 label="Branch Code *"
                 required
                 value={editFormData.code}
-                onChange={(e) => setEditFormData({ ...editFormData, code: e.target.value.toUpperCase() })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
               />
               <Select
                 label="Branch Type"
                 value={editFormData.branchType}
-                onChange={(e) => setEditFormData({ ...editFormData, branchType: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, branchType: e.target.value }))}
                 options={[
                   { value: 'COMPANY_OWNED', label: 'Company Owned' },
                   { value: 'FRANCHISE', label: 'Franchise Partner' }
@@ -1137,19 +1137,19 @@ export function BranchManagementPage() {
               <Input
                 label="Contact Phone"
                 value={editFormData.phone}
-                onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, phone: e.target.value }))}
               />
               <Input
                 label="Speed Post Biller ID"
                 placeholder="1000058077"
                 value={editFormData.billerId}
-                onChange={(e) => setEditFormData({ ...editFormData, billerId: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, billerId: e.target.value }))}
               />
               <Input
                 label="GSTIN (GST Number)"
                 placeholder="e.g. 33BNCPS0374P1ZM"
                 value={editFormData.gstNumber}
-                onChange={(e) => setEditFormData({ ...editFormData, gstNumber: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, gstNumber: e.target.value }))}
               />
             </div>
           </div>
@@ -1167,13 +1167,13 @@ export function BranchManagementPage() {
                 required
                 placeholder="e.g. SHANTHI AYURVEDAS"
                 value={editFormData.pickupSenderName}
-                onChange={(e) => setEditFormData({ ...editFormData, pickupSenderName: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, pickupSenderName: e.target.value }))}
               />
               <Input
                 label="Pickup Contact Person"
                 placeholder="e.g. Ramesh Kumar"
                 value={editFormData.pickupContactPerson}
-                onChange={(e) => setEditFormData({ ...editFormData, pickupContactPerson: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, pickupContactPerson: e.target.value }))}
               />
             </div>
 
@@ -1182,13 +1182,13 @@ export function BranchManagementPage() {
                 label="Dispatch Phone 1"
                 placeholder="e.g. 8884747209"
                 value={editFormData.pickupPhone}
-                onChange={(e) => setEditFormData({ ...editFormData, pickupPhone: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, pickupPhone: e.target.value }))}
               />
               <Input
                 label="Dispatch Phone 2 (Alternate)"
                 placeholder="e.g. 8884113629"
                 value={editFormData.pickupAlternatePhone}
-                onChange={(e) => setEditFormData({ ...editFormData, pickupAlternatePhone: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, pickupAlternatePhone: e.target.value }))}
               />
             </div>
 
@@ -1196,7 +1196,7 @@ export function BranchManagementPage() {
               label="Street Address"
               placeholder="e.g. NO15, JAYPEE GATEWAY, ANTHIVADI"
               value={editFormData.pickupStreet}
-              onChange={(e) => setEditFormData({ ...editFormData, pickupStreet: e.target.value })}
+              onChange={(e) => setEditFormData((prev) => ({ ...prev, pickupStreet: e.target.value }))}
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1204,12 +1204,12 @@ export function BranchManagementPage() {
                 label="City"
                 placeholder="e.g. Hosur"
                 value={editFormData.pickupCity}
-                onChange={(e) => setEditFormData({ ...editFormData, pickupCity: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, pickupCity: e.target.value }))}
               />
               <Select
                 label="State"
                 value={editFormData.pickupState}
-                onChange={(e) => setEditFormData({ ...editFormData, pickupState: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, pickupState: e.target.value }))}
                 options={[
                   { value: 'Tamil Nadu', label: 'Tamil Nadu' },
                   { value: 'Karnataka', label: 'Karnataka' },
@@ -1224,7 +1224,7 @@ export function BranchManagementPage() {
                 label="Pincode"
                 placeholder="e.g. 635110"
                 value={editFormData.pickupPincode}
-                onChange={(e) => setEditFormData({ ...editFormData, pickupPincode: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, pickupPincode: e.target.value }))}
               />
             </div>
 
@@ -1233,13 +1233,13 @@ export function BranchManagementPage() {
                 label="Booking Post Office"
                 placeholder="e.g. HOSUR BPC POST - 635110"
                 value={editFormData.pickupBookingOffice}
-                onChange={(e) => setEditFormData({ ...editFormData, pickupBookingOffice: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, pickupBookingOffice: e.target.value }))}
               />
               <Input
                 label="Special Pickup Notes / Landmark"
                 placeholder="e.g. Near bus stand, dispatch counter"
                 value={editFormData.pickupNotes}
-                onChange={(e) => setEditFormData({ ...editFormData, pickupNotes: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, pickupNotes: e.target.value }))}
               />
             </div>
           </div>
@@ -1308,7 +1308,7 @@ export function BranchManagementPage() {
                   <Input
                     label="Update Branch Head Name"
                     value={editFormData.headName}
-                    onChange={(e) => setEditFormData({ ...editFormData, headName: e.target.value })}
+                    onChange={(e) => setEditFormData((prev) => ({ ...prev, headName: e.target.value }))}
                   />
                   <div>
                     <div className="flex items-center justify-between mb-1">
@@ -1317,7 +1317,7 @@ export function BranchManagementPage() {
                         type="button"
                         onClick={() => {
                           const randPass = `Shanthi@${Math.floor(1000 + Math.random() * 9000)}`;
-                          setEditFormData({ ...editFormData, headPassword: randPass });
+                          setEditFormData((prev) => ({ ...prev, headPassword: randPass }));
                         }}
                         className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5 cursor-pointer"
                       >
@@ -1327,7 +1327,7 @@ export function BranchManagementPage() {
                     <Input
                       placeholder="Leave blank to keep existing password"
                       value={editFormData.headPassword}
-                      onChange={(e) => setEditFormData({ ...editFormData, headPassword: e.target.value })}
+                      onChange={(e) => setEditFormData((prev) => ({ ...prev, headPassword: e.target.value }))}
                     />
                   </div>
                 </div>
@@ -1342,13 +1342,13 @@ export function BranchManagementPage() {
                     label="Branch Head Full Name *"
                     placeholder="e.g. Ramesh Kumar"
                     value={editFormData.headName}
-                    onChange={(e) => setEditFormData({ ...editFormData, headName: e.target.value })}
+                    onChange={(e) => setEditFormData((prev) => ({ ...prev, headName: e.target.value }))}
                   />
                   <Input
                     label="Branch Head Phone"
                     placeholder="e.g. 9876543210"
                     value={editFormData.headPhone}
-                    onChange={(e) => setEditFormData({ ...editFormData, headPhone: e.target.value })}
+                    onChange={(e) => setEditFormData((prev) => ({ ...prev, headPhone: e.target.value }))}
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1356,7 +1356,7 @@ export function BranchManagementPage() {
                     label="Username / Login Email *"
                     placeholder="e.g. head@shanthiayurvedas.com"
                     value={editFormData.headEmail}
-                    onChange={(e) => setEditFormData({ ...editFormData, headEmail: e.target.value })}
+                    onChange={(e) => setEditFormData((prev) => ({ ...prev, headEmail: e.target.value }))}
                   />
                   <div>
                     <div className="flex items-center justify-between mb-1">
@@ -1365,7 +1365,7 @@ export function BranchManagementPage() {
                         type="button"
                         onClick={() => {
                           const randPass = `Shanthi@${Math.floor(1000 + Math.random() * 9000)}`;
-                          setEditFormData({ ...editFormData, headPassword: randPass });
+                          setEditFormData((prev) => ({ ...prev, headPassword: randPass }));
                         }}
                         className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5 cursor-pointer"
                       >
@@ -1375,7 +1375,7 @@ export function BranchManagementPage() {
                     <Input
                       placeholder="Enter password"
                       value={editFormData.headPassword}
-                      onChange={(e) => setEditFormData({ ...editFormData, headPassword: e.target.value })}
+                      onChange={(e) => setEditFormData((prev) => ({ ...prev, headPassword: e.target.value }))}
                     />
                   </div>
                 </div>
@@ -1400,13 +1400,13 @@ export function BranchManagementPage() {
                 label="Karnataka Speed Post Biller ID"
                 placeholder="e.g. 1000054429"
                 value={editFormData.karnatakaBillerId}
-                onChange={(e) => setEditFormData({ ...editFormData, karnatakaBillerId: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, karnatakaBillerId: e.target.value }))}
               />
               <Input
                 label="Karnataka Post Office Pincode"
                 placeholder="e.g. 562106"
                 value={editFormData.karnatakaPincode}
-                onChange={(e) => setEditFormData({ ...editFormData, karnatakaPincode: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, karnatakaPincode: e.target.value }))}
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1414,13 +1414,13 @@ export function BranchManagementPage() {
                 label="Karnataka Booking Post Office"
                 placeholder="e.g. BENGALURU BPC POST - 562106"
                 value={editFormData.karnatakaBookingOffice}
-                onChange={(e) => setEditFormData({ ...editFormData, karnatakaBookingOffice: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, karnatakaBookingOffice: e.target.value }))}
               />
               <Input
                 label="Karnataka Post Office Number / Phone"
                 placeholder="e.g. 080-22860000 or dispatch phone"
                 value={editFormData.karnatakaPostOfficeNumber}
-                onChange={(e) => setEditFormData({ ...editFormData, karnatakaPostOfficeNumber: e.target.value })}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, karnatakaPostOfficeNumber: e.target.value }))}
               />
             </div>
           </div>

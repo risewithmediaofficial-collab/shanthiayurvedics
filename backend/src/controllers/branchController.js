@@ -111,29 +111,71 @@ export const createBranch = asyncHandler(async (req, res) => {
   let effectiveDistributorPhone = distributorPhone;
   let effectiveDistributorEmail = distributorEmail;
 
-  const resolvedHeadEmail = (headEmail || accountEmail)?.toLowerCase()?.trim();
-  const resolvedHeadPassword = headPassword || accountPassword;
-  const resolvedHeadName = (headName || accountName || `${name} Branch Head`)?.trim();
+  let resolvedHeadEmail = (headEmail || accountEmail)?.toLowerCase()?.trim();
+  const resolvedHeadPassword = (headPassword || accountPassword)?.trim();
+  const resolvedHeadName = (headName || accountName)?.trim();
   const resolvedHeadPhone = headPhone || postalPickupDetails?.phone || phone || '';
 
-  if (resolvedHeadEmail && resolvedHeadPassword) {
-    const existing = await User.findOne({ email: resolvedHeadEmail });
-    if (existing) {
-      throw new ConflictError(`User account with email/username '${resolvedHeadEmail}' already exists`);
+  // If headName or headPassword was provided, but headEmail was left blank, derive from code
+  if (!resolvedHeadEmail && (resolvedHeadName || resolvedHeadPassword)) {
+    const cleanCode = code ? code.toLowerCase().replace(/[^a-z0-9]/g, '') : 'branch';
+    resolvedHeadEmail = `${cleanCode}.head@shanthiayurvedas.com`;
+  }
+
+  if (resolvedHeadEmail) {
+    const effectivePassword = (resolvedHeadPassword && resolvedHeadPassword.length >= 4)
+      ? resolvedHeadPassword
+      : `Shanthi@${Math.floor(1000 + Math.random() * 9000)}`;
+    const effectiveName = resolvedHeadName || `${name} Branch Head`;
+
+    let normalizedEmail = resolvedHeadEmail;
+    let rawUsername = resolvedHeadEmail;
+    if (resolvedHeadEmail.includes('@')) {
+      rawUsername = resolvedHeadEmail.split('@')[0];
+    } else {
+      normalizedEmail = `${resolvedHeadEmail}@shanthiayurvedas.com`;
     }
 
-    const passwordHash = await User.hashPassword(resolvedHeadPassword);
-    const assignedRole = accountRole === 'DISTRIBUTOR' ? 'DISTRIBUTOR' : 'MANAGER';
-    const newAccountUser = new User({
-      name: resolvedHeadName,
-      email: resolvedHeadEmail,
-      passwordHash,
-      initialPassword: resolvedHeadPassword,
-      role: assignedRole,
-      phone: resolvedHeadPhone,
-      isActive: true
+    // Check if user already exists
+    let existing = await User.findOne({
+      $or: [
+        { email: normalizedEmail },
+        { email: resolvedHeadEmail },
+        { username: rawUsername },
+        { username: resolvedHeadEmail }
+      ]
     });
-    await newAccountUser.save();
+
+    let newAccountUser;
+    const assignedRole = accountRole === 'DISTRIBUTOR' ? 'DISTRIBUTOR' : 'MANAGER';
+
+    if (existing) {
+      if (existing.role === 'OWNER') {
+        throw new ConflictError('Cannot link Owner account as Branch Head. Please use a distinct email/username.');
+      }
+      const passwordHash = await User.hashPassword(effectivePassword);
+      existing.name = effectiveName || existing.name;
+      existing.passwordHash = passwordHash;
+      existing.initialPassword = effectivePassword;
+      existing.role = assignedRole;
+      if (resolvedHeadPhone) existing.phone = resolvedHeadPhone;
+      existing.isActive = true;
+      await existing.save();
+      newAccountUser = existing;
+    } else {
+      const passwordHash = await User.hashPassword(effectivePassword);
+      newAccountUser = new User({
+        name: effectiveName,
+        email: normalizedEmail,
+        username: rawUsername,
+        passwordHash,
+        initialPassword: effectivePassword,
+        role: assignedRole,
+        phone: resolvedHeadPhone,
+        isActive: true
+      });
+      await newAccountUser.save();
+    }
 
     if (assignedRole === 'DISTRIBUTOR') {
       effectiveDistributorId = newAccountUser._id;
@@ -149,9 +191,9 @@ export const createBranch = asyncHandler(async (req, res) => {
     createdAccount = {
       id: newAccountUser._id,
       name: newAccountUser.name,
-      username: newAccountUser.email,
+      username: rawUsername,
       email: newAccountUser.email,
-      password: resolvedHeadPassword,
+      password: effectivePassword,
       role: assignedRole,
       isBranchHead: true
     };
@@ -314,19 +356,35 @@ export const updateBranch = asyncHandler(async (req, res) => {
   if (isActive !== undefined) branch.isActive = isActive;
 
   // Handle Branch Head Account Updates or Creation from Edit Branch
-  if (headEmail || headPassword) {
-    const resolvedHeadEmail = headEmail?.toLowerCase()?.trim();
+  if (headEmail || headPassword || headName) {
+    let resolvedHeadEmail = headEmail?.toLowerCase()?.trim();
     const resolvedHeadPassword = headPassword?.trim();
     const resolvedHeadName = (headName || branch.managerName || `${branch.name} Branch Head`)?.trim();
-    const resolvedHeadPhone = headPhone || postalPickupDetails?.phone || phone || branch.phone || '';
+    const resolvedHeadPhone = headPhone || req.body.postalPickupDetails?.phone || phone || branch.phone || '';
+
+    if (!resolvedHeadEmail && (branch.code || resolvedHeadName)) {
+      const cleanCode = branch.code ? branch.code.toLowerCase().replace(/[^a-z0-9]/g, '') : 'branch';
+      resolvedHeadEmail = `${cleanCode}.head@shanthiayurvedas.com`;
+    }
 
     let headUser = null;
     if (branch.managerId) {
       headUser = await User.findById(branch.managerId);
     }
     if (!headUser && resolvedHeadEmail) {
-      headUser = await User.findOne({ email: resolvedHeadEmail });
+      const rawUser = resolvedHeadEmail.includes('@') ? resolvedHeadEmail.split('@')[0] : resolvedHeadEmail;
+      headUser = await User.findOne({
+        $or: [
+          { email: resolvedHeadEmail },
+          { username: rawUser },
+          { username: resolvedHeadEmail }
+        ]
+      });
     }
+
+    const effectivePassword = (resolvedHeadPassword && resolvedHeadPassword.length >= 4)
+      ? resolvedHeadPassword
+      : (headUser?.initialPassword || `Shanthi@${Math.floor(1000 + Math.random() * 9000)}`);
 
     if (headUser) {
       if (resolvedHeadName) headUser.name = resolvedHeadName;
@@ -352,29 +410,29 @@ export const updateBranch = asyncHandler(async (req, res) => {
       branch.managerPhone = headUser.phone;
 
       // Update recorded initialCredentials
-      if (resolvedHeadPassword) {
-        const credIdx = branch.initialCredentials?.findIndex(c => c.email?.toLowerCase() === headUser.email.toLowerCase());
-        if (credIdx !== -1 && credIdx !== undefined) {
-          branch.initialCredentials[credIdx].password = resolvedHeadPassword;
-          branch.initialCredentials[credIdx].name = headUser.name;
-        } else {
-          branch.initialCredentials.push({
-            userId: headUser._id,
-            name: headUser.name,
-            email: headUser.email,
-            role: 'MANAGER',
-            password: resolvedHeadPassword,
-            createdAt: new Date()
-          });
-        }
+      const credIdx = branch.initialCredentials?.findIndex(c => c.email?.toLowerCase() === headUser.email.toLowerCase() || String(c.userId) === String(headUser._id));
+      if (credIdx !== -1 && credIdx !== undefined) {
+        if (resolvedHeadPassword) branch.initialCredentials[credIdx].password = resolvedHeadPassword;
+        branch.initialCredentials[credIdx].name = headUser.name;
+      } else {
+        branch.initialCredentials.push({
+          userId: headUser._id,
+          name: headUser.name,
+          email: headUser.email,
+          role: 'MANAGER',
+          password: effectivePassword,
+          createdAt: new Date()
+        });
       }
-    } else if (resolvedHeadEmail && resolvedHeadPassword && resolvedHeadPassword.length >= 4) {
-      const passwordHash = await User.hashPassword(resolvedHeadPassword);
+    } else if (resolvedHeadEmail) {
+      const passwordHash = await User.hashPassword(effectivePassword);
+      const rawUser = resolvedHeadEmail.includes('@') ? resolvedHeadEmail.split('@')[0] : resolvedHeadEmail;
       headUser = new User({
         name: resolvedHeadName,
         email: resolvedHeadEmail,
+        username: rawUser,
         passwordHash,
-        initialPassword: resolvedHeadPassword,
+        initialPassword: effectivePassword,
         role: 'MANAGER',
         phone: resolvedHeadPhone,
         branchId: branch._id,
@@ -392,7 +450,7 @@ export const updateBranch = asyncHandler(async (req, res) => {
         name: headUser.name,
         email: headUser.email,
         role: 'MANAGER',
-        password: resolvedHeadPassword,
+        password: effectivePassword,
         createdAt: new Date()
       });
     }

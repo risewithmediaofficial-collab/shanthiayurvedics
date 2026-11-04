@@ -46,30 +46,48 @@ export const adminResetPasswordSchema = {
 };
 
 export const createBranchSchema = {
-  body: z.object({
-    name: z.string().min(2).max(100),
-    code: z.string().min(2).max(10).toUpperCase(),
-    address: z
-      .object({
-        street: z.string().optional(),
-        city: z.string().optional(),
-        state: z.string().optional(),
-        pincode: z.string().optional(),
-        country: z.string().optional()
-      })
-      .optional(),
-    phone: z.string().optional(),
-    email: z.string().email().optional().or(z.literal('')),
-    managerId: z.string().optional().nullable(),
-    managerName: z.string().optional(),
-    managerPhone: z.string().optional(),
-    distributorId: z.string().optional().nullable(),
-    distributorName: z.string().optional(),
-    distributorPhone: z.string().optional(),
-    distributorEmail: z.string().email().optional().or(z.literal('')),
-    branchType: z.enum(['COMPANY_OWNED', 'FRANCHISE']).optional(),
-    billerId: z.string().optional(),
-    gstNumber: z.string().optional(),
-    revenueSharePercent: z.number().optional()
-  })
+  body: z
+    .object({
+      name: z.string().min(2).max(100),
+      code: z.string().min(2).max(10).toUpperCase(),
+      address: z
+        .object({
+          street: z.string().optional(),
+          city: z.string().optional(),
+          state: z.string().optional(),
+          pincode: z.string().optional(),
+          country: z.string().optional()
+        })
+        .passthrough()
+        .optional(),
+      phone: z.string().optional(),
+      alternatePhone: z.string().optional(),
+      email: z.string().optional().or(z.literal('')),
+      managerId: z.string().optional().nullable(),
+      managerName: z.string().optional(),
+      managerPhone: z.string().optional(),
+      distributorId: z.string().optional().nullable(),
+      distributorName: z.string().optional(),
+      distributorPhone: z.string().optional(),
+      distributorEmail: z.string().optional().or(z.literal('')),
+      branchType: z.enum(['COMPANY_OWNED', 'FRANCHISE']).optional(),
+      billerId: z.string().optional(),
+      gstNumber: z.string().optional(),
+      revenueSharePercent: z.number().optional(),
+      // Section 2: Branch Head Credentials & Account Creation
+      headName: z.string().optional(),
+      headEmail: z.string().optional(),
+      headPassword: z.string().optional(),
+      headPhone: z.string().optional(),
+      accountName: z.string().optional(),
+      accountEmail: z.string().optional(),
+      accountPassword: z.string().optional(),
+      accountRole: z.string().optional(),
+      // Section 3: Postal Pickup Details
+      postalPickupDetails: z.record(z.any()).optional(),
+      // Section 4: Karnataka India Post Configuration
+      karnatakaBillerId: z.string().optional(),
+      karnatakaPostalDetails: z.record(z.any()).optional()
+    })
+    .passthrough()
 };

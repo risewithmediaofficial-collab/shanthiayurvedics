@@ -488,12 +488,6 @@ export function ShippingLabelLandscapeModal({
       helpBannerText = `Help (How to use & Problems/Contact us)`;
     }
 
-    // Courier Detection (India Post vs TPC vs other private couriers)
-    const courierRaw = (order.courierName || '').toLowerCase().trim();
-    const isTPC = courierRaw.includes('professional') || courierRaw === 'tpc' || courierRaw.startsWith('tpc') || courierRaw.includes('the professional');
-    const isOtherCourier = !isTPC && Boolean(courierRaw && !courierRaw.includes('post') && !courierRaw.includes('india'));
-    const isIndiaPost = !isTPC && !isOtherCourier;
-
     const isCOD = (order.paymentMethod || 'COD') === 'COD';
     const advanceAmount = Number(order.advanceAmount || 0);
     const advanceUtr = order.advanceUtr || '';
@@ -504,32 +498,16 @@ export function ShippingLabelLandscapeModal({
     ) || 0);
     const amountWords = convertNumberToIndianWords(payableAmount);
 
-    // 1. Top Carrier Line (Line 2):
-    // For TPC: "THE PROFESSIONAL COURIERS (TPC) · PREPAID (Rs ...) | ... RUPEES ONLY"
-    // For Other: "<COURIER> · PREPAID (Rs ...) | ... RUPEES ONLY"
-    // For India Post: "SPEED POST : Rs ... | ... RUPEES ONLY"
-    let carrierBannerText;
-    if (isTPC) {
-      carrierBannerText = `THE PROFESSIONAL COURIERS (TPC) · ${isCOD ? `COD : Rs ${payableAmount}` : `PREPAID (Rs ${payableAmount})`} | ${amountWords} RUPEES ONLY`;
-    } else if (isOtherCourier) {
-      carrierBannerText = `${(order.courierName || 'EXPRESS COURIER').toUpperCase()} · ${isCOD ? `COD : Rs ${payableAmount}` : `PREPAID (Rs ${payableAmount})`} | ${amountWords} RUPEES ONLY`;
-    } else {
-      carrierBannerText = isCOD
-        ? `SPEED POST : Rs ${payableAmount} | ${amountWords} RUPEES ONLY`
-        : `SPEED POST : PREPAID (Rs ${payableAmount}) | ${amountWords} RUPEES ONLY`;
-    }
+    // 1. Top Carrier Line (Line 2) - Standard Speed Post header (no courier brand/name)
+    const carrierBannerText = isCOD
+      ? `SPEED POST : Rs ${payableAmount} | ${amountWords} RUPEES ONLY`
+      : `SPEED POST : PREPAID (Rs ${payableAmount}) | ${amountWords} RUPEES ONLY`;
     const speedPostText = carrierBannerText;
 
-    // Tracking / Consignment Docket Number
+    // Tracking / Article Number
     const cleanOrderNum = order.orderNumber?.replace(/[^0-9]/g, '').slice(-9) || Date.now().toString().slice(-9);
-    const trackingTitle = isTPC
-      ? 'TPC CONSIGNMENT NUMBER'
-      : (isOtherCourier ? 'CONSIGNMENT / DOCKET NUMBER' : 'ARTICLE NUMBER');
-    const tracking = order.trackingNumber || order.awbNumber || (
-      isTPC
-        ? `TPC${cleanOrderNum}`
-        : (isOtherCourier ? `CR${cleanOrderNum}` : `EM${cleanOrderNum}IN`)
-    );
+    const trackingTitle = 'ARTICLE NUMBER';
+    const tracking = order.trackingNumber || order.awbNumber || `EM${cleanOrderNum}IN`;
     
     // Dynamic Branch Sender & Return / From Address
     const branch = (() => {
@@ -637,11 +615,7 @@ export function ShippingLabelLandscapeModal({
     let bookingLocation = '';
     let carrierSubheaderText;
 
-    if (isTPC) {
-      carrierSubheaderText = `THE PROFESSIONAL COURIERS · EXPRESS PARCEL & CARGO LOGISTICS · DISPATCH HUB: ${senderCity}`;
-    } else if (isOtherCourier) {
-      carrierSubheaderText = `${(order.courierName || 'EXPRESS COURIER').toUpperCase()} LOGISTICS NETWORK · DISPATCH HUB: ${senderCity}`;
-    } else if (isKarnataka) {
+    if (isKarnataka) {
       billerId = knPickup.billerId || branch.karnatakaBillerId || '1000054429';
       let knRawOffice = (knPickup.bookingOffice || `BENGALURU BPC POST - ${knPin}`).toUpperCase();
       knRawOffice = knRawOffice.replace(/560001/g, '562106');
@@ -720,9 +694,6 @@ export function ShippingLabelLandscapeModal({
       products,
       helpBannerText,
       isKarnataka,
-      isTPC,
-      isOtherCourier,
-      isIndiaPost,
       knPincode: knPincodeVal,
       knPincodeVal: knPin,
       knPostOfficeNumber: knPoNumber
@@ -836,17 +807,6 @@ export function ShippingLabelLandscapeModal({
                         <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; background: #f9fafb; font-weight: 800; font-size: ${adaptive.labelFont}; white-space: nowrap;">WEIGHT</td>
                         <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; word-break: break-word; overflow-wrap: break-word;">${d.weightText} ${d.totalPieces} PCS</td>
                       </tr>
-                      ${d.isTPC ? `
-                        <tr style="border-bottom: 1px solid #000; background: #eff6ff;">
-                          <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #1e40af; white-space: nowrap;">COURIER</td>
-                          <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #1e40af; word-break: break-word; overflow-wrap: break-word;">TPC EXPRESS LOGISTICS</td>
-                        </tr>
-                      ` : (d.isOtherCourier ? `
-                        <tr style="border-bottom: 1px solid #000; background: #eff6ff;">
-                          <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #1e40af; white-space: nowrap;">COURIER</td>
-                          <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #1e40af; word-break: break-word; overflow-wrap: break-word;">${(d.order.courierName || 'COURIER').toUpperCase()}</td>
-                        </tr>
-                      ` : '')}
                       ${d.advanceAmount > 0 ? `
                         <tr style="border-bottom: 1px solid #000; background: #f0fdf4;">
                           <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #166534; white-space: nowrap;">ADVANCE</td>
@@ -1368,37 +1328,6 @@ export function ShippingLabelLandscapeModal({
                       {d.weightText} {d.totalPieces} PCS
                     </td>
                   </tr>
-                  {d.isTPC ? (
-                    <tr className="border-b border-black bg-blue-50/70">
-                      <td
-                        className={`px-1 ${adaptive.tablePadClass} border-r border-black font-bold text-blue-900 whitespace-nowrap align-middle`}
-                        style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
-                      >
-                        COURIER
-                      </td>
-                      <td
-                        className={`px-1.5 ${adaptive.tablePadClass} font-black text-blue-900 break-words leading-tight align-middle`}
-                        style={{ fontSize: adaptive.previewProdFont }}
-                      >
-                        TPC EXPRESS LOGISTICS
-                      </td>
-                    </tr>
-                  ) : d.isOtherCourier ? (
-                    <tr className="border-b border-black bg-blue-50/70">
-                      <td
-                        className={`px-1 ${adaptive.tablePadClass} border-r border-black font-bold text-blue-900 whitespace-nowrap align-middle`}
-                        style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
-                      >
-                        COURIER
-                      </td>
-                      <td
-                        className={`px-1.5 ${adaptive.tablePadClass} font-black text-blue-900 break-words leading-tight align-middle`}
-                        style={{ fontSize: adaptive.previewProdFont }}
-                      >
-                        {(d.order.courierName || 'COURIER').toUpperCase()}
-                      </td>
-                    </tr>
-                  ) : null}
                   {d.advanceAmount > 0 && (
                     <tr className="border-b border-black bg-emerald-50/60">
                       <td

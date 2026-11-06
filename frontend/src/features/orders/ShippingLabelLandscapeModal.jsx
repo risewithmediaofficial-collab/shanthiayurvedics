@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Printer, ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { convertNumberToIndianWords } from '../../utils/numberToWords.js';
+import { useBranch } from '../../context/BranchContext.jsx';
 
 // Font scales for adjusting text size on shipping labels
 const FONT_SCALES = {
@@ -345,6 +346,9 @@ export function ShippingLabelLandscapeModal({
   orders = [],
   title = 'Shipping Labels'
 }) {
+  const { allBranches, availableBranches, selectedBranchId } = useBranch();
+  const branchList = allBranches?.length ? allBranches : availableBranches;
+
   const [currentPage, setCurrentPage] = useState(0);
   const [brandStyle, setBrandStyle] = useState('LOGO'); // LOGO | SHANTHI
   const [fontScale, setFontScale] = useState('normal'); // compact | normal | large | xlarge
@@ -528,30 +532,83 @@ export function ShippingLabelLandscapeModal({
     );
     
     // Dynamic Branch Sender & Return / From Address
-    const branch = typeof order.branchId === 'object' && order.branchId ? order.branchId : {};
+    const branch = (() => {
+      if (
+        order.branchId &&
+        typeof order.branchId === 'object' &&
+        (order.branchId.name || order.branchId.address || order.branchId.postalPickupDetails)
+      ) {
+        return order.branchId;
+      }
+
+      const bId = typeof order.branchId === 'string'
+        ? order.branchId
+        : (order.branchId?._id || order.branchId?.id);
+
+      if (bId && Array.isArray(branchList)) {
+        const found = branchList.find((b) => String(b._id || b.id) === String(bId));
+        if (found) return found;
+      }
+
+      if (selectedBranchId && selectedBranchId !== 'ALL' && Array.isArray(branchList)) {
+        const current = branchList.find((b) => String(b._id || b.id) === String(selectedBranchId));
+        if (current) return current;
+      }
+
+      return branchList?.[0] || {};
+    })();
+
     const pickup = branch.postalPickupDetails || {};
     const knPickup = branch.karnatakaPostalDetails || {};
     const branchAddr = branch.address || {};
 
-    const senderTitle = (pickup.senderName || 'SHANTHI AYURVEDAS').toUpperCase();
-    const senderCity = (isKarnataka ? (knPickup.city || 'BENGALURU') : (pickup.city || branchAddr.city || 'HOSUR')).toUpperCase();
-    const senderPincode = (isKarnataka ? (knPickup.pincode || '562106') : (pickup.pincode || branchAddr.pincode || '635110')).trim();
+    const senderTitle = (pickup.senderName || branch.name || 'SHANTHI AYURVEDAS').toUpperCase();
+
+    // 1. Resolve cities & pincodes:
+    const knCity = (knPickup.city || 'BENGALURU').toUpperCase();
+    const knPin = (knPickup.pincode === '560001' ? '562106' : (knPickup.pincode || '562106')).trim();
+    const defaultCity = (pickup.city || branchAddr.city || 'HOSUR').toUpperCase();
+    const defaultPin = (pickup.pincode || branchAddr.pincode || '635110').trim();
+
+    const senderCity = isKarnataka ? knCity : defaultCity;
+    const senderPincode = isKarnataka ? knPin : defaultPin;
     const knPoNumber = (knPickup.postOfficeNumber || branch.karnatakaPostOfficeNumber || knPickup.phone || '').trim();
 
-    // Return address:
-    // Karnataka orders/pincodes:
-    //   Shanthi Ayurvedas, 156,srr exbhuria,Anekal, Bengaluru district. 562106
-    // Tamil Nadu & other orders:
-    //   Shanthi Ayurvedas, No15, Jaypee gateway, anthivadi, hosur. 635110
+    // 2. Resolve From / Return Address:
+    const pStreet = (pickup.street || branchAddr.street || '').trim();
+    const pCity = (pickup.city || branchAddr.city || '').trim();
+    const pState = (pickup.state || branchAddr.state || '').trim();
+    const pPincode = (pickup.pincode || branchAddr.pincode || '').trim();
+
+    let branchAddrParts = [];
+    if (pStreet) branchAddrParts.push(pStreet);
+    if (pCity && !pStreet.toLowerCase().includes(pCity.toLowerCase())) branchAddrParts.push(pCity);
+    if (pState && !pStreet.toLowerCase().includes(pState.toLowerCase())) branchAddrParts.push(pState);
+
+    let resolvedBranchAddr = branchAddrParts.join(', ');
+    if (pPincode && !resolvedBranchAddr.includes(pPincode)) {
+      resolvedBranchAddr = resolvedBranchAddr ? `${resolvedBranchAddr} - ${pPincode}` : pPincode;
+    }
+
     let fromAddressText;
     if (isKarnataka) {
-      fromAddressText = `FROM : ${senderTitle}, 156, SRR EXBHURIA, ANEKAL, BENGALURU DISTRICT - 562106`;
+      const knStreet = (knPickup.street || '').trim();
+      if (knStreet) {
+        let knParts = [knStreet];
+        if (knCity && !knStreet.toLowerCase().includes(knCity.toLowerCase())) knParts.push(knCity);
+        const knState = (knPickup.state || 'KARNATAKA').trim();
+        if (knState && !knStreet.toLowerCase().includes(knState.toLowerCase())) knParts.push(knState);
+        fromAddressText = `FROM : ${senderTitle}, ${knParts.join(', ').toUpperCase()} - ${knPin}`;
+      } else {
+        fromAddressText = `FROM : ${senderTitle}, 156, SRR EXBHURIA, ANEKAL, BENGALURU DISTRICT - 562106`;
+      }
+    } else if (resolvedBranchAddr) {
+      fromAddressText = `FROM : ${senderTitle}, ${resolvedBranchAddr.toUpperCase()}`;
     } else {
       fromAddressText = `FROM : ${senderTitle}, NO15, JAYPEE GATEWAY, ANTHIVADI, HOSUR - 635110`;
     }
 
-    // Contact Numbers:
-    // "8884747209/8884113629 and before this contat numbers 1st should be telecaller or who order placing their contact number should be"
+    // 3. Resolve Sender Contact Numbers:
     const orderPlacerPhone = String(
       order.assignedTo?.phone ||
       order.telecallerPhone ||
@@ -560,19 +617,24 @@ export function ShippingLabelLandscapeModal({
       ''
     ).replace(/^\+91\s*/, '').replace(/[^0-9]/g, '').trim();
 
-    let senderMobileText;
-    if (orderPlacerPhone && orderPlacerPhone !== '8884747209' && orderPlacerPhone !== '8884113629') {
-      senderMobileText = `MOBILE : ${orderPlacerPhone} / 8884747209 / 8884113629`;
-    } else {
-      senderMobileText = `MOBILE : 8884747209 / 8884113629`;
-    }
+    const branchPhone1 = String(pickup.phone || branch.phone || (isKarnataka ? knPickup.phone : '') || '')
+      .replace(/^\+91\s*/, '')
+      .replace(/[^0-9]/g, '')
+      .trim();
+    const branchPhone2 = String(pickup.alternatePhone || branch.alternatePhone || '')
+      .replace(/^\+91\s*/, '')
+      .replace(/[^0-9]/g, '')
+      .trim();
 
-    // 2. Subheader (Line 3):
-    // For TPC: NO Speed Post Biller ID and NO Post Office booking details!
+    const phonesList = [orderPlacerPhone, branchPhone1, branchPhone2]
+      .filter((p, idx, arr) => Boolean(p) && arr.indexOf(p) === idx);
+
+    const senderMobileText = `MOBILE : ${phonesList.length > 0 ? phonesList.join(' / ') : '8884747209 / 8884113629'}`;
+
+    // 4. Resolve Subheader (Line 3: Biller ID & Booking Post Office):
     let billerId = branch.billerId || '1000058077';
     let bookingLocation = '';
     let carrierSubheaderText;
-    const knPincodeVal = (knPickup.pincode === '560001' ? '562106' : (knPickup.pincode || '562106')).trim();
 
     if (isTPC) {
       carrierSubheaderText = `THE PROFESSIONAL COURIERS · EXPRESS PARCEL & CARGO LOGISTICS · DISPATCH HUB: ${senderCity}`;
@@ -580,7 +642,7 @@ export function ShippingLabelLandscapeModal({
       carrierSubheaderText = `${(order.courierName || 'EXPRESS COURIER').toUpperCase()} LOGISTICS NETWORK · DISPATCH HUB: ${senderCity}`;
     } else if (isKarnataka) {
       billerId = knPickup.billerId || branch.karnatakaBillerId || '1000054429';
-      let knRawOffice = (knPickup.bookingOffice || `BENGALURU BPC POST - ${knPincodeVal}`).toUpperCase();
+      let knRawOffice = (knPickup.bookingOffice || `BENGALURU BPC POST - ${knPin}`).toUpperCase();
       knRawOffice = knRawOffice.replace(/560001/g, '562106');
       bookingLocation = knRawOffice.includes('562106') ? knRawOffice : `${knRawOffice} - 562106`;
       const poNumTag = knPoNumber ? ` · PO NO: ${knPoNumber}` : '';
@@ -598,8 +660,20 @@ export function ShippingLabelLandscapeModal({
     const orderWeight = order.weight || order.items?.reduce((sum, item) => sum + (Number(item.weight || item.productId?.weight || 0) * (Number(item.quantity) || 1)), 0) || 0;
     const weightText = orderWeight > 0 ? (orderWeight >= 1000 ? `${(orderWeight / 1000).toFixed(2)} KG` : `${orderWeight} G`) : '1.06 KG';
 
-    const telecallerName = (order.assignedTo?.name || order.telecallerName || 'SHANTHI CLINIC').toUpperCase();
-    const telecallerMobile = order.assignedTo?.phone || order.telecallerPhone || '8925744369';
+    const telecallerName = (
+      order.assignedTo?.name ||
+      order.telecallerName ||
+      pickup.contactPerson ||
+      branch.managerName ||
+      'SHANTHI CLINIC'
+    ).toUpperCase();
+    const telecallerMobile =
+      order.assignedTo?.phone ||
+      order.telecallerPhone ||
+      pickup.phone ||
+      branch.managerPhone ||
+      branchPhone1 ||
+      '8925744369';
 
     // Show ALL products - consolidate duplicates by summing quantity, preserving every unique product
     const productMap = new Map();

@@ -176,7 +176,12 @@ export const getOrderById = asyncHandler(async (req, res) => {
 
 export const createOrder = asyncHandler(async (req, res) => {
   const order = await OrderService.createOrder(req.body, req.user, req);
-  return ApiResponse.created(res, order, 'Order created and stock reserved successfully');
+  const populatedOrder = await Order.findById(order._id)
+    .populate('customerId', 'name mobile email addresses')
+    .populate('telecallerId', 'name email phone role')
+    .populate('branchId', 'name code address phone alternatePhone postalPickupDetails karnatakaPostalDetails karnatakaBillerId billerId gstNumber')
+    .lean();
+  return ApiResponse.created(res, populatedOrder || order, 'Order created and stock reserved successfully');
 });
 
 export const transitionOrderStatus = asyncHandler(async (req, res) => {
@@ -276,7 +281,7 @@ export const exportOrders = asyncHandler(async (req, res) => {
   const orders = await Order.find(query)
     .populate('customerId', 'name mobile email')
     .populate('telecallerId', 'name phone')
-    .populate('branchId', 'name code')
+    .populate('branchId', 'name code address phone alternatePhone postalPickupDetails karnatakaPostalDetails karnatakaBillerId billerId gstNumber')
     .sort({ createdAt: -1 })
     .limit(5000)
     .lean();

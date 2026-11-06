@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Printer,
@@ -13,6 +13,7 @@ import apiClient from '../../api/apiClient.js';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Button } from '../../components/common/Button.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
+import { useBranch } from '../../context/BranchContext.jsx';
 
 export function PrintableInvoiceModal({
   isOpen,
@@ -22,17 +23,83 @@ export function PrintableInvoiceModal({
   onWhatsAppSent = null
 }) {
   const queryClient = useQueryClient();
+  const { allBranches, availableBranches, selectedBranchId } = useBranch();
+  const branchList = allBranches?.length ? allBranches : availableBranches;
+
   const [sendWhatsAppOnPrint, setSendWhatsAppOnPrint] = useState(true);
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
   const [whatsAppFeedback, setWhatsAppFeedback] = useState(null);
 
+  // Dynamically resolve exact branch for this order
+  const branchObj = useMemo(() => {
+    if (
+      order?.branchId &&
+      typeof order.branchId === 'object' &&
+      (order.branchId.name || order.branchId.address || order.branchId.postalPickupDetails)
+    ) {
+      return order.branchId;
+    }
+
+    const bId = typeof order?.branchId === 'string'
+      ? order.branchId
+      : (order?.branchId?._id || order?.branchId?.id);
+
+    if (bId && Array.isArray(branchList)) {
+      const found = branchList.find((b) => String(b._id || b.id) === String(bId));
+      if (found) return found;
+    }
+
+    if (selectedBranchId && selectedBranchId !== 'ALL' && Array.isArray(branchList)) {
+      const current = branchList.find((b) => String(b._id || b.id) === String(selectedBranchId));
+      if (current) return current;
+    }
+
+    return branchList?.[0] || {};
+  }, [order?.branchId, branchList, selectedBranchId]);
+
   const destPincode = (order?.deliveryAddress?.pincode || '').trim();
   const destState = (order?.deliveryAddress?.state || '').toLowerCase();
   const isKarnataka = destState.includes('karnataka') || /^(56|57|58|59)/.test(destPincode);
-  const branchObj = typeof order?.branchId === 'object' && order?.branchId ? order.branchId : {};
   const invoiceBillerId = isKarnataka
     ? (branchObj.karnatakaBillerId || branchObj.karnatakaPostalDetails?.billerId || '1000054429')
     : (branchObj.billerId || '1000058077');
+
+  // Resolve dynamic branch name, address and contact details
+  const bPickup = branchObj.postalPickupDetails || {};
+  const bAddr = branchObj.address || {};
+
+  const bStreet = (bPickup.street || bAddr.street || '').trim();
+  const bCity = (bPickup.city || bAddr.city || '').trim();
+  const bState = (bPickup.state || bAddr.state || '').trim();
+  const bPincode = (bPickup.pincode || bAddr.pincode || '').trim();
+
+  let bParts = [];
+  if (bStreet) bParts.push(bStreet);
+  if (bCity && !bStreet.toLowerCase().includes(bCity.toLowerCase())) bParts.push(bCity);
+  if (bState && !bStreet.toLowerCase().includes(bState.toLowerCase())) bParts.push(bState);
+
+  let branchFullAddress = bParts.join(', ');
+  if (bPincode && !branchFullAddress.includes(bPincode)) {
+    branchFullAddress = branchFullAddress ? `${branchFullAddress} - ${bPincode}` : bPincode;
+  }
+  if (!branchFullAddress) {
+    branchFullAddress = 'Hosur Main Clinic, Krishnagiri, Tamil Nadu - 635109';
+  }
+
+  const branchTitle = (
+    bPickup.senderName ||
+    branchObj.name ||
+    'Shanthi Ayurvedas'
+  ).trim();
+
+  const branchPhone = (
+    bPickup.phone ||
+    branchObj.phone ||
+    branchObj.managerPhone ||
+    ''
+  ).trim();
+
+  const counterDeskName = `${branchObj.name || 'Hosur Main Clinic'} — Direct Walk-In Desk`;
 
   useEffect(() => {
     const clearPrintMode = () => document.body.classList.remove('printing-invoice');
@@ -99,14 +166,14 @@ export function PrintableInvoiceModal({
     const advanceAmount = Number(order.advanceAmount || 0);
     const balanceAmount = isCOD ? (order.codAmount ?? Math.max(0, (order.grandTotal || 0) - advanceAmount)) : 0;
 
-    const text = `*SHANTHI AYURVEDAS — OFFICIAL ORDER BILL* 🌿
+    const text = `*${branchTitle.toUpperCase()} — OFFICIAL ORDER BILL* 🌿
 --------------------------------------------
 📋 *Invoice No:* ${order.orderNumber}
 📅 *Date:* ${new Date(order.createdAt).toLocaleDateString('en-GB')}
 👤 *Patient:* ${patientName}
 📱 *Mobile:* ${mobile}
-📍 *Counter Desk:* Hosur Main Clinic Walk-In
-
+📍 *Counter Desk:* ${counterDeskName}
+${branchPhone ? `📞 *Branch Contact:* ${branchPhone}\n` : ''}
 💊 *Prescribed Formulations:*
 ${itemsList || 'Ayurvedic Formulations'}
 
@@ -166,10 +233,11 @@ Dr. Shanthi Ayurvedas Medical Team`;
                 className="h-12 sm:h-14 w-auto max-w-[140px] sm:max-w-[170px] object-contain shrink-0"
               />
               <div className="pt-0.5">
-                <p className="text-xs font-bold text-slate-800">Authentic Herbal Wellness & Clinic Telemedicine</p>
-                <p className="text-[11px] text-slate-500">Hosur Main Clinic, Krishnagiri, Tamil Nadu - 635109</p>
+                <p className="text-xs font-bold text-slate-800">{branchTitle}</p>
+                <p className="text-[11px] text-slate-500">{branchFullAddress}</p>
                 <p className="text-[11px] text-slate-500 font-mono">
                   GSTIN: {branchObj.gstNumber || '33BNCPS0374P1ZM'} | Biller ID: {invoiceBillerId}
+                  {branchPhone ? ` | Ph: ${branchPhone}` : ''}
                 </p>
               </div>
             </div>
@@ -209,9 +277,11 @@ Dr. Shanthi Ayurvedas Medical Team`;
                 Billing & Counter Desk:
               </div>
               <div className="text-slate-700">
-                <span className="font-bold text-slate-900">Hosur Clinic — Direct Walk-In Desk</span>
+                <span className="font-bold text-slate-900">{counterDeskName}</span>
                 <div className="text-slate-500 text-[11px] mt-0.5">
-                  Handed over in-person to patient • ₹0 Delivery
+                  {order.orderChannel === 'COUNTER_SALE' || order.isOfficeSale
+                    ? 'Handed over in-person to patient • ₹0 Delivery'
+                    : (order.courierName ? `Dispatched via ${order.courierName}` : 'Handed over in-person to patient • ₹0 Delivery')}
                 </div>
                 {order.notes && (
                   <div className="text-[11px] text-slate-600 mt-1 italic">
@@ -306,7 +376,7 @@ Dr. Shanthi Ayurvedas Medical Team`;
           </div>
 
           <div className="pt-2 text-[10px] text-slate-400 text-center border-t border-slate-100">
-            This is an official computer-generated medical tax invoice from Shanthi Ayurvedas Hosur Clinic.
+            This is an official computer-generated medical tax invoice from {branchTitle}.
           </div>
         </div>
 

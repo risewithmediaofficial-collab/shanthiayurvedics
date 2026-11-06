@@ -43,7 +43,7 @@ export const getShipments = asyncHandler(async (req, res) => {
         select: 'orderNumber grandTotal deliveryAddress customerId status',
         populate: { path: 'customerId', select: 'name mobile' }
       })
-      .populate('branchId', 'name code')
+      .populate('branchId', 'name code address phone alternatePhone postalPickupDetails karnatakaPostalDetails karnatakaBillerId billerId gstNumber')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

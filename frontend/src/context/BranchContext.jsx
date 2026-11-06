@@ -128,6 +128,7 @@ export function BranchProvider({ children }) {
       value={{
         selectedBranchId,
         availableBranches,
+        allBranches,
         branches: availableBranches,
         selectBranch,
         setSelectedBranchId: selectBranch,

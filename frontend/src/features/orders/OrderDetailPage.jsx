@@ -19,7 +19,8 @@ import {
   AlertTriangle,
   ExternalLink,
   Send,
-  Trash2
+  Trash2,
+  Headphones
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
@@ -693,21 +694,37 @@ export function OrderDetailPage() {
                 <div className="text-slate-600 flex items-center gap-1.5 font-mono">
                   <Phone className="w-3.5 h-3.5 text-slate-400" /> {patientMobile}
                 </div>
-                <div className="text-slate-500 text-[11px]">
-                  Assigned Telecaller: {order.telecallerId?.name || 'Staff'}
+                <div>
+                  {(() => {
+                    const placer = order.telecallerName || order.telecallerId?.name || 'Staff';
+                    return (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 text-purple-900 text-xs font-bold shadow-2xs">
+                        <Headphones className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                        <span>Booked by Telecaller: <strong className="font-black text-purple-950">{placer}</strong></span>
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
 
-              <div className="p-3.5 bg-slate-50 rounded-xl space-y-1.5">
-                <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-ayur-600" /> Delivery Address
+              <div className="p-3.5 bg-gradient-to-r from-blue-50/90 via-sky-50/70 to-indigo-50/60 border border-blue-200 rounded-xl space-y-2 shadow-2xs">
+                <div className="font-black text-blue-900 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+                  <MapPin className="w-4 h-4 text-blue-600 shrink-0" /> Delivery Address
                 </div>
-                <div className="text-slate-600">
-                  {order.deliveryAddress?.street}, {order.deliveryAddress?.city}, {order.deliveryAddress?.state} - {order.deliveryAddress?.pincode}
+                <div className="text-slate-800 font-semibold text-xs leading-relaxed">
+                  {order.deliveryAddress?.street ? `${order.deliveryAddress.street}, ` : ''}
+                  {order.deliveryAddress?.landmark ? `${order.deliveryAddress.landmark}, ` : ''}
+                  {order.deliveryAddress?.city || 'Hosur'}, {order.deliveryAddress?.district ? `${order.deliveryAddress.district}, ` : ''}
+                  {order.deliveryAddress?.state || 'Tamil Nadu'}
+                  {order.deliveryAddress?.pincode && (
+                    <span className="inline-flex items-center ml-1.5 px-1.5 py-0.2 rounded font-mono font-black text-[10.5px] bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+                      📮 {order.deliveryAddress.pincode}
+                    </span>
+                  )}
                 </div>
-                <div className="text-slate-500 text-[11px] flex items-center justify-between pt-1">
+                <div className="text-slate-600 text-[11px] flex items-center justify-between pt-1 border-t border-blue-100">
                   <div>
-                    <span>Payment: <strong className="text-slate-800">{order.paymentStatus} ({order.paymentMethod || 'COD'})</strong></span>
+                    <span>Payment: <strong className="text-slate-900 font-bold">{order.paymentStatus} ({order.paymentMethod || 'COD'})</strong></span>
                     {order.advanceAmount > 0 && (
                       <div className="text-emerald-700 font-bold text-[10px] mt-0.5">
                         Advance Paid: ₹{order.advanceAmount} {order.advanceUtr ? `• UTR: ${order.advanceUtr}` : ''}

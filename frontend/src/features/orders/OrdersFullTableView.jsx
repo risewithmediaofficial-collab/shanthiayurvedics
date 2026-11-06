@@ -24,7 +24,9 @@ import {
   ArrowUpDown,
   Building2,
   Calendar,
-  UserCheck
+  UserCheck,
+  Headphones,
+  MapPin
 } from 'lucide-react';
 import { Button } from '../../components/common/Button.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
@@ -1249,14 +1251,41 @@ export function OrdersFullTableView({
                     </td>
 
                     {/* District & City */}
-                    <td className="p-3 text-slate-600">
-                      <div>{addr.district || 'Krishnagiri'}</div>
-                      <div className="text-[10px] text-slate-400">{addr.city || 'Hosur'}</div>
+                    <td className="p-3 text-xs">
+                      <div className="font-bold text-blue-900 flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span>{addr.district || 'Krishnagiri'}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-600 font-medium truncate max-w-[170px]" title={addr.street}>
+                        {addr.city || 'Hosur'} {addr.pincode ? `• ${addr.pincode}` : ''}
+                      </div>
                     </td>
 
                     {/* Telecaller */}
-                    <td className="p-3 text-slate-600 text-[11px]">
-                      {row.assignedTo?.name || row.telecallerId?.name || row.createdBy?.name || 'Central'}
+                    <td className="p-3 text-[11px]">
+                      {(() => {
+                        const tcName = row.telecallerName || row.telecallerId?.name || row.assignedTo?.name || row.createdBy?.name || '';
+                        if (tcName) {
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-900 border border-purple-200 shadow-2xs whitespace-nowrap">
+                              <Headphones className="w-3 h-3 text-purple-700 shrink-0" />
+                              <span>{tcName}</span>
+                            </span>
+                          );
+                        }
+                        if (row.orderChannel === 'COUNTER_SALE' || row.isOfficeSale) {
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-100 text-amber-900 border border-amber-200 whitespace-nowrap">
+                              🏪 Counter
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 whitespace-nowrap">
+                            Central Hub
+                          </span>
+                        );
+                      })()}
                     </td>
 
                     {/* Actions */}

@@ -26,7 +26,8 @@ import {
   ArrowUp,
   ArrowDown,
   Filter,
-  UserCheck
+  UserCheck,
+  Headphones
 } from 'lucide-react';
 import apiClient from '../../api/apiClient.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
@@ -1271,6 +1272,32 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
             const isSelected = selectedOrderIds.includes(order._id);
             const itemsSummary = order.items?.map((i) => `${i.productName} x${i.quantity}`).join(', ') || 'Herbal Healthcare Kit';
 
+            const telecallerObj = (order.telecallerId && typeof order.telecallerId === 'object') ? order.telecallerId : null;
+            const telecallerIdStr = typeof order.telecallerId === 'string' ? order.telecallerId : (telecallerObj?._id || '');
+            const matchedCaller = (!telecallerObj?.name && telecallerIdStr && Array.isArray(telecallers))
+              ? telecallers.find((t) => String(t._id || t.id) === String(telecallerIdStr))
+              : null;
+
+            const placerName = (
+              order.telecallerName ||
+              telecallerObj?.name ||
+              matchedCaller?.name ||
+              order.assignedTo?.name ||
+              order.createdBy?.name ||
+              ''
+            ).trim();
+
+            const placerPhone = (
+              order.telecallerPhone ||
+              telecallerObj?.phone ||
+              matchedCaller?.phone ||
+              order.assignedTo?.phone ||
+              order.createdBy?.phone ||
+              ''
+            ).trim();
+
+            const isCounterSale = order.orderChannel === 'COUNTER_SALE' || order.isOfficeSale;
+
             return (
               <div
                 key={order._id}
@@ -1284,9 +1311,9 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                 }`}
                 title="Click order to open details"
               >
-                {/* Row 1: Checkbox, Order ID & Timestamp */}
+                {/* Row 1: Checkbox, Order ID, Telecaller Badge & Timestamp */}
                 <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 text-xs">
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-wrap">
                     <input
                       type="checkbox"
                       checked={isSelected}
@@ -1296,6 +1323,17 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                     <span className="font-mono font-bold text-slate-800 text-xs tracking-tight truncate">
                       #{order.orderNumber}
                     </span>
+                    {placerName ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-black bg-purple-100 text-purple-900 border border-purple-300 shadow-2xs">
+                        <Headphones className="w-3 h-3 text-purple-700 shrink-0" />
+                        <span className="text-[9.5px] uppercase font-bold text-purple-600">TC:</span>
+                        <span className="truncate max-w-[120px] sm:max-w-[200px]">{placerName}</span>
+                      </span>
+                    ) : isCounterSale ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+                        🏪 Office Sale
+                      </span>
+                    ) : null}
                   </div>
 
                   <div className="flex items-center gap-1.5 text-[11px] text-slate-400 shrink-0">
@@ -1405,25 +1443,98 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                   </div>
                 </div>
 
-                {/* Row 3: Items & Address Line */}
+                {/* Row 3: Items, Colorful Address & Placer Info */}
                 {(() => {
                   const isTamilNadu = (addr.state || '').toLowerCase().includes('tamil');
                   const itemLabel = isTamilNadu ? 'பொருட்கள்' : 'Items';
                   const addressLabel = isTamilNadu ? 'முகவரி' : 'Address';
+                  const bookedLabel = isTamilNadu ? 'ஆர்டர் பதிவு' : 'Booked by';
+
+                  const streetPart = [addr.street, addr.landmark].filter(Boolean).join(', ');
+                  const areaPart = [addr.village, addr.taluk].filter(Boolean).join(', ');
+                  const cityPart = addr.city || '';
+                  const districtPart = addr.district || '';
+                  const statePart = addr.state || '';
+                  const pincodeVal = addr.pincode || '';
+
+                  // Build complete address
+                  const addressMain = [streetPart, areaPart, cityPart, districtPart, statePart].filter(Boolean).join(', ');
+
                   return (
-                    <div className="space-y-1 text-xs text-slate-600 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
-                        <span className="text-[10px] font-bold text-emerald-700 shrink-0">{itemLabel}:</span>
-                        <span className="font-semibold text-slate-800 truncate text-xs">{itemsSummary}</span>
-                      </div>
-                      <div className="flex items-start gap-1.5 text-slate-500 text-[11px] min-w-0">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                        <span className="text-[10px] font-bold text-slate-500 shrink-0">{addressLabel}:</span>
-                        <span className="truncate">
-                          {addr.street ? `${addr.street}, ` : ''}{addr.landmark ? `${addr.landmark}, ` : ''}{addr.city || 'Hosur'}{addr.district ? `, ${addr.district}` : ''} - {addr.pincode || '635109'}
+                    <div className="space-y-1.5 text-xs">
+                      {/* 1. Items Strip */}
+                      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-emerald-50/80 border border-emerald-200/90 min-w-0 shadow-2xs">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-emerald-600 text-white shadow-2xs shrink-0">
+                          <ShoppingBag className="w-3 h-3" />
+                        </span>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 shrink-0">
+                          {itemLabel}:
+                        </span>
+                        <span className="font-bold text-emerald-950 truncate text-xs">
+                          {itemsSummary}
                         </span>
                       </div>
+
+                      {/* 2. Colorful Address Box */}
+                      <div className="p-2.5 rounded-xl bg-gradient-to-r from-blue-50/90 via-sky-50/80 to-indigo-50/70 border border-blue-200 text-slate-800 shadow-2xs">
+                        <div className="flex items-start gap-2 min-w-0">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-blue-600 text-white shadow-2xs shrink-0 mt-0.5">
+                            <MapPin className="w-3.5 h-3.5" />
+                          </span>
+                          <div className="min-w-0 flex-1 leading-snug">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="px-1.5 py-0.5 rounded bg-blue-600 text-white font-black text-[9.5px] uppercase tracking-wider shadow-2xs shrink-0">
+                                {addressLabel}
+                              </span>
+                              <span className="font-semibold text-slate-800 text-[11.5px] break-words">
+                                {addressMain || 'Direct Walk-in / Office Counter'}
+                              </span>
+                              {pincodeVal && (
+                                <span className="inline-flex items-center px-1.5 py-0.2 rounded font-mono font-black text-[10.5px] bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs shrink-0">
+                                  📮 {pincodeVal}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 3. Who Placed Order (Telecaller) Strip */}
+                      {placerName ? (
+                        <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-50 via-fuchsia-50/40 to-indigo-50 border border-purple-200/90 text-purple-900 shadow-2xs">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-purple-600 text-white shadow-2xs shrink-0">
+                              <Headphones className="w-3 h-3" />
+                            </span>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-purple-700 shrink-0">
+                              {bookedLabel}:
+                            </span>
+                            <span className="font-black text-purple-950 text-xs truncate">
+                              {placerName}
+                            </span>
+                            {placerPhone && (
+                              <span className="text-purple-700 font-mono text-[11px] font-bold hidden xs:inline">
+                                ({placerPhone})
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[9.5px] font-black px-2 py-0.5 rounded-full bg-purple-200/80 text-purple-900 uppercase tracking-wider border border-purple-300 shrink-0">
+                            Telecaller
+                          </span>
+                        </div>
+                      ) : isCounterSale ? (
+                        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 shadow-2xs">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-amber-600 text-white shadow-2xs shrink-0">
+                            🏪
+                          </span>
+                          <span className="text-[10px] font-black uppercase tracking-wide text-amber-800 shrink-0">
+                            Channel:
+                          </span>
+                          <span className="font-black text-amber-950 text-xs">
+                            Office Walk-in / Counter Sale
+                          </span>
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })()}

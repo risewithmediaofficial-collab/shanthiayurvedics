@@ -21,13 +21,26 @@ export const requireBranchScope = (req, res, next) => {
     requestedBranch !== 'ALL' &&
     requestedBranch !== 'MAIN' &&
     requestedBranch !== 'null' &&
-    requestedBranch !== 'undefined'
+    requestedBranch !== 'undefined' &&
+    requestedBranch !== ''
   );
+
+  // Owner main branch fallback
+  const ownerMainBranchId = branchId
+    ? (typeof branchId === 'object' ? (branchId._id || branchId.id) : branchId)?.toString()
+    : (Array.isArray(branches) && branches[0] ? (branches[0]._id || branches[0]).toString() : null);
 
   if (role === ROLES.OWNER) {
     // Owner can request any branch or view ALL branches globally
     if (isExplicitBranch) {
       req.branchScope = { branchId: requestedBranch, isGlobal: false };
+    } else if (requestedBranch === 'ALL') {
+      req.branchScope = { branchId: null, isGlobal: true };
+    } else if (requestedBranch === 'MAIN' && ownerMainBranchId) {
+      req.branchScope = { branchId: ownerMainBranchId, isGlobal: false };
+    } else if (ownerMainBranchId) {
+      // Owner strictly defaults to their main branch instead of showing all branches!
+      req.branchScope = { branchId: ownerMainBranchId, isGlobal: false };
     } else {
       req.branchScope = { branchId: null, isGlobal: true };
     }

@@ -133,10 +133,22 @@ describe('requireBranchScope', () => {
     expect(next.mock.calls[0][0].statusCode).toBe(403);
   });
 
-  it('should set isGlobal:true for OWNER with no explicit branch header', () => {
+  it('should fallback to user.branchId with isGlobal:false for OWNER with no explicit branch header', () => {
     const req = buildReq({
       user: { role: ROLES.OWNER, branchId: 'b1', branches: [] },
       headers: {}
+    });
+    const next = buildNext();
+    requireBranchScope(req, {}, next);
+    expect(next).toHaveBeenCalledWith();
+    expect(req.branchScope.isGlobal).toBe(false);
+    expect(req.branchScope.branchId).toBe('b1');
+  });
+
+  it('should set isGlobal:true for OWNER when x-branch-id: ALL is explicitly requested', () => {
+    const req = buildReq({
+      user: { role: ROLES.OWNER, branchId: 'b1', branches: [] },
+      headers: { 'x-branch-id': 'ALL' }
     });
     const next = buildNext();
     requireBranchScope(req, {}, next);
@@ -167,25 +179,28 @@ describe('requireBranchScope', () => {
     expect(req.branchScope.branchId).toBe('branch123');
   });
 
-  it('should block non-owner from accessing unauthorized branch', () => {
+  it('should clamp non-owner to their assigned branch when attempting to access another branch', () => {
     const req = buildReq({
       user: { role: 'TELECALLER', branchId: 'branchA', branches: [] },
       headers: { 'x-branch-id': 'branchB' }
     });
     const next = buildNext();
     requireBranchScope(req, {}, next);
-    expect(next.mock.calls[0][0].statusCode).toBe(403);
-    expect(next.mock.calls[0][0].message).toContain('Unauthorized branch access');
+    expect(next).toHaveBeenCalledWith();
+    expect(req.branchScope.branchId).toBe('branchA');
+    expect(req.branchScope.isGlobal).toBe(false);
   });
 
-  it('should block non-owner with no branch assigned', () => {
+  it('should assign unassigned scope for non-owner with no branch assigned', () => {
     const req = buildReq({
       user: { role: 'TELECALLER', branchId: null, branches: [] },
       headers: {}
     });
     const next = buildNext();
     requireBranchScope(req, {}, next);
-    expect(next.mock.calls[0][0].statusCode).toBe(403);
+    expect(next).toHaveBeenCalledWith();
+    expect(req.branchScope.unassigned).toBe(true);
+    expect(req.branchScope.branchId).toBeNull();
   });
 });
 

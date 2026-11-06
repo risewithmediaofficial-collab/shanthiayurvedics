@@ -7,10 +7,13 @@ const idOf = (value) => (value?._id || value)?.toString();
 // Use the same scope for list, detail, export and mutation paths, including bulk jobs.
 export const recordScope = (user, req, ownershipField) => {
   const scope = {};
-  const branchId = req?.branchScope?.branchId || user?.branchId || user?.branches?.[0];
-  const isGlobal = user?.role === ROLES.OWNER && req?.branchScope?.isGlobal !== false;
-  const bId = idOf(branchId);
-  if (!isGlobal && bId && bId !== 'MAIN' && bId !== 'ALL' && mongoose.Types.ObjectId.isValid(bId)) {
+  let rawBranchId = req?.branchScope?.branchId;
+  if (!rawBranchId || rawBranchId === 'MAIN') {
+    rawBranchId = user?.branchId || user?.branches?.[0];
+  }
+  const isGlobal = user?.role === ROLES.OWNER && req?.branchScope?.isGlobal === true;
+  const bId = idOf(rawBranchId);
+  if (!isGlobal && bId && bId !== 'ALL' && mongoose.Types.ObjectId.isValid(bId)) {
     scope.branchId = bId;
   }
   if (user?.role === ROLES.TELECALLER && ownershipField) {

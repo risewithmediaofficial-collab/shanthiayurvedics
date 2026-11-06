@@ -10,9 +10,11 @@ export function BranchProvider({ children }) {
   const queryClient = useQueryClient();
   const [selectedBranchId, setSelectedBranchId] = useState(() => {
     try {
-      return sessionStorage.getItem('active_branch_id') || 'ALL';
+      const saved = sessionStorage.getItem('active_branch_id');
+      if (saved && saved !== 'ALL') return saved;
+      return '';
     } catch {
-      return 'ALL';
+      return '';
     }
   });
 
@@ -39,10 +41,22 @@ export function BranchProvider({ children }) {
     }];
   }, [branchesResponse]);
 
+  // Main hub/branch identification
+  const mainBranch = useMemo(() => {
+    if (!allBranches || allBranches.length === 0) return null;
+    return (
+      allBranches.find((b) => b.isDefault || b.code === 'MAIN' || b.code === 'HSR' || /main|hub|hosur/i.test(b.name || '')) ||
+      allBranches[0]
+    );
+  }, [allBranches]);
+
   const availableBranches = useMemo(() => {
     if (!user) return [];
     if (user.role === 'OWNER') {
-      return allBranches;
+      if (!mainBranch) return allBranches;
+      const mainId = String(mainBranch._id || mainBranch.id);
+      const others = allBranches.filter((b) => String(b._id || b.id) !== mainId);
+      return [mainBranch, ...others];
     }
 
     if (user.role === 'MANAGER') {
@@ -74,23 +88,27 @@ export function BranchProvider({ children }) {
       : null;
 
     return matchedBranch ? [matchedBranch] : (allBranches.length > 0 ? [allBranches[0]] : []);
-  }, [user, allBranches]);
+  }, [user, allBranches, mainBranch]);
 
   // Keep selectedBranchId clean and synchronized
   useEffect(() => {
     if (!user) {
-      setSelectedBranchId('ALL');
+      setSelectedBranchId('');
       try { sessionStorage.removeItem('active_branch_id'); } catch {}
       return;
     }
 
+    const mainBranchId = mainBranch ? String(mainBranch._id || mainBranch.id) : '';
+
     if (user.role === 'OWNER') {
       const savedBranch = sessionStorage.getItem('active_branch_id');
-      if (savedBranch && (savedBranch === 'ALL' || availableBranches.some((b) => String(b._id || b.id) === savedBranch))) {
+      // If owner had explicitly selected a valid branch (other than 'ALL') that exists:
+      if (savedBranch && savedBranch !== 'ALL' && availableBranches.some((b) => String(b._id || b.id) === savedBranch)) {
         setSelectedBranchId(savedBranch);
-      } else {
-        setSelectedBranchId('ALL');
-        try { sessionStorage.setItem('active_branch_id', 'ALL'); } catch {}
+      } else if (mainBranchId) {
+        // STRICT: Default owner to Main Branch orders/data upon login, NEVER 'ALL'
+        setSelectedBranchId(mainBranchId);
+        try { sessionStorage.setItem('active_branch_id', mainBranchId); } catch {}
       }
     } else {
       // MANAGER, DISTRIBUTOR, TELECALLER: Strictly locked to their assigned branch!
@@ -101,7 +119,7 @@ export function BranchProvider({ children }) {
         try { sessionStorage.setItem('active_branch_id', targetBranch); } catch {}
       }
     }
-  }, [user, availableBranches]);
+  }, [user, availableBranches, mainBranch]);
 
   const selectBranch = (branchId) => {
     // Only OWNER can switch branches globally. Manager can only switch if assigned multiple specific branches.
@@ -109,7 +127,8 @@ export function BranchProvider({ children }) {
       return;
     }
 
-    const targetBranch = branchId || (user?.role === 'OWNER' ? 'ALL' : String(availableBranches[0]?._id || availableBranches[0]?.id));
+    const mainBranchId = mainBranch ? String(mainBranch._id || mainBranch.id) : '';
+    const targetBranch = branchId || (mainBranchId || String(availableBranches[0]?._id || availableBranches[0]?.id));
     if (targetBranch === 'ALL' && user?.role !== 'OWNER') return;
     if (targetBranch !== 'ALL' && !availableBranches.some((branch) => String(branch._id || branch.id) === targetBranch)) return;
     if (targetBranch === selectedBranchId) return;

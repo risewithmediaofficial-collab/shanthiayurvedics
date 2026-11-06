@@ -11,13 +11,6 @@ export function BranchSelector({ align = 'left' }) {
 
   const branchOptions = useMemo(() => {
     const opts = [];
-    if (isOwner) {
-      opts.push({
-        value: 'ALL',
-        label: '🏢 All Branches (Global)',
-        shortLabel: '🏢 All',
-      });
-    }
 
     safeBranches.forEach((branch, index) => {
       const branchId = branch?._id || branch?.id || (typeof branch === 'string' ? branch : `branch-${index}`);
@@ -31,6 +24,14 @@ export function BranchSelector({ align = 'left' }) {
         badge: branch?.code || undefined,
       });
     });
+
+    if (isOwner) {
+      opts.push({
+        value: 'ALL',
+        label: '🏢 All Branches (Global Overview)',
+        shortLabel: '🏢 All (Global)',
+      });
+    }
 
     return opts;
   }, [safeBranches, isOwner]);

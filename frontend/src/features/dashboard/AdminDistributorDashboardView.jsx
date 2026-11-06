@@ -345,7 +345,11 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
   const { data: dashboardData, isLoading } = useQuery({
     queryKey: ['admin-distributor-dashboard', selectedBranchId],
     queryFn: async () => {
-      const res = await apiClient.get('/dashboard');
+      const params = {};
+      if (selectedBranchId && selectedBranchId !== 'ALL' && selectedBranchId !== 'MAIN') {
+        params.branchId = selectedBranchId;
+      }
+      const res = await apiClient.get('/dashboard', { params });
       return res.data?.data;
     }
   });
@@ -354,7 +358,11 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
   const { data: ordersResponse } = useQuery({
     queryKey: ['admin-orders', selectedBranchId],
     queryFn: async () => {
-      const res = await apiClient.get('/orders?limit=30');
+      const params = { limit: 30 };
+      if (selectedBranchId && selectedBranchId !== 'ALL' && selectedBranchId !== 'MAIN') {
+        params.branchId = selectedBranchId;
+      }
+      const res = await apiClient.get('/orders', { params });
       return res.data;
     },
     enabled: activeTab === 'ORDERS' || activeTab === 'HOME'
@@ -364,7 +372,11 @@ export function AdminDistributorDashboardView({ onSwitchToManagerView, onSwitchT
   const { data: leadsResponse } = useQuery({
     queryKey: ['admin-leads', selectedBranchId],
     queryFn: async () => {
-      const res = await apiClient.get('/leads?limit=30');
+      const params = { limit: 30 };
+      if (selectedBranchId && selectedBranchId !== 'ALL' && selectedBranchId !== 'MAIN') {
+        params.branchId = selectedBranchId;
+      }
+      const res = await apiClient.get('/leads', { params });
       return res.data;
     },
     enabled: activeTab === 'LEADS' || activeTab === 'HOME'

@@ -28,14 +28,21 @@ export const getOrders = asyncHandler(async (req, res) => {
   const sortOrder = req.query.sortOrder === 'asc' || req.query.sortOrder === '1' ? 1 : -1;
 
   const query = recordScope(req.user, req, 'telecallerId');
-  if (!req.branchScope.isGlobal && req.branchScope.branchId) {
-    query.branchId = req.branchScope.branchId;
+  if (!req.branchScope.isGlobal && req.branchScope.branchId && req.branchScope.branchId !== 'MAIN' && req.branchScope.branchId !== 'ALL') {
+    if (mongoose.Types.ObjectId.isValid(req.branchScope.branchId)) {
+      query.branchId = req.branchScope.branchId;
+    }
   }
 
   if (req.user.role === ROLES.TELECALLER) {
-    query.telecallerId = req.user.id;
-  } else if (telecallerId && telecallerId !== 'ALL') {
-    query.telecallerId = telecallerId;
+    const uId = req.user.id || req.user._id;
+    if (uId && uId !== 'undefined' && uId !== 'null') {
+      query.telecallerId = uId;
+    }
+  } else if (telecallerId && telecallerId !== 'ALL' && telecallerId !== 'undefined' && telecallerId !== 'null') {
+    if (mongoose.Types.ObjectId.isValid(telecallerId)) {
+      query.telecallerId = telecallerId;
+    }
   }
 
   if (status && status !== 'ALL') {
@@ -61,8 +68,9 @@ export const getOrders = asyncHandler(async (req, res) => {
     query.paymentMethod = paymentMethod;
   }
 
-  if (startDate || endDate) {
-    query.createdAt = dateRange(startDate, endDate);
+  const dateFilter = (startDate || endDate) ? dateRange(startDate, endDate) : null;
+  if (dateFilter) {
+    query.createdAt = dateFilter;
   }
 
   if (isCounterSaleFilter) {
@@ -138,7 +146,9 @@ export const getOrders = asyncHandler(async (req, res) => {
           ...(query.branchId && mongoose.Types.ObjectId.isValid(query.branchId)
             ? { branchId: new mongoose.Types.ObjectId(query.branchId) }
             : {}),
-          ...(query.telecallerId ? { telecallerId: new mongoose.Types.ObjectId(query.telecallerId) } : {}),
+          ...(query.telecallerId && mongoose.Types.ObjectId.isValid(query.telecallerId)
+            ? { telecallerId: new mongoose.Types.ObjectId(query.telecallerId) }
+            : {}),
           $and: [{ status: { $ne: 'CANCELLED' } }]
         }
       },

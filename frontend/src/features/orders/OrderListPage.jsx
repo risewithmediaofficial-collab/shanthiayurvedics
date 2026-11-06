@@ -177,16 +177,19 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
         exportOrdersList = orders.filter((o) => selectedOrderIds.includes(o._id));
       } else {
         const params = {
-          export: true, telecallerId: callerId,
+          export: true,
           sortBy,
           sortOrder
         };
+        if (callerId && callerId !== 'ALL' && callerId !== 'undefined' && callerId !== 'null') params.telecallerId = callerId;
         if (search?.trim()) params.search = search.trim();
         if (statusFilter && statusFilter !== 'ALL') params.status = statusFilter;
         if (districtFilter && districtFilter !== 'ALL') params.district = districtFilter;
-        if (startDate) params.startDate = startDate;
-        if (endDate) params.endDate = endDate;
-        if (selectedBranchId && selectedBranchId !== 'ALL') params.branchId = selectedBranchId;
+        if (startDate && startDate !== 'undefined' && startDate !== 'null') params.startDate = startDate;
+        if (endDate && endDate !== 'undefined' && endDate !== 'null') params.endDate = endDate;
+        if (selectedBranchId && selectedBranchId !== 'ALL' && selectedBranchId !== 'MAIN' && selectedBranchId !== 'undefined' && selectedBranchId !== 'null') {
+          params.branchId = selectedBranchId;
+        }
 
         const res = await apiClient.get('/orders', { params });
         exportOrdersList = res.data?.data || orders;
@@ -297,7 +300,14 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
   const { data: metricsResponse, refetch: refetchMetrics } = useQuery({
     queryKey: ['order-metrics-summary', selectedBranchId, callerId],
     queryFn: async () => {
-      const res = await apiClient.get('/orders/metrics-summary', { params: { telecallerId: callerId } });
+      const params = {};
+      if (callerId && callerId !== 'ALL' && callerId !== 'undefined' && callerId !== 'null') {
+        params.telecallerId = callerId;
+      }
+      if (selectedBranchId && selectedBranchId !== 'ALL' && selectedBranchId !== 'MAIN' && selectedBranchId !== 'undefined' && selectedBranchId !== 'null') {
+        params.branchId = selectedBranchId;
+      }
+      const res = await apiClient.get('/orders/metrics-summary', { params });
       return res.data?.data || {};
     },
     enabled: Boolean(user),
@@ -346,13 +356,18 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
   const { data: ordersResponse, isLoading, refetch: refetchOrders } = useQuery({
     queryKey: ['orders', callerId, page, debouncedSearch, statusFilter, districtFilter, startDate, endDate, sortBy, sortOrder, selectedBranchId],
     queryFn: async () => {
-      const params = { page, limit: 15, sortBy, sortOrder, telecallerId: callerId };
+      const params = { page, limit: 15, sortBy, sortOrder };
+      if (callerId && callerId !== 'ALL' && callerId !== 'undefined' && callerId !== 'null') {
+        params.telecallerId = callerId;
+      }
       if (debouncedSearch?.trim()) params.search = debouncedSearch.trim();
       if (statusFilter && statusFilter !== 'ALL') params.status = statusFilter;
       if (districtFilter && districtFilter !== 'ALL') params.district = districtFilter;
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
-      if (selectedBranchId && selectedBranchId !== 'ALL') params.branchId = selectedBranchId;
+      if (startDate && startDate !== 'undefined' && startDate !== 'null') params.startDate = startDate;
+      if (endDate && endDate !== 'undefined' && endDate !== 'null') params.endDate = endDate;
+      if (selectedBranchId && selectedBranchId !== 'ALL' && selectedBranchId !== 'MAIN' && selectedBranchId !== 'undefined' && selectedBranchId !== 'null') {
+        params.branchId = selectedBranchId;
+      }
       const res = await apiClient.get('/orders', { params });
       return res.data;
     },

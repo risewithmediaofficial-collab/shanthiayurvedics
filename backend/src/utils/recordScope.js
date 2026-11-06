@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { ROLES } from '../constants/roles.js';
 import { AppError, NotFoundError } from './errors.js';
 
@@ -8,9 +9,15 @@ export const recordScope = (user, req, ownershipField) => {
   const scope = {};
   const branchId = req?.branchScope?.branchId || user?.branchId || user?.branches?.[0];
   const isGlobal = user?.role === ROLES.OWNER && req?.branchScope?.isGlobal !== false;
-  if (!isGlobal && branchId) scope.branchId = idOf(branchId);
+  const bId = idOf(branchId);
+  if (!isGlobal && bId && bId !== 'MAIN' && bId !== 'ALL' && mongoose.Types.ObjectId.isValid(bId)) {
+    scope.branchId = bId;
+  }
   if (user?.role === ROLES.TELECALLER && ownershipField) {
-    scope[ownershipField] = idOf(user.id || user._id);
+    const uId = idOf(user.id || user._id);
+    if (uId && mongoose.Types.ObjectId.isValid(uId)) {
+      scope[ownershipField] = uId;
+    }
   }
   return scope;
 };

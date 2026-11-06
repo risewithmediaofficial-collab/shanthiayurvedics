@@ -16,11 +16,13 @@ export const requireBranchScope = (req, res, next) => {
     req.body?.branchId
   );
   const requestedBranch = rawRequested ? rawRequested.toString().trim() : null;
-  const isExplicitBranch =
+  const isExplicitBranch = Boolean(
     requestedBranch &&
     requestedBranch !== 'ALL' &&
+    requestedBranch !== 'MAIN' &&
     requestedBranch !== 'null' &&
-    requestedBranch !== 'undefined';
+    requestedBranch !== 'undefined'
+  );
 
   if (role === ROLES.OWNER) {
     // Owner can request any branch or view ALL branches globally

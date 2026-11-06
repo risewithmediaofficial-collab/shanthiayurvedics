@@ -567,6 +567,7 @@ export function ShippingLabelLandscapeModal({
     // 1. Resolve cities & pincodes:
     const knCity = (knPickup.city || 'BENGALURU').toUpperCase();
     const knPin = (knPickup.pincode === '560001' ? '562106' : (knPickup.pincode || '562106')).trim();
+    const knPincodeVal = knPin;
     const defaultCity = (pickup.city || branchAddr.city || 'HOSUR').toUpperCase();
     const defaultPin = (pickup.pincode || branchAddr.pincode || '635110').trim();
 
@@ -723,6 +724,7 @@ export function ShippingLabelLandscapeModal({
       isOtherCourier,
       isIndiaPost,
       knPincode: knPincodeVal,
+      knPincodeVal: knPin,
       knPostOfficeNumber: knPoNumber
     };
   };

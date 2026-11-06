@@ -11,9 +11,13 @@ export const pagination = (query = {}) => {
 export const escapeSearch = (value) => String(value).slice(0, 200).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export const dateRange = (startDate, endDate) => {
+  const sDate = (startDate && startDate !== 'undefined' && startDate !== 'null' && startDate !== 'ALL') ? startDate : null;
+  const eDate = (endDate && endDate !== 'undefined' && endDate !== 'null' && endDate !== 'ALL') ? endDate : null;
+  if (!sDate && !eDate) return undefined;
+
   const range = {};
-  if (startDate) range.$gte = parseBusinessDate(startDate);
-  if (endDate) range.$lte = parseBusinessDate(endDate, true);
+  if (sDate) range.$gte = parseBusinessDate(sDate);
+  if (eDate) range.$lte = parseBusinessDate(eDate, true);
   if (Object.values(range).some((date) => Number.isNaN(date.getTime()))) {
     throw new AppError('Enter a valid start and end date', 400);
   }

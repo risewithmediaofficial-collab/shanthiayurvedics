@@ -95,12 +95,12 @@ describe('apiClient module', () => {
       expect(result.headers['x-branch-id']).toBe('branch123');
     });
 
-    it('should NOT add x-branch-id when active_branch_id is "ALL"', () => {
+    it('should forward x-branch-id: "ALL" when active_branch_id is explicitly set to "ALL"', () => {
       sessionStorage.setItem('active_branch_id', 'ALL');
       const config = { headers: {} };
       const result = handlers.requestHandler(config);
 
-      expect(result.headers['x-branch-id']).toBeUndefined();
+      expect(result.headers['x-branch-id']).toBe('ALL');
     });
 
     it('should NOT add x-branch-id when value is "null" string', () => {

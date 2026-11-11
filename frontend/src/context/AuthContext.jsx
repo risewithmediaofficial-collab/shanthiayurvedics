@@ -18,6 +18,7 @@ export function AuthProvider({ children }) {
     try {
       ['auth_access_token', 'auth_refresh_token', 'auth_user', 'switched_from_owner'].forEach((key) => localStorage.removeItem(key));
       sessionStorage.removeItem('active_branch_id');
+      sessionStorage.removeItem('active_branch_explicit');
     } catch { /* Private browsing may restrict storage. */ }
     delete apiClient.defaults.headers.common.Authorization;
     setUser(null);
@@ -88,7 +89,10 @@ export function AuthProvider({ children }) {
     const response = await apiClient.post('/auth/login', credentials);
     if (!response.data?.success) throw new Error(response.data?.message || 'Login failed');
     queryClient.clear();
-    try { sessionStorage.removeItem('active_branch_id'); } catch { /* No storage. */ }
+    try {
+      sessionStorage.removeItem('active_branch_id');
+      sessionStorage.removeItem('active_branch_explicit');
+    } catch { /* No storage. */ }
     applySession(response.data.data);
     return response.data;
   }, [applySession]);
@@ -110,7 +114,10 @@ export function AuthProvider({ children }) {
       resData = response.data.data;
     }
     queryClient.clear();
-    try { sessionStorage.removeItem('active_branch_id'); } catch { /* No storage. */ }
+    try {
+      sessionStorage.removeItem('active_branch_id');
+      sessionStorage.removeItem('active_branch_explicit');
+    } catch { /* No storage. */ }
     applySession(resData);
     return resData;
   }, [applySession]);

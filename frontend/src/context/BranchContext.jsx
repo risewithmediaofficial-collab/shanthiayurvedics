@@ -11,7 +11,10 @@ export function BranchProvider({ children }) {
   const [selectedBranchId, setSelectedBranchId] = useState(() => {
     try {
       const saved = sessionStorage.getItem('active_branch_id');
-      if (saved && saved !== 'ALL') return saved;
+      const isExplicit = sessionStorage.getItem('active_branch_explicit') === 'true';
+      if (saved && (saved !== 'ALL' || isExplicit) && saved !== 'MAIN' && saved !== 'undefined' && saved !== 'null') {
+        return saved;
+      }
       return '';
     } catch {
       return '';
@@ -19,14 +22,20 @@ export function BranchProvider({ children }) {
   });
 
   // Reactive query: updates instantly whenever 'branches' query key is invalidated!
-  const { data: branchesResponse } = useQuery({
+  const { data: branchesResponse, isLoading: branchesLoading, isFetched: branchesFetched } = useQuery({
     queryKey: ['branches'],
     queryFn: async () => {
       const res = await apiClient.get('/branches');
       return res.data;
     },
-    enabled: Boolean(user)
+    enabled: Boolean(user),
+    staleTime: 60000
   });
+
+  const hasLoadedBranches = useMemo(() => {
+    const raw = branchesResponse?.data ?? branchesResponse;
+    return Array.isArray(raw);
+  }, [branchesResponse]);
 
   const allBranches = useMemo(() => {
     const list = Array.isArray(branchesResponse?.data)
@@ -94,32 +103,67 @@ export function BranchProvider({ children }) {
   useEffect(() => {
     if (!user) {
       setSelectedBranchId('');
-      try { sessionStorage.removeItem('active_branch_id'); } catch {}
+      try {
+        sessionStorage.removeItem('active_branch_id');
+        sessionStorage.removeItem('active_branch_explicit');
+      } catch {}
+      return;
+    }
+
+    // Do not clamp or overwrite saved selection against temporary fallback before branches API resolves
+    if (!hasLoadedBranches && (branchesLoading || !branchesFetched)) {
+      return;
+    }
+    if (!hasLoadedBranches) {
       return;
     }
 
     const mainBranchId = mainBranch ? String(mainBranch._id || mainBranch.id) : '';
+    const savedBranch = (() => {
+      try { return sessionStorage.getItem('active_branch_id'); } catch { return null; }
+    })();
+    const isExplicit = (() => {
+      try { return sessionStorage.getItem('active_branch_explicit') === 'true'; } catch { return false; }
+    })();
 
     if (user.role === 'OWNER') {
-      const savedBranch = sessionStorage.getItem('active_branch_id');
-      // If owner had explicitly selected a valid branch (other than 'ALL') that exists:
-      if (savedBranch && savedBranch !== 'ALL' && availableBranches.some((b) => String(b._id || b.id) === savedBranch)) {
-        setSelectedBranchId(savedBranch);
+      const isSavedValidBranch = Boolean(
+        savedBranch &&
+        availableBranches.some((b) => String(b._id || b.id) === String(savedBranch))
+      );
+
+      if (isSavedValidBranch) {
+        setSelectedBranchId(String(savedBranch));
+      } else if (savedBranch === 'ALL' && isExplicit) {
+        setSelectedBranchId('ALL');
       } else if (mainBranchId) {
-        // STRICT: Default owner to Main Branch orders/data upon login, NEVER 'ALL'
+        // STRICT: Default owner to Main Branch orders/data upon login, NEVER stale 'ALL'
         setSelectedBranchId(mainBranchId);
-        try { sessionStorage.setItem('active_branch_id', mainBranchId); } catch {}
+        try {
+          sessionStorage.setItem('active_branch_id', mainBranchId);
+          sessionStorage.removeItem('active_branch_explicit');
+        } catch {}
       }
+    } else if (
+      user.role === 'MANAGER' &&
+      availableBranches.length > 1 &&
+      savedBranch &&
+      availableBranches.some((b) => String(b._id || b.id) === String(savedBranch))
+    ) {
+      setSelectedBranchId(String(savedBranch));
     } else {
-      // MANAGER, DISTRIBUTOR, TELECALLER: Strictly locked to their assigned branch!
+      // MANAGER (single branch), DISTRIBUTOR, TELECALLER: Strictly locked to their assigned branch!
       const firstBranch = availableBranches[0];
       const targetBranch = (firstBranch && firstBranch._id !== 'MAIN') ? String(firstBranch._id || firstBranch.id) : '';
       if (targetBranch) {
         setSelectedBranchId(targetBranch);
-        try { sessionStorage.setItem('active_branch_id', targetBranch); } catch {}
+        try {
+          sessionStorage.setItem('active_branch_id', targetBranch);
+          sessionStorage.removeItem('active_branch_explicit');
+        } catch {}
       }
     }
-  }, [user, availableBranches, mainBranch]);
+  }, [user, availableBranches, mainBranch, hasLoadedBranches, branchesLoading, branchesFetched]);
 
   const selectBranch = (branchId) => {
     // Only OWNER can switch branches globally. Manager can only switch if assigned multiple specific branches.
@@ -128,18 +172,23 @@ export function BranchProvider({ children }) {
     }
 
     const mainBranchId = mainBranch ? String(mainBranch._id || mainBranch.id) : '';
-    const targetBranch = branchId || (mainBranchId || String(availableBranches[0]?._id || availableBranches[0]?.id));
+    const targetBranch = branchId ? String(branchId) : (mainBranchId || String(availableBranches[0]?._id || availableBranches[0]?.id));
     if (targetBranch === 'ALL' && user?.role !== 'OWNER') return;
     if (targetBranch !== 'ALL' && !availableBranches.some((branch) => String(branch._id || branch.id) === targetBranch)) return;
-    if (targetBranch === selectedBranchId) return;
-    queryClient.clear?.();
-    setSelectedBranchId(targetBranch);
+    if (targetBranch === String(selectedBranchId)) return;
+
+    // Persist in sessionStorage BEFORE updating state/invalidating queries so immediate fetches attach new x-branch-id
     try {
       sessionStorage.setItem('active_branch_id', targetBranch);
+      sessionStorage.setItem('active_branch_explicit', 'true');
     } catch {}
 
-    // Invalidate React Query cache so all modules immediately re-fetch with new branch headers!
-    queryClient.invalidateQueries();
+    setSelectedBranchId(targetBranch);
+
+    // Clear and refetch all branch-scoped queries while preserving ['branches'] so availableBranches never flashes empty!
+    const nonBranchesPredicate = (query) => query?.queryKey?.[0] !== 'branches';
+    queryClient.removeQueries?.({ predicate: nonBranchesPredicate });
+    queryClient.invalidateQueries?.({ predicate: nonBranchesPredicate });
   };
 
   return (

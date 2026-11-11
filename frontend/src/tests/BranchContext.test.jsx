@@ -43,7 +43,7 @@ vi.mock('@tanstack/react-query', () => ({
 
 import { useAuth } from '../context/AuthContext.jsx';
 import apiClient from '../api/apiClient.js';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -72,28 +72,53 @@ describe('BranchProvider — OWNER', () => {
     sessionStorage.clear();
   });
 
-  it('should load all branches for OWNER and default to ALL', async () => {
-    const { result } = renderHook(() => useBranch(), { wrapper: makeWrapper('OWNER') });
-
-    await waitFor(() => expect(result.current.availableBranches.length).toBe(2));
-    expect(result.current.selectedBranchId).toBe('ALL');
-    expect(result.current.isOwner).toBe(true);
-  });
-
-  it('should restore saved branch from sessionStorage for OWNER', async () => {
-    sessionStorage.setItem('active_branch_id', 'branch1');
+  it('should load all branches for OWNER and default to Main Branch (branch1)', async () => {
     const { result } = renderHook(() => useBranch(), { wrapper: makeWrapper('OWNER') });
 
     await waitFor(() => expect(result.current.availableBranches.length).toBe(2));
     expect(result.current.selectedBranchId).toBe('branch1');
+    expect(result.current.isOwner).toBe(true);
   });
 
-  it('should fallback to ALL when saved branch is not in the list', async () => {
+  it('should restore saved branch from sessionStorage for OWNER', async () => {
+    sessionStorage.setItem('active_branch_id', 'branch2');
+    const { result } = renderHook(() => useBranch(), { wrapper: makeWrapper('OWNER') });
+
+    await waitFor(() => expect(result.current.availableBranches.length).toBe(2));
+    expect(result.current.selectedBranchId).toBe('branch2');
+  });
+
+  it('should fallback to Main Branch (branch1) when saved branch is not in the list or stale ALL', async () => {
     sessionStorage.setItem('active_branch_id', 'invalid_branch_id');
     const { result } = renderHook(() => useBranch(), { wrapper: makeWrapper('OWNER') });
 
     await waitFor(() => expect(result.current.availableBranches.length).toBe(2));
-    expect(result.current.selectedBranchId).toBe('ALL');
+    expect(result.current.selectedBranchId).toBe('branch1');
+
+    sessionStorage.setItem('active_branch_id', 'ALL');
+    sessionStorage.removeItem('active_branch_explicit');
+    const { result: staleAllResult } = renderHook(() => useBranch(), { wrapper: makeWrapper('OWNER') });
+    await waitFor(() => expect(staleAllResult.current.selectedBranchId).toBe('branch1'));
+  });
+
+  it('should preserve saved branch2 while branches API is loading without overwriting sessionStorage with MAIN', async () => {
+    sessionStorage.setItem('active_branch_id', 'branch2');
+    sessionStorage.setItem('active_branch_explicit', 'true');
+
+    useQuery.mockReturnValueOnce({
+      data: undefined,
+      isLoading: true,
+      isFetched: false
+    });
+
+    const { result, rerender } = renderHook(() => useBranch(), { wrapper: makeWrapper('OWNER') });
+    expect(sessionStorage.getItem('active_branch_id')).toBe('branch2');
+    expect(result.current.selectedBranchId).toBe('branch2');
+
+    rerender();
+    await waitFor(() => expect(result.current.availableBranches.length).toBe(2));
+    expect(result.current.selectedBranchId).toBe('branch2');
+    expect(sessionStorage.getItem('active_branch_id')).toBe('branch2');
   });
 });
 
@@ -135,14 +160,14 @@ describe('BranchProvider — unauthenticated', () => {
     sessionStorage.clear();
   });
 
-  it('should clear branches and set ALL when user is null', async () => {
+  it('should clear branches and reset selectedBranchId when user is null', async () => {
     useAuth.mockReturnValue({ user: null });
     const { result } = renderHook(() => useBranch(), {
       wrapper: ({ children }) => <BranchProvider>{children}</BranchProvider>
     });
 
     await waitFor(() => expect(result.current.availableBranches).toEqual([]));
-    expect(result.current.selectedBranchId).toBe('ALL');
+    expect(result.current.selectedBranchId).toBe('');
   });
 });
 
@@ -154,12 +179,14 @@ describe('BranchProvider — selectBranch()', () => {
     sessionStorage.clear();
   });
 
-  it('should update selectedBranchId and write to sessionStorage', async () => {
+  it('should update selectedBranchId, write to sessionStorage, and keep branches cache intact', async () => {
+    const clear = vi.fn();
+    const removeQueries = vi.fn();
     const invalidateQueries = vi.fn();
-    useQueryClient.mockReturnValue({ invalidateQueries });
+    useQueryClient.mockReturnValue({ clear, removeQueries, invalidateQueries });
 
     const { result } = renderHook(() => useBranch(), { wrapper: makeWrapper('OWNER') });
-    await waitFor(() => expect(result.current.availableBranches.length).toBe(2));
+    await waitFor(() => expect(result.current.selectedBranchId).toBe('branch1'));
 
     act(() => {
       result.current.selectBranch('branch2');
@@ -167,18 +194,42 @@ describe('BranchProvider — selectBranch()', () => {
 
     expect(result.current.selectedBranchId).toBe('branch2');
     expect(sessionStorage.getItem('active_branch_id')).toBe('branch2');
+    expect(sessionStorage.getItem('active_branch_explicit')).toBe('true');
+    expect(clear).not.toHaveBeenCalled();
+    expect(removeQueries).toHaveBeenCalled();
     expect(invalidateQueries).toHaveBeenCalled();
+    const predicate = invalidateQueries.mock.calls[0][0].predicate;
+    expect(predicate({ queryKey: ['branches'] })).toBe(false);
+    expect(predicate({ queryKey: ['orders'] })).toBe(true);
   });
 
-  it('should default to ALL when null is passed to selectBranch', async () => {
+  it('should allow explicitly switching to ALL without snapping back to main branch', async () => {
+    const { result } = renderHook(() => useBranch(), { wrapper: makeWrapper('OWNER') });
+    await waitFor(() => expect(result.current.selectedBranchId).toBe('branch1'));
+
+    act(() => {
+      result.current.selectBranch('ALL');
+    });
+
+    expect(result.current.selectedBranchId).toBe('ALL');
+    expect(sessionStorage.getItem('active_branch_id')).toBe('ALL');
+    expect(sessionStorage.getItem('active_branch_explicit')).toBe('true');
+  });
+
+  it('should default to Main Branch (branch1) when null is passed to selectBranch', async () => {
     const { result } = renderHook(() => useBranch(), { wrapper: makeWrapper('OWNER') });
     await waitFor(() => expect(result.current.availableBranches.length).toBe(2));
+
+    act(() => {
+      result.current.selectBranch('branch2');
+    });
+    expect(result.current.selectedBranchId).toBe('branch2');
 
     act(() => {
       result.current.selectBranch(null);
     });
 
-    expect(result.current.selectedBranchId).toBe('ALL');
+    expect(result.current.selectedBranchId).toBe('branch1');
   });
 });
 

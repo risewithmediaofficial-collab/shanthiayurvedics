@@ -13,7 +13,7 @@ export function BranchSelector({ align = 'left' }) {
     const opts = [];
 
     safeBranches.forEach((branch, index) => {
-      const branchId = branch?._id || branch?.id || (typeof branch === 'string' ? branch : `branch-${index}`);
+      const branchId = String(branch?._id || branch?.id || (typeof branch === 'string' ? branch : `branch-${index}`));
       const rawName = branch?.name || (branch?.code ? `Branch ${branch.code}` : `Branch ${index + 1}`);
       const branchCode = branch?.code ? ` (${branch.code})` : '';
 
@@ -57,7 +57,7 @@ export function BranchSelector({ align = 'left' }) {
   return (
     <div className="flex items-center max-w-[85px] xs:max-w-[105px] sm:max-w-none">
       <CustomSelect
-        value={selectedBranchId || 'ALL'}
+        value={selectedBranchId ? String(selectedBranchId) : (branchOptions[0]?.value ?? '')}
         onChange={(e) => selectBranch(e.target.value)}
         options={branchOptions}
         icon={Building2}

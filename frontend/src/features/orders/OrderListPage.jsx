@@ -607,7 +607,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
 
   const activeBranchName = selectedBranchId === 'ALL'
     ? 'All Branches'
-    : (branches?.find((b) => (b._id || b.id) === selectedBranchId)?.name || user?.branchName || 'Hosur');
+    : (branches?.find((b) => String(b._id || b.id) === String(selectedBranchId))?.name || user?.branchName || 'Hosur');
   const userDisplayName = (callerId && telecallersResponse?.length)
     ? (telecallersResponse.find((t) => t._id === callerId)?.name || user?.name || 'Telecaller')
     : (user?.name || (isTelecaller ? 'Telecaller' : 'Central Hub'));

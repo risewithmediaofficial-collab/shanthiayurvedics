@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import apiClient from '../api/apiClient.js';
 import { getSocket } from '../api/socketClient.js';
 import { useAuth } from './AuthContext.jsx';
@@ -14,10 +14,15 @@ import {
 const NotificationContext = createContext(null);
 
 export function NotificationProvider({ children }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const userRef = useRef(user);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   // Web Push status tracking
   const [pushStatus, setPushStatus] = useState({
@@ -128,41 +133,89 @@ export function NotificationProvider({ children }) {
     if (!socket) return;
 
     const handleNewNotification = (notification) => {
-      setNotifications((prev) => [notification, ...prev]);
+      if (!notification) return;
+      const currentUserId = userRef.current?.id || userRef.current?._id;
+      const targetUserId = notification.userId?._id || notification.userId;
+      // STRICT: If notification is specifically for another user, do not show to current user
+      if (targetUserId && currentUserId && String(targetUserId) !== String(currentUserId)) {
+        return;
+      }
+
+      setNotifications((prev) => {
+        const notifId = notification._id || notification.id;
+        if (notifId && prev.some((n) => (n._id || n.id) === notifId)) {
+          return prev;
+        }
+        return [notification, ...prev];
+      });
       setUnreadCount((prev) => prev + 1);
     };
 
     socket.on('notification:new', handleNewNotification);
     socket.on('lead:assigned', (data) => {
-      handleNewNotification({
-        _id: `lead-${Date.now()}`,
-        title: '🎯 New Lead Assigned',
-        message: `Lead ${data.name || ''} has been assigned to you.`,
-        type: 'LEAD_ASSIGNED',
-        isRead: false,
-        createdAt: new Date().toISOString()
+      if (!data) return;
+      const currentUserId = userRef.current?.id || userRef.current?._id;
+      const targetUserId = data.assignedTo || data.userId;
+      // STRICT: Only show lead assigned notification if assigned specifically to the current user!
+      if (targetUserId && currentUserId && String(targetUserId) !== String(currentUserId)) {
+        return;
+      }
+
+      const leadId = data.leadId || data._id;
+      setNotifications((prev) => {
+        // Prevent duplicate notification if notification:new or existing entry already has it
+        if (leadId && prev.some((n) => (n.data?.leadId === leadId || n._id === `lead-${leadId}`) && n.type === 'LEAD_ASSIGNED')) {
+          return prev;
+        }
+        setUnreadCount((c) => c + 1);
+        return [
+          {
+            _id: `lead-${leadId || Date.now()}`,
+            title: '🎯 New Lead Assigned',
+            message: `Lead ${data.name || ''} has been assigned to you.`,
+            type: 'LEAD_ASSIGNED',
+            isRead: false,
+            createdAt: new Date().toISOString(),
+            data: { leadId, name: data.name, mobile: data.mobile }
+          },
+          ...prev
+        ];
       });
     });
 
     socket.on('followup:due', (data) => {
+      if (!data) return;
+      const currentUserId = userRef.current?.id || userRef.current?._id;
+      const targetUserId = data?.telecallerId || data?.userId;
+      if (targetUserId && currentUserId && String(targetUserId) !== String(currentUserId)) {
+        return;
+      }
       handleNewNotification({
-        _id: `followup-${Date.now()}`,
+        _id: `followup-${data?.followupId || Date.now()}`,
         title: '⏰ Follow-up Due',
         message: `Follow-up with ${data.customerName || 'customer'} is due now.`,
         type: 'FOLLOW_UP_DUE',
         isRead: false,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        data
       });
     });
 
     socket.on('reorder:due', (data) => {
+      if (!data) return;
+      const currentUserId = userRef.current?.id || userRef.current?._id;
+      const targetUserId = data?.recipientId || data?.userId;
+      if (targetUserId && currentUserId && String(targetUserId) !== String(currentUserId)) {
+        return;
+      }
       handleNewNotification({
-        _id: `reorder-${Date.now()}`,
+        _id: `reorder-${data?.orderId || Date.now()}`,
         title: `🔄 Reorder Reminder: ${data.patientName || 'Customer'}`,
         message: `Treatment course completion approaching for ${data.patientName || 'patient'} (${data.mobile || ''}). Call to book repeat course.`,
         type: 'REORDER_DUE',
         isRead: false,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        data
       });
     });
 

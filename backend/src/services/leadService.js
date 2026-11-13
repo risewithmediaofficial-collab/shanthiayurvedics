@@ -154,7 +154,8 @@ export class LeadService {
       emitToUser(assignedUserId, 'lead:assigned', {
         leadId: newLead._id,
         name: newLead.name,
-        mobile: newLead.mobile
+        mobile: newLead.mobile,
+        assignedTo: assignedUserId
       });
       emitToUser(assignedUserId, 'notification:new', notif);
 
@@ -386,6 +387,7 @@ export class LeadService {
     emitToUser(newTelecallerId.toString(), 'lead:assigned', {
       leadId: lead._id,
       name: lead.name,
+      assignedTo: newTelecallerId.toString(),
       reassigned: true
     });
     emitToUser(newTelecallerId.toString(), 'notification:new', notif);

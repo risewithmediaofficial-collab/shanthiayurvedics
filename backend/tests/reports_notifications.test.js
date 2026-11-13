@@ -175,5 +175,56 @@ describe("Notifications Module Integration Tests", () => {
       .set("Authorization", `Bearer ${ownerToken}`);
     expect(afterList.body.data.length).toBe(0);
   });
+
+  it("should send lead assigned notification ONLY to the person assigned and not other telecallers in the branch", async () => {
+    const branch = await Branch.findOne({ code: "HSR" });
+
+    // Create two telecallers in the same branch
+    const tc1 = await User.create({
+      name: "Telecaller One",
+      email: `tc1.${Date.now()}@shanthiayurvedas.com`,
+      passwordHash: await User.hashPassword("Password@12345"),
+      role: ROLES.TELECALLER,
+      branchId: branch._id,
+      branches: [branch._id],
+      isActive: true
+    });
+    const tc1Login = await request(app).post("/api/auth/login").send({ email: tc1.email, password: "Password@12345" });
+    const tc1Token = tc1Login.body.data.accessToken;
+
+    const tc2 = await User.create({
+      name: "Telecaller Two",
+      email: `tc2.${Date.now()}@shanthiayurvedas.com`,
+      passwordHash: await User.hashPassword("Password@12345"),
+      role: ROLES.TELECALLER,
+      branchId: branch._id,
+      branches: [branch._id],
+      isActive: true
+    });
+    const tc2Login = await request(app).post("/api/auth/login").send({ email: tc2.email, password: "Password@12345" });
+    const tc2Token = tc2Login.body.data.accessToken;
+
+    // Simulate lead assigned to TC1
+    const assignRes = await request(app)
+      .post("/api/notifications/simulate-lead-assign")
+      .set("Authorization", `Bearer ${tc1Token}`)
+      .send({ userId: tc1._id, name: "Exclusive Lead For TC1", mobile: "9988776655" });
+    expect(assignRes.status).toBe(200);
+
+    // TC1 must see the notification
+    const tc1List = await request(app)
+      .get("/api/notifications")
+      .set("Authorization", `Bearer ${tc1Token}`);
+    expect(tc1List.status).toBe(200);
+    expect(tc1List.body.data.length).toBeGreaterThan(0);
+    expect(tc1List.body.data.some((n) => n.data?.name === "Exclusive Lead For TC1")).toBe(true);
+
+    // TC2 (in the exact same branch) must NOT see TC1's notification
+    const tc2List = await request(app)
+      .get("/api/notifications")
+      .set("Authorization", `Bearer ${tc2Token}`);
+    expect(tc2List.status).toBe(200);
+    expect(tc2List.body.data.some((n) => n.data?.name === "Exclusive Lead For TC1")).toBe(false);
+  });
 });
 

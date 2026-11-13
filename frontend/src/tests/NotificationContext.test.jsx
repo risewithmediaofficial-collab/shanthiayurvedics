@@ -45,8 +45,8 @@ const mockNotifications = [
   { _id: 'n2', title: 'Test 2', message: 'World', type: 'INFO', isRead: true, createdAt: new Date().toISOString() }
 ];
 
-function makeWrapper(isAuthenticated = true) {
-  useAuth.mockReturnValue({ isAuthenticated });
+function makeWrapper(isAuthenticated = true, user = { id: 'u_telecaller_1', role: 'TELECALLER' }) {
+  useAuth.mockReturnValue({ isAuthenticated, user });
   return ({ children }) => <NotificationProvider>{children}</NotificationProvider>;
 }
 
@@ -215,6 +215,96 @@ describe('NotificationProvider — socket events', () => {
 
     unmount();
     expect(mockSocket.off).toHaveBeenCalledWith('notification:new', expect.any(Function));
+  });
+
+  it('should ignore lead:assigned notification if assignedTo does not match current user', async () => {
+    let leadAssignedHandler = null;
+    const mockSocket = {
+      on: vi.fn((event, handler) => {
+        if (event === 'lead:assigned') leadAssignedHandler = handler;
+      }),
+      off: vi.fn()
+    };
+    getSocket.mockReturnValue(mockSocket);
+    apiClient.get.mockResolvedValue({
+      data: { success: true, data: [], unreadCount: 0 }
+    });
+
+    const { result } = renderHook(() => useNotifications(), {
+      wrapper: makeWrapper(true, { id: 'my_user_id', role: 'TELECALLER' })
+    });
+
+    await waitFor(() => expect(leadAssignedHandler).toBeTypeOf('function'));
+
+    // Emit lead:assigned meant for another user
+    act(() => {
+      leadAssignedHandler({
+        leadId: 'lead_123',
+        name: 'John Doe',
+        assignedTo: 'different_user_id'
+      });
+    });
+
+    expect(result.current.notifications.length).toBe(0);
+    expect(result.current.unreadCount).toBe(0);
+
+    // Emit lead:assigned meant for current user
+    act(() => {
+      leadAssignedHandler({
+        leadId: 'lead_123',
+        name: 'John Doe',
+        assignedTo: 'my_user_id'
+      });
+    });
+
+    expect(result.current.notifications.length).toBe(1);
+    expect(result.current.unreadCount).toBe(1);
+    expect(result.current.notifications[0].title).toBe('🎯 New Lead Assigned');
+  });
+
+  it('should ignore notification:new if userId is set to another user', async () => {
+    let notifHandler = null;
+    const mockSocket = {
+      on: vi.fn((event, handler) => {
+        if (event === 'notification:new') notifHandler = handler;
+      }),
+      off: vi.fn()
+    };
+    getSocket.mockReturnValue(mockSocket);
+    apiClient.get.mockResolvedValue({
+      data: { success: true, data: [], unreadCount: 0 }
+    });
+
+    const { result } = renderHook(() => useNotifications(), {
+      wrapper: makeWrapper(true, { id: 'my_user_id', role: 'TELECALLER' })
+    });
+
+    await waitFor(() => expect(notifHandler).toBeTypeOf('function'));
+
+    // Notification intended for someone else
+    act(() => {
+      notifHandler({
+        _id: 'notif_diff',
+        userId: 'other_user_id',
+        title: '🎯 Other Lead Assigned',
+        message: 'Lead assigned to other'
+      });
+    });
+
+    expect(result.current.notifications.length).toBe(0);
+
+    // Notification intended for me
+    act(() => {
+      notifHandler({
+        _id: 'notif_me',
+        userId: 'my_user_id',
+        title: '🎯 My Lead Assigned',
+        message: 'Lead assigned to me'
+      });
+    });
+
+    expect(result.current.notifications.length).toBe(1);
+    expect(result.current.notifications[0]._id).toBe('notif_me');
   });
 });
 

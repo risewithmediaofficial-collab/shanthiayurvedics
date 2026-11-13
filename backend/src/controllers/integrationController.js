@@ -47,9 +47,11 @@ export const handleMetaWebhook = asyncHandler(async (req, res) => {
         notes: `Meta Ad Lead: ${leadData.ad_name || 'Campaign'}`
       });
 
-      emitToBranch(defaultBranch._id.toString(), 'lead:assigned', {
+      emitToBranch(defaultBranch._id.toString(), 'lead:created', {
         leadId: lead._id,
         name: lead.name,
+        branchId: defaultBranch._id,
+        status: lead.status,
         source: 'META'
       });
     }

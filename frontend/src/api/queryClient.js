@@ -1,13 +1,13 @@
 import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query';
+import { formatErrorResolution } from '../utils/errorHandler.js';
 
 const reportError = (error) => {
-  if (error?.code === 'ERR_CANCELED' || error?.response?.status === 401) return;
-  window.dispatchEvent(new CustomEvent('crm:error', { detail: {
-    message: error?.response?.data?.message || (error?.code === 'ECONNABORTED'
-      ? 'The request took too long. Please try again.'
-      : error?.response ? 'The request could not be completed. Please try again.' : 'Unable to connect. Check your connection and try again.'),
-    requestId: error?.response?.data?.requestId
-  } }));
+  if (error?.code === 'ERR_CANCELED') return;
+  // Format the error into full resolution payload with title, message, how-to-solve, and page routing links
+  const resolution = formatErrorResolution(error);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('crm:error', { detail: resolution }));
+  }
 };
 
 export const queryClient = new QueryClient({

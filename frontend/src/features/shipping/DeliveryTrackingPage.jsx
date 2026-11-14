@@ -16,6 +16,7 @@ import { Pagination } from '../../components/common/Pagination.jsx';
 import { DateRangeFilter } from '../../components/common/DateRangeFilter.jsx';
 import { ExportButton } from '../../components/common/ExportButton.jsx';
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils.js';
+import { ErrorDetailAlert } from '../../components/common/ErrorDetailAlert.jsx';
 
 // ── Status badge helper ──────────────────────────────────────────────────────
 
@@ -921,14 +922,10 @@ export function DeliveryTrackingPage() {
 
             {/* Error display */}
             {importMutation.isError && (
-              <div className="p-3 bg-red-50 rounded-xl border border-red-200 flex items-start gap-2 text-xs text-red-700">
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>
-                  {importMutation.error?.response?.data?.message
-                    || importMutation.error?.message
-                    || 'Import failed. Please check the file format and try again.'}
-                </span>
-              </div>
+              <ErrorDetailAlert
+                error={importMutation.error}
+                title="Tracking Import Failed"
+              />
             )}
           </div>
         )}

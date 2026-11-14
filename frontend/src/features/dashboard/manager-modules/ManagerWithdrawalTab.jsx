@@ -21,6 +21,7 @@ import { Badge } from '../../../components/common/Badge.jsx';
 import { Modal } from '../../../components/common/Modal.jsx';
 import { Spinner } from '../../../components/common/Spinner.jsx';
 import { DateRangeFilter } from '../../../components/common/DateRangeFilter.jsx';
+import { ErrorDetailAlert } from '../../../components/common/ErrorDetailAlert.jsx';
 
 export function ManagerWithdrawalTab() {
   const { selectedBranchId, isOwner } = useBranch();
@@ -136,7 +137,18 @@ export function ManagerWithdrawalTab() {
   };
 
   if (isLoading) return <div className="flex justify-center p-10"><Spinner /></div>;
-  if (isError) return <div role="alert" className="bento-card text-sm text-red-700">Could not load branch finance: {error?.response?.data?.message || error?.message || 'Unknown error'} <Button type="button" onClick={() => refetch()}>Retry</Button></div>;
+  if (isError) {
+    return (
+      <div className="p-4">
+        <ErrorDetailAlert
+          error={error}
+          title="Could Not Load Branch Finance Ledger"
+          onRetry={() => refetch()}
+          defaultExpanded={true}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -412,7 +424,14 @@ export function ManagerWithdrawalTab() {
           if (!settlementRequest) return;
           settlementMutation.mutate({ id: settlementRequest.id, status: settlementStatus, referenceNo });
         }}>
-          {settlementMutation.isError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{actionErrorMsg}</p>}
+          {settlementMutation.isError && (
+            <ErrorDetailAlert
+              error={settlementMutation.error}
+              message={actionErrorMsg}
+              title="Settlement Action Failed"
+              className="my-2"
+            />
+          )}
           <label className="block text-sm font-semibold text-slate-700">Decision
             <select value={settlementStatus} onChange={(event) => setSettlementStatus(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 p-2">
               <option value="PROCESSED">Processed</option>

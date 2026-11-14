@@ -12,6 +12,7 @@ import { Shield, X, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { Input } from '../../components/common/Input.jsx';
 import { Button } from '../../components/common/Button.jsx';
+import { ErrorDetailAlert } from '../../components/common/ErrorDetailAlert.jsx';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Username or email is required'),
@@ -25,6 +26,7 @@ export function LoginPage() {
   const from = location.state?.from?.pathname || '/dashboard';
 
   const [errorMessage, setErrorMessage] = useState('');
+  const [loginError, setLoginError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [hasAgreedTerms, setHasAgreedTerms] = useState(false);
@@ -56,12 +58,15 @@ export function LoginPage() {
     try {
       setIsLoading(true);
       setErrorMessage('');
+      setLoginError(null);
       await login(pendingCredentials);
       setShowTermsModal(false);
       navigate(from, { replace: true });
     } catch (err) {
       setShowTermsModal(false);
-      setErrorMessage(err.response?.data?.message || err.message || 'Invalid username or password');
+      const msg = err.response?.data?.message || err.message || 'Invalid username or password';
+      setErrorMessage(msg);
+      setLoginError(err);
     } finally {
       setIsLoading(false);
     }
@@ -76,11 +81,12 @@ export function LoginPage() {
         </p>
       </div>
 
-      {errorMessage && (
-        <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700">
-          <ErrorOutlineRounded sx={{ fontSize: 18 }} className="shrink-0 mt-0.5" />
-          <span>{errorMessage}</span>
-        </div>
+      {loginError && (
+        <ErrorDetailAlert
+          error={loginError}
+          title="Sign In Authentication Failed"
+          message={errorMessage}
+        />
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

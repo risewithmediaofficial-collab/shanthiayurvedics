@@ -8,6 +8,7 @@ import { Badge } from '../../components/common/Badge.jsx';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Select } from '../../components/common/Select.jsx';
 import { Input } from '../../components/common/Input.jsx';
+import { ErrorDetailAlert } from '../../components/common/ErrorDetailAlert.jsx';
 
 export function DispatchQueuePage() {
   const queryClient = useQueryClient();
@@ -139,9 +140,10 @@ export function DispatchQueuePage() {
             className="space-y-4"
           >
             {createShipmentMutation.isError && (
-              <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800">
-                {createShipmentMutation.error?.response?.data?.message || 'Shipment generation failed'}
-              </div>
+              <ErrorDetailAlert
+                error={createShipmentMutation.error}
+                title="Shipment Generation Failed"
+              />
             )}
 
             <Select

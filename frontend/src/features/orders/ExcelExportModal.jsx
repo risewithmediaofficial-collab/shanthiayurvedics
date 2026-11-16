@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Button } from '../../components/common/Button.jsx';
+import { getEffectiveCodAmount } from '../../utils/orderUtils.js';
 
 export function ExcelExportModal({
   isOpen,
@@ -42,7 +43,7 @@ export function ExcelExportModal({
         const addr = ord.deliveryAddress || {};
         const customerName = pat.patientName || ord.customerId?.name || 'Customer';
         const mobile = pat.mobile || ord.customerId?.mobile || addr.phone || '';
-        const isCOD = (ord.paymentMethod || 'COD') === 'COD';
+        const isCOD = (ord.paymentMethod || 'COD') === 'COD' || ord.paymentMethod === 'CASH_ON_DELIVERY';
 
         return {
           'Serial No': idx + 1,
@@ -55,8 +56,10 @@ export function ExcelExportModal({
           'Pincode': addr.pincode || '635109',
           'Mobile Number': mobile,
           'Weight (grams)': 350,
-          'COD Amount': isCOD ? (ord.grandTotal || 0) : 0,
-          'Insured Value': isCOD ? (ord.grandTotal || 0) : 0,
+          'COD Amount': isCOD ? getEffectiveCodAmount(ord) : 0,
+          'Advance Paid': Number(ord.advanceAmount || 0),
+          'Insured Value': Number(ord.grandTotal || 0),
+          'Total MRP': Number(ord.grandTotal || 0),
           'Invoice / Order Ref': ord.orderNumber,
           'Sender Name': 'Shanthi Ayurvedas Hosur',
           'Sender Mobile': '9629985345'
@@ -77,6 +80,8 @@ export function ExcelExportModal({
         const altMobile = pat.alternateMobile || '';
         const itemsStr = ord.items?.map((i) => `${i.productName} (x${i.quantity})`).join(', ') || 'Ayurvedic Medicine';
 
+        const isCOD = (ord.paymentMethod || 'COD') === 'COD' || ord.paymentMethod === 'CASH_ON_DELIVERY';
+
         return {
           'S.No': idx + 1,
           'Order Number': ord.orderNumber,
@@ -87,7 +92,9 @@ export function ExcelExportModal({
           'Products Summary': itemsStr,
           'Subtotal': ord.subtotal || 0,
           'Shipping': ord.shippingCharge || 0,
-          'Grand Total (₹)': ord.grandTotal || 0,
+          'Total MRP (₹)': ord.grandTotal || 0,
+          'Advance Paid (₹)': ord.advanceAmount || 0,
+          'COD Collect (₹)': isCOD ? getEffectiveCodAmount(ord) : 0,
           'Payment Method': ord.paymentMethod || 'COD',
           'Payment Status': ord.paymentStatus || 'PENDING',
           'Order Status': ord.status,

@@ -411,7 +411,9 @@ export function ScanTrackerPage() {
       'City',
       'State',
       'Pincode',
-      'Amount (Rs)',
+      'COD Collect Amount (Rs)',
+      'Advance Paid (Rs)',
+      'Total MRP (Rs)',
       'Payment Mode',
       'Items Ordered',
       'Status'
@@ -419,31 +421,48 @@ export function ScanTrackerPage() {
 
     const csvRows = scannedOrders.map((o, idx) => {
       const itemsStr = (o.items || []).map((i) => `${i.productName} (${i.quantity})`).join(' | ');
+      const isCod = o.paymentMethod === 'COD' || o.paymentMethod === 'CASH_ON_DELIVERY';
+      const codCollect = isCod ? getEffectiveCodAmount(o) : 0;
+      const advancePaid = Number(o.advanceAmount || 0);
+      const totalMrp = Number(o.grandTotal || 0);
+
+      // Clean mobile number and format as Excel text formula so Excel renders full digits without scientific notation (e.g. 8.66E+09)
+      const rawMobile = String(o.patientDetails?.mobile || o.customerId?.phone || '').replace(/[^0-9]/g, '');
+      const formattedMobile = rawMobile ? `="${rawMobile}"` : '""';
+
+      const trackingRaw = String(o.trackingNumber || '').trim();
+      // If tracking number is all digits (e.g. 12-digit barcode), protect from scientific notation
+      const formattedTracking = /^\d{8,}$/.test(trackingRaw) ? `="${trackingRaw}"` : `"${trackingRaw.replace(/"/g, '""')}"`;
+
       return [
         idx + 1,
-        o.orderNumber,
-        `"${o.trackingNumber || ''}"`,
-        `"${o.patientDetails?.patientName || o.customerId?.name || ''}"`,
-        `"${o.patientDetails?.mobile || o.customerId?.phone || ''}"`,
+        `"${o.orderNumber || ''}"`,
+        formattedTracking,
+        `"${(o.patientDetails?.patientName || o.customerId?.name || '').replace(/"/g, '""')}"`,
+        formattedMobile,
         `"${(o.deliveryAddress?.street || '').replace(/"/g, '""')}"`,
-        `"${o.deliveryAddress?.city || ''}"`,
-        `"${o.deliveryAddress?.state || ''}"`,
-        `"${o.deliveryAddress?.pincode || ''}"`,
-        o.grandTotal || 0,
-        o.paymentMethod || 'COD',
-        `"${itemsStr}"`,
-        o.status
+        `"${(o.deliveryAddress?.city || '').replace(/"/g, '""')}"`,
+        `"${(o.deliveryAddress?.state || '').replace(/"/g, '""')}"`,
+        `"${(o.deliveryAddress?.pincode || '').replace(/"/g, '""')}"`,
+        codCollect,
+        advancePaid,
+        totalMrp,
+        `"${o.paymentMethod || 'COD'}"`,
+        `"${itemsStr.replace(/"/g, '""')}"`,
+        `"${o.status || ''}"`
       ];
     });
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...csvRows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = '\uFEFF' + [headers.join(','), ...csvRows.map((e) => e.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
+    link.href = url;
     link.setAttribute('download', `Dispatch_Manifest_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     showToast('✓ CSV Manifest downloaded');
   };
 
@@ -640,7 +659,7 @@ export function ScanTrackerPage() {
   const deliveredOrders = allOrders.filter((o) => o.status === 'DELIVERED');
   const totalDeliveredCod = deliveredOrders
     .filter((o) => o.paymentMethod === 'COD' || o.paymentMethod === 'CASH_ON_DELIVERY')
-    .reduce((sum, o) => sum + (o.grandTotal || 0), 0);
+    .reduce((sum, o) => sum + getEffectiveCodAmount(o), 0);
 
   const markDeliveredMutation = useMutation({
     mutationFn: async (orderId) => {

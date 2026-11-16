@@ -143,18 +143,23 @@ export function OrderDetailPage() {
     order?.trackingNumber.toUpperCase() !== 'PENDING'
   );
 
+  const isOrderTPC = Boolean(
+    (order?.courierName || '').toLowerCase().includes('professional') ||
+    (order?.courierName || '').toLowerCase().includes('tpc')
+  );
+
   const handleOpenTransition = (status) => {
-    // STRICT ENFORCEMENT: Without an AWB number, do not allow transitioning to post-dispatch states
+    // STRICT ENFORCEMENT: For TPC orders, without an AWB number, do not allow transitioning to post-dispatch states
     const postDispatchStates = ['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_FAILED', 'RTO'];
-    if (postDispatchStates.includes(status) && !hasAwb) {
-      alert(`⚠️ Cannot transition order to '${status}': An AWB / Tracking number has not been generated for this order yet. Please generate an AWB number before dispatch.`);
+    if (postDispatchStates.includes(status) && isOrderTPC && !hasAwb) {
+      alert(`⚠️ Cannot transition order to '${status}': An AWB / Tracking number has not been generated for this TPC order yet. Please generate an AWB number before dispatch.`);
       return;
     }
 
     setTargetStatus(status);
     if (status === 'DISPATCHED') {
       setDispatchTrackingNumber(order?.trackingNumber || '');
-      setDispatchCourierName(order?.courierName || 'The Professional Courier (TPC)');
+      setDispatchCourierName(order?.courierName || 'India Post');
     }
     setTransitionModalOpen(true);
   };
@@ -434,8 +439,8 @@ export function OrderDetailPage() {
                     const newStatus = e.target.value;
                     if (newStatus === order.status) return;
                     const postDispatchStates = ['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_FAILED', 'RTO'];
-                    if (postDispatchStates.includes(newStatus) && !hasAwb) {
-                      alert(`⚠️ Cannot transition order to '${newStatus}': An AWB / Tracking number has not been generated for this order yet. Please generate an AWB number first.`);
+                    if (postDispatchStates.includes(newStatus) && isOrderTPC && !hasAwb) {
+                      alert(`⚠️ Cannot transition order to '${newStatus}': An AWB / Tracking number has not been generated for this TPC order yet. Please generate an AWB number first.`);
                       return;
                     }
                     handleOpenTransition(newStatus);
@@ -657,14 +662,19 @@ export function OrderDetailPage() {
                 </div>
               )}
               {order.paymentMethod === 'COD' && (
-                <div className="py-1.5 flex justify-between items-center text-xs font-bold text-amber-900 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
-                  <span>Balance COD to Collect</span>
-                  <span className="font-mono text-sm">₹{(order.codAmount ?? Math.max(0, (order.grandTotal || 0) - (order.advanceAmount || 0)))?.toLocaleString()}</span>
+                <div className="py-2.5 px-3 flex justify-between items-center text-xs font-black text-amber-950 bg-amber-100 rounded-xl border-2 border-amber-400 shadow-2xs my-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">💵</span>
+                    <span className="text-xs uppercase tracking-wide">COD Collect Amount:</span>
+                  </div>
+                  <span className="font-mono text-base sm:text-lg font-black text-amber-900">
+                    ₹{(order.codAmount ?? Math.max(0, (order.grandTotal || 0) - (order.advanceAmount || 0)))?.toLocaleString()}
+                  </span>
                 </div>
               )}
-              <div className="py-2 flex justify-between text-sm font-black text-slate-900 border-t border-slate-200 mt-1">
-                <span>Grand Total ({order.paymentMethod})</span>
-                <span className="text-emerald-800">₹{order.grandTotal?.toLocaleString()}</span>
+              <div className="py-1.5 flex justify-between text-xs font-semibold text-slate-500 border-t border-slate-200 mt-1">
+                <span>Total MRP / Value ({order.paymentMethod})</span>
+                <span className="font-mono text-slate-700">₹{order.grandTotal?.toLocaleString()}</span>
               </div>
             </div>
           </Card>
@@ -804,8 +814,8 @@ export function OrderDetailPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (targetStatus === 'DISPATCHED' && !hasAwb && !dispatchTrackingNumber?.trim()) {
-              alert('Please enter or generate an AWB / Tracking number before dispatching.');
+            if (targetStatus === 'DISPATCHED' && isOrderTPC && !hasAwb && !dispatchTrackingNumber?.trim()) {
+              alert('Please enter or generate a TPC AWB / Tracking number before dispatching.');
               return;
             }
             transitionMutation.mutate({

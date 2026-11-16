@@ -303,13 +303,34 @@ export function BarcodeScanStationModal({ isOpen, onClose, onOrderUpdated }) {
                 </div>
               </div>
 
-              <div className="text-right">
-                <span className="text-sm font-black text-slate-900">
-                  ₹{matchedOrder.grandTotal?.toLocaleString()}
-                </span>
-                <span className="block text-[10px] text-slate-400 uppercase font-bold">
-                  {matchedOrder.paymentMethod}
-                </span>
+              <div className="text-right flex flex-col items-end">
+                {matchedOrder.paymentMethod === 'COD' ? (
+                  <>
+                    <span className="text-[10px] font-semibold text-slate-500 font-mono">
+                      MRP: ₹{matchedOrder.grandTotal?.toLocaleString()}
+                    </span>
+                    {matchedOrder.advanceAmount > 0 && (
+                      <span className="text-[9.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 rounded">
+                        Adv: ₹{matchedOrder.advanceAmount?.toLocaleString()}
+                      </span>
+                    )}
+                    <div className="text-xs font-black font-mono bg-amber-100 text-amber-950 px-2 py-0.5 rounded border border-amber-400 mt-0.5 flex items-center gap-1 shadow-2xs">
+                      <span>💵 COD:</span>
+                      <strong className="text-amber-900 font-black">
+                        ₹{(matchedOrder.codAmount ?? Math.max(0, (matchedOrder.grandTotal || 0) - (matchedOrder.advanceAmount || 0))).toLocaleString()}
+                      </strong>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm font-black text-slate-900">
+                      ₹{matchedOrder.grandTotal?.toLocaleString()}
+                    </span>
+                    <span className="block text-[10px] text-slate-400 uppercase font-bold">
+                      {matchedOrder.paymentMethod}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
 

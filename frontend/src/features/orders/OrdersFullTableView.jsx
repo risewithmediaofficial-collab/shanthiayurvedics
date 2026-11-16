@@ -332,11 +332,14 @@ export function OrdersFullTableView({
     if (selectedOrderIds.length === 0) return;
     const postDispatchStates = ['DISPATCHED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_FAILED', 'RTO'];
     if (postDispatchStates.includes(bulkStatusToApply)) {
-      const ordersWithoutAwb = (orders || []).filter(
-        (o) => selectedOrderIds.includes(o._id) && (!o.trackingNumber || o.trackingNumber.trim() === '' || o.trackingNumber.toUpperCase() === 'PENDING')
-      );
+      const ordersWithoutAwb = (orders || []).filter((o) => {
+        if (!selectedOrderIds.includes(o._id)) return false;
+        const isTPC = (o.courierName || '').toLowerCase().includes('professional') || (o.courierName || '').toLowerCase().includes('tpc');
+        if (!isTPC) return false; // India Post does not require pre-generated AWB
+        return !o.trackingNumber || o.trackingNumber.trim() === '' || o.trackingNumber.toUpperCase() === 'PENDING';
+      });
       if (ordersWithoutAwb.length > 0) {
-        alert(`⚠️ Cannot transition to '${bulkStatusToApply}': ${ordersWithoutAwb.length} selected order(s) do not have an AWB / Tracking number generated. Please generate AWB numbers first.`);
+        alert(`⚠️ Cannot transition to '${bulkStatusToApply}': ${ordersWithoutAwb.length} TPC order(s) do not have an AWB number generated. Please generate TPC AWB numbers first.`);
         return;
       }
     }
@@ -980,11 +983,15 @@ export function OrdersFullTableView({
               type="button"
               disabled={selectedOrderIds.length === 0}
               onClick={() => {
+                const isTPC = (order) => {
+                  const c = String(order?.courierName || '').trim().toLowerCase();
+                  return c.includes('tpc') || c.includes('the professional');
+                };
                 const ordersWithoutAwb = (orders || []).filter(
-                  (o) => selectedOrderIds.includes(o._id) && (!o.trackingNumber || o.trackingNumber.trim() === '' || o.trackingNumber.toUpperCase() === 'PENDING')
+                  (o) => selectedOrderIds.includes(o._id) && isTPC(o) && (!o.trackingNumber || o.trackingNumber.trim() === '' || o.trackingNumber.toUpperCase() === 'PENDING')
                 );
                 if (ordersWithoutAwb.length > 0) {
-                  alert(`⚠️ Cannot dispatch: ${ordersWithoutAwb.length} selected order(s) do not have an AWB / Tracking number generated. Please generate AWB numbers first.`);
+                  alert(`⚠️ Cannot dispatch: ${ordersWithoutAwb.length} selected TPC order(s) do not have an AWB / Tracking number generated. Please generate AWB numbers first.`);
                   return;
                 }
                 bulkStatusMutation &&
@@ -1177,8 +1184,27 @@ export function OrdersFullTableView({
 
                     {/* Amount & Payment */}
                     <td className="p-3">
-                      <span className="font-bold font-mono text-slate-900 block">₹{row.grandTotal?.toLocaleString()}</span>
-                      <div className="flex items-center gap-1.5 flex-wrap">
+                      {row.paymentMethod === 'COD' ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] font-semibold text-slate-500 font-mono">
+                            MRP: ₹{row.grandTotal?.toLocaleString()}
+                          </span>
+                          {row.advanceAmount > 0 && (
+                            <span className="text-[9.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 rounded w-fit">
+                              Adv: ₹{row.advanceAmount.toLocaleString()}
+                            </span>
+                          )}
+                          <div className="text-xs font-black font-mono bg-amber-100 text-amber-950 px-2 py-0.5 rounded border border-amber-400 w-fit flex items-center gap-1 shadow-2xs">
+                            <span className="text-[10px]">💵 COD:</span>
+                            <span className="font-black text-amber-900">
+                              ₹{(row.codAmount ?? Math.max(0, (row.grandTotal || 0) - (row.advanceAmount || 0))).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="font-bold font-mono text-slate-900 block">₹{row.grandTotal?.toLocaleString()}</span>
+                      )}
+                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
                         <span className="text-[10px] uppercase font-bold text-slate-500">
                           {row.paymentMethod || 'COD'}
                         </span>
@@ -1216,9 +1242,10 @@ export function OrdersFullTableView({
                             const newStatus = e.target.value;
                             if (!newStatus || newStatus === row.status) return;
                             const postDispatchStates = ['DISPATCHED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_FAILED', 'RTO'];
+                            const isTPC = (row.courierName || '').toLowerCase().includes('professional') || (row.courierName || '').toLowerCase().includes('tpc');
                             const hasRowAwb = Boolean(row.trackingNumber && row.trackingNumber.trim() !== '' && row.trackingNumber.toUpperCase() !== 'PENDING');
-                            if (postDispatchStates.includes(newStatus) && !hasRowAwb) {
-                              alert(`⚠️ Cannot transition order #${row.orderNumber} to '${newStatus}': An AWB / Tracking number has not been generated for this order yet. Please generate an AWB number first.`);
+                            if (postDispatchStates.includes(newStatus) && isTPC && !hasRowAwb) {
+                              alert(`⚠️ Cannot transition order #${row.orderNumber} to '${newStatus}': An AWB / Tracking number has not been generated for this TPC order yet. Please generate an AWB number first.`);
                               return;
                             }
                             singleTransitionMutation &&

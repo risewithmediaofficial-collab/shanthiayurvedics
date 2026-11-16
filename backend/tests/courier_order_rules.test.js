@@ -146,4 +146,45 @@ describe('Courier Service Order Placement Rules via API', () => {
     expect(res.body.data.paymentMethod).toBe('ONLINE');
     expect(res.body.data.codAmount).toBe(0);
   });
+
+  it('should allow transitioning India Post order to DISPATCHED with scanned barcode without AWB generation error', async () => {
+    // 1. Create India Post order
+    const createRes = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        customerId: customer._id.toString(),
+        branchId: branch._id.toString(),
+        courierName: 'India Post',
+        paymentMethod: 'COD',
+        items: [{ productId: product._id.toString(), batchId: batch._id.toString(), quantity: 1, unitPrice: 250 }],
+        deliveryAddress: customer.addresses[0]
+      });
+
+    expect(createRes.status).toBe(201);
+    const orderId = createRes.body.data._id;
+
+    // Transition to CONFIRMED
+    await request(app)
+      .patch(`/api/orders/${orderId}/transition`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ status: 'CONFIRMED' });
+
+    // 2. Scan barcode and dispatch via PATCH /api/orders/:id (as done in ScanTrackerPage)
+    const scanBarcode = `EK${Math.floor(100000000 + Math.random() * 900000000)}IN`;
+    const patchRes = await request(app)
+      .patch(`/api/orders/${orderId}`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        trackingNumber: scanBarcode,
+        courierName: 'India Post',
+        status: 'DISPATCHED',
+        shippingDate: new Date()
+      });
+
+    expect(patchRes.status).toBe(200);
+    expect(patchRes.body.data.status).toBe('DISPATCHED');
+    expect(patchRes.body.data.trackingNumber).toBe(scanBarcode);
+    expect(patchRes.body.data.courierName).toBe('India Post');
+  });
 });

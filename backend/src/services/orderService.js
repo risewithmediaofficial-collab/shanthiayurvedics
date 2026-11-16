@@ -344,14 +344,21 @@ export class OrderService {
       StateMachineService.validateOrderTransition(previousStatus, targetStatus);
     }
 
-    // STRICT ENFORCEMENT: Without generating an AWB / Tracking number, do NOT allow transition to DISPATCHED or any status after dispatch
+    const effectiveCourier = (courierName || order.courierName || '').toLowerCase();
+    const isTPC = effectiveCourier.includes('professional') || effectiveCourier.includes('tpc');
+    const isIndiaPost = !isTPC;
+
+    // STRICT ENFORCEMENT: Only enforce pre-generated AWB check for TPC if trackingNumber is missing.
+    // For India Post, staff physically scan article barcode stickers upon dispatch or handover, so do not block with "generate AWB" error.
     if (StateMachineService.isDispatchedOrBeyond(targetStatus)) {
       const effectiveAwb = (trackingNumber || order.trackingNumber || '').trim();
       if (!effectiveAwb || effectiveAwb.toUpperCase() === 'PENDING') {
-        throw new AppError(
-          `Cannot transition order to '${targetStatus}' without generating an AWB / Tracking number. Please generate an AWB number first.`,
-          400
-        );
+        if (isTPC) {
+          throw new AppError(
+            `Cannot transition order to '${targetStatus}': An AWB / Tracking number has not been generated for TPC shipment. Please generate a TPC AWB number first.`,
+            400
+          );
+        }
       }
     }
 
@@ -396,6 +403,8 @@ export class OrderService {
     }
     if (courierName) {
       order.courierName = courierName.trim();
+    } else if (isIndiaPost && !order.courierName) {
+      order.courierName = 'India Post';
     }
     const transitionNote = notes || (forceRevert ? `Force revert / Manager override to ${targetStatus}` : `Transitioned to ${targetStatus}`);
     order.statusHistory.push({
@@ -524,7 +533,14 @@ export class OrderService {
       order.courierName = updateData.courierName;
     }
     if (updateData.status && updateData.status !== order.status) {
-      order = await this.transitionStatus(orderId, updateData.status, { changedBy: user, notes: updateData.notes, req });
+      order = await this.transitionStatus(orderId, updateData.status, {
+        changedBy: user,
+        notes: updateData.notes,
+        req,
+        trackingNumber: updateData.trackingNumber,
+        courierName: updateData.courierName,
+        forceRevert: updateData.forceRevert
+      });
     }
     for (const key of ['shippingDate', 'boxDimensions', 'weightGrams']) {
       if (updateData[key] !== undefined) order[key] = updateData[key];

@@ -138,6 +138,7 @@ export function ScanTrackerPage() {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [cameraTarget, setCameraTarget] = useState('DISPATCH'); // 'DISPATCH' | 'RTO'
+  const [pendingDispatchConfirm, setPendingDispatchConfirm] = useState(null); // { order, trackingNumber }
   const barcodeInputRef = useRef(null);
   const videoRef = useRef(null);
   const mediaStreamRef = useRef(null);
@@ -219,10 +220,20 @@ export function ScanTrackerPage() {
       return;
     }
 
-    saveBarcodeMutation.mutate({
-      orderId: activeOrder._id,
+    // Prompt confirmation dialog before dispatching
+    setPendingDispatchConfirm({
+      order: activeOrder,
       trackingNumber: validation.code
     });
+  };
+
+  const handleConfirmDispatchOrder = () => {
+    if (!pendingDispatchConfirm) return;
+    saveBarcodeMutation.mutate({
+      orderId: pendingDispatchConfirm.order._id,
+      trackingNumber: pendingDispatchConfirm.trackingNumber
+    });
+    setPendingDispatchConfirm(null);
   };
 
   const handleSkipOrder = () => {
@@ -279,6 +290,13 @@ export function ScanTrackerPage() {
               } else {
                 setBarcodeInput(scannedRaw);
                 showToast(`📷 Scanned from camera: ${scannedRaw}`);
+                const validation = validateBarcode(scannedRaw);
+                if (validation.valid && activeOrder) {
+                  setPendingDispatchConfirm({
+                    order: activeOrder,
+                    trackingNumber: validation.code
+                  });
+                }
               }
               return;
             }
@@ -980,26 +998,40 @@ export function ScanTrackerPage() {
                     </div>
 
                     {/* Price & Payment Mode */}
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">💰</span>
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                      <div className="flex items-center justify-between">
                         <div>
-                          <div className="text-[9px] text-slate-400 uppercase font-semibold">Order Total</div>
-                          <span className="font-bold text-slate-900 font-mono text-sm sm:text-base">
-                            ₹{Number(activeOrder.grandTotal || 0).toFixed(2)}
+                          <span className="text-[10px] text-slate-500 font-semibold font-mono block">
+                            MRP Total: ₹{Number(activeOrder.grandTotal || 0).toLocaleString()}
+                          </span>
+                          {activeOrder.advanceAmount > 0 && (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                              Adv Paid: ₹{Number(activeOrder.advanceAmount).toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <span className={`inline-block px-2.5 py-0.5 rounded-md text-[11px] font-bold font-mono ${
+                            activeOrder.paymentMethod === 'PREPAID'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              : 'bg-amber-100 text-amber-900 border border-amber-300'
+                          }`}>
+                            {activeOrder.paymentMethod || 'COD'}
                           </span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-[9px] text-slate-400 uppercase font-semibold">Payment Mode</div>
-                        <span className={`inline-block px-2.5 py-0.5 rounded-md text-xs font-bold font-mono ${
-                          activeOrder.paymentMethod === 'PREPAID'
-                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                            : 'bg-amber-100 text-amber-900 border border-amber-200'
-                        }`}>
-                          {activeOrder.paymentMethod || 'COD'}
-                        </span>
-                      </div>
+
+                      {activeOrder.paymentMethod === 'COD' && (
+                        <div className="flex items-center justify-between p-2 rounded-lg bg-amber-100 border-2 border-amber-400 text-amber-950 shadow-2xs">
+                          <span className="text-xs font-black flex items-center gap-1">
+                            <span>💵</span>
+                            <span>COD COLLECT:</span>
+                          </span>
+                          <span className="text-base sm:text-lg font-black font-mono text-amber-900">
+                            ₹{(activeOrder.codAmount ?? Math.max(0, (activeOrder.grandTotal || 0) - (activeOrder.advanceAmount || 0))).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Delivery Address */}
@@ -1889,6 +1921,135 @@ export function ScanTrackerPage() {
                 className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold"
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DISPATCH CONFIRMATION MODAL AFTER SCANNING ── */}
+      {pendingDispatchConfirm && (
+        <div className="fixed inset-0 z-[70] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center shrink-0">
+                <Truck className="w-6 h-6 text-amber-700" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-900 text-base sm:text-lg leading-tight">
+                  Dispatch Order #{pendingDispatchConfirm.order.orderNumber}?
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Confirm India Post dispatch and attach scanned barcode
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-3.5 space-y-2.5 border border-slate-200 text-xs">
+              {/* Scanned Barcode Display */}
+              <div className="p-2.5 bg-white rounded-lg border-2 border-dashed border-indigo-400 text-center">
+                <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
+                  Scanned Tracking Number
+                </span>
+                <span className="font-mono text-base sm:text-lg font-black text-indigo-900 tracking-wider">
+                  {pendingDispatchConfirm.trackingNumber}
+                </span>
+                <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                  📮 India Post Speed Post
+                </span>
+              </div>
+
+              {/* Customer summary */}
+              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/80">
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Customer</span>
+                  <span className="font-bold text-slate-800 truncate block">
+                    {pendingDispatchConfirm.order.patientDetails?.patientName || pendingDispatchConfirm.order.customerId?.name || 'Customer'}
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-500">
+                    {pendingDispatchConfirm.order.patientDetails?.mobile || pendingDispatchConfirm.order.customerId?.phone || ''}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Destination</span>
+                  <span className="font-bold text-slate-800 truncate block">
+                    {pendingDispatchConfirm.order.deliveryAddress?.city || pendingDispatchConfirm.order.deliveryAddress?.district || 'India'}
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-500">
+                    PIN: {pendingDispatchConfirm.order.deliveryAddress?.pincode || '—'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Price & Highlighted COD Collect */}
+              <div className="pt-2 border-t border-slate-200/80 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-500 font-semibold font-mono">
+                    Total MRP: ₹{Number(pendingDispatchConfirm.order.grandTotal || 0).toLocaleString()}
+                  </span>
+                  {pendingDispatchConfirm.order.advanceAmount > 0 && (
+                    <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                      Adv Paid: ₹{Number(pendingDispatchConfirm.order.advanceAmount).toLocaleString()}
+                    </span>
+                  )}
+                </div>
+
+                {pendingDispatchConfirm.order.paymentMethod === 'COD' ? (
+                  <div className="p-2.5 rounded-lg bg-amber-100 border-2 border-amber-400 text-amber-950 flex items-center justify-between shadow-2xs">
+                    <span className="text-xs font-black flex items-center gap-1.5">
+                      <span>💵</span>
+                      <span>COD COLLECT:</span>
+                    </span>
+                    <strong className="text-base sm:text-lg font-black font-mono text-amber-900">
+                      ₹{(pendingDispatchConfirm.order.codAmount ?? Math.max(0, (pendingDispatchConfirm.order.grandTotal || 0) - (pendingDispatchConfirm.order.advanceAmount || 0))).toLocaleString()}
+                    </strong>
+                  </div>
+                ) : (
+                  <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-between">
+                    <span className="text-xs font-bold">PREPAID ORDER</span>
+                    <span className="text-xs font-mono font-bold">No Cash to Collect</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-500">
+                <span className="font-semibold text-slate-700">Status Change:</span>
+                <span className="px-1.5 py-0.5 rounded bg-slate-200 font-bold text-slate-700 text-[10px]">
+                  {pendingDispatchConfirm.order.status}
+                </span>
+                <span>➔</span>
+                <span className="px-1.5 py-0.5 rounded bg-emerald-100 border border-emerald-300 font-black text-emerald-800 text-[10px]">
+                  DISPATCHED
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingDispatchConfirm(null);
+                  setTimeout(() => barcodeInputRef.current?.focus(), 100);
+                }}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel / Rescan
+              </button>
+              <button
+                type="button"
+                autoFocus
+                disabled={saveBarcodeMutation.isPending}
+                onClick={handleConfirmDispatchOrder}
+                className="px-5 py-2 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors cursor-pointer shadow-md flex items-center gap-1.5"
+              >
+                {saveBarcodeMutation.isPending ? (
+                  <span>Dispatching...</span>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 font-bold" />
+                    <span>✔ Yes, Dispatch Order</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

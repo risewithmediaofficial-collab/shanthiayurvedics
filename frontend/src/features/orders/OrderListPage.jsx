@@ -253,6 +253,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
 
   // Status Change Confirmation Dialog State
   const [statusChangeConfirm, setStatusChangeConfirm] = useState(null); // { orderId, newStatus, orderNumber, currentStatus, forceRevert }
+  const [dispatchTrackingInput, setDispatchTrackingInput] = useState('');
 
   // Modals State
   const [createModalOpen, setCreateModalOpen] = useState(searchParams.get('new') === 'true');
@@ -452,8 +453,8 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
 
   // Single Order Status Transition
   const singleTransitionMutation = useMutation({
-    mutationFn: ({ orderId, status, forceRevert }) =>
-      apiClient.patch(`/orders/${orderId}/transition`, { status, forceRevert }),
+    mutationFn: ({ orderId, status, forceRevert, trackingNumber, courierName }) =>
+      apiClient.patch(`/orders/${orderId}/transition`, { status, forceRevert, trackingNumber, courierName }),
     onSuccess: (_, { status }) => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       refetchOrders();
@@ -568,11 +569,14 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
     }
     const postDispatchStates = ['DISPATCHED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_FAILED', 'RTO'];
     if (postDispatchStates.includes(bulkStatusToApply)) {
-      const ordersWithoutAwb = (orders || []).filter(
-        (o) => selectedOrderIds.includes(o._id) && (!o.trackingNumber || o.trackingNumber.trim() === '' || o.trackingNumber.toUpperCase() === 'PENDING')
-      );
+      const ordersWithoutAwb = (orders || []).filter((o) => {
+        if (!selectedOrderIds.includes(o._id)) return false;
+        const isTPC = (o.courierName || '').toLowerCase().includes('professional') || (o.courierName || '').toLowerCase().includes('tpc');
+        if (!isTPC) return false; // India Post does not require pre-generated AWB
+        return !o.trackingNumber || o.trackingNumber.trim() === '' || o.trackingNumber.toUpperCase() === 'PENDING';
+      });
       if (ordersWithoutAwb.length > 0) {
-        showToast(`⚠️ Cannot transition to ${bulkStatusToApply}: ${ordersWithoutAwb.length} order(s) do not have an AWB number. Please generate AWB numbers first.`);
+        showToast(`⚠️ Cannot transition to ${bulkStatusToApply}: ${ordersWithoutAwb.length} TPC order(s) do not have an AWB number. Please generate TPC AWB numbers first.`);
         return;
       }
     }
@@ -1403,19 +1407,33 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                   </div>
 
                   <div className="text-right shrink-0 flex flex-col items-end">
-                    <div className="text-base sm:text-lg font-black text-slate-900 font-mono tracking-tight">
-                      ₹{order.grandTotal?.toLocaleString()}
-                    </div>
-                    {order.advanceAmount > 0 && (
-                      <div className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-0.5">
-                        Adv: ₹{order.advanceAmount.toLocaleString()}
-                        {order.advanceUtr ? ` • UTR: ${order.advanceUtr}` : ''}
-                      </div>
-                    )}
-                    {order.paymentMethod === 'COD' && order.advanceAmount > 0 && (
-                      <div className="text-[11px] text-amber-900 font-black font-mono bg-amber-50 px-1.5 py-0.5 rounded border border-amber-300 mt-0.5">
-                        💵 COD: <strong>₹{(order.codAmount ?? Math.max(0, (order.grandTotal || 0) - order.advanceAmount)).toLocaleString()}</strong>
-                      </div>
+                    {order.paymentMethod === 'COD' ? (
+                      <>
+                        <div className="text-[11px] sm:text-xs font-semibold text-slate-500 font-mono tracking-tight">
+                          MRP: ₹{order.grandTotal?.toLocaleString()}
+                        </div>
+                        {order.advanceAmount > 0 && (
+                          <div className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-0.5">
+                            Adv: ₹{order.advanceAmount.toLocaleString()}
+                            {order.advanceUtr ? ` • UTR: ${order.advanceUtr}` : ''}
+                          </div>
+                        )}
+                        <div className="text-xs sm:text-sm font-black font-mono bg-amber-100 text-amber-950 px-2.5 py-1 rounded-lg border-2 border-amber-400 mt-1 shadow-2xs flex items-center justify-end gap-1">
+                          <span>💵 COD:</span>
+                          <strong className="text-sm sm:text-base font-black text-amber-900">
+                            ₹{(order.codAmount ?? Math.max(0, (order.grandTotal || 0) - (order.advanceAmount || 0))).toLocaleString()}
+                          </strong>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-base sm:text-lg font-black text-slate-900 font-mono tracking-tight">
+                          ₹{order.grandTotal?.toLocaleString()}
+                        </div>
+                        <div className="text-[9.5px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 mt-0.5">
+                          ✓ PAID ONLINE
+                        </div>
+                      </>
                     )}
                     <div className="flex items-center justify-end gap-1 mt-1 flex-wrap">
                       {order.courierName && (
@@ -1556,16 +1574,20 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                           const newStatus = e.target.value;
                           if (!newStatus || newStatus === order.status) return;
                           const postDispatchStates = ['DISPATCHED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_FAILED', 'RTO'];
+                          const isTPC = (order.courierName || '').toLowerCase().includes('professional') || (order.courierName || '').toLowerCase().includes('tpc');
                           const hasOrderAwb = Boolean(order.trackingNumber && order.trackingNumber.trim() !== '' && order.trackingNumber.toUpperCase() !== 'PENDING');
-                          if (postDispatchStates.includes(newStatus) && !hasOrderAwb) {
-                            showToast(`⚠️ Cannot transition order #${order.orderNumber} to ${newStatus} without generating an AWB number. Please generate an AWB first.`);
+                          if (postDispatchStates.includes(newStatus) && isTPC && !hasOrderAwb) {
+                            showToast(`⚠️ Cannot transition order #${order.orderNumber} to ${newStatus} without generating an AWB number for TPC. Please generate an AWB first.`);
                             return;
                           }
+                          setDispatchTrackingInput(order.trackingNumber || '');
                           setStatusChangeConfirm({
                             orderId: order._id,
                             newStatus,
                             orderNumber: order.orderNumber,
                             currentStatus: order.status,
+                            courierName: order.courierName || 'India Post',
+                            existingTracking: order.trackingNumber || '',
                             forceRevert: Boolean(isOwner || isManager || isDistributor)
                           });
                         }}
@@ -1759,6 +1781,28 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                   <span>Customer will automatically receive a WhatsApp confirmation.</span>
                 </div>
               )}
+              {statusChangeConfirm.newStatus === 'DISPATCHED' && (
+                <div className="space-y-1.5 p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 text-xs">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-slate-700">Courier Partner:</span>
+                    <span className="font-bold text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
+                      📮 {statusChangeConfirm.courierName || 'India Post'}
+                    </span>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Tracking Number / Barcode (Scan or Type):
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. EK452095441IN or scan sticker"
+                      value={dispatchTrackingInput}
+                      onChange={(e) => setDispatchTrackingInput(e.target.value.toUpperCase())}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold tracking-wider text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex items-center justify-end gap-2 pt-1">
               <button
@@ -1774,6 +1818,8 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                   singleTransitionMutation.mutate({
                     orderId: statusChangeConfirm.orderId,
                     status: statusChangeConfirm.newStatus,
+                    trackingNumber: dispatchTrackingInput.trim() || statusChangeConfirm.existingTracking || undefined,
+                    courierName: statusChangeConfirm.courierName || 'India Post',
                     forceRevert: statusChangeConfirm.forceRevert
                   });
                   setStatusChangeConfirm(null);

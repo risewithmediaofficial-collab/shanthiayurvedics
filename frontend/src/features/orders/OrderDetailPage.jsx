@@ -35,6 +35,7 @@ import { PrintableInvoiceModal } from './PrintableInvoiceModal.jsx';
 import { PrintableShippingLabelModal } from './PrintableShippingLabelModal.jsx';
 import { CustomerProfileModal } from '../customers/CustomerProfileModal.jsx';
 import { TPCShippingCard } from './components/TPCShippingCard.jsx';
+import { getEffectiveCodAmount } from '../../utils/orderUtils.js';
 
 const ALL_STATUS_OPTIONS = [
   { value: 'NEW', label: 'New' },
@@ -589,16 +590,18 @@ export function OrderDetailPage() {
             Edit
           </Button>
 
-          {/* Delete Order */}
-          <Button
-            variant="danger"
-            size="sm"
-            icon={Trash2}
-            onClick={() => setIsDeleteModalOpen(true)}
-            className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
-          >
-            Delete
-          </Button>
+          {/* Delete Order (Admin and Manager) */}
+          {(isOwner || isManager) && (
+            <Button
+              variant="danger"
+              size="sm"
+              icon={Trash2}
+              onClick={() => setIsDeleteModalOpen(true)}
+              className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+            >
+              Delete
+            </Button>
+          )}
 
           {renderAvailableTransitions()}
         </div>
@@ -668,7 +671,7 @@ export function OrderDetailPage() {
                     <span className="text-xs uppercase tracking-wide">COD Collect Amount:</span>
                   </div>
                   <span className="font-mono text-base sm:text-lg font-black text-amber-900">
-                    ₹{(order.codAmount ?? Math.max(0, (order.grandTotal || 0) - (order.advanceAmount || 0)))?.toLocaleString()}
+                    ₹{getEffectiveCodAmount(order)?.toLocaleString()}
                   </span>
                 </div>
               )}

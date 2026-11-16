@@ -39,6 +39,8 @@ import * as XLSX from 'xlsx';
 import apiClient from '../../api/apiClient.js';
 import { useBranch } from '../../context/BranchContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { usePermissions } from '../../hooks/usePermissions.js';
+import { getEffectiveCodAmount } from '../../utils/orderUtils.js';
 import { AccountSwitcherPill } from '../../components/layout/AccountSwitcher.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { Button } from '../../components/common/Button.jsx';
@@ -80,6 +82,9 @@ export function ScanTrackerPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { isOwner, isManager } = usePermissions();
+  const canDeleteOrders = Boolean(isOwner || isManager);
+  const [orderToDelete, setOrderToDelete] = useState(null);
   const { selectedBranchId, branches, setSelectedBranchId } = useBranch();
 
   // Active Main Tab: 'SCAN' | 'EXPORT' | 'RTO' | 'DELIVERED' | 'RE_EXPORT'
@@ -375,7 +380,7 @@ export function ScanTrackerPage() {
         'STATE': addr.state || 'Tamil Nadu',
         'PINCODE': addr.pincode || '',
         'PAYMENT TYPE': isCod ? 'COD' : 'PREPAID',
-        'COD AMOUNT': isCod ? Number(order.grandTotal || 0) : 0,
+        'COD AMOUNT': isCod ? getEffectiveCodAmount(order) : 0,
         'DECLARED VALUE': Number(order.grandTotal || 0),
         'WEIGHT (G)': 450,
         'ORDER REF': order.orderNumber || order._id?.slice(-6)?.toUpperCase(),
@@ -491,19 +496,42 @@ export function ScanTrackerPage() {
     }
   });
 
-  // Remove barcode from order (unscan)
+  // Remove barcode from order (unscan / return to scan queue)
   const removeBarcodeMutation = useMutation({
     mutationFn: async (orderId) => {
       const res = await apiClient.patch(`/orders/${orderId}`, {
         trackingNumber: '',
-        status: 'CONFIRMED'
+        status: 'CONFIRMED',
+        forceRevert: true
       });
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scan-tracker-orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['scan-tracker-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order-metrics-summary'] });
       showToast('✓ Tracking barcode cleared; order returned to scanning queue');
+    },
+    onError: (err) => {
+      alert(err.response?.data?.message || 'Failed to return order to scan queue');
+    }
+  });
+
+  // Delete Order (Admin & Manager)
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (orderId) => {
+      const res = await apiClient.delete(`/orders/${orderId}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['scan-tracker-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order-metrics-summary'] });
+      showToast('✓ Order deleted successfully and inventory released');
+      setOrderToDelete(null);
+    },
+    onError: (err) => {
+      alert(err.response?.data?.message || 'Failed to delete order');
     }
   });
 
@@ -1028,7 +1056,7 @@ export function ScanTrackerPage() {
                             <span>COD COLLECT:</span>
                           </span>
                           <span className="text-base sm:text-lg font-black font-mono text-amber-900">
-                            ₹{(activeOrder.codAmount ?? Math.max(0, (activeOrder.grandTotal || 0) - (activeOrder.advanceAmount || 0))).toLocaleString()}
+                            ₹{getEffectiveCodAmount(activeOrder).toLocaleString()}
                           </span>
                         </div>
                       )}
@@ -1231,7 +1259,7 @@ export function ScanTrackerPage() {
                   <div className="text-2xl font-black font-mono text-emerald-950 mt-0.5">
                     ₹{scannedOrders
                       .filter((o) => o.paymentMethod === 'COD' || o.paymentMethod === 'CASH_ON_DELIVERY')
-                      .reduce((sum, o) => sum + (o.grandTotal || 0), 0)
+                      .reduce((sum, o) => sum + getEffectiveCodAmount(o), 0)
                       .toLocaleString()}
                   </div>
                 </div>
@@ -1374,16 +1402,26 @@ export function ScanTrackerPage() {
                             </div>
                           </td>
                           <td className="p-3">
-                            <div className="font-mono font-bold text-slate-900">
-                              ₹{Number(order.grandTotal || 0).toLocaleString()}
-                            </div>
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                              order.paymentMethod === 'COD' || order.paymentMethod === 'CASH_ON_DELIVERY'
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {order.paymentMethod || 'COD'}
+                            <span className="text-[10px] text-slate-500 font-semibold font-mono block">
+                              MRP: ₹{Number(order.grandTotal || 0).toLocaleString()}
                             </span>
+                            {order.advanceAmount > 0 && (
+                              <span className="text-[9.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 rounded block w-fit mb-0.5">
+                                Adv: ₹{Number(order.advanceAmount).toLocaleString()}
+                              </span>
+                            )}
+                            {(order.paymentMethod === 'COD' || order.paymentMethod === 'CASH_ON_DELIVERY') ? (
+                              <div className="text-xs font-black font-mono bg-amber-100 text-amber-950 px-2 py-0.5 rounded border border-amber-400 w-fit flex items-center gap-1 shadow-2xs mt-0.5">
+                                <span className="text-[10px]">💵 COD:</span>
+                                <span className="font-black text-amber-900">
+                                  ₹{getEffectiveCodAmount(order).toLocaleString()}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 inline-block mt-0.5">
+                                {order.paymentMethod || 'PREPAID'}
+                              </span>
+                            )}
                           </td>
                           <td className="p-3">
                             <Badge variant={order.status === 'DISPATCHED' ? 'success' : 'primary'} size="sm">
@@ -1399,23 +1437,34 @@ export function ScanTrackerPage() {
                                   setEditBarcodeModal(order);
                                   setNewBarcodeVal(order.trackingNumber || '');
                                 }}
-                                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
                               </button>
 
                               <button
                                 type="button"
-                                title="Unscan / Remove Barcode"
+                                title="Unscan & Return to Queue"
                                 onClick={() => {
                                   if (window.confirm(`Remove tracking barcode from Order #${order.orderNumber} and return to scan queue?`)) {
                                     removeBarcodeMutation.mutate(order._id);
                                   }
                                 }}
-                                className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50"
+                                className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 cursor-pointer"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <RotateCcw className="w-3.5 h-3.5" />
                               </button>
+
+                              {canDeleteOrders && (
+                                <button
+                                  type="button"
+                                  title="Delete Order (Admin & Manager)"
+                                  onClick={() => setOrderToDelete(order)}
+                                  className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -2001,7 +2050,7 @@ export function ScanTrackerPage() {
                       <span>COD COLLECT:</span>
                     </span>
                     <strong className="text-base sm:text-lg font-black font-mono text-amber-900">
-                      ₹{(pendingDispatchConfirm.order.codAmount ?? Math.max(0, (pendingDispatchConfirm.order.grandTotal || 0) - (pendingDispatchConfirm.order.advanceAmount || 0))).toLocaleString()}
+                      ₹{getEffectiveCodAmount(pendingDispatchConfirm.order).toLocaleString()}
                     </strong>
                   </div>
                 ) : (
@@ -2050,6 +2099,61 @@ export function ScanTrackerPage() {
                     <span>✔ Yes, Dispatch Order</span>
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── DELETE ORDER CONFIRMATION MODAL (ADMIN & MANAGER) ── */}
+      {orderToDelete && (
+        <div className="fixed inset-0 z-[80] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-rose-100 border border-rose-300 flex items-center justify-center shrink-0">
+                <Trash2 className="w-6 h-6 text-rose-700" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-900 text-base sm:text-lg leading-tight">
+                  Delete Order #{orderToDelete.orderNumber}?
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Admin & Manager Order Deletion
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-rose-50 rounded-xl border border-rose-200 text-xs text-rose-900 space-y-2">
+              <p className="font-semibold">
+                Are you sure you want to permanently delete this order?
+              </p>
+              <div className="bg-white/80 p-2.5 rounded-lg border border-rose-100 space-y-1 text-[11px]">
+                <div><strong>Customer:</strong> {orderToDelete.patientDetails?.patientName || orderToDelete.customerId?.name || 'Customer'} ({orderToDelete.patientDetails?.mobile || orderToDelete.customerId?.phone || ''})</div>
+                <div><strong>MRP Total:</strong> ₹{Number(orderToDelete.grandTotal || 0).toLocaleString()} • {orderToDelete.paymentMethod}</div>
+                {orderToDelete.trackingNumber && (
+                  <div><strong>Barcode:</strong> <span className="font-mono font-bold text-indigo-700">{orderToDelete.trackingNumber}</span></div>
+                )}
+              </div>
+              <p className="text-[11px] text-rose-700 leading-snug">
+                ⚠️ Reserved stock for this order will be automatically released back to branch inventory.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setOrderToDelete(null)}
+                disabled={deleteOrderMutation.isPending}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteOrderMutation.isPending}
+                onClick={() => deleteOrderMutation.mutate(orderToDelete._id)}
+                className="px-5 py-2 text-xs font-black text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-colors cursor-pointer shadow-md flex items-center gap-1.5"
+              >
+                {deleteOrderMutation.isPending ? 'Deleting...' : '✔ Yes, Delete Order'}
               </button>
             </div>
           </div>

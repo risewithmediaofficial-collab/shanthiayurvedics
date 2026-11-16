@@ -15,6 +15,27 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { NotFoundError } from '../utils/errors.js';
 import { ROLES } from '../constants/roles.js';
 
+const normalizeOrderCod = (ord) => {
+  if (!ord) return ord;
+  if (ord.paymentMethod === 'COD' || ord.paymentMethod === 'CASH_ON_DELIVERY') {
+    const adv = Math.max(0, Number(ord.advanceAmount) || 0);
+    const grand = Math.max(0, Number(ord.grandTotal) || 0);
+    const maxCod = Math.max(0, grand - adv);
+    if (adv > 0) {
+      if (ord.codAmount === undefined || ord.codAmount === null || ord.codAmount > maxCod || ord.codAmount >= grand) {
+        ord.codAmount = maxCod;
+      }
+    } else {
+      if (ord.codAmount === undefined || ord.codAmount === null || ord.codAmount === 0) {
+        ord.codAmount = grand;
+      }
+    }
+  } else {
+    ord.codAmount = 0;
+  }
+  return ord;
+};
+
 export const getOrders = asyncHandler(async (req, res) => {
   const { page, limit } = pagination(req.query);
   const status = req.query.status;
@@ -157,6 +178,9 @@ export const getOrders = asyncHandler(async (req, res) => {
   ]);
 
   const totalRevenue = revenueAgg[0]?.total || 0;
+  if (Array.isArray(orders)) {
+    orders.forEach(normalizeOrderCod);
+  }
 
   return ApiResponse.paginated(res, orders, { page, limit, total, totalRevenue, sortBy, sortOrder: sortOrder === 1 ? 'asc' : 'desc' }, 'Orders retrieved');
 });
@@ -175,6 +199,8 @@ export const getOrderById = asyncHandler(async (req, res) => {
   if (req.user.role === ROLES.TELECALLER && order.telecallerId?._id?.toString() !== req.user.id) {
     throw new NotFoundError('Order');
   }
+
+  normalizeOrderCod(order);
 
   const statusHistory = await OrderStatusHistory.find({ orderId: order._id })
     .populate('changedBy', 'name email role')

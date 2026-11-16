@@ -31,6 +31,7 @@ import {
 import { Button } from '../../components/common/Button.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { CustomSelect } from '../../components/common/CustomSelect.jsx';
+import { getEffectiveCodAmount } from '../../utils/orderUtils.js';
 
 // Status styling configuration
 const STATUS_META = {
@@ -1197,7 +1198,7 @@ export function OrdersFullTableView({
                           <div className="text-xs font-black font-mono bg-amber-100 text-amber-950 px-2 py-0.5 rounded border border-amber-400 w-fit flex items-center gap-1 shadow-2xs">
                             <span className="text-[10px]">💵 COD:</span>
                             <span className="font-black text-amber-900">
-                              ₹{(row.codAmount ?? Math.max(0, (row.grandTotal || 0) - (row.advanceAmount || 0))).toLocaleString()}
+                              ₹{getEffectiveCodAmount(row).toLocaleString()}
                             </span>
                           </div>
                         </div>

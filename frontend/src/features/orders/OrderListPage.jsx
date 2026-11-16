@@ -50,6 +50,7 @@ import { exportToExcel, exportToCSV } from '../../utils/exportUtils.js';
 import { DateRangeFilter } from '../../components/common/DateRangeFilter.jsx';
 import { ExportButton } from '../../components/common/ExportButton.jsx';
 import { OrdersFullTableView } from './OrdersFullTableView.jsx';
+import { getEffectiveCodAmount } from '../../utils/orderUtils.js';
 
 // Status styling configuration
 const STATUS_META = {
@@ -217,6 +218,8 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
           'Alt Mobile': pat.alternateMobile || '',
           'Products Summary': itemsStr,
           'Total Amount (₹)': ord.grandTotal || 0,
+          'Advance Paid (₹)': ord.advanceAmount || 0,
+          'COD Collect (₹)': getEffectiveCodAmount(ord),
           'Payment Method': ord.paymentMethod || 'COD',
           'Payment Status': ord.paymentStatus || 'PENDING',
           'Order Status': ord.status,
@@ -1421,7 +1424,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                         <div className="text-xs sm:text-sm font-black font-mono bg-amber-100 text-amber-950 px-2.5 py-1 rounded-lg border-2 border-amber-400 mt-1 shadow-2xs flex items-center justify-end gap-1">
                           <span>💵 COD:</span>
                           <strong className="text-sm sm:text-base font-black text-amber-900">
-                            ₹{(order.codAmount ?? Math.max(0, (order.grandTotal || 0) - (order.advanceAmount || 0))).toLocaleString()}
+                            ₹{getEffectiveCodAmount(order).toLocaleString()}
                           </strong>
                         </div>
                       </>
@@ -1639,14 +1642,16 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                       <Eye className="w-3.5 h-3.5" />
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedOrderForDelete(order)}
-                      title="Delete Order"
-                      className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors cursor-pointer shrink-0"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {(isOwner || isManager) && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOrderForDelete(order)}
+                        title="Delete Order"
+                        className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors cursor-pointer shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

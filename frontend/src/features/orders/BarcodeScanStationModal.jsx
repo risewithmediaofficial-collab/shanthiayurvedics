@@ -21,6 +21,7 @@ import { Modal } from '../../components/common/Modal.jsx';
 import { Button } from '../../components/common/Button.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import apiClient from '../../api/apiClient.js';
+import { getEffectiveCodAmount } from '../../utils/orderUtils.js';
 
 export function BarcodeScanStationModal({ isOpen, onClose, onOrderUpdated }) {
   const [activeTab, setActiveTab] = useState('scan'); // 'scan' | 'export' | 'rto' | 'delivered'
@@ -317,7 +318,7 @@ export function BarcodeScanStationModal({ isOpen, onClose, onOrderUpdated }) {
                     <div className="text-xs font-black font-mono bg-amber-100 text-amber-950 px-2 py-0.5 rounded border border-amber-400 mt-0.5 flex items-center gap-1 shadow-2xs">
                       <span>💵 COD:</span>
                       <strong className="text-amber-900 font-black">
-                        ₹{(matchedOrder.codAmount ?? Math.max(0, (matchedOrder.grandTotal || 0) - (matchedOrder.advanceAmount || 0))).toLocaleString()}
+                        ₹{getEffectiveCodAmount(matchedOrder).toLocaleString()}
                       </strong>
                     </div>
                   </>

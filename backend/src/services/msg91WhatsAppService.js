@@ -42,10 +42,14 @@ export class Msg91WhatsAppService {
       // Payable amount
       const isCOD = (order.paymentMethod || 'COD') === 'COD';
       const advanceAmount = Number(order.advanceAmount || 0);
+      const grandTotal = Number(order.grandTotal || 0);
+      const maxCod = Math.max(0, grandTotal - advanceAmount);
       const payableAmount = Math.round(Number(
         isCOD
-          ? (order.codAmount !== undefined && order.codAmount !== null && order.codAmount !== '' ? order.codAmount : Math.max(0, (order.grandTotal || 0) - advanceAmount))
-          : order.grandTotal
+          ? (advanceAmount > 0
+              ? (order.codAmount > 0 && order.codAmount <= maxCod ? order.codAmount : maxCod)
+              : (order.codAmount > 0 ? order.codAmount : grandTotal))
+          : grandTotal
       ) || 0);
 
       const paymentMode = isCOD ? 'Cash on Delivery (COD)' : `Prepaid (${order.paymentMethod || 'Online'})`;
@@ -181,9 +185,13 @@ export class Msg91WhatsAppService {
       // Payable amount
       const isCOD = (order.paymentMethod || 'COD') === 'COD';
       const advanceAmount = Number(order.advanceAmount || 0);
+      const grandTotal = Number(order.grandTotal || 0);
+      const maxCod = Math.max(0, grandTotal - advanceAmount);
       const payableAmount = Math.round(Number(
         isCOD
-          ? (order.codAmount !== undefined && order.codAmount !== null && order.codAmount !== '' ? order.codAmount : Math.max(0, (order.grandTotal || 0) - advanceAmount))
+          ? (advanceAmount > 0
+              ? (order.codAmount > 0 && order.codAmount <= maxCod ? order.codAmount : maxCod)
+              : (order.codAmount > 0 ? order.codAmount : grandTotal))
           : 0
       ) || 0);
 

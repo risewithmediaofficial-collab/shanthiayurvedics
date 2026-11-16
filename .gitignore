@@ -30,3 +30,4 @@ tests/*.png
 *.backup.json
 *backup*.json
 .mongo_data/
+.playwright-mcp/

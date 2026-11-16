@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Printer, ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { convertNumberToIndianWords } from '../../utils/numberToWords.js';
 import { useBranch } from '../../context/BranchContext.jsx';
+import { getEffectiveCodAmount } from '../../utils/orderUtils.js';
 
 // Font scales for adjusting text size on shipping labels
 const FONT_SCALES = {
@@ -493,7 +494,7 @@ export function ShippingLabelLandscapeModal({
     const advanceUtr = order.advanceUtr || '';
     const payableAmount = Math.round(Number(
       isCOD
-        ? (order.codAmount !== undefined && order.codAmount !== null && order.codAmount !== '' ? order.codAmount : Math.max(0, (order.grandTotal || 0) - advanceAmount))
+        ? getEffectiveCodAmount(order)
         : order.grandTotal
     ) || 0);
     const amountWords = convertNumberToIndianWords(payableAmount);

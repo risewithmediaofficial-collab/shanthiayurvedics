@@ -176,9 +176,10 @@ export class OrderService {
       const grandTotal = orderData.offerPrice ? Number(orderData.offerPrice) : calculatedTotal;
       const advanceAmount = Math.max(0, Number(orderData.advanceAmount || 0));
       const advanceUtr = (orderData.advanceUtr || orderData.utrNumber || '').trim();
+      const maxCod = Math.max(0, grandTotal - advanceAmount);
       const codAmount = (isOfficeSale || isProfessionalCourier) ? 0 : (orderData.codAmount !== undefined && orderData.codAmount !== null && orderData.codAmount !== ''
-        ? Number(orderData.codAmount)
-        : (paymentMethod === 'COD' ? Math.max(0, grandTotal - advanceAmount) : 0));
+        ? (advanceAmount > 0 ? Math.min(Number(orderData.codAmount), maxCod) : Number(orderData.codAmount))
+        : (paymentMethod === 'COD' ? maxCod : 0));
 
       const assignedTelecallerId = orderData.telecallerId || user.id || user._id;
       let telecallerName = orderData.telecallerName || '';
@@ -615,10 +616,13 @@ export class OrderService {
     if (updateData.advanceUtr !== undefined || updateData.utrNumber !== undefined) {
       order.advanceUtr = (updateData.advanceUtr || updateData.utrNumber || '').trim();
     }
-    if (updateData.codAmount !== undefined) {
-      order.codAmount = Number(updateData.codAmount);
-    } else if (updateData.advanceAmount !== undefined && order.paymentMethod === 'COD') {
-      order.codAmount = Math.max(0, (order.grandTotal || 0) - (order.advanceAmount || 0));
+    if (order.paymentMethod === 'COD' || order.paymentMethod === 'CASH_ON_DELIVERY') {
+      const maxCod = Math.max(0, (order.grandTotal || 0) - (order.advanceAmount || 0));
+      if (updateData.codAmount !== undefined) {
+        order.codAmount = order.advanceAmount > 0 ? Math.min(Number(updateData.codAmount), maxCod) : Number(updateData.codAmount);
+      } else {
+        order.codAmount = maxCod;
+      }
     }
 
     if (updateData.paymentStatus) {

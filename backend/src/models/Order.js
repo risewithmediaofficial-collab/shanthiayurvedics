@@ -255,5 +255,26 @@ orderSchema.index({ telecallerId: 1, createdAt: -1 });
 orderSchema.index({ branchId: 1, createdAt: -1 });
 orderSchema.index({ orderChannel: 1 });
 
+// Ensure COD collect amount never equals or exceeds MRP when an advance was paid
+orderSchema.pre('save', function (next) {
+  if (this.paymentMethod === 'COD' || this.paymentMethod === 'CASH_ON_DELIVERY') {
+    const adv = Math.max(0, Number(this.advanceAmount) || 0);
+    const grand = Math.max(0, Number(this.grandTotal) || 0);
+    const maxCod = Math.max(0, grand - adv);
+    if (adv > 0) {
+      if (this.codAmount === undefined || this.codAmount === null || this.codAmount > maxCod || this.codAmount >= grand) {
+        this.codAmount = maxCod;
+      }
+    } else {
+      if (this.codAmount === undefined || this.codAmount === null || this.codAmount === 0) {
+        this.codAmount = grand;
+      }
+    }
+  } else {
+    this.codAmount = 0;
+  }
+  next();
+});
+
 export const Order = mongoose.model('Order', orderSchema);
 export default Order;

@@ -187,4 +187,87 @@ describe('Courier Service Order Placement Rules via API', () => {
     expect(patchRes.body.data.trackingNumber).toBe(scanBarcode);
     expect(patchRes.body.data.courierName).toBe('India Post');
   });
+
+  it('should correctly set codAmount to (grandTotal - advanceAmount) when advance is paid', async () => {
+    const res = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        customerId: customer._id.toString(),
+        branchId: branch._id.toString(),
+        courierName: 'India Post',
+        paymentMethod: 'COD',
+        advanceAmount: 100,
+        items: [{ productId: product._id.toString(), batchId: batch._id.toString(), quantity: 2, unitPrice: 250 }], // Total 500
+        deliveryAddress: customer.addresses[0]
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.grandTotal).toBe(500);
+    expect(res.body.data.advanceAmount).toBe(100);
+    // Crucial check: COD amount MUST be 400, NOT 500 (MRP)
+    expect(res.body.data.codAmount).toBe(400);
+
+    // Also verify getOrders returns normalized codAmount
+    const getRes = await request(app)
+      .get(`/api/orders/${res.body.data._id}`)
+      .set('Authorization', `Bearer ${managerToken}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.data.codAmount).toBe(400);
+  });
+
+  it('should allow Manager / Admin to unscan and revert DISPATCHED order to CONFIRMED with forceRevert', async () => {
+    // Create & dispatch order
+    const createRes = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        customerId: customer._id.toString(),
+        branchId: branch._id.toString(),
+        courierName: 'India Post',
+        paymentMethod: 'COD',
+        items: [{ productId: product._id.toString(), batchId: batch._id.toString(), quantity: 1, unitPrice: 250 }],
+        deliveryAddress: customer.addresses[0]
+      });
+
+    const orderId = createRes.body.data._id;
+    const barcode = `EK${Math.floor(100000000 + Math.random() * 900000000)}IN`;
+
+    await request(app)
+      .patch(`/api/orders/${orderId}`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ trackingNumber: barcode, courierName: 'India Post', status: 'DISPATCHED' });
+
+    // Unscan with forceRevert: true (from ScanTrackerPage)
+    const unscanRes = await request(app)
+      .patch(`/api/orders/${orderId}`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ trackingNumber: '', status: 'CONFIRMED', forceRevert: true });
+
+    expect(unscanRes.status).toBe(200);
+    expect(unscanRes.body.data.status).toBe('CONFIRMED');
+    expect(unscanRes.body.data.trackingNumber).toBe('');
+  });
+
+  it('should allow Manager / Admin to delete an order', async () => {
+    const createRes = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        customerId: customer._id.toString(),
+        branchId: branch._id.toString(),
+        courierName: 'India Post',
+        paymentMethod: 'COD',
+        items: [{ productId: product._id.toString(), batchId: batch._id.toString(), quantity: 1, unitPrice: 250 }],
+        deliveryAddress: customer.addresses[0]
+      });
+
+    const orderId = createRes.body.data._id;
+    const delRes = await request(app)
+      .delete(`/api/orders/${orderId}`)
+      .set('Authorization', `Bearer ${managerToken}`);
+
+    expect(delRes.status).toBe(200);
+    expect(delRes.body.message).toMatch(/deleted successfully/i);
+  });
 });

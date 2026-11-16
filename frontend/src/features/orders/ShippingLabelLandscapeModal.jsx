@@ -778,8 +778,8 @@ export function ShippingLabelLandscapeModal({
               <div class="col-left">
                 <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 4px; margin-bottom: 2px;">
                   <div class="cust-name" style="font-size: ${adaptive.nameSize};">${d.customerName}</div>
-                  <div class="cod-badge" style="font-size: ${adaptive.codBadgeSize};">
-                    ${d.isCOD ? `COD <strong style="font-size: ${adaptive.codAmtSize};">₹${d.payableAmount}</strong>` : `PREPAID`}
+                  <div class="cod-badge" style="font-size: ${adaptive.codBadgeSize}; color: #000000; border-color: #000000;">
+                    ${d.isCOD ? `COD <strong style="font-size: ${adaptive.codAmtSize}; color: #000000; font-weight: 900;">₹${d.payableAmount}</strong>` : `PREPAID`}
                   </div>
                 </div>
                 <div class="cust-phone" style="font-size: ${adaptive.phoneSize};">
@@ -1027,8 +1027,8 @@ export function ShippingLabelLandscapeModal({
             overflow-wrap: break-word;
           }
           .cod-badge {
-            border: 1.5px solid #dc2626;
-            color: #dc2626;
+            border: 2px solid #000000;
+            color: #000000;
             font-weight: 900;
             padding: ${isSingle ? '2px 7px' : '1.5px 6px'};
             border-radius: 3px;
@@ -1246,10 +1246,10 @@ export function ShippingLabelLandscapeModal({
                 {d.customerName}
               </div>
               <div
-                className="border border-red-600 text-red-600 font-black px-1.5 py-0.2 rounded-xs shrink-0 whitespace-nowrap"
-                style={{ fontSize: adaptive.previewCodBadgeSize }}
+                className="border-2 border-black text-black font-black px-1.5 py-0.2 rounded-xs shrink-0 whitespace-nowrap"
+                style={{ fontSize: adaptive.previewCodBadgeSize, color: '#000000', borderColor: '#000000' }}
               >
-                {d.isCOD ? <><span>COD </span><strong style={{ fontWeight: '900', fontSize: adaptive.previewCodAmtSize }}>₹{d.payableAmount}</strong></> : 'PREPAID'}
+                {d.isCOD ? <><span>COD </span><strong style={{ fontWeight: '900', fontSize: adaptive.previewCodAmtSize, color: '#000000' }}>₹{d.payableAmount}</strong></> : 'PREPAID'}
               </div>
             </div>
             <div

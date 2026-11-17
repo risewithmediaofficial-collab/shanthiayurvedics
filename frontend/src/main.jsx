@@ -39,11 +39,31 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
 // Prevent mouse scroll wheel from changing values on number inputs across all pages
 if (typeof window !== 'undefined') {
-  window.addEventListener('wheel', () => {
-    if (document.activeElement && document.activeElement.type === 'number') {
-      document.activeElement.blur();
-    }
-  }, { passive: true });
+  window.addEventListener(
+    'wheel',
+    (e) => {
+      const activeEl = document.activeElement;
+      const targetEl = e.target;
+      const isNumberInput =
+        (targetEl && targetEl.tagName === 'INPUT' && targetEl.type === 'number') ||
+        (activeEl && activeEl.tagName === 'INPUT' && activeEl.type === 'number');
+
+      if (isNumberInput) {
+        if (activeEl && activeEl.tagName === 'INPUT' && activeEl.type === 'number') {
+          activeEl.blur();
+        }
+        e.preventDefault();
+        // Allow the page or modal to scroll normally instead of changing the number
+        const scrollable =
+          (targetEl && targetEl.closest && (targetEl.closest('.overflow-y-auto, .overflow-auto, [role="dialog"]') || targetEl.closest('main') || targetEl.closest('body'))) ||
+          window;
+        if (scrollable && typeof scrollable.scrollBy === 'function') {
+          scrollable.scrollBy({ top: e.deltaY, behavior: 'auto' });
+        }
+      }
+    },
+    { passive: false }
+  );
 }
 
 // Register Web Push Service Worker reliably

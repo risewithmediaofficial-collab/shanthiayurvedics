@@ -790,13 +790,8 @@ export function ShippingLabelLandscapeModal({
                 <div class="cust-address" style="font-size: ${adaptive.addrSize};">${d.formattedAddress}</div>
               </div>
 
-              <!-- Right Column: Tracking & Table -->
+              <!-- Right Column: Details Table -->
               <div class="col-right">
-                <div class="article-box" style="padding: ${adaptive.artBoxPadding};">
-                  <div class="art-title" style="font-size: ${adaptive.artTitleSize};">${d.trackingTitle}</div>
-                  <div class="art-code" style="font-size: ${adaptive.artCodeSize};">${d.tracking}</div>
-                </div>
-
                 <div class="table-wrapper">
                   <table class="details-table">
                     <tbody>
@@ -1063,29 +1058,10 @@ export function ShippingLabelLandscapeModal({
             padding: ${isSingle ? '5px 10px' : '4px 7px'};
             display: flex;
             flex-direction: column;
-            gap: 3px;
             justify-content: flex-start;
             min-width: 0;
             height: 100%;
             box-sizing: border-box;
-          }
-          .article-box {
-            border: 1px dashed #737373;
-            padding: ${isSingle ? '3px 6px' : '2.5px 5px'};
-            text-align: center;
-            background: #fafafa;
-            flex-shrink: 0;
-          }
-          .art-title {
-            font-weight: 800;
-            text-transform: uppercase;
-            color: #525252;
-          }
-          .art-code {
-            font-family: monospace;
-            font-weight: 900;
-            letter-spacing: 0.8px;
-            margin-top: 0.5px;
           }
           .table-wrapper {
             flex: 1;
@@ -1276,26 +1252,8 @@ export function ShippingLabelLandscapeModal({
             </div>
           </div>
 
-          {/* Right Column: Tracking Box & Table */}
-          <div className="p-1.5 sm:p-2 flex flex-col gap-1 justify-start min-w-0 h-full">
-            <div
-              className={`border border-dashed border-neutral-400 text-center bg-neutral-50 rounded-xs shrink-0 ${adaptive.articleBoxClass}`}
-              style={{ padding: adaptive.artBoxPadding }}
-            >
-              <div
-                className="font-bold text-neutral-500 uppercase tracking-wider"
-                style={{ fontSize: adaptive.artTitleSize }}
-              >
-                {d.trackingTitle}
-              </div>
-              <div
-                className="font-mono font-black tracking-wider text-black"
-                style={{ fontSize: adaptive.artCodeSize }}
-              >
-                {d.tracking}
-              </div>
-            </div>
-
+          {/* Right Column: Details Table */}
+          <div className="p-1.5 sm:p-2 flex flex-col justify-start min-w-0 h-full">
             <div className="flex-1 flex flex-col min-h-0 h-full">
               <table
                 className="w-full h-full flex-1 border-collapse border border-black font-bold uppercase table-fixed"

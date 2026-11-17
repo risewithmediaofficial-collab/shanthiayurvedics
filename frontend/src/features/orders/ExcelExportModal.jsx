@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import {
   Download,
   FileSpreadsheet,
@@ -37,39 +37,132 @@ export function ExcelExportModal({
     const dateStamp = new Date().toISOString().slice(0, 10);
 
     if (exportFormat === 'indiapost') {
-      // India Post Speed Post / COD Booking Manifest Format
-      const postData = targetOrders.map((ord, idx) => {
+      // Custom Post Manifest Format with Yellow Highlight Headers (Matching Image 1)
+      const headers = [
+        'SL.NO',
+        'BARCODE',
+        'PIN CODE',
+        'RECIVER NAME',
+        'RECIVER ADDRESS',
+        'CONTACT',
+        'COD AMOUNT',
+        'WEIGHT',
+        'MRP',
+        'REFER BY',
+        'COURIER BY'
+      ];
+
+      const aoaData = [headers];
+
+      targetOrders.forEach((ord, idx) => {
         const pat = ord.patientDetails || {};
         const addr = ord.deliveryAddress || {};
-        const customerName = pat.patientName || ord.customerId?.name || 'Customer';
-        const mobile = pat.mobile || ord.customerId?.mobile || addr.phone || '';
         const isCOD = (ord.paymentMethod || 'COD') === 'COD' || ord.paymentMethod === 'CASH_ON_DELIVERY';
 
-        return {
-          'Serial No': idx + 1,
-          'Article Number / Barcode': ord.trackingNumber || `SP${ord.orderNumber.replace(/[^0-9]/g, '').slice(-9)}IN`,
-          'Addressee Name': customerName,
-          'Delivery Address': `${addr.street || ''} ${addr.landmark || ''}`.trim() || 'Main Road',
-          'City / Town': addr.city || 'Hosur',
-          'District': addr.district || 'Krishnagiri',
-          'State': addr.state || 'Tamil Nadu',
-          'Pincode': addr.pincode || '635109',
-          'Mobile Number': mobile,
-          'Weight (grams)': 350,
-          'COD Amount': isCOD ? getEffectiveCodAmount(ord) : 0,
-          'Advance Paid': Number(ord.advanceAmount || 0),
-          'Insured Value': Number(ord.grandTotal || 0),
-          'Total MRP': Number(ord.grandTotal || 0),
-          'Invoice / Order Ref': ord.orderNumber,
-          'Sender Name': 'Shanthi Ayurvedas Hosur',
-          'Sender Mobile': '9629985345'
-        };
+        const fullAddress = [
+          addr.street,
+          addr.landmark ? `Near ${addr.landmark}` : '',
+          addr.city || addr.district,
+          addr.state,
+          addr.pincode ? `PIN: ${addr.pincode}` : ''
+        ].filter(Boolean).join(', ') || 'Address on file';
+
+        const bookedByName =
+          ord.telecallerId?.name ||
+          ord.telecallerName ||
+          ord.bookedBy?.name ||
+          ord.bookedByName ||
+          ord.createdByName ||
+          ord.createdBy?.name ||
+          'Shanthi Ayurvedas';
+
+        const cleanMobile = String(pat.mobile || ord.customerId?.phone || addr.phone || '').replace(/[^0-9]/g, '');
+        const cleanPincode = String(addr.pincode || '').trim();
+        const tracking = String(ord.trackingNumber || `SP${ord.orderNumber.replace(/[^0-9]/g, '').slice(-9)}IN`).trim();
+
+        const totalWeight = Number(ord.weight) || (ord.items || []).reduce((sum, item) => {
+          return sum + (Number(item.weight || item.productId?.weight || 0) * (Number(item.quantity) || 1));
+        }, 0) || 350;
+
+        aoaData.push([
+          idx + 1,
+          tracking,
+          cleanPincode,
+          pat.patientName || ord.customerId?.name || 'Customer',
+          fullAddress,
+          cleanMobile,
+          isCOD ? getEffectiveCodAmount(ord) : 0,
+          totalWeight,
+          Number(ord.grandTotal || 0),
+          bookedByName,
+          ord.courierPartner || ord.courierName || 'Speed Post'
+        ]);
       });
 
-      const ws = XLSX.utils.json_to_sheet(postData);
+      const ws = XLSX.utils.aoa_to_sheet(aoaData);
+
+      // Yellow Header Style matching Image 1
+      const headerStyle = {
+        fill: { fgColor: { rgb: 'FFFF00' } },
+        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '000000' } },
+        alignment: { horizontal: 'center', vertical: 'center' },
+        border: {
+          top: { style: 'thin', color: { rgb: '000000' } },
+          bottom: { style: 'thin', color: { rgb: '000000' } },
+          left: { style: 'thin', color: { rgb: '000000' } },
+          right: { style: 'thin', color: { rgb: '000000' } }
+        }
+      };
+
+      const colLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
+
+      colLetters.forEach((col) => {
+        const cellRef = col + '1';
+        if (ws[cellRef]) ws[cellRef].s = headerStyle;
+      });
+
+      for (let r = 2; r <= aoaData.length; r++) {
+        colLetters.forEach((col) => {
+          const cellRef = col + r;
+          if (!ws[cellRef]) return;
+          if (col === 'B' || col === 'C' || col === 'F') ws[cellRef].t = 's';
+
+          const isCenter = ['A', 'B', 'C', 'F', 'K'].includes(col);
+          const isRight = ['G', 'H', 'I'].includes(col);
+
+          ws[cellRef].s = {
+            font: { name: 'Calibri', sz: 10, bold: isRight },
+            alignment: { vertical: 'center', horizontal: isCenter ? 'center' : isRight ? 'right' : 'left' },
+            border: {
+              top: { style: 'thin', color: { rgb: 'D1D5DB' } },
+              bottom: { style: 'thin', color: { rgb: 'D1D5DB' } },
+              left: { style: 'thin', color: { rgb: 'D1D5DB' } },
+              right: { style: 'thin', color: { rgb: 'D1D5DB' } }
+            }
+          };
+        });
+      }
+
+      ws['!cols'] = [
+        { wch: 8 },  // SL.NO
+        { wch: 18 }, // BARCODE
+        { wch: 12 }, // PIN CODE
+        { wch: 22 }, // RECIVER NAME
+        { wch: 36 }, // RECIVER ADDRESS
+        { wch: 15 }, // CONTACT
+        { wch: 14 }, // COD AMOUNT
+        { wch: 11 }, // WEIGHT
+        { wch: 12 }, // MRP
+        { wch: 20 }, // REFER BY
+        { wch: 14 }  // COURIER BY
+      ];
+
+      ws['!rows'] = [{ hpt: 26 }];
+
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'India_Post_Manifest');
-      XLSX.writeFile(wb, `IndiaPost_Manifest_${dateStamp}.xlsx`);
+      const monthName = new Date().toLocaleString('en-US', { month: 'long' }).toUpperCase();
+      XLSX.utils.book_append_sheet(wb, ws, `${monthName}_POST`);
+      XLSX.writeFile(wb, `${monthName}_POST_MANIFEST_${dateStamp}.xlsx`);
     } else {
       // Standard Excel / CSV Order Export
       const exportData = targetOrders.map((ord, idx) => {

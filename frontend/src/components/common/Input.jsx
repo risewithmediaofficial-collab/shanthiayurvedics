@@ -58,6 +58,14 @@ export const Input = forwardRef(function Input(
           aria-invalid={error ? true : undefined}
           aria-describedby={[describedBy, feedbackId].filter(Boolean).join(' ') || undefined}
           type={effectiveType}
+          onWheel={(e) => {
+            if (effectiveType === 'number') {
+              e.target.blur();
+            }
+            if (props.onWheel) {
+              props.onWheel(e);
+            }
+          }}
           className={twMerge(
             clsx(
               'w-full min-h-10 px-3 py-2 text-sm bg-white border rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none transition-colors duration-150',

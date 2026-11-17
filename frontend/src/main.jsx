@@ -37,6 +37,15 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   </React.StrictMode>
 );
 
+// Prevent mouse scroll wheel from changing values on number inputs across all pages
+if (typeof window !== 'undefined') {
+  window.addEventListener('wheel', () => {
+    if (document.activeElement && document.activeElement.type === 'number') {
+      document.activeElement.blur();
+    }
+  }, { passive: true });
+}
+
 // Register Web Push Service Worker reliably
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   const registerSw = () => {

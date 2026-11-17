@@ -35,7 +35,7 @@ import {
   Building2,
   CheckCheck
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import apiClient from '../../api/apiClient.js';
 import { useBranch } from '../../context/BranchContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -357,42 +357,162 @@ export function ScanTrackerPage() {
   });
 
   // Official India Post Speed Post / COD Bulk Excel Upload File (.xlsx)
+  // Official Speed Post / COD Dispatch Manifest matching custom template (Image 1)
   const exportToIndiaPostExcel = () => {
     if (scannedOrders.length === 0) {
       alert('No scanned orders available to export.');
       return;
     }
 
-    const rows = scannedOrders.map((order, idx) => {
+    const headers = [
+      'SL.NO',
+      'BARCODE',
+      'PIN CODE',
+      'RECIVER NAME',
+      'RECIVER ADDRESS',
+      'CONTACT',
+      'COD AMOUNT',
+      'WEIGHT',
+      'MRP',
+      'REFER BY',
+      'COURIER BY'
+    ];
+
+    const aoaData = [headers];
+
+    scannedOrders.forEach((order, idx) => {
       const patient = order.patientDetails || {};
       const addr = order.deliveryAddress || {};
       const isCod = order.paymentMethod === 'COD' || order.paymentMethod === 'CASH_ON_DELIVERY';
-      const itemsStr = (order.items || []).map((i) => `${i.productName || 'Item'} x${i.quantity}`).join(', ');
 
-      return {
-        'SL NO': idx + 1,
-        'ARTICLE NUMBER': order.trackingNumber || '',
-        'CUSTOMER NAME': patient.patientName || order.customerId?.name || 'Customer',
-        'MOBILE': patient.mobile || order.customerId?.phone || '',
-        'ADDRESS LINE 1': `${addr.street || ''} ${addr.landmark ? `, Near ${addr.landmark}` : ''}`.trim(),
-        'CITY / TOWN': addr.city || addr.district || '',
-        'DISTRICT': addr.district || '',
-        'STATE': addr.state || 'Tamil Nadu',
-        'PINCODE': addr.pincode || '',
-        'PAYMENT TYPE': isCod ? 'COD' : 'PREPAID',
-        'COD AMOUNT': isCod ? getEffectiveCodAmount(order) : 0,
-        'DECLARED VALUE': Number(order.grandTotal || 0),
-        'WEIGHT (G)': 450,
-        'ORDER REF': order.orderNumber || order._id?.slice(-6)?.toUpperCase(),
-        'CONTENTS': itemsStr
-      };
+      const fullAddress = [
+        addr.street,
+        addr.landmark ? `Near ${addr.landmark}` : '',
+        addr.city || addr.district,
+        addr.state,
+        addr.pincode ? `PIN: ${addr.pincode}` : ''
+      ].filter(Boolean).join(', ') || 'Address on file';
+
+      const bookedByName =
+        order.telecallerId?.name ||
+        order.telecallerName ||
+        order.bookedBy?.name ||
+        order.bookedByName ||
+        order.createdByName ||
+        order.createdBy?.name ||
+        'Shanthi Ayurvedas';
+
+      const cleanMobile = String(patient.mobile || order.customerId?.phone || addr.phone || '').replace(/[^0-9]/g, '');
+      const cleanPincode = String(addr.pincode || '').trim();
+      const tracking = String(order.trackingNumber || '').trim();
+
+      const totalWeight = Number(order.weight) || (order.items || []).reduce((sum, item) => {
+        return sum + (Number(item.weight || item.productId?.weight || 0) * (Number(item.quantity) || 1));
+      }, 0) || 450;
+
+      aoaData.push([
+        idx + 1,
+        tracking,
+        cleanPincode,
+        patient.patientName || order.customerId?.name || 'Customer',
+        fullAddress,
+        cleanMobile,
+        isCod ? getEffectiveCodAmount(order) : 0,
+        totalWeight,
+        Number(order.grandTotal || 0),
+        bookedByName,
+        order.courierPartner || order.courierName || 'Speed Post'
+      ]);
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const worksheet = XLSX.utils.aoa_to_sheet(aoaData);
+
+    // Apply bright yellow highlight header style matching Image 1
+    const headerStyle = {
+      fill: {
+        fgColor: { rgb: 'FFFF00' } // Bright Yellow highlight
+      },
+      font: {
+        name: 'Calibri',
+        sz: 11,
+        bold: true,
+        color: { rgb: '000000' }
+      },
+      alignment: {
+        horizontal: 'center',
+        vertical: 'center'
+      },
+      border: {
+        top: { style: 'thin', color: { rgb: '000000' } },
+        bottom: { style: 'thin', color: { rgb: '000000' } },
+        left: { style: 'thin', color: { rgb: '000000' } },
+        right: { style: 'thin', color: { rgb: '000000' } }
+      }
+    };
+
+    const colLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
+
+    // Style headers (Row 1)
+    colLetters.forEach((col) => {
+      const cellRef = col + '1';
+      if (worksheet[cellRef]) {
+        worksheet[cellRef].s = headerStyle;
+      }
+    });
+
+    // Style data rows
+    for (let r = 2; r <= aoaData.length; r++) {
+      colLetters.forEach((col) => {
+        const cellRef = col + r;
+        if (!worksheet[cellRef]) return;
+
+        // Force text format for phone, barcode and pincode to avoid scientific notation
+        if (col === 'B' || col === 'C' || col === 'F') {
+          worksheet[cellRef].t = 's';
+        }
+
+        const isCenter = ['A', 'B', 'C', 'F', 'K'].includes(col);
+        const isRight = ['G', 'H', 'I'].includes(col);
+
+        worksheet[cellRef].s = {
+          font: { name: 'Calibri', sz: 10, bold: isRight },
+          alignment: {
+            vertical: 'center',
+            horizontal: isCenter ? 'center' : isRight ? 'right' : 'left'
+          },
+          border: {
+            top: { style: 'thin', color: { rgb: 'D1D5DB' } },
+            bottom: { style: 'thin', color: { rgb: 'D1D5DB' } },
+            left: { style: 'thin', color: { rgb: 'D1D5DB' } },
+            right: { style: 'thin', color: { rgb: 'D1D5DB' } }
+          }
+        };
+      });
+    }
+
+    // Auto-fit column widths
+    worksheet['!cols'] = [
+      { wch: 8 },  // SL.NO
+      { wch: 18 }, // BARCODE
+      { wch: 12 }, // PIN CODE
+      { wch: 22 }, // RECIVER NAME
+      { wch: 36 }, // RECIVER ADDRESS
+      { wch: 15 }, // CONTACT
+      { wch: 14 }, // COD AMOUNT
+      { wch: 11 }, // WEIGHT
+      { wch: 12 }, // MRP
+      { wch: 20 }, // REFER BY
+      { wch: 14 }  // COURIER BY
+    ];
+
+    // Header row height
+    worksheet['!rows'] = [{ hpt: 26 }];
+
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'IndiaPost_Booking');
-    XLSX.writeFile(workbook, `IndiaPost_SpeedPost_Manifest_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    showToast('✓ India Post Excel Booking Sheet (.xlsx) downloaded successfully');
+    const monthName = new Date().toLocaleString('en-US', { month: 'long' }).toUpperCase();
+    XLSX.utils.book_append_sheet(workbook, worksheet, `${monthName}_POST`);
+    XLSX.writeFile(workbook, `${monthName}_POST_MANIFEST_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    showToast('✓ Post Manifest (.xlsx) with highlighted headers downloaded successfully');
   };
 
   const exportToCsv = () => {
@@ -402,54 +522,65 @@ export function ScanTrackerPage() {
     }
 
     const headers = [
-      'Sl No',
-      'Order Number',
-      'Barcode / Tracking AWB',
-      'Customer Name',
-      'Mobile',
-      'Address',
-      'City',
-      'State',
-      'Pincode',
-      'COD Collect Amount (Rs)',
-      'Advance Paid (Rs)',
-      'Total MRP (Rs)',
-      'Payment Mode',
-      'Items Ordered',
-      'Status'
+      'SL.NO',
+      'BARCODE',
+      'PIN CODE',
+      'RECIVER NAME',
+      'RECIVER ADDRESS',
+      'CONTACT',
+      'COD AMOUNT',
+      'WEIGHT',
+      'MRP',
+      'REFER BY',
+      'COURIER BY'
     ];
 
-    const csvRows = scannedOrders.map((o, idx) => {
-      const itemsStr = (o.items || []).map((i) => `${i.productName} (${i.quantity})`).join(' | ');
-      const isCod = o.paymentMethod === 'COD' || o.paymentMethod === 'CASH_ON_DELIVERY';
-      const codCollect = isCod ? getEffectiveCodAmount(o) : 0;
-      const advancePaid = Number(o.advanceAmount || 0);
-      const totalMrp = Number(o.grandTotal || 0);
+    const csvRows = scannedOrders.map((order, idx) => {
+      const patient = order.patientDetails || {};
+      const addr = order.deliveryAddress || {};
+      const isCod = order.paymentMethod === 'COD' || order.paymentMethod === 'CASH_ON_DELIVERY';
 
-      // Clean mobile number and format as Excel text formula so Excel renders full digits without scientific notation (e.g. 8.66E+09)
-      const rawMobile = String(o.patientDetails?.mobile || o.customerId?.phone || '').replace(/[^0-9]/g, '');
+      const fullAddress = [
+        addr.street,
+        addr.landmark ? `Near ${addr.landmark}` : '',
+        addr.city || addr.district,
+        addr.state,
+        addr.pincode ? `PIN: ${addr.pincode}` : ''
+      ].filter(Boolean).join(', ') || 'Address on file';
+
+      const bookedByName =
+        order.telecallerId?.name ||
+        order.telecallerName ||
+        order.bookedBy?.name ||
+        order.bookedByName ||
+        order.createdByName ||
+        order.createdBy?.name ||
+        'Shanthi Ayurvedas';
+
+      const rawMobile = String(patient.mobile || order.customerId?.phone || addr.phone || '').replace(/[^0-9]/g, '');
       const formattedMobile = rawMobile ? `="${rawMobile}"` : '""';
 
-      const trackingRaw = String(o.trackingNumber || '').trim();
-      // If tracking number is all digits (e.g. 12-digit barcode), protect from scientific notation
+      const trackingRaw = String(order.trackingNumber || '').trim();
       const formattedTracking = /^\d{8,}$/.test(trackingRaw) ? `="${trackingRaw}"` : `"${trackingRaw.replace(/"/g, '""')}"`;
+      const cleanPincode = String(addr.pincode || '').trim();
+      const formattedPincode = cleanPincode ? `="${cleanPincode}"` : '""';
+
+      const totalWeight = Number(order.weight) || (order.items || []).reduce((sum, item) => {
+        return sum + (Number(item.weight || item.productId?.weight || 0) * (Number(item.quantity) || 1));
+      }, 0) || 450;
 
       return [
         idx + 1,
-        `"${o.orderNumber || ''}"`,
         formattedTracking,
-        `"${(o.patientDetails?.patientName || o.customerId?.name || '').replace(/"/g, '""')}"`,
+        formattedPincode,
+        `"${(patient.patientName || order.customerId?.name || 'Customer').replace(/"/g, '""')}"`,
+        `"${fullAddress.replace(/"/g, '""')}"`,
         formattedMobile,
-        `"${(o.deliveryAddress?.street || '').replace(/"/g, '""')}"`,
-        `"${(o.deliveryAddress?.city || '').replace(/"/g, '""')}"`,
-        `"${(o.deliveryAddress?.state || '').replace(/"/g, '""')}"`,
-        `"${(o.deliveryAddress?.pincode || '').replace(/"/g, '""')}"`,
-        codCollect,
-        advancePaid,
-        totalMrp,
-        `"${o.paymentMethod || 'COD'}"`,
-        `"${itemsStr.replace(/"/g, '""')}"`,
-        `"${o.status || ''}"`
+        isCod ? getEffectiveCodAmount(order) : 0,
+        totalWeight,
+        Number(order.grandTotal || 0),
+        `"${bookedByName.replace(/"/g, '""')}"`,
+        `"${(order.courierPartner || order.courierName || 'Speed Post').replace(/"/g, '""')}"`
       ];
     });
 
@@ -458,7 +589,8 @@ export function ScanTrackerPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `Dispatch_Manifest_${new Date().toISOString().slice(0, 10)}.csv`);
+    const monthName = new Date().toLocaleString('en-US', { month: 'long' }).toUpperCase();
+    link.setAttribute('download', `${monthName}_POST_MANIFEST_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

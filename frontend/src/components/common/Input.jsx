@@ -60,6 +60,7 @@ export const Input = forwardRef(function Input(
           type={effectiveType}
           onWheel={(e) => {
             if (effectiveType === 'number') {
+              e.preventDefault();
               e.target.blur();
             }
             if (props.onWheel) {

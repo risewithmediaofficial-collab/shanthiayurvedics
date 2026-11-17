@@ -44,6 +44,7 @@ export function ExcelExportModal({
         'PIN CODE',
         'RECIVER NAME',
         'RECIVER ADDRESS',
+        'DISTRICT',
         'CONTACT',
         'COD AMOUNT',
         'WEIGHT',
@@ -59,13 +60,13 @@ export function ExcelExportModal({
         const addr = ord.deliveryAddress || {};
         const isCOD = (ord.paymentMethod || 'COD') === 'COD' || ord.paymentMethod === 'CASH_ON_DELIVERY';
 
-        const fullAddress = [
+        const district = addr.district || addr.city || '';
+        const reciverAddress = [
           addr.street,
           addr.landmark ? `Near ${addr.landmark}` : '',
-          addr.city || addr.district,
-          addr.state,
-          addr.pincode ? `PIN: ${addr.pincode}` : ''
-        ].filter(Boolean).join(', ') || 'Address on file';
+          addr.village,
+          addr.taluk
+        ].filter(Boolean).join(', ') || addr.street || addr.city || 'Address on file';
 
         const bookedByName =
           ord.telecallerId?.name ||
@@ -89,7 +90,8 @@ export function ExcelExportModal({
           tracking,
           cleanPincode,
           pat.patientName || ord.customerId?.name || 'Customer',
-          fullAddress,
+          reciverAddress,
+          district,
           cleanMobile,
           isCOD ? getEffectiveCodAmount(ord) : 0,
           totalWeight,
@@ -114,7 +116,7 @@ export function ExcelExportModal({
         }
       };
 
-      const colLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
+      const colLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 
       colLetters.forEach((col) => {
         const cellRef = col + '1';
@@ -125,10 +127,10 @@ export function ExcelExportModal({
         colLetters.forEach((col) => {
           const cellRef = col + r;
           if (!ws[cellRef]) return;
-          if (col === 'B' || col === 'C' || col === 'F') ws[cellRef].t = 's';
+          if (col === 'B' || col === 'C' || col === 'G') ws[cellRef].t = 's';
 
-          const isCenter = ['A', 'B', 'C', 'F', 'K'].includes(col);
-          const isRight = ['G', 'H', 'I'].includes(col);
+          const isCenter = ['A', 'B', 'C', 'F', 'G', 'L'].includes(col);
+          const isRight = ['H', 'I', 'J'].includes(col);
 
           ws[cellRef].s = {
             font: { name: 'Calibri', sz: 10, bold: isRight },
@@ -144,17 +146,18 @@ export function ExcelExportModal({
       }
 
       ws['!cols'] = [
-        { wch: 8 },  // SL.NO
-        { wch: 18 }, // BARCODE
-        { wch: 12 }, // PIN CODE
-        { wch: 22 }, // RECIVER NAME
-        { wch: 36 }, // RECIVER ADDRESS
-        { wch: 15 }, // CONTACT
-        { wch: 14 }, // COD AMOUNT
-        { wch: 11 }, // WEIGHT
-        { wch: 12 }, // MRP
-        { wch: 20 }, // REFER BY
-        { wch: 14 }  // COURIER BY
+        { wch: 8 },  // A: SL.NO
+        { wch: 18 }, // B: BARCODE
+        { wch: 12 }, // C: PIN CODE
+        { wch: 22 }, // D: RECIVER NAME
+        { wch: 36 }, // E: RECIVER ADDRESS
+        { wch: 18 }, // F: DISTRICT
+        { wch: 15 }, // G: CONTACT
+        { wch: 14 }, // H: COD AMOUNT
+        { wch: 11 }, // I: WEIGHT
+        { wch: 12 }, // J: MRP
+        { wch: 20 }, // K: REFER BY
+        { wch: 14 }  // L: COURIER BY
       ];
 
       ws['!rows'] = [{ hpt: 26 }];

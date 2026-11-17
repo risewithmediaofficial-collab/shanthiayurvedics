@@ -1371,12 +1371,15 @@ export function OrderCreateModal({
                         value={codAmount}
                         onChange={(e) => setCodAmount(e.target.value)}
                       />
-                      <div className="flex items-center justify-between mt-1.5 text-[10px]">
-                        <span className="text-slate-600">
-                          Collecting: <strong className="text-slate-900 font-mono text-xs">₹{effectiveCodAmount}</strong>
+                      <div className="flex items-center justify-between mt-1.5 text-xs flex-wrap gap-1">
+                        <span className="text-slate-700 flex items-center gap-1.5 flex-wrap">
+                          <span className="font-semibold text-slate-600 text-[11px]">Doorstep COD:</span>
+                          <strong className="text-amber-950 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded font-mono text-xs font-black shadow-2xs">
+                            ₹{effectiveCodAmount.toLocaleString()}
+                          </strong>
                           {parsedAdvance > 0 && (
-                            <span className="text-emerald-700 ml-1">
-                              (₹{finalPayableTotal} - ₹{parsedAdvance} Adv)
+                            <span className="text-emerald-700 font-bold text-[10px] bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                              (₹{finalPayableTotal.toLocaleString()} Total − ₹{parsedAdvance.toLocaleString()} Adv)
                             </span>
                           )}
                         </span>
@@ -1384,9 +1387,9 @@ export function OrderCreateModal({
                           <button
                             type="button"
                             onClick={() => setCodAmount('')}
-                            className="text-ayur-700 hover:underline font-bold cursor-pointer"
+                            className="text-ayur-700 hover:underline font-bold text-[10px] cursor-pointer"
                           >
-                            Reset to Balance (₹{defaultCodToCollect})
+                            Reset to Balance (₹{defaultCodToCollect.toLocaleString()})
                           </button>
                         )}
                       </div>
@@ -1434,24 +1437,58 @@ export function OrderCreateModal({
               <span className="text-emerald-300 font-mono">Weight: {formattedTotalWeight}</span>
             </div>
           </div>
-          <div className="text-left sm:text-right pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10 flex items-center sm:block justify-between">
-            <div className="text-2xl font-black text-emerald-400 font-mono">
-              ₹{finalPayableTotal.toLocaleString()}
-            </div>
+          <div className="text-left sm:text-right pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10 flex flex-col items-start sm:items-end justify-center min-w-[200px]">
             {!isOfficeOrder && !isTPC && paymentMethod === 'COD' ? (
-              <div className="text-[11px] text-amber-300 font-bold font-mono">
-                COD to Collect: ₹{effectiveCodAmount.toLocaleString()}
-                {parsedAdvance > 0 && ` (After ₹${parsedAdvance} Adv)`}
-              </div>
+              <>
+                <div className="text-[11px] uppercase font-black text-amber-300 tracking-wider flex items-center gap-1.5">
+                  <span>💵 COD TO COLLECT:</span>
+                  {parsedAdvance > 0 && (
+                    <span className="text-[10px] font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 px-1.5 py-0.2 rounded lowercase">
+                      -₹{parsedAdvance.toLocaleString()} adv
+                    </span>
+                  )}
+                </div>
+                <div className="text-3xl sm:text-4xl font-black text-amber-400 font-mono tracking-tight leading-none my-1">
+                  ₹{effectiveCodAmount.toLocaleString()}
+                </div>
+                <div className="text-[11px] text-slate-400 font-mono font-medium flex items-center gap-1.5 flex-wrap justify-start sm:justify-end">
+                  <span>Total MRP: ₹{finalPayableTotal.toLocaleString()}</span>
+                  {parsedAdvance > 0 && (
+                    <span className="text-emerald-400 font-bold">
+                      • Adv: -₹{parsedAdvance.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+              </>
             ) : !isOfficeOrder && (isTPC || paymentMethod === 'ONLINE') ? (
-              <div className="text-[10px] text-cyan-300 font-bold font-mono">
-                Prepaid Total: ₹{finalPayableTotal.toLocaleString()}
-              </div>
+              <>
+                <div className="text-[11px] uppercase font-bold text-cyan-300 tracking-wider">
+                  Prepaid Order Total
+                </div>
+                <div className="text-3xl font-black text-emerald-400 font-mono tracking-tight leading-none my-1">
+                  ₹{finalPayableTotal.toLocaleString()}
+                </div>
+                <div className="text-[11px] text-emerald-300 font-semibold font-mono">
+                  ✓ Full Pre-Payment (₹0 COD)
+                </div>
+              </>
             ) : isOfficeOrder ? (
-              <div className="text-[10px] text-purple-300 font-bold">
-                Counter Bill ({paymentMethod})
+              <>
+                <div className="text-[11px] uppercase font-bold text-purple-300 tracking-wider">
+                  Counter Sale ({paymentMethod})
+                </div>
+                <div className="text-3xl font-black text-purple-300 font-mono tracking-tight leading-none my-1">
+                  ₹{finalPayableTotal.toLocaleString()}
+                </div>
+                <div className="text-[11px] text-slate-400 font-mono">
+                  Office Desk Handover
+                </div>
+              </>
+            ) : (
+              <div className="text-2xl font-black text-emerald-400 font-mono">
+                ₹{finalPayableTotal.toLocaleString()}
               </div>
-            ) : null}
+            )}
           </div>
         </div>
 

@@ -489,7 +489,7 @@ export function ShippingLabelLandscapeModal({
       helpBannerText = `Help (How to use & Problems/Contact us)`;
     }
 
-    const isCOD = (order.paymentMethod || 'COD') === 'COD';
+    const isCOD = (order.paymentMethod || 'COD') === 'COD' || order.paymentMethod === 'CASH_ON_DELIVERY';
     const advanceAmount = Number(order.advanceAmount || 0);
     const advanceUtr = order.advanceUtr || '';
     const payableAmount = Math.round(Number(
@@ -502,7 +502,7 @@ export function ShippingLabelLandscapeModal({
     // 1. Top Carrier Line (Line 2) - Standard Speed Post header (no courier brand/name)
     const carrierBannerText = isCOD
       ? `SPEED POST : Rs ${payableAmount} | ${amountWords} RUPEES ONLY`
-      : `SPEED POST : PREPAID (Rs ${payableAmount}) | ${amountWords} RUPEES ONLY`;
+      : 'SPEED POST : PREPAID';
     const speedPostText = carrierBannerText;
 
     // Tracking / Article Number
@@ -819,7 +819,7 @@ export function ShippingLabelLandscapeModal({
                         <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; background: #f9fafb; font-weight: 800; font-size: ${adaptive.labelFont}; white-space: nowrap;">WEIGHT</td>
                         <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; word-break: break-word; overflow-wrap: break-word;">${d.weightText} ${d.totalPieces} PCS</td>
                       </tr>
-                      ${d.advanceAmount > 0 ? `
+                      ${d.isCOD && d.advanceAmount > 0 ? `
                         <tr style="border-bottom: 1px solid #000; background: #f0fdf4;">
                           <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; font-weight: 800; font-size: ${adaptive.labelFont}; color: #166534; white-space: nowrap;">ADVANCE</td>
                           <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; color: #166534; word-break: break-word; overflow-wrap: break-word;">₹${d.advanceAmount} ${d.advanceUtr ? `· ${d.advanceUtr}` : ''}</td>
@@ -1303,7 +1303,7 @@ export function ShippingLabelLandscapeModal({
                       {d.weightText} {d.totalPieces} PCS
                     </td>
                   </tr>
-                  {d.advanceAmount > 0 && (
+                  {d.isCOD && d.advanceAmount > 0 && (
                     <tr className="border-b border-black bg-emerald-50/60">
                       <td
                         className={`px-1 ${adaptive.tablePadClass} border-r border-black font-bold text-emerald-800 whitespace-nowrap align-middle`}

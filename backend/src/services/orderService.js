@@ -401,6 +401,9 @@ export class OrderService {
     order.status = targetStatus;
     if (trackingNumber) {
       order.trackingNumber = trackingNumber.trim();
+      if (!order.scannedAt) {
+        order.scannedAt = new Date();
+      }
     }
     if (courierName) {
       order.courierName = courierName.trim();
@@ -529,6 +532,15 @@ export class OrderService {
     const oldValue = order.toObject();
     if (updateData.trackingNumber !== undefined) {
       order.trackingNumber = updateData.trackingNumber;
+      if (updateData.trackingNumber) {
+        if (updateData.scannedAt) {
+          order.scannedAt = new Date(updateData.scannedAt);
+        } else if (!order.scannedAt) {
+          order.scannedAt = new Date();
+        }
+      } else {
+        order.scannedAt = null;
+      }
     }
     if (updateData.courierName !== undefined) {
       order.courierName = updateData.courierName;
@@ -589,6 +601,15 @@ export class OrderService {
 
     if (updateData.trackingNumber !== undefined) {
       order.trackingNumber = updateData.trackingNumber;
+      if (updateData.trackingNumber) {
+        if (updateData.scannedAt) {
+          order.scannedAt = new Date(updateData.scannedAt);
+        } else if (!order.scannedAt) {
+          order.scannedAt = new Date();
+        }
+      } else {
+        order.scannedAt = null;
+      }
     }
 
     if (updateData.grandTotal !== undefined && !isNaN(Number(updateData.grandTotal))) {

@@ -1452,7 +1452,8 @@ export function OrderCreateModal({
                   ₹{effectiveCodAmount.toLocaleString()}
                 </div>
                 <div className="text-[11px] text-slate-400 font-mono font-medium flex items-center gap-1.5 flex-wrap justify-start sm:justify-end">
-                  <span>Total MRP: ₹{finalPayableTotal.toLocaleString()}</span>
+                  <span>Products MRP: ₹{productsGrossSubtotal.toLocaleString()}</span>
+                  <span>• Order Total: ₹{finalPayableTotal.toLocaleString()}</span>
                   {parsedAdvance > 0 && (
                     <span className="text-emerald-400 font-bold">
                       • Adv: -₹{parsedAdvance.toLocaleString()}

@@ -187,7 +187,8 @@ export function ScanTrackerPage() {
         trackingNumber,
         courierName: 'India Post',
         status: 'DISPATCHED',
-        shippingDate: new Date()
+        shippingDate: new Date(),
+        scannedAt: new Date()
       });
       return res.data;
     },
@@ -357,6 +358,24 @@ export function ScanTrackerPage() {
   });
 
   // Official India Post Speed Post / COD Bulk Excel Upload File (.xlsx)
+  // Helper: Extract or format scan / entry date
+  const getScannedDateString = (order) => {
+    const dispatchedHistory = Array.isArray(order?.statusHistory)
+      ? order.statusHistory.slice().reverse().find((h) => h.toStatus === 'DISPATCHED' || h.notes?.toLowerCase()?.includes('barcode') || h.notes?.toLowerCase()?.includes('scan'))
+      : null;
+    const rawDate = order?.scannedAt || order?.shippingDate || dispatchedHistory?.timestamp || order?.updatedAt || order?.createdAt;
+    if (!rawDate) {
+      const now = new Date();
+      return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    }
+    const d = new Date(rawDate);
+    if (isNaN(d.getTime())) {
+      const now = new Date();
+      return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    }
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  };
+
   // Official Speed Post / COD Dispatch Manifest matching custom template (Image 1)
   const exportToIndiaPostExcel = () => {
     if (scannedOrders.length === 0) {
@@ -367,6 +386,7 @@ export function ScanTrackerPage() {
     const headers = [
       'SL.NO',
       'BARCODE',
+      'DATE',
       'PIN CODE',
       'RECIVER NAME',
       'RECIVER ADDRESS',
@@ -406,6 +426,7 @@ export function ScanTrackerPage() {
       const cleanMobile = String(patient.mobile || order.customerId?.phone || addr.phone || '').replace(/[^0-9]/g, '');
       const cleanPincode = String(addr.pincode || '').trim();
       const tracking = String(order.trackingNumber || '').trim();
+      const scanDate = getScannedDateString(order);
 
       const totalWeight = Number(order.weight) || (order.items || []).reduce((sum, item) => {
         return sum + (Number(item.weight || item.productId?.weight || 0) * (Number(item.quantity) || 1));
@@ -414,6 +435,7 @@ export function ScanTrackerPage() {
       aoaData.push([
         idx + 1,
         tracking,
+        scanDate,
         cleanPincode,
         patient.patientName || order.customerId?.name || 'Customer',
         reciverAddress,
@@ -421,7 +443,7 @@ export function ScanTrackerPage() {
         cleanMobile,
         isCod ? getEffectiveCodAmount(order) : 0,
         totalWeight,
-        Number(order.grandTotal || 0),
+        Number(order.subtotal || order.grandTotal || 0),
         bookedByName,
         order.courierPartner || order.courierName || 'Speed Post'
       ]);
@@ -452,7 +474,7 @@ export function ScanTrackerPage() {
       }
     };
 
-    const colLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+    const colLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'];
 
     // Style headers (Row 1)
     colLetters.forEach((col) => {
@@ -468,13 +490,13 @@ export function ScanTrackerPage() {
         const cellRef = col + r;
         if (!worksheet[cellRef]) return;
 
-        // Force text format for phone, barcode and pincode to avoid scientific notation
-        if (col === 'B' || col === 'C' || col === 'G') {
+        // Force text format for phone, barcode, date and pincode to avoid scientific notation
+        if (col === 'B' || col === 'C' || col === 'D' || col === 'H') {
           worksheet[cellRef].t = 's';
         }
 
-        const isCenter = ['A', 'B', 'C', 'F', 'G', 'L'].includes(col);
-        const isRight = ['H', 'I', 'J'].includes(col);
+        const isCenter = ['A', 'B', 'C', 'D', 'G', 'H', 'M'].includes(col);
+        const isRight = ['I', 'J', 'K'].includes(col);
 
         worksheet[cellRef].s = {
           font: { name: 'Calibri', sz: 10, bold: isRight },
@@ -496,16 +518,17 @@ export function ScanTrackerPage() {
     worksheet['!cols'] = [
       { wch: 8 },  // A: SL.NO
       { wch: 18 }, // B: BARCODE
-      { wch: 12 }, // C: PIN CODE
-      { wch: 22 }, // D: RECIVER NAME
-      { wch: 36 }, // E: RECIVER ADDRESS
-      { wch: 18 }, // F: DISTRICT
-      { wch: 15 }, // G: CONTACT
-      { wch: 14 }, // H: COD AMOUNT
-      { wch: 11 }, // I: WEIGHT
-      { wch: 12 }, // J: MRP
-      { wch: 20 }, // K: REFER BY
-      { wch: 14 }  // L: COURIER BY
+      { wch: 13 }, // C: DATE
+      { wch: 12 }, // D: PIN CODE
+      { wch: 22 }, // E: RECIVER NAME
+      { wch: 36 }, // F: RECIVER ADDRESS
+      { wch: 18 }, // G: DISTRICT
+      { wch: 15 }, // H: CONTACT
+      { wch: 14 }, // I: COD AMOUNT
+      { wch: 11 }, // J: WEIGHT
+      { wch: 12 }, // K: MRP
+      { wch: 20 }, // L: REFER BY
+      { wch: 14 }  // M: COURIER BY
     ];
 
     // Header row height
@@ -527,6 +550,7 @@ export function ScanTrackerPage() {
     const headers = [
       'SL.NO',
       'BARCODE',
+      'DATE',
       'PIN CODE',
       'RECIVER NAME',
       'RECIVER ADDRESS',
@@ -568,6 +592,7 @@ export function ScanTrackerPage() {
       const formattedTracking = /^\d{8,}$/.test(trackingRaw) ? `="${trackingRaw}"` : `"${trackingRaw.replace(/"/g, '""')}"`;
       const cleanPincode = String(addr.pincode || '').trim();
       const formattedPincode = cleanPincode ? `="${cleanPincode}"` : '""';
+      const scanDate = getScannedDateString(order);
 
       const totalWeight = Number(order.weight) || (order.items || []).reduce((sum, item) => {
         return sum + (Number(item.weight || item.productId?.weight || 0) * (Number(item.quantity) || 1));
@@ -576,6 +601,7 @@ export function ScanTrackerPage() {
       return [
         idx + 1,
         formattedTracking,
+        `"${scanDate}"`,
         formattedPincode,
         `"${(patient.patientName || order.customerId?.name || 'Customer').replace(/"/g, '""')}"`,
         `"${reciverAddress.replace(/"/g, '""')}"`,
@@ -583,7 +609,7 @@ export function ScanTrackerPage() {
         formattedMobile,
         isCod ? getEffectiveCodAmount(order) : 0,
         totalWeight,
-        Number(order.grandTotal || 0),
+        Number(order.subtotal || order.grandTotal || 0),
         `"${bookedByName.replace(/"/g, '""')}"`,
         `"${(order.courierPartner || order.courierName || 'Speed Post').replace(/"/g, '""')}"`
       ];
@@ -637,7 +663,8 @@ export function ScanTrackerPage() {
   const updateBarcodeMutation = useMutation({
     mutationFn: async ({ orderId, trackingNumber }) => {
       const res = await apiClient.patch(`/orders/${orderId}`, {
-        trackingNumber
+        trackingNumber,
+        scannedAt: new Date()
       });
       return res.data;
     },
@@ -657,6 +684,7 @@ export function ScanTrackerPage() {
     mutationFn: async (orderId) => {
       const res = await apiClient.patch(`/orders/${orderId}`, {
         trackingNumber: '',
+        scannedAt: null,
         status: 'CONFIRMED',
         forceRevert: true
       });
@@ -1556,10 +1584,13 @@ export function ScanTrackerPage() {
                                 <Copy className="w-3.5 h-3.5" />
                               </button>
                             </div>
+                            <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                              📅 {getScannedDateString(order)}
+                            </div>
                           </td>
                           <td className="p-3">
                             <span className="text-[10px] text-slate-500 font-semibold font-mono block">
-                              MRP: ₹{Number(order.grandTotal || 0).toLocaleString()}
+                              MRP: ₹{Number(order.subtotal || order.grandTotal || 0).toLocaleString()}
                             </span>
                             {order.advanceAmount > 0 && (
                               <span className="text-[9.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 rounded block w-fit mb-0.5">
@@ -2190,7 +2221,12 @@ export function ScanTrackerPage() {
               <div className="pt-2 border-t border-slate-200/80 space-y-1.5">
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-slate-500 font-semibold font-mono">
-                    Total MRP: ₹{Number(pendingDispatchConfirm.order.grandTotal || 0).toLocaleString()}
+                    Total MRP: ₹{Number(pendingDispatchConfirm.order.subtotal || pendingDispatchConfirm.order.grandTotal || 0).toLocaleString()}
+                    {pendingDispatchConfirm.order.shippingCharge > 0 && (
+                      <span className="text-slate-400 font-normal ml-1">
+                        (Total: ₹{Number(pendingDispatchConfirm.order.grandTotal || 0).toLocaleString()})
+                      </span>
+                    )}
                   </span>
                   {pendingDispatchConfirm.order.advanceAmount > 0 && (
                     <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">

@@ -208,6 +208,9 @@ const orderSchema = new mongoose.Schema(
       trim: true,
       index: true
     },
+    scannedAt: {
+      type: Date
+    },
     courierName: {
       type: String,
       default: 'India Post'

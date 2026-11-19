@@ -37,10 +37,29 @@ export function ExcelExportModal({
     const dateStamp = new Date().toISOString().slice(0, 10);
 
     if (exportFormat === 'indiapost') {
+      // Helper: Extract or format scan / entry date
+      const getScannedDateString = (order) => {
+        const dispatchedHistory = Array.isArray(order?.statusHistory)
+          ? order.statusHistory.slice().reverse().find((h) => h.toStatus === 'DISPATCHED' || h.notes?.toLowerCase()?.includes('barcode') || h.notes?.toLowerCase()?.includes('scan'))
+          : null;
+        const rawDate = order?.scannedAt || order?.shippingDate || dispatchedHistory?.timestamp || order?.updatedAt || order?.createdAt;
+        if (!rawDate) {
+          const now = new Date();
+          return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+        }
+        const d = new Date(rawDate);
+        if (isNaN(d.getTime())) {
+          const now = new Date();
+          return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+        }
+        return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+      };
+
       // Custom Post Manifest Format with Yellow Highlight Headers (Matching Image 1)
       const headers = [
         'SL.NO',
         'BARCODE',
+        'DATE',
         'PIN CODE',
         'RECIVER NAME',
         'RECIVER ADDRESS',
@@ -80,6 +99,7 @@ export function ExcelExportModal({
         const cleanMobile = String(pat.mobile || ord.customerId?.phone || addr.phone || '').replace(/[^0-9]/g, '');
         const cleanPincode = String(addr.pincode || '').trim();
         const tracking = String(ord.trackingNumber || `SP${ord.orderNumber.replace(/[^0-9]/g, '').slice(-9)}IN`).trim();
+        const scanDate = getScannedDateString(ord);
 
         const totalWeight = Number(ord.weight) || (ord.items || []).reduce((sum, item) => {
           return sum + (Number(item.weight || item.productId?.weight || 0) * (Number(item.quantity) || 1));
@@ -88,6 +108,7 @@ export function ExcelExportModal({
         aoaData.push([
           idx + 1,
           tracking,
+          scanDate,
           cleanPincode,
           pat.patientName || ord.customerId?.name || 'Customer',
           reciverAddress,
@@ -95,7 +116,7 @@ export function ExcelExportModal({
           cleanMobile,
           isCOD ? getEffectiveCodAmount(ord) : 0,
           totalWeight,
-          Number(ord.grandTotal || 0),
+          Number(ord.subtotal || ord.grandTotal || 0),
           bookedByName,
           ord.courierPartner || ord.courierName || 'Speed Post'
         ]);
@@ -116,7 +137,7 @@ export function ExcelExportModal({
         }
       };
 
-      const colLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+      const colLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'];
 
       colLetters.forEach((col) => {
         const cellRef = col + '1';
@@ -127,10 +148,10 @@ export function ExcelExportModal({
         colLetters.forEach((col) => {
           const cellRef = col + r;
           if (!ws[cellRef]) return;
-          if (col === 'B' || col === 'C' || col === 'G') ws[cellRef].t = 's';
+          if (col === 'B' || col === 'C' || col === 'D' || col === 'H') ws[cellRef].t = 's';
 
-          const isCenter = ['A', 'B', 'C', 'F', 'G', 'L'].includes(col);
-          const isRight = ['H', 'I', 'J'].includes(col);
+          const isCenter = ['A', 'B', 'C', 'D', 'G', 'H', 'M'].includes(col);
+          const isRight = ['I', 'J', 'K'].includes(col);
 
           ws[cellRef].s = {
             font: { name: 'Calibri', sz: 10, bold: isRight },
@@ -148,16 +169,17 @@ export function ExcelExportModal({
       ws['!cols'] = [
         { wch: 8 },  // A: SL.NO
         { wch: 18 }, // B: BARCODE
-        { wch: 12 }, // C: PIN CODE
-        { wch: 22 }, // D: RECIVER NAME
-        { wch: 36 }, // E: RECIVER ADDRESS
-        { wch: 18 }, // F: DISTRICT
-        { wch: 15 }, // G: CONTACT
-        { wch: 14 }, // H: COD AMOUNT
-        { wch: 11 }, // I: WEIGHT
-        { wch: 12 }, // J: MRP
-        { wch: 20 }, // K: REFER BY
-        { wch: 14 }  // L: COURIER BY
+        { wch: 13 }, // C: DATE
+        { wch: 12 }, // D: PIN CODE
+        { wch: 22 }, // E: RECIVER NAME
+        { wch: 36 }, // F: RECIVER ADDRESS
+        { wch: 18 }, // G: DISTRICT
+        { wch: 15 }, // H: CONTACT
+        { wch: 14 }, // I: COD AMOUNT
+        { wch: 11 }, // J: WEIGHT
+        { wch: 12 }, // K: MRP
+        { wch: 20 }, // L: REFER BY
+        { wch: 14 }  // M: COURIER BY
       ];
 
       ws['!rows'] = [{ hpt: 26 }];
@@ -188,7 +210,8 @@ export function ExcelExportModal({
           'Products Summary': itemsStr,
           'Subtotal': ord.subtotal || 0,
           'Shipping': ord.shippingCharge || 0,
-          'Total MRP (₹)': ord.grandTotal || 0,
+          'Total MRP (₹)': ord.subtotal || ord.grandTotal || 0,
+          'Grand Total (₹)': ord.grandTotal || 0,
           'Advance Paid (₹)': ord.advanceAmount || 0,
           'COD Collect (₹)': isCOD ? getEffectiveCodAmount(ord) : 0,
           'Payment Method': ord.paymentMethod || 'COD',

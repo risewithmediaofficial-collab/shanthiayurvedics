@@ -611,24 +611,32 @@ export function ShippingLabelLandscapeModal({
 
     const senderMobileText = `MOBILE : ${phonesList.length > 0 ? phonesList.join(' / ') : '8884747209 / 8884113629'}`;
 
-    // 4. Resolve Subheader (Line 3: Biller ID & Booking Post Office):
+    // 4. Resolve Subheader (Line 3: Biller ID & Booking Post Office, without pincode):
     let billerId = branch.billerId || '1000058077';
     let bookingLocation = '';
     let carrierSubheaderText;
 
     if (isKarnataka) {
       billerId = knPickup.billerId || branch.karnatakaBillerId || '1000054429';
-      let knRawOffice = (knPickup.bookingOffice || `BENGALURU BPC POST - ${knPin}`).toUpperCase();
-      knRawOffice = knRawOffice.replace(/560001/g, '562106');
-      bookingLocation = knRawOffice.includes('562106') ? knRawOffice : `${knRawOffice} - 562106`;
+      const knRawOffice = (knPickup.bookingOffice || 'BENGALURU BPC POST').toUpperCase();
+      // Remove any pincode from the booking location
+      bookingLocation = knRawOffice
+        .replace(/[-–—]?\s*\b\d{6}\b/g, '')
+        .replace(/[-–—\s]+$/, '')
+        .trim();
       const poNumTag = knPoNumber ? ` · PO NO: ${knPoNumber}` : '';
       carrierSubheaderText = `BILLER ID : ${billerId} (BOOKED AT ${bookingLocation}${poNumTag})`;
     } else {
       billerId = branch.billerId || '1000058077';
-      bookingLocation = (
+      const rawBooking = (
         pickup.bookingOffice ||
-        (senderCity ? `${senderCity} BPC POST - ${senderPincode}` : 'HOSUR BPC POST - 635110')
+        (senderCity ? `${senderCity} BPC POST` : 'HOSUR BPC POST')
       ).toUpperCase();
+      // Remove any pincode from the booking location
+      bookingLocation = rawBooking
+        .replace(/[-–—]?\s*\b\d{6}\b/g, '')
+        .replace(/[-–—\s]+$/, '')
+        .trim();
       carrierSubheaderText = `BILLER ID : ${billerId} (BOOKED AT ${bookingLocation})`;
     }
 
@@ -721,12 +729,20 @@ export function ShippingLabelLandscapeModal({
         // Dynamic adaptive sizing based on product count
         const adaptive = getAdaptiveLayout(d.products.length, isSingle, fontScale, d.formattedAddress?.length || 0);
 
-        const productRowsHtml = d.products.map((prod, idx) => `
-          <tr style="border-bottom: ${idx !== d.products.length - 1 ? '1px solid #000' : 'none'};">
-            <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; background: #f9fafb; font-weight: 800; font-size: ${adaptive.labelFont}; white-space: nowrap;">PRODUCT</td>
-            <td style="padding: ${adaptive.padTableY} 5px; font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; word-break: break-word; overflow-wrap: break-word; white-space: normal;">${prod.name} X${prod.qty}</td>
+        const productRowsHtml = `
+          <tr style="border-bottom: none;">
+            <td style="padding: ${adaptive.padTableY} 4px; border-right: 1px solid #000; width: ${adaptive.labelWidth}; background: #f9fafb; font-weight: 800; font-size: ${adaptive.labelFont}; white-space: nowrap; vertical-align: middle;">PRODUCT</td>
+            <td style="padding: ${adaptive.padTableY} 5px; vertical-align: middle;">
+              <div style="display: flex; flex-direction: column; gap: 2.5px;">
+                ${d.products.map((prod, idx) => `
+                  <div style="font-weight: 900; font-size: ${adaptive.prodFont}; line-height: ${adaptive.lineHeight}; word-break: break-word; overflow-wrap: break-word; white-space: normal;">
+                    ${d.products.length > 1 ? `${idx + 1}. ` : ''}${prod.name} X${prod.qty}
+                  </div>
+                `).join('')}
+              </div>
+            </td>
           </tr>
-        `).join('');
+        `;
 
         // Cutting guide between labels in 3-per-sheet mode
         if (!isSingle && lIdx > 0) {
@@ -1303,23 +1319,32 @@ export function ShippingLabelLandscapeModal({
                       </td>
                     </tr>
                   )}
-                  {/* Render ALL products without hiding any */}
-                  {d.products.map((prod, pIdx) => (
-                    <tr key={pIdx} className={pIdx !== d.products.length - 1 ? 'border-b border-black' : ''}>
-                      <td
-                        className={`px-1 ${adaptive.tablePadClass} border-r border-black bg-gray-50 text-gray-700 font-bold whitespace-nowrap align-middle`}
-                        style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
-                      >
-                        PRODUCT
-                      </td>
-                      <td
-                        className={`px-1.5 ${adaptive.tablePadClass} font-black text-black leading-tight break-words whitespace-normal align-middle`}
-                        style={{ fontSize: adaptive.previewProdFont, lineHeight: adaptive.lineHeight }}
-                      >
-                        {prod.name} X{prod.qty}
-                      </td>
-                    </tr>
-                  ))}
+                  {/* Single PRODUCT row with all ordered products displayed clearly */}
+                  <tr className="border-b-0">
+                    <td
+                      className={`px-1 ${adaptive.tablePadClass} border-r border-black bg-gray-50 text-gray-700 font-bold whitespace-nowrap align-middle`}
+                      style={{ width: adaptive.labelWidth, fontSize: adaptive.previewLabelFont }}
+                    >
+                      PRODUCT
+                    </td>
+                    <td
+                      className={`px-1.5 ${adaptive.tablePadClass} font-black text-black leading-tight break-words whitespace-normal align-middle`}
+                      style={{ fontSize: adaptive.previewProdFont }}
+                    >
+                      <div className="flex flex-col gap-1">
+                        {d.products.map((prod, pIdx) => (
+                          <div
+                            key={pIdx}
+                            style={{ lineHeight: adaptive.lineHeight }}
+                            className="break-words"
+                          >
+                            {d.products.length > 1 ? `${pIdx + 1}. ` : ''}
+                            {prod.name} X{prod.qty}
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>

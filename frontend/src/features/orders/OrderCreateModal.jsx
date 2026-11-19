@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   User,
@@ -140,6 +140,97 @@ export function OrderCreateModal({
   const [notes, setNotes] = useState('');
   const [formError, setFormError] = useState('');
 
+  // 7. Telecaller / Attribution Details
+  const [selectedTelecallerId, setSelectedTelecallerId] = useState(
+    telecallerId || (user?.role === 'TELECALLER' ? String(user._id || user.id || '') : '')
+  );
+  const [selectedTelecallerName, setSelectedTelecallerName] = useState(
+    user?.role === 'TELECALLER' ? (user.name || '') : ''
+  );
+  const [selectedTelecallerPhone, setSelectedTelecallerPhone] = useState(
+    user?.role === 'TELECALLER' ? (user.phone || user.mobile || '') : ''
+  );
+
+  // Fetch active telecallers & staff for attribution
+  const { data: telecallersList = [] } = useQuery({
+    queryKey: ['active-telecallers-order-create'],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get('/users', { params: { limit: 100 } });
+        const list = res.data?.data || (Array.isArray(res.data) ? res.data : []);
+        return list.filter((u) => u.isActive !== false);
+      } catch (e) {
+        console.error('Failed to load telecallers list:', e);
+        return [];
+      }
+    },
+    enabled: Boolean(isOpen && user)
+  });
+
+  const telecallerSelectOptions = useMemo(() => {
+    const list = telecallersList
+      .filter((u) => u.role === 'TELECALLER' || u.role === 'MANAGER' || u.role === 'DISTRIBUTOR')
+      .map((tc) => ({
+        value: String(tc._id || tc.id),
+        label: `${tc.name}${tc.role === 'MANAGER' ? ' (Manager)' : tc.role === 'DISTRIBUTOR' ? ' (Distributor)' : ''}${tc.phone ? ` • ${tc.phone}` : ''}`
+      }));
+
+    if (user && !list.some((opt) => opt.value === String(user._id || user.id))) {
+      list.unshift({
+        value: String(user._id || user.id),
+        label: `${user.name} (${user.role || 'Staff'})${user.phone ? ` • ${user.phone}` : ''}`
+      });
+    }
+
+    return [
+      { value: '', label: 'Select Telecaller...' },
+      ...list
+    ];
+  }, [telecallersList, user]);
+
+  const handleTelecallerChange = (tcId) => {
+    setSelectedTelecallerId(tcId);
+    if (!tcId) {
+      setSelectedTelecallerName('');
+      setSelectedTelecallerPhone('');
+      return;
+    }
+    const found = telecallersList.find((tc) => String(tc._id || tc.id) === String(tcId)) ||
+      (user && String(user._id || user.id) === String(tcId) ? user : null);
+    if (found) {
+      setSelectedTelecallerName(found.name || '');
+      setSelectedTelecallerPhone(found.phone || found.mobile || '');
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      if (user?.role !== 'TELECALLER' && !telecallerId) {
+        setSelectedTelecallerId('');
+        setSelectedTelecallerName('');
+        setSelectedTelecallerPhone('');
+      }
+      return;
+    }
+    if (telecallerId) {
+      setSelectedTelecallerId(String(telecallerId));
+    } else if (user?.role === 'TELECALLER') {
+      setSelectedTelecallerId(String(user._id || user.id || ''));
+      setSelectedTelecallerName(user.name || '');
+      setSelectedTelecallerPhone(user.phone || user.mobile || '');
+    }
+  }, [isOpen, telecallerId, user]);
+
+  useEffect(() => {
+    if (selectedTelecallerId && telecallersList.length > 0 && !selectedTelecallerPhone) {
+      const found = telecallersList.find((tc) => String(tc._id || tc.id) === String(selectedTelecallerId));
+      if (found) {
+        if (!selectedTelecallerName) setSelectedTelecallerName(found.name || '');
+        setSelectedTelecallerPhone(found.phone || found.mobile || '');
+      }
+    }
+  }, [selectedTelecallerId, telecallersList]);
+
   // Fetch product catalog
   const { data: productsData } = useQuery({
     queryKey: ['productsForOrder'],
@@ -166,6 +257,11 @@ export function OrderCreateModal({
       if (Array.isArray(initialPatientData.items) && initialPatientData.items.length > 0) {
         setProducts(initialPatientData.items);
       }
+      if (initialPatientData.telecallerId || initialPatientData.assignedTelecallerId) {
+        setSelectedTelecallerId(String(initialPatientData.telecallerId || initialPatientData.assignedTelecallerId));
+      }
+      if (initialPatientData.telecallerName) setSelectedTelecallerName(initialPatientData.telecallerName);
+      if (initialPatientData.telecallerPhone) setSelectedTelecallerPhone(initialPatientData.telecallerPhone);
     }
   }, [initialPatientData, isOpen]);
 
@@ -355,6 +451,12 @@ export function OrderCreateModal({
       return;
     }
 
+    const matchedTc = telecallersList.find((tc) => String(tc._id || tc.id) === String(selectedTelecallerId)) ||
+      (user && String(user._id || user.id) === String(selectedTelecallerId) ? user : null);
+    const finalTelecallerId = selectedTelecallerId || telecallerId || (user?.role === 'TELECALLER' ? (user._id || user.id) : undefined);
+    const finalTelecallerName = selectedTelecallerName || matchedTc?.name || (user?.role === 'TELECALLER' ? user?.name : undefined);
+    const finalTelecallerPhone = selectedTelecallerPhone || matchedTc?.phone || (user?.role === 'TELECALLER' ? (user?.phone || user?.mobile) : undefined);
+
     createOrderMutation.mutate({
       patientName,
       fatherName,
@@ -362,9 +464,9 @@ export function OrderCreateModal({
       altMobile,
       courierName: resolvedCourierName,
       trackingNumber: manualTrackingNumber.trim() || undefined,
-      telecallerId: telecallerId || (user?.role === 'TELECALLER' ? (user._id || user.id) : undefined),
-      telecallerName: user?.role === 'TELECALLER' ? user?.name : undefined,
-      telecallerPhone: user?.role === 'TELECALLER' ? (user?.phone || user?.mobile) : undefined,
+      telecallerId: finalTelecallerId,
+      telecallerName: finalTelecallerName,
+      telecallerPhone: finalTelecallerPhone,
       items: validItems.map((p) => {
         const prod = productsData?.find((pr) => pr._id === p.productId);
         const uPrice = Number(p.unitPrice);
@@ -593,6 +695,31 @@ export function OrderCreateModal({
                 />
                 <p className="text-[10px] text-slate-500 mt-1">
                   Pincode, courier partner, and postal address are not needed for counter walk-ins.
+                </p>
+              </div>
+            </div>
+
+            {/* Telecaller & Contact Number Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-purple-200/80">
+              <div>
+                <Select
+                  label="Telecaller / Booked By"
+                  placeholder="Select Telecaller..."
+                  value={selectedTelecallerId}
+                  onChange={(e) => handleTelecallerChange(e.target.value)}
+                  options={telecallerSelectOptions}
+                />
+              </div>
+              <div>
+                <Input
+                  label="Contact Number"
+                  placeholder="10 digit contact number"
+                  value={selectedTelecallerPhone}
+                  onChange={(e) => setSelectedTelecallerPhone(e.target.value)}
+                  maxLength={15}
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Telecaller contact number for referral tracking & direct patient service.
                 </p>
               </div>
             </div>
@@ -1401,6 +1528,41 @@ export function OrderCreateModal({
                         : '₹0 (Prepaid Order — No Doorstep Cash Collection)'}
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Telecaller / Referred By Attribution */}
+              <div className="pt-3 border-t border-slate-200/80">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                    3. Telecaller / Booked By (Referral)
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    Prints on shipping label 'REFER BY'
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Select
+                      label="Telecaller / Booked By"
+                      placeholder="Select Telecaller..."
+                      value={selectedTelecallerId}
+                      onChange={(e) => handleTelecallerChange(e.target.value)}
+                      options={telecallerSelectOptions}
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      label="Contact Number"
+                      placeholder="10 digit contact number"
+                      value={selectedTelecallerPhone}
+                      onChange={(e) => setSelectedTelecallerPhone(e.target.value)}
+                      maxLength={15}
+                    />
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      Telecaller contact number for customer queries & label help banner.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

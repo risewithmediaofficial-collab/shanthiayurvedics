@@ -1413,11 +1413,16 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                     {order.paymentMethod === 'COD' ? (
                       <>
                         <div className="text-[11px] sm:text-xs font-semibold text-slate-500 font-mono tracking-tight">
-                          MRP: ₹{order.grandTotal?.toLocaleString()}
+                          Gross: ₹{(order.subtotal || order.grandTotal || 0).toLocaleString()}
                         </div>
+                        {order.shippingCharge > 0 && (
+                          <div className="text-[9.5px] text-slate-400 font-mono">
+                            + Ship: ₹{order.shippingCharge.toLocaleString()}
+                          </div>
+                        )}
                         {order.advanceAmount > 0 && (
                           <div className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-0.5">
-                            Adv: ₹{order.advanceAmount.toLocaleString()}
+                            Adv: -₹{order.advanceAmount.toLocaleString()}
                             {order.advanceUtr ? ` • UTR: ${order.advanceUtr}` : ''}
                           </div>
                         )}
@@ -1433,6 +1438,11 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                         <div className="text-base sm:text-lg font-black text-slate-900 font-mono tracking-tight">
                           ₹{order.grandTotal?.toLocaleString()}
                         </div>
+                        {order.subtotal && order.subtotal !== order.grandTotal && (
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            Gross: ₹{order.subtotal.toLocaleString()}
+                          </div>
+                        )}
                         <div className="text-[9.5px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 mt-0.5">
                           ✓ PAID ONLINE
                         </div>

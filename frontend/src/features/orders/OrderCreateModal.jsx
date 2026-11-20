@@ -67,7 +67,6 @@ export function OrderCreateModal({
   useEffect(() => {
     if (isTelecaller) {
       setIsOfficeOrder(false);
-      if (shippingCharge === '0') setShippingCharge('69');
     } else if (isOfficeSale || isOfficeSaleRoute) {
       setIsOfficeOrder(true);
       setShippingCharge('0');
@@ -106,7 +105,7 @@ export function OrderCreateModal({
   const [customCourierName, setCustomCourierName] = useState('ST Courier');
   const [manualTrackingNumber, setManualTrackingNumber] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('COD'); // 'COD' | 'ONLINE'
-  const [shippingCharge, setShippingCharge] = useState('69');
+  const [shippingCharge, setShippingCharge] = useState('0');
   const [advanceAmount, setAdvanceAmount] = useState('');
   const [advanceUtr, setAdvanceUtr] = useState('');
   const [codAmount, setCodAmount] = useState('');
@@ -570,7 +569,6 @@ export function OrderCreateModal({
                 type="button"
                 onClick={() => {
                   setIsOfficeOrder(false);
-                  if (shippingCharge === '0') setShippingCharge('69');
                 }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   !isOfficeOrder
@@ -1321,7 +1319,6 @@ export function OrderCreateModal({
                     type="button"
                     onClick={() => {
                       setPaymentMethod('COD');
-                      if (shippingCharge === '0') setShippingCharge('69');
                     }}
                     className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer ${
                       paymentMethod === 'COD'
@@ -1342,7 +1339,6 @@ export function OrderCreateModal({
                     type="button"
                     onClick={() => {
                       setPaymentMethod('ONLINE');
-                      setShippingCharge('0');
                     }}
                     className={`p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer ${
                       paymentMethod === 'ONLINE'
@@ -1366,8 +1362,8 @@ export function OrderCreateModal({
                 {/* 1. Manual Shipping Charge Input */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                    <span>🚚 Shipping Charge (₹) *</span>
-                    <span className="text-[10px] text-slate-400 font-normal">Enter manually</span>
+                    <span>🚚 Shipping Charge (₹)</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Default ₹0 (free)</span>
                   </label>
                   <div className="flex items-center gap-1.5">
                     <Input
@@ -1574,8 +1570,9 @@ export function OrderCreateModal({
           <div>
             <div className="text-[11px] text-slate-400 font-medium">Order Summary & Total</div>
             <div className="text-[10px] text-slate-400 flex items-center gap-2 mt-0.5 flex-wrap">
-              <span>Gross Products: ₹{productsGrossSubtotal.toLocaleString()}</span>
-              {!isOfficeOrder && <span>• Shipping: ₹{parsedShippingCharge}</span>}
+              <span className="font-bold text-slate-200">Gross Products (MRP): ₹{productsGrossSubtotal.toLocaleString()}</span>
+              {!isOfficeOrder && parsedShippingCharge > 0 && <span>• Shipping: ₹{parsedShippingCharge}</span>}
+              {!isOfficeOrder && parsedShippingCharge === 0 && <span className="text-emerald-400 font-semibold">• Shipping: ₹0 Free</span>}
               {!isOfficeOrder && (
                 <span className="text-cyan-300 font-semibold">• {resolvedCourierName} ({isTPC ? 'Pre-Payment Only' : (paymentMethod === 'COD' ? 'COD' : 'Prepaid')})</span>
               )}
@@ -1614,7 +1611,8 @@ export function OrderCreateModal({
                   ₹{effectiveCodAmount.toLocaleString()}
                 </div>
                 <div className="text-[11px] text-slate-400 font-mono font-medium flex items-center gap-1.5 flex-wrap justify-start sm:justify-end">
-                  <span>Products MRP: ₹{productsGrossSubtotal.toLocaleString()}</span>
+                  <span className="text-slate-300 font-bold">Gross MRP: ₹{productsGrossSubtotal.toLocaleString()}</span>
+                  {parsedShippingCharge > 0 && <span>• Ship: ₹{parsedShippingCharge}</span>}
                   <span>• Order Total: ₹{finalPayableTotal.toLocaleString()}</span>
                   {parsedAdvance > 0 && (
                     <span className="text-emerald-400 font-bold">

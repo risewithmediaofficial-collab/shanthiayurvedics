@@ -1188,14 +1188,19 @@ export function OrdersFullTableView({
                       {row.paymentMethod === 'COD' ? (
                         <div className="flex flex-col gap-0.5">
                           <span className="text-[10px] font-semibold text-slate-500 font-mono">
-                            MRP: ₹{row.grandTotal?.toLocaleString()}
+                            Gross: ₹{(row.subtotal || row.grandTotal || 0).toLocaleString()}
                           </span>
-                          {row.advanceAmount > 0 && (
-                            <span className="text-[9.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 rounded w-fit">
-                              Adv: ₹{row.advanceAmount.toLocaleString()}
+                          {row.shippingCharge > 0 && (
+                            <span className="text-[9px] text-slate-400 font-mono">
+                              + Ship: ₹{row.shippingCharge.toLocaleString()}
                             </span>
                           )}
-                          <div className="text-xs font-black font-mono bg-amber-100 text-amber-950 px-2 py-0.5 rounded border border-amber-400 w-fit flex items-center gap-1 shadow-2xs">
+                          {row.advanceAmount > 0 && (
+                            <span className="text-[9.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 rounded w-fit">
+                              Adv: -₹{row.advanceAmount.toLocaleString()}
+                            </span>
+                          )}
+                          <div className="text-xs font-black font-mono bg-amber-100 text-amber-950 px-2 py-0.5 rounded border border-amber-400 w-fit flex items-center gap-1 shadow-2xs mt-0.5">
                             <span className="text-[10px]">💵 COD:</span>
                             <span className="font-black text-amber-900">
                               ₹{getEffectiveCodAmount(row).toLocaleString()}
@@ -1203,7 +1208,14 @@ export function OrdersFullTableView({
                           </div>
                         </div>
                       ) : (
-                        <span className="font-bold font-mono text-slate-900 block">₹{row.grandTotal?.toLocaleString()}</span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-bold font-mono text-slate-900 block">₹{row.grandTotal?.toLocaleString()}</span>
+                          {row.subtotal && row.subtotal !== row.grandTotal && (
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              Gross: ₹{row.subtotal.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
                       )}
                       <div className="flex items-center gap-1.5 flex-wrap mt-1">
                         <span className="text-[10px] uppercase font-bold text-slate-500">

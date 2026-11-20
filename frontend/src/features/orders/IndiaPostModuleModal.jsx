@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '../../components/common/Modal.jsx';
 import { Button } from '../../components/common/Button.jsx';
+import { getEffectiveCodAmount } from '../../utils/orderUtils.js';
 
 export function IndiaPostModuleModal({ isOpen, onClose, orders = [] }) {
   const [selectedOnly, setSelectedOnly] = useState(false);
@@ -47,8 +48,8 @@ export function IndiaPostModuleModal({ isOpen, onClose, orders = [] }) {
         'STATE': addr.state || 'Tamil Nadu',
         'MOBILE': pat.mobile || ord.customerId?.mobile || addr.phone || '',
         'WEIGHT (GMS)': 350,
-        'COD AMOUNT': isCOD ? (ord.grandTotal || 0) : 0,
-        'INSURANCE VALUE': isCOD ? (ord.grandTotal || 0) : 0,
+        'COD AMOUNT': isCOD ? getEffectiveCodAmount(ord) : 0,
+        'INSURANCE VALUE': isCOD ? getEffectiveCodAmount(ord) : 0,
         'REFERENCE NO': ord.orderNumber
       };
     });

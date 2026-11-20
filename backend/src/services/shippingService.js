@@ -61,7 +61,7 @@ export class ShippingService {
   static async createShipment(orderId, payload = {}, user, req) {
     const {
       carrierCode = COURIER_PROVIDERS.INDIA_POST,
-      shippingCharge = 50,
+      shippingCharge,
       weight = 0.5,
       pieces = 1,
       length = 15,
@@ -134,6 +134,10 @@ export class ShippingService {
       isMock = false;
     }
 
+    const resolvedShippingCharge = shippingCharge !== undefined
+      ? Number(shippingCharge)
+      : (Number(order.shippingCharge) || 0);
+
     const shipment = new Shipment({
       orderId: order._id,
       branchId: order.branchId?._id || order.branchId,
@@ -141,7 +145,7 @@ export class ShippingService {
       carrierCode,
       awbNumber,
       isMock,
-      shippingCharge,
+      shippingCharge: resolvedShippingCharge,
       bookingDate: new Date(),
       trackingStatus: SHIPPING_STATUS.SHIPMENT_CREATED,
       packageDetails,

@@ -1,7 +1,7 @@
 import { Order } from '../models/Order.js';
 import { Customer } from '../models/Customer.js';
 import { Notification } from '../models/Notification.js';
-import { emitToUser, emitToBranch } from '../sockets/index.js';
+import { emitToUser } from '../sockets/index.js';
 import { logger } from '../config/logger.js';
 import { ROLES } from '../constants/roles.js';
 
@@ -142,17 +142,19 @@ export class ReorderService {
       let createdCount = 0;
 
       for (const ord of candidateOrders) {
-        // Collect recipients: assigned telecaller + creator who placed the order
-        const recipientUserIds = new Set();
-        if (ord.telecallerId) {
-          recipientUserIds.add(ord.telecallerId.toString());
+        // Resolve target recipient: strictly the assigned telecaller for this order
+        let targetRecipientId = ord.telecallerId?.toString();
+        if (!targetRecipientId && ord.customerId) {
+          const customer = await Customer.findById(ord.customerId).select('assignedTelecallerId').lean();
+          if (customer?.assignedTelecallerId) {
+            targetRecipientId = customer.assignedTelecallerId.toString();
+          }
         }
-        const createdById = ord.statusHistory?.[0]?.changedBy;
-        if (createdById) {
-          recipientUserIds.add(createdById.toString());
+        if (!targetRecipientId && ord.statusHistory?.[0]?.changedBy) {
+          targetRecipientId = ord.statusHistory[0].changedBy.toString();
         }
 
-        if (recipientUserIds.size === 0) continue;
+        if (!targetRecipientId) continue;
 
         // Verify patient hasn't placed a new order in the last 14 days
         const hasReordered = await Order.exists({
@@ -171,48 +173,47 @@ export class ReorderService {
         const patientName = ord.patientDetails?.patientName || 'Patient';
         const mobile = ord.patientDetails?.mobile || '';
 
-        for (const recipientId of recipientUserIds) {
-          // Check if a REORDER_DUE notification already exists for this order & user
-          const alreadyNotified = await Notification.exists({
-            userId: recipientId,
-            type: 'REORDER_DUE',
-            'data.orderId': ord._id
-          });
+        // Check if a REORDER_DUE notification already exists for this order & user
+        const alreadyNotified = await Notification.exists({
+          userId: targetRecipientId,
+          type: 'REORDER_DUE',
+          'data.orderId': ord._id
+        });
 
-          if (alreadyNotified) continue;
+        if (alreadyNotified) continue;
 
-          const notificationPayload = {
-            userId: recipientId,
-            branchId: ord.branchId,
-            title: `🔄 15-Day Reorder Due: ${patientName}`,
-            message: `Patient ${patientName} (${ord.orderNumber}) completed 15 days of treatment (${daysAgo} days ago). Call ${mobile} to book repeat course.`,
-            type: 'REORDER_DUE',
-            data: {
-              orderId: ord._id,
-              orderNumber: ord.orderNumber,
-              customerId: ord.customerId,
-              patientName,
-              mobile,
-              daysAgo
-            }
-          };
-
-          const newNotification = await Notification.create(notificationPayload);
-          createdCount++;
-
-          // Real-time socket delivery
-          emitToUser(recipientId, 'notification:new', newNotification);
-        }
-
-        if (ord.branchId) {
-          emitToBranch(ord.branchId.toString(), 'reorder:due', {
+        const notificationPayload = {
+          userId: targetRecipientId,
+          branchId: ord.branchId,
+          title: `🔄 15-Day Reorder Due: ${patientName}`,
+          message: `Patient ${patientName} (${ord.orderNumber}) completed 15 days of treatment (${daysAgo} days ago). Call ${mobile} to book repeat course.`,
+          type: 'REORDER_DUE',
+          data: {
             orderId: ord._id,
             orderNumber: ord.orderNumber,
+            customerId: ord.customerId,
             patientName,
             mobile,
-            daysAgo: Math.floor((now.getTime() - new Date(ord.createdAt).getTime()) / (1000 * 60 * 60 * 24))
-          });
-        }
+            daysAgo,
+            telecallerId: targetRecipientId,
+            recipientId: targetRecipientId
+          }
+        };
+
+        const newNotification = await Notification.create(notificationPayload);
+        createdCount++;
+
+        // Real-time socket delivery strictly to this specific assigned telecaller
+        emitToUser(targetRecipientId, 'notification:new', newNotification);
+        emitToUser(targetRecipientId, 'reorder:due', {
+          orderId: ord._id,
+          orderNumber: ord.orderNumber,
+          patientName,
+          mobile,
+          daysAgo,
+          telecallerId: targetRecipientId,
+          recipientId: targetRecipientId
+        });
       }
 
       if (createdCount > 0) {

@@ -8,6 +8,7 @@ import DeleteSweepRounded from '@mui/icons-material/DeleteSweepRounded';
 import CloseRounded from '@mui/icons-material/CloseRounded';
 import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded';
 import { useNotifications } from '../../context/NotificationContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { Drawer } from '../common/Drawer.jsx';
 import { CustomerProfileModal } from '../../features/customers/CustomerProfileModal.jsx';
 
@@ -230,6 +231,7 @@ function SwipeableNotificationItem({
 
 export function NotificationBell() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const {
     notifications,
     unreadCount,
@@ -240,7 +242,19 @@ export function NotificationBell() {
     pushStatus
   } = useNotifications();
 
-  const safeNotifications = Array.isArray(notifications) ? notifications : [];
+  const currentUserId = user?.id || user?._id;
+  const isTelecaller = user?.role === 'TELECALLER';
+
+  const safeNotifications = (Array.isArray(notifications) ? notifications : []).filter((n) => {
+    if (isTelecaller && currentUserId) {
+      const uid = n.userId?._id || n.userId || n.data?.telecallerId || n.data?.recipientId;
+      // If notification has a target or userId, it must strictly match current telecaller
+      if (uid && String(uid) !== String(currentUserId)) {
+        return false;
+      }
+    }
+    return true;
+  });
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCustomerForProfile, setSelectedCustomerForProfile] = useState(null);
 

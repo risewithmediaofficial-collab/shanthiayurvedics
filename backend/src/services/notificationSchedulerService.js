@@ -1,9 +1,10 @@
 import cron from 'node-cron';
 import { FollowUp } from '../models/FollowUp.js';
 import { Order } from '../models/Order.js';
+import { Customer } from '../models/Customer.js';
 import { Notification } from '../models/Notification.js';
 import { sendPushToUser } from './pushService.js';
-import { emitToUser, emitToBranch } from '../sockets/index.js';
+import { emitToUser } from '../sockets/index.js';
 import { logger } from '../config/logger.js';
 import { FOLLOWUP_STATUS } from '../constants/leadStates.js';
 
@@ -124,17 +125,19 @@ export class NotificationSchedulerService {
       let reorderNotifCount = 0;
 
       for (const ord of candidateOrders) {
-        // Collect recipient user IDs: assigned telecaller + order creator
-        const recipientUserIds = new Set();
-        if (ord.telecallerId) {
-          recipientUserIds.add(ord.telecallerId.toString());
+        // Resolve target recipient: strictly the assigned telecaller for this order
+        let targetRecipientId = ord.telecallerId?.toString();
+        if (!targetRecipientId && ord.customerId) {
+          const customer = await Customer.findById(ord.customerId).select('assignedTelecallerId').lean();
+          if (customer?.assignedTelecallerId) {
+            targetRecipientId = customer.assignedTelecallerId.toString();
+          }
         }
-        const createdById = ord.statusHistory?.[0]?.changedBy;
-        if (createdById) {
-          recipientUserIds.add(createdById.toString());
+        if (!targetRecipientId && ord.statusHistory?.[0]?.changedBy) {
+          targetRecipientId = ord.statusHistory[0].changedBy.toString();
         }
 
-        if (recipientUserIds.size === 0) continue;
+        if (!targetRecipientId) continue;
 
         // Verify patient hasn't placed a new order in the last 12 days
         const hasReordered = await Order.exists({
@@ -154,92 +157,91 @@ export class NotificationSchedulerService {
         const patientName = ord.patientDetails?.patientName || 'Patient';
         const mobile = ord.patientDetails?.mobile || '';
 
-        for (const recipientId of recipientUserIds) {
-          // Check how many REORDER_DUE notifications have already been sent to this recipient for this order TODAY
-          const notificationsSentToday = await Notification.countDocuments({
-            userId: recipientId,
-            type: 'REORDER_DUE',
-            'data.orderId': ord._id,
-            createdAt: { $gte: todayStart }
-          });
+        // Check how many REORDER_DUE notifications have already been sent to this recipient for this order TODAY
+        const notificationsSentToday = await Notification.countDocuments({
+          userId: targetRecipientId,
+          type: 'REORDER_DUE',
+          'data.orderId': ord._id,
+          createdAt: { $gte: todayStart }
+        });
 
-          // Limit to 3 times daily
-          if (notificationsSentToday >= 3) {
+        // Limit to 3 times daily
+        if (notificationsSentToday >= 3) {
+          continue;
+        }
+
+        // Enforce minimum 3 hours between reminders on the same day to distribute evenly
+        const latestNotificationToday = await Notification.findOne({
+          userId: targetRecipientId,
+          type: 'REORDER_DUE',
+          'data.orderId': ord._id,
+          createdAt: { $gte: todayStart }
+        }).sort({ createdAt: -1 });
+
+        if (latestNotificationToday) {
+          const hoursSinceLast = (now.getTime() - new Date(latestNotificationToday.createdAt).getTime()) / (1000 * 60 * 60);
+          if (hoursSinceLast < 3) {
             continue;
           }
-
-          // Enforce minimum 3 hours between reminders on the same day to distribute evenly
-          const latestNotificationToday = await Notification.findOne({
-            userId: recipientId,
-            type: 'REORDER_DUE',
-            'data.orderId': ord._id,
-            createdAt: { $gte: todayStart }
-          }).sort({ createdAt: -1 });
-
-          if (latestNotificationToday) {
-            const hoursSinceLast = (now.getTime() - new Date(latestNotificationToday.createdAt).getTime()) / (1000 * 60 * 60);
-            if (hoursSinceLast < 3) {
-              continue;
-            }
-          }
-
-          const reminderNumber = notificationsSentToday + 1;
-          const isBeforeDue = daysUntilCourseEnd > 0;
-          const title = isBeforeDue
-            ? `🔄 Reorder Due in ${daysUntilCourseEnd} Days: ${patientName} (${reminderNumber}/3 today)`
-            : `🔄 15-Day Reorder Overdue: ${patientName} (${reminderNumber}/3 today)`;
-
-          const message = isBeforeDue
-            ? `Patient ${patientName} (${ord.orderNumber}) 15-day course will finish in ${daysUntilCourseEnd} days. Call ${mobile} now to book repeat course.`
-            : `Patient ${patientName} (${ord.orderNumber}) completed 15-day course (${daysAgo} days ago). Call ${mobile} to book repeat course.`;
-
-          // 1. In-App Notification
-          const newNotification = await Notification.create({
-            userId: recipientId,
-            branchId: ord.branchId,
-            title,
-            message,
-            type: 'REORDER_DUE',
-            data: {
-              orderId: ord._id,
-              orderNumber: ord.orderNumber,
-              customerId: ord.customerId,
-              patientName,
-              mobile,
-              daysAgo,
-              daysUntilCourseEnd,
-              reminderNumber,
-              maxDaily: 3
-            }
-          });
-
-          // 2. Real-time Socket Event
-          emitToUser(recipientId, 'notification:new', newNotification);
-
-          // 3. Web Push Notification
-          await sendPushToUser(recipientId, {
-            title,
-            body: message,
-            link: `/orders?search=${encodeURIComponent(mobile || patientName)}`,
-            eventId: `reorder-${ord._id}-${todayStart.toISOString().slice(0, 10)}-${reminderNumber}`,
-            tag: `reorder-${ord._id}`,
-            requireInteraction: true
-          }).catch((err) => {
-            logger.warn({ err, recipientId }, 'Web Push delivery error on reorder reminder');
-          });
-
-          reorderNotifCount++;
         }
 
-        if (ord.branchId) {
-          emitToBranch(ord.branchId.toString(), 'reorder:due', {
+        const reminderNumber = notificationsSentToday + 1;
+        const isBeforeDue = daysUntilCourseEnd > 0;
+        const title = isBeforeDue
+          ? `🔄 Reorder Due in ${daysUntilCourseEnd} Days: ${patientName} (${reminderNumber}/3 today)`
+          : `🔄 15-Day Reorder Overdue: ${patientName} (${reminderNumber}/3 today)`;
+
+        const message = isBeforeDue
+          ? `Patient ${patientName} (${ord.orderNumber}) 15-day course will finish in ${daysUntilCourseEnd} days. Call ${mobile} now to book repeat course.`
+          : `Patient ${patientName} (${ord.orderNumber}) completed 15-day course (${daysAgo} days ago). Call ${mobile} to book repeat course.`;
+
+        // 1. In-App Notification
+        const newNotification = await Notification.create({
+          userId: targetRecipientId,
+          branchId: ord.branchId,
+          title,
+          message,
+          type: 'REORDER_DUE',
+          data: {
             orderId: ord._id,
             orderNumber: ord.orderNumber,
+            customerId: ord.customerId,
             patientName,
             mobile,
-            daysAgo
-          });
-        }
+            daysAgo,
+            daysUntilCourseEnd,
+            reminderNumber,
+            maxDaily: 3,
+            telecallerId: targetRecipientId,
+            recipientId: targetRecipientId
+          }
+        });
+
+        // 2. Real-time Socket Event strictly to the target telecaller
+        emitToUser(targetRecipientId, 'notification:new', newNotification);
+        emitToUser(targetRecipientId, 'reorder:due', {
+          orderId: ord._id,
+          orderNumber: ord.orderNumber,
+          patientName,
+          mobile,
+          daysAgo,
+          telecallerId: targetRecipientId,
+          recipientId: targetRecipientId
+        });
+
+        // 3. Web Push Notification
+        await sendPushToUser(targetRecipientId, {
+          title,
+          body: message,
+          link: `/orders?search=${encodeURIComponent(mobile || patientName)}`,
+          eventId: `reorder-${ord._id}-${todayStart.toISOString().slice(0, 10)}-${reminderNumber}`,
+          tag: `reorder-${ord._id}`,
+          requireInteraction: true
+        }).catch((err) => {
+          logger.warn({ err, targetRecipientId }, 'Web Push delivery error on reorder reminder');
+        });
+
+        reorderNotifCount++;
       }
 
       if (reorderNotifCount > 0) {

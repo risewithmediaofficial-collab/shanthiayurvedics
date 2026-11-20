@@ -3,6 +3,7 @@ import request from "supertest";
 import app from "../src/app.js";
 import { User } from "../src/models/User.js";
 import { Branch } from "../src/models/Branch.js";
+import { Notification } from "../src/models/Notification.js";
 import { ROLES } from "../src/constants/roles.js";
 import "./setup.js";
 
@@ -225,6 +226,81 @@ describe("Notifications Module Integration Tests", () => {
       .set("Authorization", `Bearer ${tc2Token}`);
     expect(tc2List.status).toBe(200);
     expect(tc2List.body.data.some((n) => n.data?.name === "Exclusive Lead For TC1")).toBe(false);
+  });
+
+  it("telecaller must ONLY see their own reorder notifications and must NOT see other telecallers reorders or null userId notifications", async () => {
+    const branch = await Branch.findOne({ code: "HSR" });
+
+    const tcA = await User.create({
+      name: "Telecaller A",
+      email: `tca.${Date.now()}@shanthiayurvedas.com`,
+      passwordHash: await User.hashPassword("Password@12345"),
+      role: ROLES.TELECALLER,
+      branchId: branch._id,
+      branches: [branch._id],
+      isActive: true
+    });
+    const tcaLogin = await request(app).post("/api/auth/login").send({ email: tcA.email, password: "Password@12345" });
+    const tcaToken = tcaLogin.body.data.accessToken;
+
+    const tcB = await User.create({
+      name: "Telecaller B",
+      email: `tcb.${Date.now()}@shanthiayurvedas.com`,
+      passwordHash: await User.hashPassword("Password@12345"),
+      role: ROLES.TELECALLER,
+      branchId: branch._id,
+      branches: [branch._id],
+      isActive: true
+    });
+    const tcbLogin = await request(app).post("/api/auth/login").send({ email: tcB.email, password: "Password@12345" });
+    const tcbToken = tcbLogin.body.data.accessToken;
+
+    // Create a notification for tcA
+    await Notification.create({
+      userId: tcA._id,
+      branchId: branch._id,
+      title: "🔄 Reorder Due: Patient A",
+      message: "Patient A reorder due",
+      type: "REORDER_DUE",
+      data: { patientName: "Patient A" }
+    });
+
+    // Create a notification for tcB
+    await Notification.create({
+      userId: tcB._id,
+      branchId: branch._id,
+      title: "🔄 Reorder Due: Patient B",
+      message: "Patient B reorder due",
+      type: "REORDER_DUE",
+      data: { patientName: "Patient B" }
+    });
+
+    // Create a branch announcement without userId
+    await Notification.create({
+      userId: null,
+      branchId: branch._id,
+      title: "📢 Branch announcement",
+      message: "General branch note",
+      type: "GENERAL"
+    });
+
+    // tcA gets notifications
+    const resA = await request(app).get("/api/notifications").set("Authorization", `Bearer ${tcaToken}`);
+    expect(resA.status).toBe(200);
+    // tcA should ONLY see their own notification
+    expect(resA.body.data.every((n) => n.userId.toString() === tcA._id.toString())).toBe(true);
+    expect(resA.body.data.some((n) => n.title.includes("Patient A"))).toBe(true);
+    expect(resA.body.data.some((n) => n.title.includes("Patient B"))).toBe(false);
+    expect(resA.body.data.some((n) => n.title.includes("Branch announcement"))).toBe(false);
+
+    // tcB gets notifications
+    const resB = await request(app).get("/api/notifications").set("Authorization", `Bearer ${tcbToken}`);
+    expect(resB.status).toBe(200);
+    // tcB should ONLY see their own notification
+    expect(resB.body.data.every((n) => n.userId.toString() === tcB._id.toString())).toBe(true);
+    expect(resB.body.data.some((n) => n.title.includes("Patient B"))).toBe(true);
+    expect(resB.body.data.some((n) => n.title.includes("Patient A"))).toBe(false);
+    expect(resB.body.data.some((n) => n.title.includes("Branch announcement"))).toBe(false);
   });
 });
 

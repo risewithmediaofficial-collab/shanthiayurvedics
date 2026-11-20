@@ -53,9 +53,20 @@ export function NotificationProvider({ children }) {
       setIsLoading(true);
       const res = await apiClient.get('/notifications?limit=25');
       if (res.data?.success) {
-        const notifList = Array.isArray(res.data.data) ? res.data.data : [];
+        let notifList = Array.isArray(res.data.data) ? res.data.data : [];
+        const currentUserId = userRef.current?.id || userRef.current?._id;
+        const isTelecaller = userRef.current?.role === 'TELECALLER';
+
+        // STRICT DEFENSE-IN-DEPTH: Telecallers must only ever see their own personal notifications
+        if (isTelecaller && currentUserId) {
+          notifList = notifList.filter((n) => {
+            const uid = n.userId?._id || n.userId;
+            return uid && String(uid) === String(currentUserId);
+          });
+        }
+
         setNotifications(notifList);
-        const unread = res.data.meta?.unreadCount ?? res.data.unreadCount ?? notifList.filter((n) => !n?.isRead).length;
+        const unread = notifList.filter((n) => !n?.isRead).length;
         setUnreadCount(unread);
       }
     } catch (e) {
@@ -135,9 +146,16 @@ export function NotificationProvider({ children }) {
     const handleNewNotification = (notification) => {
       if (!notification) return;
       const currentUserId = userRef.current?.id || userRef.current?._id;
-      const targetUserId = notification.userId?._id || notification.userId;
-      // STRICT: If notification is specifically for another user, do not show to current user
-      if (targetUserId && currentUserId && String(targetUserId) !== String(currentUserId)) {
+      const isTelecaller = userRef.current?.role === 'TELECALLER';
+      const targetUserId = notification.userId?._id || notification.userId || notification.targetUserId || notification.recipientId;
+
+      // STRICT ISOLATION FOR TELECALLERS:
+      // Telecallers must NEVER receive or display any notification not explicitly targeted to them.
+      if (isTelecaller) {
+        if (!targetUserId || !currentUserId || String(targetUserId) !== String(currentUserId)) {
+          return;
+        }
+      } else if (targetUserId && currentUserId && String(targetUserId) !== String(currentUserId)) {
         return;
       }
 
@@ -155,9 +173,15 @@ export function NotificationProvider({ children }) {
     socket.on('lead:assigned', (data) => {
       if (!data) return;
       const currentUserId = userRef.current?.id || userRef.current?._id;
-      const targetUserId = data.assignedTo || data.userId;
+      const isTelecaller = userRef.current?.role === 'TELECALLER';
+      const targetUserId = data.assignedTo || data.userId || data.telecallerId;
+
       // STRICT: Only show lead assigned notification if assigned specifically to the current user!
-      if (targetUserId && currentUserId && String(targetUserId) !== String(currentUserId)) {
+      if (isTelecaller) {
+        if (!targetUserId || !currentUserId || String(targetUserId) !== String(currentUserId)) {
+          return;
+        }
+      } else if (targetUserId && currentUserId && String(targetUserId) !== String(currentUserId)) {
         return;
       }
 
@@ -186,12 +210,20 @@ export function NotificationProvider({ children }) {
     socket.on('followup:due', (data) => {
       if (!data) return;
       const currentUserId = userRef.current?.id || userRef.current?._id;
-      const targetUserId = data?.telecallerId || data?.userId;
-      if (targetUserId && currentUserId && String(targetUserId) !== String(currentUserId)) {
+      const isTelecaller = userRef.current?.role === 'TELECALLER';
+      const targetUserId = data?.telecallerId || data?.userId || data?.recipientId;
+
+      if (isTelecaller) {
+        if (!targetUserId || !currentUserId || String(targetUserId) !== String(currentUserId)) {
+          return;
+        }
+      } else if (targetUserId && currentUserId && String(targetUserId) !== String(currentUserId)) {
         return;
       }
+
       handleNewNotification({
         _id: `followup-${data?.followupId || Date.now()}`,
+        userId: targetUserId,
         title: '⏰ Follow-up Due',
         message: `Follow-up with ${data.customerName || 'customer'} is due now.`,
         type: 'FOLLOW_UP_DUE',
@@ -204,12 +236,21 @@ export function NotificationProvider({ children }) {
     socket.on('reorder:due', (data) => {
       if (!data) return;
       const currentUserId = userRef.current?.id || userRef.current?._id;
-      const targetUserId = data?.recipientId || data?.userId;
-      if (targetUserId && currentUserId && String(targetUserId) !== String(currentUserId)) {
+      const isTelecaller = userRef.current?.role === 'TELECALLER';
+      const targetUserId = data?.recipientId || data?.telecallerId || data?.userId;
+
+      // STRICT: Never allow reorder alert into telecaller's notifications unless specifically theirs
+      if (isTelecaller) {
+        if (!targetUserId || !currentUserId || String(targetUserId) !== String(currentUserId)) {
+          return;
+        }
+      } else if (targetUserId && currentUserId && String(targetUserId) !== String(currentUserId)) {
         return;
       }
+
       handleNewNotification({
         _id: `reorder-${data?.orderId || Date.now()}`,
+        userId: targetUserId,
         title: `🔄 Reorder Reminder: ${data.patientName || 'Customer'}`,
         message: `Treatment course completion approaching for ${data.patientName || 'patient'} (${data.mobile || ''}). Call to book repeat course.`,
         type: 'REORDER_DUE',

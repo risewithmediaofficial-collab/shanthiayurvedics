@@ -14,16 +14,17 @@ export const getNotifications = asyncHandler(async (req, res) => {
   // Run 15-day reorder check non-blockingly in background
   ReorderService.checkAndCreateReorderNotifications().catch(() => {});
 
-  // STRICT: Notifications must be returned ONLY to the intended recipient.
-  // A user sees notifications where:
-  // 1. userId explicitly matches req.user.id
-  // 2. OR general branch announcements where userId is null/empty and branchId matches req.user.branchId
-  const query = {
-    $or: [
-      { userId: req.user.id },
-      { userId: { $in: [null, undefined] }, branchId: req.user.branchId }
-    ]
-  };
+  // STRICT: Telecallers must ONLY see notifications specifically addressed to them.
+  // Other roles (Manager, Admin, Owner) see their personal notifications plus general branch announcements.
+  const isTelecaller = req.user.role === 'TELECALLER';
+  const query = isTelecaller
+    ? { userId: req.user.id }
+    : {
+        $or: [
+          { userId: req.user.id },
+          { userId: { $in: [null, undefined] }, branchId: req.user.branchId }
+        ]
+      };
 
   const [notifications, unreadCount] = await Promise.all([
     Notification.find(query).sort({ createdAt: -1 }).limit(limit).lean(),
@@ -34,14 +35,19 @@ export const getNotifications = asyncHandler(async (req, res) => {
 });
 
 export const markRead = asyncHandler(async (req, res) => {
+  const isTelecaller = req.user.role === 'TELECALLER';
+  const query = isTelecaller
+    ? { _id: req.params.id, userId: req.user.id }
+    : {
+        _id: req.params.id,
+        $or: [
+          { userId: req.user.id },
+          { userId: { $in: [null, undefined] }, branchId: req.user.branchId }
+        ]
+      };
+
   const notif = await Notification.findOneAndUpdate(
-    {
-      _id: req.params.id,
-      $or: [
-        { userId: req.user.id },
-        { userId: { $in: [null, undefined] }, branchId: req.user.branchId }
-      ]
-    },
+    query,
     { isRead: true, readAt: new Date() },
     { new: true }
   );
@@ -53,13 +59,16 @@ export const markRead = asyncHandler(async (req, res) => {
 });
 
 export const markAllRead = asyncHandler(async (req, res) => {
-  const query = {
-    $or: [
-      { userId: req.user.id },
-      { userId: { $in: [null, undefined] }, branchId: req.user.branchId }
-    ],
-    isRead: false
-  };
+  const isTelecaller = req.user.role === 'TELECALLER';
+  const query = isTelecaller
+    ? { userId: req.user.id, isRead: false }
+    : {
+        $or: [
+          { userId: req.user.id },
+          { userId: { $in: [null, undefined] }, branchId: req.user.branchId }
+        ],
+        isRead: false
+      };
 
   await Notification.updateMany(query, { isRead: true, readAt: new Date() });
   emitToUser(req.user.id.toString(), 'notification:all_read', {});
@@ -68,13 +77,18 @@ export const markAllRead = asyncHandler(async (req, res) => {
 
 export const deleteNotification = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const notif = await Notification.findOneAndDelete({
-    _id: id,
-    $or: [
-      { userId: req.user.id },
-      { userId: { $in: [null, undefined] }, branchId: req.user.branchId }
-    ]
-  });
+  const isTelecaller = req.user.role === 'TELECALLER';
+  const query = isTelecaller
+    ? { _id: id, userId: req.user.id }
+    : {
+        _id: id,
+        $or: [
+          { userId: req.user.id },
+          { userId: { $in: [null, undefined] }, branchId: req.user.branchId }
+        ]
+      };
+
+  const notif = await Notification.findOneAndDelete(query);
   if (!notif && req.user.role === 'OWNER') {
     await Notification.findByIdAndDelete(id);
   }
@@ -83,12 +97,17 @@ export const deleteNotification = asyncHandler(async (req, res) => {
 });
 
 export const clearAllNotifications = asyncHandler(async (req, res) => {
-  await Notification.deleteMany({
-    $or: [
-      { userId: req.user.id },
-      { userId: { $in: [null, undefined] }, branchId: req.user.branchId }
-    ]
-  });
+  const isTelecaller = req.user.role === 'TELECALLER';
+  const query = isTelecaller
+    ? { userId: req.user.id }
+    : {
+        $or: [
+          { userId: req.user.id },
+          { userId: { $in: [null, undefined] }, branchId: req.user.branchId }
+        ]
+      };
+
+  await Notification.deleteMany(query);
   emitToUser(req.user.id.toString(), 'notification:all_cleared', {});
   return ApiResponse.success(res, null, 'All notifications cleared');
 });

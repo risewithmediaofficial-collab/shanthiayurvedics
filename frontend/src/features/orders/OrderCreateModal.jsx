@@ -26,6 +26,7 @@ import { Input } from '../../components/common/Input.jsx';
 import { Select } from '../../components/common/Select.jsx';
 import { Badge } from '../../components/common/Badge.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useBranch } from '../../context/BranchContext.jsx';
 import { PrintableInvoiceModal } from './PrintableInvoiceModal.jsx';
 
 const INDIAN_STATES = [
@@ -57,6 +58,19 @@ export function OrderCreateModal({
 }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { selectedBranchId, availableBranches = [], allBranches = [] } = useBranch();
+
+  const activeBranch = useMemo(() => {
+    return (
+      (availableBranches.length > 0 && availableBranches.find(b => (b._id || b.id)?.toString() === selectedBranchId?.toString())) ||
+      (allBranches.length > 0 && allBranches.find(b => (b._id || b.id)?.toString() === selectedBranchId?.toString())) ||
+      availableBranches[0] ||
+      allBranches[0] ||
+      null
+    );
+  }, [availableBranches, allBranches, selectedBranchId]);
+
+  const currentBranchName = activeBranch?.name || 'Clinic';
 
   const isOfficeSaleRoute = typeof window !== 'undefined' && window.location.pathname.includes('/orders/counter-sale');
   const isTelecaller = user?.role === 'TELECALLER' || Boolean(telecallerId);
@@ -653,7 +667,7 @@ export function OrderCreateModal({
                 <span>Counter Walk-In Sale (No Courier Shipping Required)</span>
               </div>
               <span className="text-[11px] font-bold text-purple-800 bg-purple-100/90 px-2.5 py-0.5 rounded-full border border-purple-200">
-                Hosur Main Clinic Desk • Direct Patient Handover (₹0 Delivery)
+                {currentBranchName} Desk • Direct Patient Handover (₹0 Delivery)
               </span>
             </div>
 

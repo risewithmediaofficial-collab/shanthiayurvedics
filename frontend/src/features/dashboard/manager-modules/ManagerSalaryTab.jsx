@@ -25,7 +25,19 @@ import { Spinner } from '../../../components/common/Spinner.jsx';
 import { DateRangeFilter } from '../../../components/common/DateRangeFilter.jsx';
 
 export function ManagerSalaryTab({ onSwitchToTelecaller }) {
-  const { selectedBranchId } = useBranch();
+  const { selectedBranchId, availableBranches = [], allBranches = [] } = useBranch();
+
+  const activeBranch = useMemo(() => {
+    return (
+      (availableBranches.length > 0 && availableBranches.find(b => (b._id || b.id)?.toString() === selectedBranchId?.toString())) ||
+      (allBranches.length > 0 && allBranches.find(b => (b._id || b.id)?.toString() === selectedBranchId?.toString())) ||
+      availableBranches[0] ||
+      allBranches[0] ||
+      null
+    );
+  }, [availableBranches, allBranches, selectedBranchId]);
+
+  const currentBranchName = activeBranch?.name || 'Branch';
 
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState(String(currentDate.getMonth() + 1));
@@ -254,7 +266,7 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
         </div>
 
         <div className="text-xs text-slate-500 font-semibold">
-          Active Branch: <span className="text-slate-900 font-bold">Hosur Main Branch (108)</span>
+          Active Branch: <span className="text-slate-900 font-bold">{currentBranchName} {activeBranch?.code ? `(${activeBranch.code})` : ''}</span>
         </div>
       </div>
 
@@ -584,7 +596,7 @@ export function ManagerSalaryTab({ onSwitchToTelecaller }) {
                   className="h-12 w-auto max-w-[160px] object-contain mx-auto mb-1"
                 />
                 <p className="text-xs text-slate-600 font-medium">Consolidated Branch Telecaller Commission Report</p>
-                <p className="text-[11px] text-slate-400 font-mono">Period: {selectedMonth}/{selectedYear} · Hosur Main Branch</p>
+                <p className="text-[11px] text-slate-400 font-mono">Period: {selectedMonth}/{selectedYear} · {currentBranchName}</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-slate-50 rounded-xl text-center">

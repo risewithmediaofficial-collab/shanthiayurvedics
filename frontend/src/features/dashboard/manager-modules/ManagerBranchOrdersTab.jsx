@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Send,
@@ -22,8 +22,31 @@ import { Spinner } from '../../../components/common/Spinner.jsx';
 import { DateRangeFilter } from '../../../components/common/DateRangeFilter.jsx';
 
 export function ManagerBranchOrdersTab() {
-  const { selectedBranchId, branches = [] } = useBranch();
+  const { selectedBranchId, branches = [], allBranches = [] } = useBranch();
   const queryClient = useQueryClient();
+
+  const activeBranch = useMemo(() => {
+    return (
+      (branches.length > 0 && branches.find(b => (b._id || b.id)?.toString() === selectedBranchId?.toString())) ||
+      (allBranches.length > 0 && allBranches.find(b => (b._id || b.id)?.toString() === selectedBranchId?.toString())) ||
+      branches[0] ||
+      allBranches[0] ||
+      null
+    );
+  }, [branches, allBranches, selectedBranchId]);
+
+  const currentBranchName = activeBranch?.name || 'Branch';
+
+  const isMatchBranch = (branchObjOrId) => {
+    if (!branchObjOrId) return false;
+    const bId = (typeof branchObjOrId === 'object' ? branchObjOrId._id || branchObjOrId.id : branchObjOrId)?.toString();
+    if (bId && selectedBranchId && bId === selectedBranchId.toString()) return true;
+    if (activeBranch?._id && bId === activeBranch._id.toString()) return true;
+    if (typeof branchObjOrId === 'object' && branchObjOrId.name && activeBranch?.name) {
+      return branchObjOrId.name.toLowerCase() === activeBranch.name.toLowerCase();
+    }
+    return false;
+  };
 
   const [activeTab, setActiveTab] = useState('RECEIVED'); // 'RECEIVED' or 'SENT'
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -46,7 +69,7 @@ export function ManagerBranchOrdersTab() {
   const [destinationBranchId, setDestinationBranchId] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
   const [transferQty, setTransferQty] = useState(25);
-  const [transferReason, setTransferReason] = useState('Stock balancing across Hosur network');
+  const [transferReason, setTransferReason] = useState('Stock balancing across branch network');
 
   // Fetch branch stock transfers
   const { data: transfersResponse, isLoading } = useQuery({
@@ -163,8 +186,8 @@ export function ManagerBranchOrdersTab() {
       // 1. Direction / Tab filter
       const matchesTab =
         activeTab === 'RECEIVED'
-          ? t.toBranchId?.name?.includes('Hosur') || t.toBranchId?.code === 'HSR'
-          : t.fromBranchId?.name?.includes('Hosur') || t.fromBranchId?.code === 'HSR';
+          ? isMatchBranch(t.toBranchId)
+          : isMatchBranch(t.fromBranchId);
       if (!matchesTab) return false;
 
       // 2. Status filter
@@ -287,7 +310,7 @@ export function ManagerBranchOrdersTab() {
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            <span className="hidden sm:inline">Orders </span>Received ({allTransfers.filter(t => t.toBranchId?.code === 'HSR' || t.toBranchId?.name?.includes('Hosur')).length})
+            <span className="hidden sm:inline">Orders </span>Received ({allTransfers.filter(t => isMatchBranch(t.toBranchId)).length})
           </button>
 
           <button
@@ -299,7 +322,7 @@ export function ManagerBranchOrdersTab() {
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            <span className="hidden sm:inline">Orders </span>Sent ({allTransfers.filter(t => t.fromBranchId?.code === 'HSR' || t.fromBranchId?.name?.includes('Hosur')).length})
+            <span className="hidden sm:inline">Orders </span>Sent ({allTransfers.filter(t => isMatchBranch(t.fromBranchId)).length})
           </button>
         </div>
 

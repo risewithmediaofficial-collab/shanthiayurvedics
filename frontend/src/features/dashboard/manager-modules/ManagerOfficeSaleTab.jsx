@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Store,
@@ -47,8 +47,20 @@ const PINCODE_MAP = {
 };
 
 export function ManagerOfficeSaleTab() {
-  const { selectedBranchId, branches = [] } = useBranch();
+  const { selectedBranchId, branches = [], allBranches = [] } = useBranch();
   const queryClient = useQueryClient();
+
+  const activeBranch = useMemo(() => {
+    return (
+      (branches.length > 0 && branches.find(b => (b._id || b.id)?.toString() === selectedBranchId?.toString())) ||
+      (allBranches.length > 0 && allBranches.find(b => (b._id || b.id)?.toString() === selectedBranchId?.toString())) ||
+      branches[0] ||
+      allBranches[0] ||
+      null
+    );
+  }, [branches, allBranches, selectedBranchId]);
+
+  const currentBranchName = activeBranch?.name || 'Hosur Clinic';
 
   // Patient & Treatment Plan state
   const [patientName, setPatientName] = useState('');
@@ -373,7 +385,7 @@ export function ManagerOfficeSaleTab() {
           />
           <div>
             <h3 className="font-bold text-sm text-slate-900 leading-tight flex items-center gap-2">
-              <span>Hosur Clinic — Walk-in Treatment & Counter Billing Desk</span>
+              <span>{currentBranchName} — Walk-in Treatment & Counter Billing Desk</span>
               <Badge variant="emerald" size="sm">Office Desk</Badge>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -977,7 +989,7 @@ export function ManagerOfficeSaleTab() {
                 onClick={() => {
                   const phone = (printedBill.patientMobile || '').replace(/\D/g, '');
                   const intlPhone = phone.length === 10 ? `91${phone}` : phone;
-                  const text = `*SHANTHI AYURVEDAS — OFFICIAL ORDER BILL* 🌿\nBill: ${printedBill.orderNumber}\nPatient: ${printedBill.patientName}\nTotal: ₹${printedBill.grandTotal?.toLocaleString()}\nPayment: ${printedBill.paymentMethod}\nHosur Main Clinic Walk-In\n\nWishing you holistic health!`;
+                  const text = `*SHANTHI AYURVEDAS — OFFICIAL ORDER BILL* 🌿\nBill: ${printedBill.orderNumber}\nPatient: ${printedBill.patientName}\nTotal: ₹${printedBill.grandTotal?.toLocaleString()}\nPayment: ${printedBill.paymentMethod}\n${currentBranchName} Walk-In\n\nWishing you holistic health!`;
                   window.open(`https://api.whatsapp.com/send?phone=${intlPhone}&text=${encodeURIComponent(text)}`, '_blank');
                 }}
                 className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer touch-manipulation"

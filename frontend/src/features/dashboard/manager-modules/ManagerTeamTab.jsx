@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Users,
@@ -34,8 +34,39 @@ import { Spinner } from '../../../components/common/Spinner.jsx';
 import { DateRangeFilter } from '../../../components/common/DateRangeFilter.jsx';
 
 export function ManagerTeamTab({ onSwitchToTelecaller }) {
-  const { selectedBranchId } = useBranch();
+  const { selectedBranchId, availableBranches = [], allBranches = [] } = useBranch();
   const queryClient = useQueryClient();
+
+  const activeBranch = useMemo(() => {
+    return (
+      (availableBranches.length > 0 && availableBranches.find(b => (b._id || b.id)?.toString() === selectedBranchId?.toString())) ||
+      (allBranches.length > 0 && allBranches.find(b => (b._id || b.id)?.toString() === selectedBranchId?.toString())) ||
+      availableBranches[0] ||
+      allBranches[0] ||
+      null
+    );
+  }, [availableBranches, allBranches, selectedBranchId]);
+
+  const currentBranchName = activeBranch?.name || 'Branch';
+
+  const getStaffBranchName = (staff) => {
+    if (staff?.branchId && typeof staff.branchId === 'object' && staff.branchId.name) {
+      return staff.branchId.name;
+    }
+    if (Array.isArray(staff?.branches) && staff.branches[0]) {
+      if (typeof staff.branches[0] === 'object' && staff.branches[0].name) {
+        return staff.branches[0].name;
+      }
+      const matched = allBranches.find(b => (b._id || b.id)?.toString() === staff.branches[0]?.toString());
+      if (matched?.name) return matched.name;
+    }
+    if (staff?.branchId) {
+      const bId = (typeof staff.branchId === 'object' ? staff.branchId._id || staff.branchId.id : staff.branchId)?.toString();
+      const matched = allBranches.find(b => (b._id || b.id)?.toString() === bId);
+      if (matched?.name) return matched.name;
+    }
+    return currentBranchName;
+  };
 
   // Default to 'table' view as requested
   const [viewMode, setViewMode] = useState('table');
@@ -366,7 +397,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
         <div className="bento-card flex flex-col gap-1">
           <div className="bento-metric-title">Calls Logged Today</div>
           <div className="bento-metric-value text-blue-600">{totalCalls}</div>
-          <div className="text-[11px] text-blue-400 font-medium">Hosur Main Desk</div>
+          <div className="text-[11px] text-blue-400 font-medium">{currentBranchName} Desk</div>
         </div>
 
         <div className="bento-card flex flex-col gap-1">
@@ -568,7 +599,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
                           <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-bold uppercase tracking-wider">
                             Telecaller
                           </span>
-                          <p className="text-[10px] text-slate-500 font-medium">Hosur Main</p>
+                          <p className="text-[10px] text-slate-500 font-medium">{getStaffBranchName(staff)}</p>
                         </div>
                       </td>
 
@@ -876,7 +907,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              createStaffMutation.mutate(newStaffData);
+              createStaffMutation.mutate({ ...newStaffData, branchId: activeBranch?._id || selectedBranchId });
             }}
             className="space-y-3 text-xs"
           >
@@ -1113,7 +1144,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
                       className="h-6 w-auto object-contain shrink-0"
                     />
                   </div>
-                  <p className="text-[10px] font-bold text-emerald-200 tracking-wider uppercase">Hosur Main Branch</p>
+                  <p className="text-[10px] font-bold text-emerald-200 tracking-wider uppercase">{getStaffBranchName(selectedStaffForDoc)}</p>
                 </div>
                 <Badge variant="emerald" size="sm">STAFF ID</Badge>
               </div>
@@ -1130,7 +1161,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
               </div>
 
               <div className="pt-3 border-t border-white/20 flex items-center justify-between text-[10px] text-white/80">
-                <span>Hosur, Tamil Nadu</span>
+                <span>{activeBranch?.address?.city || activeBranch?.name?.replace(/branch|hub/i, '').trim() || 'Tamil Nadu'}, Tamil Nadu</span>
                 <span>Valid: 2026 - 2027</span>
               </div>
             </div>
@@ -1175,7 +1206,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
             <p>Dear {selectedStaffForDoc?.name || 'Staff Member'},</p>
             <p>
               We are pleased to appoint you as a <strong>Telecaller & Customer Care Executive</strong> at
-              Shanthi Ayurvedas, Hosur Branch. Your primary duties include patient consultation, lead outreach,
+              Shanthi Ayurvedas, {getStaffBranchName(selectedStaffForDoc)}. Your primary duties include patient consultation, lead outreach,
               and order processing in compliance with franchise standard operating procedures.
             </p>
             <p>
@@ -1231,7 +1262,7 @@ export function ManagerTeamTab({ onSwitchToTelecaller }) {
             </h2>
             <p className="text-xs text-slate-700 max-w-sm mx-auto">
               In recognition of outstanding dedication, patient care counseling, and exceptional sales achievement
-              at Shanthi Ayurvedas Hosur.
+              at Shanthi Ayurvedas {getStaffBranchName(selectedStaffForDoc)}.
             </p>
             <div className="pt-4 flex justify-between text-xs font-bold text-slate-800">
               <div>Dr Shanthi (Manager)</div>

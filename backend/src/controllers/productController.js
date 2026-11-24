@@ -2,6 +2,8 @@ import { Product } from '../models/Product.js';
 import { ProductCategory } from '../models/ProductCategory.js';
 import { ProductBatch } from '../models/ProductBatch.js';
 import { Inventory } from '../models/Inventory.js';
+import { Branch } from '../models/Branch.js';
+import { InventoryService } from '../services/inventoryService.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { NotFoundError, ConflictError } from '../utils/errors.js';
@@ -122,9 +124,10 @@ export const createProduct = asyncHandler(async (req, res) => {
   });
   await product.save();
 
+  let createdBatch = null;
   // Create initial batch if supplied
   if (initialBatch) {
-    await ProductBatch.create({
+    createdBatch = await ProductBatch.create({
       productId: product._id,
       batchNumber: initialBatch.batchNumber || `BAT-${Date.now().toString().slice(-4)}`,
       manufacturingDate: initialBatch.manufacturingDate || new Date(),
@@ -132,6 +135,16 @@ export const createProduct = asyncHandler(async (req, res) => {
       mrp: initialBatch.mrp || mrp,
       purchasePrice: initialBatch.purchasePrice || costPrice
     });
+  }
+
+  // Auto-initialize inventory record for all active branches so product immediately appears in stocks
+  try {
+    const branches = await Branch.find({ isActive: true });
+    for (const b of branches) {
+      await InventoryService.getOrCreateInventory(product._id, createdBatch?._id || null, b._id);
+    }
+  } catch (invErr) {
+    console.error('Failed to auto-initialize product inventory:', invErr);
   }
 
   await AuditService.log({

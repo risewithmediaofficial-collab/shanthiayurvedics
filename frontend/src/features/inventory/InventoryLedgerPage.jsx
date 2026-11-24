@@ -67,7 +67,7 @@ export function InventoryLedgerPage() {
   const { data: productsData } = useQuery({
     queryKey: ['productsAll'],
     queryFn: async () => {
-      const res = await apiClient.get('/products', { params: { limit: 100 } });
+      const res = await apiClient.get('/products', { params: { export: true } });
       const _rd = res.data?.data; return Array.isArray(_rd) ? _rd : [];
     }
   });
@@ -76,10 +76,13 @@ export function InventoryLedgerPage() {
   const { data: invResponse, isLoading: isInvLoading } = useQuery({
     queryKey: ['inventory', page, search, startDate, endDate, sortBy, sortOrder, selectedBranchId],
     queryFn: async () => {
-      const params = { page, limit: 15, sortBy, sortOrder };
+      const params = { page, limit: 50, sortBy, sortOrder };
       if (search?.trim()) params.search = search.trim();
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
+      if (selectedBranchId && selectedBranchId !== 'ALL' && selectedBranchId !== 'MAIN') {
+        params.branchId = selectedBranchId;
+      }
       const res = await apiClient.get('/inventory', { params });
       return res.data;
     },
@@ -90,9 +93,12 @@ export function InventoryLedgerPage() {
   const { data: movementsResponse, isLoading: isMovLoading } = useQuery({
     queryKey: ['inventoryMovements', page, startDate, endDate, sortBy, sortOrder, selectedBranchId],
     queryFn: async () => {
-      const params = { page, limit: 15, sortBy, sortOrder };
+      const params = { page, limit: 50, sortBy, sortOrder };
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
+      if (selectedBranchId && selectedBranchId !== 'ALL' && selectedBranchId !== 'MAIN') {
+        params.branchId = selectedBranchId;
+      }
       const res = await apiClient.get('/inventory/movements', { params });
       return res.data;
     },
@@ -175,6 +181,9 @@ export function InventoryLedgerPage() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['inventoryMovements'] });
+      queryClient.invalidateQueries({ queryKey: ['productsAll'] });
+      queryClient.invalidateQueries({ queryKey: ['order-metrics-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setStockModalOpen(false);
       const actionLabel =
         variables.mode === 'IN'
@@ -196,6 +205,8 @@ export function InventoryLedgerPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['inventoryMovements'] });
+      queryClient.invalidateQueries({ queryKey: ['productsAll'] });
+      queryClient.invalidateQueries({ queryKey: ['order-metrics-summary'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setDeleteStockModalOpen(false);
       setStockItemToDelete(null);
@@ -219,7 +230,7 @@ export function InventoryLedgerPage() {
     const payload = {
       inventoryId: formData.inventoryId || undefined,
       productId: formData.productId,
-      branchId: formData.branchId || (availableBranches[0]?._id ? String(availableBranches[0]._id) : undefined),
+      branchId: formData.branchId || (selectedBranchId !== 'ALL' && selectedBranchId ? selectedBranchId : (availableBranches[0]?._id ? String(availableBranches[0]._id) : undefined)),
       reason: formData.reason,
       notes: formData.notes
     };
@@ -260,6 +271,7 @@ export function InventoryLedgerPage() {
     if (row) {
       const bId = row.branchId?._id || (typeof row.branchId === 'string' ? row.branchId : '') || (selectedBranchId !== 'ALL' ? selectedBranchId : (availableBranches[0]?._id ? String(availableBranches[0]._id) : ''));
       setFormData({
+        isFromRow: true,
         inventoryId: row._id || '',
         productId: row.productId?._id || row.productId || '',
         productName: row.productId?.name || '',
@@ -272,36 +284,36 @@ export function InventoryLedgerPage() {
         newAvailable: row.availableQuantity != null ? String(row.availableQuantity) : '0'
       });
     } else {
-      const firstProd = productsData?.[0];
       const defaultBranch = selectedBranchId !== 'ALL' ? selectedBranchId : (availableBranches[0]?._id ? String(availableBranches[0]._id) : '');
-      const existingMatch = firstProd ? inventory.find(inv => (inv.productId?._id || inv.productId) === firstProd._id) : null;
       setFormData({
-        inventoryId: existingMatch?._id || '',
-        productId: firstProd?._id || '',
-        productName: firstProd?.name || '',
-        productSku: firstProd?.sku || '',
+        isFromRow: false,
+        inventoryId: '',
+        productId: '',
+        productName: '',
+        productSku: '',
         branchId: defaultBranch,
-        currentAvailable: existingMatch ? Number(existingMatch.availableQuantity || 0) : 0,
+        currentAvailable: 0,
         quantity: '',
         reason: mode === 'IN' ? 'PURCHASE' : mode === 'OUT' ? 'DAMAGED' : 'PHYSICAL_VERIFICATION',
         notes: '',
-        newAvailable: existingMatch ? String(existingMatch.availableQuantity || 0) : '0'
+        newAvailable: '0'
       });
     }
     setStockModalOpen(true);
   };
 
   const handleProductSelect = (selectedProdId) => {
-    const prodObj = (productsData || []).find(p => p._id === selectedProdId);
-    const existing = inventory.find(inv => (inv.productId?._id || inv.productId) === selectedProdId);
-    setFormData(prev => ({
+    const prodObj = (productsData || []).find((p) => (p._id || p.id) === selectedProdId);
+    const existing = inventory.find((inv) => (inv.productId?._id || inv.productId) === selectedProdId);
+    const currentQty = existing ? Number(existing.availableQuantity || 0) : Number(prodObj?.availableQuantity || 0);
+    setFormData((prev) => ({
       ...prev,
       productId: selectedProdId,
       productName: prodObj?.name || '',
       productSku: prodObj?.sku || '',
       inventoryId: existing?._id || '',
-      currentAvailable: existing ? Number(existing.availableQuantity || 0) : 0,
-      newAvailable: existing ? String(existing.availableQuantity || 0) : '0'
+      currentAvailable: currentQty,
+      newAvailable: String(currentQty)
     }));
   };
 
@@ -715,9 +727,18 @@ export function InventoryLedgerPage() {
           )}
 
           {/* Product Selection / Display */}
-          {formData.productName ? (
+          {formData.isFromRow && formData.productName ? (
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Selected Product</div>
+              <div className="flex items-center justify-between">
+                <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Selected Product</div>
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, isFromRow: false, productId: '', productName: '', productSku: '' }))}
+                  className="text-[11px] font-bold text-ayur-700 hover:text-ayur-900 cursor-pointer underline"
+                >
+                  Change Product
+                </button>
+              </div>
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-bold text-slate-900 text-sm">{formData.productName}</div>
@@ -730,16 +751,24 @@ export function InventoryLedgerPage() {
               </div>
             </div>
           ) : (
-            <Select
-              label="Select Product *"
-              required
-              value={formData.productId}
-              onChange={(e) => handleProductSelect(e.target.value)}
-              options={[
-                { value: '', label: 'Select a product...' },
-                ...(productsData || []).map((p) => ({ value: p._id, label: `${p.name} (${p.sku})` }))
-              ]}
-            />
+            <div className="space-y-1">
+              <Select
+                label="Select Product *"
+                required
+                value={formData.productId}
+                onChange={(e) => handleProductSelect(e.target.value)}
+                options={[
+                  { value: '', label: 'Select a product...' },
+                  ...(productsData || []).map((p) => ({ value: p._id || p.id, label: `${p.name} (${p.sku})` }))
+                ]}
+              />
+              {formData.productId && (
+                <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                  <span className="text-slate-500 font-medium">Current available stock:</span>
+                  <span className="font-bold text-slate-900 font-mono">{currentAvailableNum} units</span>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Dynamic Quantity Input Based on Mode */}

@@ -174,7 +174,7 @@ describe('Inventory & Orders Integration Tests (ACID & State Machine)', () => {
       .set('Authorization', `Bearer ${managerToken}`);
 
     const itemInv = invRes.body.data.find(
-      (i) => i.productId._id === testProduct._id && i.batchId._id === testBatch._id
+      (i) => i.productId?._id === testProduct._id && i.batchId?._id === testBatch._id
     );
     expect(itemInv.availableQuantity).toBe(45);
     expect(itemInv.reservedQuantity).toBe(5);
@@ -258,7 +258,7 @@ describe('Inventory & Orders Integration Tests (ACID & State Machine)', () => {
       .set('Authorization', `Bearer ${managerToken}`);
 
     const itemInv = invRes.body.data.find(
-      (i) => i.productId._id === testProduct._id && i.batchId._id === testBatch._id
+      (i) => i.productId?._id === testProduct._id && i.batchId?._id === testBatch._id
     );
     expect(itemInv.availableQuantity).toBe(50);
     expect(itemInv.reservedQuantity).toBe(0);

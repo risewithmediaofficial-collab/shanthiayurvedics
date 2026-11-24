@@ -298,6 +298,11 @@ export const exportOrders = asyncHandler(async (req, res) => {
   if (!req.branchScope.isGlobal && req.branchScope.branchId) {
     query.branchId = req.branchScope.branchId;
   }
+  if (req.user.role !== ROLES.TELECALLER && req.query.telecallerId && req.query.telecallerId !== 'ALL' && req.query.telecallerId !== 'undefined' && req.query.telecallerId !== 'null') {
+    if (mongoose.Types.ObjectId.isValid(req.query.telecallerId)) {
+      query.telecallerId = new mongoose.Types.ObjectId(req.query.telecallerId);
+    }
+  }
   if (req.query.status && req.query.status !== 'ALL') {
     const s = req.query.status.trim().toUpperCase();
     if (s === 'IN_TRANSIT' || s === 'TRANSIT' || s === 'SHIPPED' || s === 'DISPATCHED') {
@@ -333,7 +338,7 @@ export const getOrderMetricsSummary = asyncHandler(async (req, res) => {
       packedCount: 0, toVerifyCount: 0, inQueueCount: 0, lowStockCount: 0,
       totalRevenue: 0, totalLeads: 0, deliveredOrdersCount: 0, newOrdersCount: 0,
       confirmedOrdersCount: 0, processingCount: 0, rtoOrdersCount: 0,
-      cancelledCount: 0, stuckOrdersCount: 0
+      cancelledCount: 0, stuckOrdersCount: 0, telecallerCounts: {}
     }, 'Order metrics summary retrieved');
   }
 
@@ -345,7 +350,17 @@ export const getOrderMetricsSummary = asyncHandler(async (req, res) => {
     : null;
 
   const branchFilter = recordScope(req.user, req, 'telecallerId');
-  const branchAggFilter = { ...(branchObjectId ? { branchId: branchObjectId } : {}), ...(branchFilter.telecallerId ? { telecallerId: new mongoose.Types.ObjectId(branchFilter.telecallerId) } : {}) };
+  const telecallerId = req.query.telecallerId;
+  if (req.user.role !== ROLES.TELECALLER && telecallerId && telecallerId !== 'ALL' && telecallerId !== 'undefined' && telecallerId !== 'null') {
+    if (mongoose.Types.ObjectId.isValid(telecallerId)) {
+      branchFilter.telecallerId = new mongoose.Types.ObjectId(telecallerId);
+    }
+  }
+
+  const branchAggFilter = {
+    ...(branchObjectId ? { branchId: branchObjectId } : {}),
+    ...(branchFilter.telecallerId ? { telecallerId: new mongoose.Types.ObjectId(branchFilter.telecallerId) } : {})
+  };
 
   const { startOfToday } = businessDateBoundaries();
 
@@ -364,7 +379,8 @@ export const getOrderMetricsSummary = asyncHandler(async (req, res) => {
     confirmedOrdersCount,
     processingCount,
     rtoOrdersCount,
-    cancelledCount
+    cancelledCount,
+    telecallerCountsAgg
   ] = await Promise.all([
     Order.countDocuments(branchFilter),
     Order.aggregate([
@@ -386,8 +402,30 @@ export const getOrderMetricsSummary = asyncHandler(async (req, res) => {
     Order.countDocuments({ ...branchFilter, status: 'CONFIRMED' }),
     Order.countDocuments({ ...branchFilter, status: 'PROCESSING' }),
     Order.countDocuments({ ...branchFilter, status: 'RTO' }),
-    Order.countDocuments({ ...branchFilter, status: 'CANCELLED' })
+    Order.countDocuments({ ...branchFilter, status: 'CANCELLED' }),
+    Order.aggregate([
+      {
+        $match: {
+          ...(branchObjectId ? { branchId: branchObjectId } : {})
+        }
+      },
+      {
+        $group: {
+          _id: '$telecallerId',
+          count: { $sum: 1 }
+        }
+      }
+    ])
   ]);
+
+  const telecallerCounts = {};
+  if (Array.isArray(telecallerCountsAgg)) {
+    telecallerCountsAgg.forEach((item) => {
+      if (item._id) {
+        telecallerCounts[item._id.toString()] = item.count;
+      }
+    });
+  }
 
   return ApiResponse.success(res, {
     totalOrders,
@@ -406,7 +444,8 @@ export const getOrderMetricsSummary = asyncHandler(async (req, res) => {
     processingCount,
     rtoOrdersCount,
     cancelledCount,
-    stuckOrdersCount: Math.max(0, (totalOrders || 0) - (deliveredOrdersCount || 0) - (cancelledCount || 0) - (rtoOrdersCount || 0))
+    stuckOrdersCount: Math.max(0, (totalOrders || 0) - (deliveredOrdersCount || 0) - (cancelledCount || 0) - (rtoOrdersCount || 0)),
+    telecallerCounts
   }, 'Order metrics summary retrieved');
 });
 

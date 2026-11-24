@@ -117,6 +117,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
   const [districtFilter, setDistrictFilter] = useState('');
+  const [selectedTelecallerFilter, setSelectedTelecallerFilter] = useState(searchParams.get('telecallerId') || '');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [sortBy, setSortBy] = useState('createdAt');
@@ -178,12 +179,15 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
       if (selectedOrderIds.length > 0) {
         exportOrdersList = orders.filter((o) => selectedOrderIds.includes(o._id));
       } else {
+        const effectiveTelecallerId = selectedTelecallerFilter || callerId;
         const params = {
           export: true,
           sortBy,
           sortOrder
         };
-        if (callerId && callerId !== 'ALL' && callerId !== 'undefined' && callerId !== 'null') params.telecallerId = callerId;
+        if (effectiveTelecallerId && effectiveTelecallerId !== 'ALL' && effectiveTelecallerId !== 'undefined' && effectiveTelecallerId !== 'null') {
+          params.telecallerId = effectiveTelecallerId;
+        }
         if (search?.trim()) params.search = search.trim();
         if (statusFilter && statusFilter !== 'ALL') params.status = statusFilter;
         if (districtFilter && districtFilter !== 'ALL') params.district = districtFilter;
@@ -301,13 +305,15 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
     setTimeout(() => setToastMsg(''), 4000);
   };
 
+  const effectiveTelecallerId = selectedTelecallerFilter || callerId;
+
   // Fetch Live Metrics Summary for Top Ribbon
   const { data: metricsResponse, refetch: refetchMetrics } = useQuery({
-    queryKey: ['order-metrics-summary', selectedBranchId, callerId],
+    queryKey: ['order-metrics-summary', selectedBranchId, effectiveTelecallerId],
     queryFn: async () => {
       const params = {};
-      if (callerId && callerId !== 'ALL' && callerId !== 'undefined' && callerId !== 'null') {
-        params.telecallerId = callerId;
+      if (effectiveTelecallerId && effectiveTelecallerId !== 'ALL' && effectiveTelecallerId !== 'undefined' && effectiveTelecallerId !== 'null') {
+        params.telecallerId = effectiveTelecallerId;
       }
       if (selectedBranchId && selectedBranchId !== 'ALL' && selectedBranchId !== 'MAIN' && selectedBranchId !== 'undefined' && selectedBranchId !== 'null') {
         params.branchId = selectedBranchId;
@@ -359,11 +365,11 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
 
   // Fetch Paginated Orders
   const { data: ordersResponse, isLoading, refetch: refetchOrders } = useQuery({
-    queryKey: ['orders', callerId, page, debouncedSearch, statusFilter, districtFilter, startDate, endDate, sortBy, sortOrder, selectedBranchId],
+    queryKey: ['orders', effectiveTelecallerId, page, debouncedSearch, statusFilter, districtFilter, startDate, endDate, sortBy, sortOrder, selectedBranchId],
     queryFn: async () => {
       const params = { page, limit: 15, sortBy, sortOrder };
-      if (callerId && callerId !== 'ALL' && callerId !== 'undefined' && callerId !== 'null') {
-        params.telecallerId = callerId;
+      if (effectiveTelecallerId && effectiveTelecallerId !== 'ALL' && effectiveTelecallerId !== 'undefined' && effectiveTelecallerId !== 'null') {
+        params.telecallerId = effectiveTelecallerId;
       }
       if (debouncedSearch?.trim()) params.search = debouncedSearch.trim();
       if (statusFilter && statusFilter !== 'ALL') params.status = statusFilter;
@@ -385,6 +391,18 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
   const telecallers = telecallersResponse || [];
   const products = productsResponse || [];
   const metrics = metricsResponse || {};
+  const telecallerCounts = metrics?.telecallerCounts || {};
+
+  const telecallerOptions = [
+    { value: '', label: 'All Telecallers' },
+    ...telecallers.map((tc) => {
+      const count = telecallerCounts[tc._id] || 0;
+      return {
+        value: tc._id,
+        label: `${tc.name} (${count} ${count === 1 ? 'order' : 'orders'})`
+      };
+    })
+  ];
 
   // Bulk Status Update Mutation
   const bulkStatusMutation = useMutation({
@@ -962,15 +980,20 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
             </Button>
 
             {!isTelecaller && (
-              <div className="w-full xs:w-auto xs:min-w-[140px] sm:min-w-[170px]">
+              <div className="w-full xs:w-auto xs:min-w-[170px] sm:min-w-[210px]">
                 <CustomSelect
-                  value={assignVerifierId}
-                  onChange={(e) => setAssignVerifierId(e.target.value)}
-                  options={telecallers.map((tc) => ({ value: tc._id, label: tc.name }))}
-                  placeholder="Assign verify..."
+                  value={selectedTelecallerFilter || assignVerifierId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedTelecallerFilter(val);
+                    setAssignVerifierId(val);
+                    setPage(1);
+                  }}
+                  options={telecallerOptions}
+                  placeholder="All Telecallers / Assign..."
                   size="sm"
                   align="left"
-                  minWidth="min-w-full sm:min-w-[170px]"
+                  minWidth="min-w-full sm:min-w-[210px]"
                 />
               </div>
             )}
@@ -1038,6 +1061,34 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
           >
             Auto Dispatch
           </Button>
+        </div>
+      )}
+
+      {/* 6A. Active Telecaller Filter Banner */}
+      {!isTelecaller && selectedTelecallerFilter && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-950 px-4 py-2.5 rounded-xl flex items-center justify-between text-xs font-medium shadow-2xs">
+          <div className="flex items-center gap-2">
+            <UserCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+            <span>
+              Showing orders placed by{' '}
+              <strong className="text-emerald-900 font-bold">
+                {telecallers.find((t) => t._id === selectedTelecallerFilter)?.name || 'Selected Telecaller'}
+              </strong>
+              {' '}— <span className="font-bold font-mono text-emerald-800">{metrics.totalOrders ?? meta.total}</span> orders placed
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedTelecallerFilter('');
+              setAssignVerifierId('');
+              setPage(1);
+            }}
+            className="flex items-center gap-1 text-emerald-800 hover:text-emerald-950 font-bold text-xs bg-emerald-100/80 hover:bg-emerald-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>Show All Orders</span>
+          </button>
         </div>
       )}
 
@@ -1165,6 +1216,25 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
             />
           </div>
 
+          {/* Telecaller Filter Dropdown (Manager / Owner) */}
+          {!isTelecaller && (
+            <div className="col-span-1 sm:w-52">
+              <CustomSelect
+                value={selectedTelecallerFilter}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedTelecallerFilter(val);
+                  setAssignVerifierId(val);
+                  setPage(1);
+                }}
+                placeholder="All Telecallers"
+                options={telecallerOptions}
+                className="bg-slate-50 border-slate-200 text-slate-700 font-medium"
+                minWidth="min-w-full sm:min-w-[190px]"
+              />
+            </div>
+          )}
+
           {/* Sort By Dropdown */}
           <div className="col-span-2 sm:w-48">
             <CustomSelect
@@ -1191,12 +1261,14 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
               className="flex-1 sm:flex-initial"
             />
 
-            {(statusFilter || districtFilter || startDate || endDate || search || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
+            {(statusFilter || districtFilter || selectedTelecallerFilter || startDate || endDate || search || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
               <button
                 type="button"
                 onClick={() => {
                   setStatusFilter('');
                   setDistrictFilter('');
+                  setSelectedTelecallerFilter('');
+                  setAssignVerifierId('');
                   setStartDate('');
                   setEndDate('');
                   setSearch('');
@@ -1205,7 +1277,7 @@ export function OrderListPage({ hideHeader = false, callerId } = {}) {
                   setPage(1);
                 }}
                 className="px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1 shrink-0"
-                title="Reset all search, status, date, and sorting filters"
+                title="Reset all search, status, telecaller, date, and sorting filters"
               >
                 <X className="w-3.5 h-3.5" />
                 <span>Reset</span>

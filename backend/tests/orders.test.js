@@ -194,11 +194,11 @@ describe("Orders Module Integration Tests", () => {
     });
     const freshOrderId = orderRes.body.data._id;
 
-    // Attempt transition to DISPATCHED with no tracking number
+    // Attempt transition to DISPATCHED with no tracking number for TPC
     const failRes = await request(app)
       .patch(`/api/orders/${freshOrderId}/transition`)
       .set("Authorization", `Bearer ${managerToken}`)
-      .send({ status: ORDER_STATUS.DISPATCHED });
+      .send({ status: ORDER_STATUS.DISPATCHED, courierName: 'The Professional Couriers (TPC)' });
 
     expect(failRes.status).toBe(400);
     expect(failRes.body.message).toMatch(/AWB \/ Tracking number/i);

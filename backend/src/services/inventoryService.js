@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Inventory } from '../models/Inventory.js';
 import { StockMovement } from '../models/StockMovement.js';
 import { StockTransfer } from '../models/StockTransfer.js';
@@ -59,9 +60,13 @@ export class InventoryService {
       resolvedBranch = batchId;
     }
 
+    const validBatch = (batchId && (mongoose.Types.ObjectId.isValid(batchId) || (typeof batchId === 'string' && batchId.length === 24)))
+      ? batchId
+      : null;
+
     const { resolvedBranchId, resolvedBatchId } = await this.resolveBatchAndBranch({
       productId,
-      batchId: typeof batchId === 'string' && batchId.length === 24 ? batchId : null,
+      batchId: validBatch,
       branchId: resolvedBranch
     });
 
@@ -81,6 +86,9 @@ export class InventoryService {
         returnedQuantity: 0,
         damagedQuantity: 0
       });
+      await inv.save(actualSession ? { session: actualSession } : undefined);
+    } else if (!inv.batchId && resolvedBatchId) {
+      inv.batchId = resolvedBatchId;
       await inv.save(actualSession ? { session: actualSession } : undefined);
     }
     return inv;
@@ -109,8 +117,9 @@ export class InventoryService {
 
     if (!inv) {
       inv = await this.getOrCreateInventory(productId, resolvedBatchId, resolvedBranchId, session);
-    } else if (!inv.branchId) {
-      inv.branchId = resolvedBranchId;
+    } else {
+      if (!inv.branchId) inv.branchId = resolvedBranchId;
+      if (!inv.batchId && resolvedBatchId) inv.batchId = resolvedBatchId;
     }
 
     const previousAvailable = inv.availableQuantity;
@@ -187,8 +196,9 @@ export class InventoryService {
 
     if (!inv) {
       inv = await this.getOrCreateInventory(productId, resolvedBatchId, resolvedBranchId, session);
-    } else if (!inv.branchId) {
-      inv.branchId = resolvedBranchId;
+    } else {
+      if (!inv.branchId) inv.branchId = resolvedBranchId;
+      if (!inv.batchId && resolvedBatchId) inv.batchId = resolvedBatchId;
     }
 
     if (inv.availableQuantity < quantity) {

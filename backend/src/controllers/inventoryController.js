@@ -13,7 +13,7 @@ import { AuditService } from '../services/auditService.js';
 export const getInventory = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const isExport = req.query.export === 'true';
-  const limit = isExport ? 5000 : parseInt(req.query.limit, 10) || 25;
+  const limit = isExport ? 5000 : parseInt(req.query.limit, 10) || 50;
   const search = req.query.search?.trim();
   const startDate = req.query.startDate;
   const endDate = req.query.endDate;
@@ -66,9 +66,63 @@ export const getInventory = asyncHandler(async (req, res) => {
     // Non-blocking auto-repair
   }
 
+  // Auto-sync: Ensure ALL active products in the catalog have an Inventory entry for active branches
+  try {
+    const activeProducts = await Product.find({ isActive: { $ne: false } }).select('_id').lean();
+    if (activeProducts.length > 0) {
+      let targetBranchId = (!req.branchScope.isGlobal && req.branchScope.branchId && req.branchScope.branchId !== 'ALL' && req.branchScope.branchId !== 'MAIN')
+        ? req.branchScope.branchId
+        : null;
+
+      const branchesToSync = targetBranchId
+        ? [targetBranchId]
+        : await Branch.find({ isActive: true }).distinct('_id');
+
+      for (const bId of branchesToSync) {
+        if (!bId) continue;
+        const existingProductIds = await Inventory.find({ branchId: bId }).distinct('productId');
+        const existingSet = new Set(existingProductIds.map((id) => id.toString()));
+        const missing = activeProducts.filter((p) => !existingSet.has(p._id.toString()));
+
+        if (missing.length > 0) {
+          const docs = missing.map((p) => ({
+            productId: p._id,
+            branchId: bId,
+            availableQuantity: 0,
+            reservedQuantity: 0,
+            allocatedQuantity: 0,
+            dispatchedQuantity: 0,
+            returnedQuantity: 0,
+            damagedQuantity: 0,
+            isActive: true
+          }));
+          await Inventory.insertMany(docs, { ordered: false });
+        }
+      }
+    }
+  } catch (_syncErr) {
+    // Non-blocking auto-sync
+  }
+
   const query = {};
-  if (!req.branchScope.isGlobal && req.branchScope.branchId) {
+  if (!req.branchScope.isGlobal && req.branchScope.branchId && req.branchScope.branchId !== 'ALL' && req.branchScope.branchId !== 'MAIN') {
     query.branchId = req.branchScope.branchId;
+  }
+
+  // Filter products by active status and optional search term
+  if (search) {
+    const matchingProductIds = await Product.find({
+      isActive: { $ne: false },
+      $or: [
+        { name: { $regex: search, $options: 'i' } },
+        { sku: { $regex: search, $options: 'i' } },
+        { category: { $regex: search, $options: 'i' } }
+      ]
+    }).distinct('_id');
+    query.productId = { $in: matchingProductIds };
+  } else {
+    const activeProductIds = await Product.find({ isActive: { $ne: false } }).distinct('_id');
+    query.productId = { $in: activeProductIds };
   }
 
   if (startDate || endDate) {
@@ -90,26 +144,16 @@ export const getInventory = asyncHandler(async (req, res) => {
     sortObj.updatedAt = sortOrder;
   } else if (sortBy === 'createdAt') {
     sortObj.createdAt = sortOrder;
-  } else {
-    sortObj['productId.name'] = sortOrder;
   }
 
   const skip = (page - 1) * limit;
   let findQuery = Inventory.find(query)
-    .populate({
-      path: 'productId',
-      select: 'name sku category price mrp lowStockThreshold isActive',
-      match: {
-        isActive: { $ne: false },
-        ...(search ? { $or: [{ name: { $regex: search, $options: 'i' } }, { sku: { $regex: search, $options: 'i' } }] } : {})
-      }
-    })
+    .populate('productId', 'name sku category price mrp lowStockThreshold isActive')
     .populate('batchId', 'batchNumber expiryDate mrp')
-    .populate('branchId', 'name code')
-    .sort(sortObj);
+    .populate('branchId', 'name code');
 
-  if (!isExport) {
-    findQuery = findQuery.skip(skip).limit(limit);
+  if (Object.keys(sortObj).length > 0) {
+    findQuery = findQuery.sort(sortObj);
   }
 
   const [total, rawInventory] = await Promise.all([
@@ -117,13 +161,24 @@ export const getInventory = asyncHandler(async (req, res) => {
     findQuery.lean()
   ]);
 
-  // Filter out records where product didn't match or is inactive
-  const inventory = rawInventory.filter((item) => Boolean(item.productId && item.productId.isActive !== false));
+  // Ensure only valid records with active products are included
+  let inventory = rawInventory.filter((item) => Boolean(item.productId && item.productId.isActive !== false));
+
+  // Sort by product name if requested
+  if (sortBy === 'productName' || sortBy === 'name') {
+    inventory.sort((a, b) => {
+      const nameA = (a.productId?.name || '').toLowerCase();
+      const nameB = (b.productId?.name || '').toLowerCase();
+      return sortOrder === 1 ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+    });
+  }
+
+  const paginatedInventory = isExport ? inventory : inventory.slice(skip, skip + limit);
 
   return ApiResponse.paginated(
     res,
-    inventory,
-    { page, limit: isExport ? inventory.length : limit, total: inventory.length < limit && page === 1 ? inventory.length : total },
+    paginatedInventory,
+    { page, limit: isExport ? inventory.length : limit, total: inventory.length },
     'Inventory records retrieved'
   );
 });
